@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-5">
+        <div class="card p-4">
+            <h2 class="text-center mb-4" style="color: #F5A623;">
+                🎬 Login to Afrigen
+            </h2>
+            <p class="text-center text-muted">Africa Creates, AI Generates</p>
+
+            <!-- Google Login Button -->
+            <a href="{{ url_for('auth.google_login') }}"
+               class="btn w-100 mb-3"
+               style="background: #fff; color: #333; border: 1px solid #ddd;">
+                <img src="https://www.google.com/favicon.ico"
+                     width="20" style="margin-right: 10px;">
+                Continue with Google
+            </a>
+
+            <div class="text-center mb-3" style="color: #888;">
+                ─── or ───
+            </div>
+
+            <form method="POST">
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <input type="email" name="email" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Password</label>
+                    <input type="password" name="password" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn-afrigen w-100">Login</button>
+            </form>
+
+            <p class="text-center mt-3">
+                Don't have an account?
+                <a href="{{ url_for('auth.register') }}" style="color: #F5A623;">
+                    Register here
+                </a>
+            </p>
+            <p class="text-center">
+                <a href="{{ url_for('auth.forgot_password') }}"
+                   style="color: #888; font-size: 14px;">
+                    Forgot password?
+                </a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

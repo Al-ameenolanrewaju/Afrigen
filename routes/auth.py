@@ -1,0 +1,208 @@
+from flask import Blueprint, render_template, request, redirect, url_for,flash
+from flask_login import login_user, logout_user, current_user, login_required
+from werkzeug.security import generate_password_hash, check_password_hash
+from models import db, User, Referral
+from services.email import generate_reset_token, verify_reset_token, send_reset_password_email
+from services.email import send_welcome_email
+import logging
+import os
+
+auth = Blueprint('auth', __name__)
+logger = logging.getLogger(__name__)
+
+@auth.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        email = request.form.get('email')
+        password = request.form.get('password')
+        ref_code = request.args.get('ref')  # ← get referral code!
+
+        existing_user = User.query.filter_by(email=email).first()
+        if existing_user:
+            logger.warning(f"Registration failed - email exists: {email}")
+            flash('Email already registered!', 'danger')
+            return redirect(url_for('auth.register'))
+
+        hashed_password = generate_password_hash(password)
+        new_user = User(
+            username=username,
+            email=email,
+            password=hashed_password,
+            credits=5  # default credits
+        )
+        db.session.add(new_user)
+        db.session.flush()  # get new user id
+
+        # Handle referral
+        if ref_code:
+            referral = Referral.query.filter_by(
+                referral_code=ref_code,
+                is_used=False
+            ).first()
+
+            if referral:
+                # Give bonus credits to new user
+                new_user.credits = 7  # 5 + 2 bonus
+
+                # Give bonus credits to referrer
+                referrer = User.query.get(referral.referrer_id)
+                if referrer:
+                    referrer.credits += 2
+
+                # Mark referral as used
+                referral.referred_id = new_user.id
+                referral.is_used = True
+
+                flash('Bonus credits added! 🎁', 'success')
+
+        db.session.commit()
+
+        logger.info(f"New user registered: {username} ({email})")
+
+        try:
+            send_welcome_email(email, username)
+        except Exception as e:
+            logger.error(f"Welcome email failed for {email}: {e}")
+
+        flash('Account created! Please login.', 'success')
+        return redirect(url_for('auth.login'))
+
+    return render_template('auth/register.html')
+
+
+@auth.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
+
+        user = User.query.filter_by(email=email).first()
+
+        if user and check_password_hash(user.password, password):
+            if user.plan == 'banned':
+                logger.warning(f"Banned user login attempt: {email}")
+                flash('Your account has been banned!', 'danger')
+                return redirect(url_for('auth.login'))
+
+            login_user(user)
+            logger.info(f"User logged in: {email}")
+            flash('Welcome back!', 'success')
+            return redirect(url_for('main.dashboard'))
+        else:
+            logger.warning(f"Failed login attempt: {email}")
+            flash('Invalid email or password!', 'danger')
+
+    return render_template('auth/login.html')
+@auth.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    flash('Logged out successfully!', 'success')
+    return redirect(url_for('main.index'))
+
+
+
+
+@auth.route('/google')
+def google_login():
+    from app import google
+    redirect_uri = url_for('auth.google_callback', _external=True)
+    return google.authorize_redirect(redirect_uri)
+
+@auth.route('/google/callback')
+def google_callback():
+    from app import google
+    token = google.authorize_access_token()
+    user_info = token.get('userinfo')
+
+    if user_info:
+        email = user_info['email']
+        username = user_info['name']
+
+        # Check if user exists
+        user = User.query.filter_by(email=email).first()
+
+        if not user:
+            # Create new user
+            user = User(
+                username=username,
+                email=email,
+                password=generate_password_hash(os.urandom(24).hex())
+            )
+            db.session.add(user)
+            db.session.commit()
+
+            # Send welcome email
+            try:
+                from services.email import send_welcome_email
+                send_welcome_email(email, username)
+            except Exception as e:
+                print(f"Email error: {e}")
+
+        login_user(user)
+        flash('Logged in with Google! 🎉', 'success')
+        return redirect(url_for('main.dashboard'))
+
+    flash('Google login failed!', 'danger')
+    return redirect(url_for('auth.login'))
+
+
+
+@auth.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    if request.method == 'POST':
+        email = request.form.get('email')
+        user = User.query.filter_by(email=email).first()
+
+        if user:
+            # Generate reset token
+            token = generate_reset_token(email)
+            reset_url = url_for('auth.reset_password',
+                                token=token, _external=True)
+
+            # Send reset email
+            try:
+                send_reset_password_email(email, user.username, reset_url)
+                flash('Reset link sent! Check your email! 📧', 'success')
+            except Exception as e:
+                print(f"Email error: {e}")
+                flash('Error sending email!', 'danger')
+        else:
+            # Don't reveal if email exists or not
+            flash('If that email exists, a reset link has been sent!', 'success')
+
+        return redirect(url_for('auth.forgot_password'))
+
+    return render_template('auth/forgot_password.html')
+
+
+@auth.route('/reset-password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    # Verify token
+    email = verify_reset_token(token)
+
+    if not email:
+        flash('Invalid or expired reset link!', 'danger')
+        return redirect(url_for('auth.forgot_password'))
+
+    if request.method == 'POST':
+        password = request.form.get('password')
+        confirm_password = request.form.get('confirm_password')
+
+        if password != confirm_password:
+            flash('Passwords do not match!', 'danger')
+            return redirect(url_for('auth.reset_password', token=token))
+
+        # Update password
+        user = User.query.filter_by(email=email).first()
+        if user:
+            user.password = generate_password_hash(password)
+            db.session.commit()
+            flash('Password reset successfully! Please login.', 'success')
+            return redirect(url_for('auth.login'))
+
+    return render_template('auth/reset_password.html', token=token)
+
+
+

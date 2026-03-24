@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}My Generations{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card p-4">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h2 style="color: #F5A623;">🎬 My Generations</h2>
+                        <p style="color: #C9D1D9;">
+                            All your AI generated videos in one place!
+                        </p>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <a href="{{ url_for('main.dashboard') }}"
+                           class="btn btn-afrigen">
+                            + Generate New
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Generations List -->
+    {% if generations %}
+        {% for gen in generations %}
+        <div class="card p-4 mb-3">
+            <div class="row">
+                <!-- Video -->
+                <div class="col-md-4">
+                    {% if gen.video_url %}
+                    <video width="100%" controls style="border-radius: 8px;">
+                        <source src="{{ gen.video_url }}" type="video/mp4">
+                    </video>
+                    {% else %}
+                    <div style="background: #21262D; border-radius: 8px;
+                                height: 150px; display: flex;
+                                align-items: center; justify-content: center;">
+                        <p style="color: #888;">No video yet</p>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Details -->
+                <div class="col-md-8">
+                    <div class="mb-2">
+                        <small style="color: #888;">Original Idea:</small>
+                        <p style="color: #C9D1D9; font-style: italic;">
+                            "{{ gen.original_prompt }}"
+                        </p>
+                    </div>
+
+                    <div class="mb-2">
+                        <small style="color: #F5A623;">AI Refined Prompt:</small>
+                        <p style="color: #F0F6FC; font-size: 14px;">
+                            {{ gen.refined_prompt[:200] }}...
+                        </p>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <small style="color: #888;">
+                                📅 {{ gen.created_at.strftime('%B %d, %Y') }}
+                            </small>
+                        </div>
+                        <div class="col-md-6">
+                            <span class="badge" style="
+                                background: {% if gen.status == 'completed' %}#27AE60
+                                           {% else %}#E74C3C{% endif %};
+                                color: white;">
+                                {{ gen.status.upper() }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="mt-3">
+                        {% if gen.video_url %}
+                        <a href="{{ gen.video_url }}"
+                           class="btn btn-afrigen btn-sm me-2"
+                           target="_blank">
+                            🎬 Watch
+                        </a>
+                        <a href="{{ gen.video_url }}"
+                           class="btn btn-outline-warning btn-sm"
+                           download>
+                            ⬇️ Download
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+
+    {% else %}
+    <!-- No generations yet -->
+    <div class="card p-5 text-center">
+        <h3>🎬</h3>
+        <h4 style="color: #F5A623;">No videos yet!</h4>
+        <p style="color: #C9D1D9;">
+            Generate your first AI video now!
+        </p>
+        <a href="{{ url_for('main.dashboard') }}"
+           class="btn btn-afrigen px-5">
+            Generate First Video 🚀
+        </a>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+
+{% block title %}Afrigen Admin{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+
+    <!-- Header -->
+    <div class="card p-4 mb-4">
+        <h2 style="color: #F5A623;">⚙️ Afrigen Admin Panel</h2>
+        <p style="color: #C9D1D9;">Manage users and monitor platform!</p>
+    </div>
+
+    <!-- Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="stat-card">
+                <div class="stat-number">{{ total_users }}</div>
+                <div class="stat-label">Total Users</div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="stat-card">
+                <div class="stat-number">{{ total_generations }}</div>
+                <div class="stat-label">Videos Generated</div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="stat-card">
+                <div class="stat-number" style="color: #F5A623;">
+                    {{ pro_users }}
+                </div>
+                <div class="stat-label">Pro Users</div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="stat-card">
+                <div class="stat-number" style="color: #27AE60;">
+                    {{ free_users }}
+                </div>
+                <div class="stat-label">Free Users</div>
+            </div>
+        </div>
+    </div>
+
+        </div>
+    </div>
+
+    <!-- Telegram Users Table -->
+<div class="card p-4 mt-4">
+    <h4 style="color: #2AABEE;" class="mb-3">🤖 Telegram Users</h4>
+    <div class="table-responsive">
+        <table class="table" style="color: #F0F6FC;">
+            <thead style="color: #2AABEE;">
+                <tr>
+                    <th>Username</th>
+                    <th>First Name</th>
+                    <th>Prompts Refined</th>
+                    <th>Joined</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tuser in telegram_users %}
+                <tr>
+                    <td>@{{ tuser.username or 'No username' }}</td>
+                    <td>{{ tuser.first_name or 'N/A' }}</td>
+                    <td>{{ tuser.prompts_refined }}</td>
+                    <td>
+                    {% if tuser.joined_at %}
+                        {{ tuser.joined_at.strftime('%b %d, %Y') }}
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+    <!-- Users Table -->
+    <div class="card p-4 mb-4">
+        <h4 style="color: #F5A623;" class="mb-3">👥 All Users</h4>
+        <div class="table-responsive">
+            <table class="table" style="color: #F0F6FC;">
+                <thead style="color: #F5A623;">
+                    <tr>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th>Plan</th>
+                        <th>Credits</th>
+                        <th>Joined</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>{{ user.username }}</td>
+                        <td>{{ user.email }}</td>
+                        <td>
+                            <span class="badge" style="
+                                background: {% if user.plan == 'pro' %}#F5A623
+                                           {% else %}#21262D{% endif %};
+                                color: {% if user.plan == 'pro' %}#0D1117
+                                       {% else %}#C9D1D9{% endif %};">
+                                {{ user.plan.upper() }}
+                            </span>
+                        </td>
+                        <td>{{ user.credits }}</td>
+                        <td>{{ user.created_at.strftime('%b %d, %Y') }}</td>
+                        <td>
+    {% if user.email != 'oadedamola07@gmail.com' %}
+        {% if user.plan == 'free' %}
+        <a href="{{ url_for('main.upgrade_user', user_id=user.id) }}"
+           class="btn btn-afrigen btn-sm me-1">
+            ⭐ Upgrade
+        </a>
+        {% elif user.plan == 'pro' %}
+        <a href="{{ url_for('main.downgrade_user', user_id=user.id) }}"
+           class="btn btn-outline-warning btn-sm me-1">
+            Downgrade
+        </a>
+        {% endif %}
+
+        {% if user.plan != 'banned' %}
+        <a href="{{ url_for('main.ban_user', user_id=user.id) }}"
+           class="btn btn-warning btn-sm me-1"
+           onclick="return confirm('Ban {{ user.username }}?')">
+            🚫 Ban
+        </a>
+        {% else %}
+        <a href="{{ url_for('main.upgrade_user', user_id=user.id) }}"
+           class="btn btn-success btn-sm me-1">
+            ✅ Unban
+        </a>
+        {% endif %}
+
+        <a href="{{ url_for('main.delete_user', user_id=user.id) }}"
+           class="btn btn-danger btn-sm"
+           onclick="return confirm('DELETE {{ user.username }}? This cannot be undone!')">
+            🗑️ Delete
+        </a>
+    {% else %}
+        <span style="color: #F5A623;">👑 Admin</span>
+    {% endif %}
+</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Recent Generations -->
+    <div class="card p-4">
+        <h4 style="color: #F5A623;" class="mb-3">🎬 Recent Generations</h4>
+        <div class="table-responsive">
+            <table class="table" style="color: #F0F6FC;">
+                <thead style="color: #F5A623;">
+                    <tr>
+                        <th>User</th>
+                        <th>Original Prompt</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                        <th>Video</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for gen in generations %}
+                    <tr>
+                        <td>{{ gen.user.username }}</td>
+                        <td>{{ gen.original_prompt[:50] }}...</td>
+                        <td>
+                            <span class="badge" style="
+                                background: {% if gen.status == 'completed' %}#27AE60
+                                           {% else %}#E74C3C{% endif %};">
+                                {{ gen.status }}
+                            </span>
+                        </td>
+                        <td>{{ gen.created_at.strftime('%b %d, %Y') }}</td>
+                        <td>
+                            {% if gen.video_url %}
+                            <a href="{{ gen.video_url }}"
+                               target="_blank"
+                               class="btn btn-sm btn-outline-warning">
+                                Watch
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

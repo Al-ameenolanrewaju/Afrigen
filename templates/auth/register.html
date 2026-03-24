@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Register{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-5">
+        <div class="card p-4">
+            <h2 class="text-center mb-4" style="color: #F5A623;">
+                🌍 Join Afrigen
+            </h2>
+            <p class="text-center text-muted">Start generating African content today!</p>
+            <!-- Add this before the form -->
+<a href="{{ url_for('auth.google_login') }}"
+   class="btn w-100 mb-3"
+   style="background: #fff; color: #333; border: 1px solid #ddd;">
+    <img src="https://www.google.com/favicon.ico"
+         width="20" style="margin-right: 10px;">
+    Continue with Google
+</a>
+
+<div class="text-center mb-3" style="color: #888;">
+    ─── or ───
+</div>
+
+            <form method="POST">
+                <div class="mb-3">
+                    <label class="form-label">Username</label>
+                    <input type="text" name="username" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <input type="email" name="email" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Password</label>
+                    <input type="password" name="password" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn-afrigen w-100">Create Account</button>
+            </form>
+
+            <p class="text-center mt-3">
+                Already have an account?
+                <a href="{{ url_for('auth.login') }}" style="color: #F5A623;">Login here</a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

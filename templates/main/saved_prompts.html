@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Saved Prompts{% endblock %}
+{% block content %}
+<div class="container mt-4">
+
+    <!-- Header -->
+    <div class="card p-4 mb-4">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2 style="color: #F5A623;">💾 Saved Prompts</h2>
+                <p style="color: #C9D1D9;">Your favorite AI prompts!</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <a href="{{ url_for('main.dashboard') }}" class="btn btn-afrigen">
+                    + Generate New
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {% if prompts %}
+        {% for prompt in prompts %}
+        <div class="card p-4 mb-3">
+            <div class="row">
+                <div class="col-md-8">
+                    <small style="color: #888;">Original:</small>
+                    <p style="color: #C9D1D9;">"{{ prompt.original_prompt }}"</p>
+                    <small style="color: #F5A623;">Refined:</small>
+                    <p style="color: #F0F6FC; font-size: 14px;">
+                        {{ prompt.refined_prompt[:200] }}...
+                    </p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <span class="badge mb-2" style="background: #21262D; color: #C9D1D9;">
+                        {{ prompt.prompt_type.upper() }}
+                    </span>
+                    <br>
+                    <small style="color: #888;">
+                        {{ prompt.created_at.strftime('%b %d, %Y') }}
+                    </small>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+
+    {% else %}
+    <div class="card p-5 text-center">
+        <h3>💾</h3>
+        <h4 style="color: #F5A623;">No saved prompts yet!</h4>
+        <p style="color: #C9D1D9;">Generate a prompt and save it!</p>
+        <a href="{{ url_for('main.dashboard') }}" class="btn btn-afrigen px-5">
+            Generate Now 🚀
+        </a>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

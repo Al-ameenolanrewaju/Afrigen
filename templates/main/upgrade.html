@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Upgrade to Pro{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+
+            <!-- Header -->
+            <div class="text-center mb-4">
+                <h2 style="color: #F5A623;">⭐ Upgrade to Afrigen Pro</h2>
+                <p style="color: #C9D1D9;">Unlock unlimited AI video generation!</p>
+            </div>
+
+            <!-- Pro Features -->
+            <div class="card p-4 mb-4" style="border-color: #F5A623;">
+                <h4 style="color: #F5A623;" class="mb-3">What You Get:</h4>
+                <ul style="list-style: none; padding: 0; color: #C9D1D9;">
+                    <li class="mb-2">✅ Unlimited video generation</li>
+                    <li class="mb-2">✅ HD quality videos</li>
+                    <li class="mb-2">✅ All 5 video styles</li>
+                    <li class="mb-2">✅ AI voiceover (ElevenLabs)</li>
+                    <li class="mb-2">✅ No watermark</li>
+                    <li class="mb-2">✅ Priority generation</li>
+                    <li class="mb-2">✅ Email notifications</li>
+                </ul>
+
+                <div class="text-center mt-3">
+                    <h2 style="color: #F5A623;">₦5,000<small style="font-size: 16px; color: #888;">/month</small></h2>
+                </div>
+            </div>
+
+            <!-- Payment Button -->
+            <div class="card p-4 text-center">
+                <p style="color: #C9D1D9;" class="mb-3">
+                    Secure payment powered by Paystack 🔒
+                </p>
+
+                <form method="POST" action="{{ url_for('main.initialize_payment') }}">
+                    <button type="submit" class="btn btn-afrigen btn-lg w-100">
+                        Pay ₦5,000 with Paystack 💳
+                    </button>
+                </form>
+
+                <p style="color: #888; font-size: 12px; margin-top: 15px;">
+                    You will be redirected to Paystack's secure payment page.
+                    Supports cards, bank transfer and USSD.
+                </p>
+            </div>
+            <!-- Annual Plan -->
+            <div class="card p-4 mb-4 mt-3" style="border-color: #27AE60;">
+                <div class="text-center">
+                    <span class="badge" style="background: #27AE60; padding: 5px 15px;">
+                        SAVE 2 MONTHS! 🎉
+                    </span>
+                    <h4 style="color: #F5A623;" class="mt-2">Annual Plan</h4>
+                    <h2 style="color: #F5A623;">
+                        ₦50,000
+                        <small style="font-size: 16px; color: #888;">/year</small>
+                    </h2>
+                    <p style="color: #27AE60;">Save ₦10,000 vs monthly!</p>
+                </div>
+
+                <form method="POST" action="{{ url_for('main.initialize_payment_annual') }}">
+                    <button type="submit" class="btn btn-success w-100 mt-3">
+                        Pay ₦50,000/year 💳
+                    </button>
+                </form>
+            </div>
+
+            <!-- Back Button -->
+            <div class="text-center mt-3">
+                <a href="{{ url_for('main.dashboard') }}"
+                   style="color: #888;">
+                    ← Back to Dashboard
+                </a>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

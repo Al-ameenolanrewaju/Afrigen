@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Image Result{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+
+            <!-- Header -->
+            <div class="card p-4 mb-4 text-center">
+                <h2 style="color: #F5A623;">🖼️ Your AI Image Is Ready!</h2>
+            </div>
+
+            <!-- Image -->
+            {% if image_url %}
+            <div class="card p-4 mb-4 text-center" style="border-color: #27AE60;">
+                <h5 style="color: #27AE60;">✅ Image Generated!</h5>
+                <img src="{{ image_url }}"
+                     class="img-fluid mt-3"
+                     style="border-radius: 8px; max-width: 100%;">
+                <div class="mt-3">
+                    <a href="{{ image_url }}"
+                       class="btn btn-afrigen px-4 me-2"
+                       download>
+                        ⬇️ Download Image
+                    </a>
+                    <!-- Share Buttons -->
+                    <a href="https://wa.me/?text=Check out this AI image I generated with Afrigen! {{ request.host_url }}{{ image_url[1:] }}"
+                       target="_blank"
+                       class="btn btn-success px-3">
+                        📱 WhatsApp
+                    </a>
+                </div>
+            </div>
+            {% else %}
+            <div class="card p-4 mb-4 text-center">
+                <h5 style="color: #E74C3C;">❌ Image generation failed!</h5>
+                <p style="color: #C9D1D9;">Please try again!</p>
+            </div>
+            {% endif %}
+
+            <!-- Prompts -->
+            <div class="card p-4 mb-4">
+                <h5 style="color: #F5A623;">✨ AI Refined Prompt:</h5>
+                <p style="color: #C9D1D9;">{{ refined }}</p>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="text-center">
+                <a href="{{ url_for('main.dashboard') }}"
+                   class="btn btn-afrigen px-4 me-2">
+                    🔄 Generate Another
+                </a>
+                <a href="{{ url_for('main.history') }}"
+                   class="btn btn-outline-warning px-4">
+                    📜 View History
+                </a>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
