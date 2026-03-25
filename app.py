@@ -98,6 +98,23 @@ def forbidden(e):
     return render_template("errors/403.html"), 403
 
 
+@app.route('/set-webhook')
+def set_webhook():
+    """Set Telegram webhook"""
+    import requests as req
+
+    webhook_url = f"https://afrigen.onrender.com/webhook/{TELEGRAM_TOKEN}"
+
+    response = req.post(
+        f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/setWebhook",
+        json={"url": webhook_url}
+    )
+
+    result = response.json()
+    print(f"Webhook set: {result}")
+    return jsonify(result)
+
+
 
 
 @app.route(f'/webhook/{TELEGRAM_TOKEN}', methods=['POST'])
