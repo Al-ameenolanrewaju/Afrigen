@@ -18,6 +18,7 @@ import asyncio
 import json
 
 
+
 load_dotenv()
 app = Flask(__name__)
 app.config.from_object(DevelopmentConfig)
@@ -136,8 +137,111 @@ def webhook():
 
 async def setup_telegram():
     global telegram_app
-    from bot.bot import start, help_command, styles_command, credits_command, history_command, handle_style_selection, \
-        handle_message
+
+    async def setup_telegram():
+        global telegram_app
+        from telegram.ext import CommandHandler, MessageHandler, CallbackQueryHandler, filters
+        from groq import Groq
+
+        groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+
+        async def start(update, context):
+            user = update.effective_user
+            keyboard = [
+                [InlineKeyboardButton("🎬 Video Prompt", callback_data="menu_video"),
+                 InlineKeyboardButton("🖼️ Image Prompt", callback_data="menu_image")],
+                [InlineKeyboardButton("🎨 Choose Style", callback_data="menu_styles"),
+                 InlineKeyboardButton("❓ Help", callback_data="menu_help")],
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await update.message.reply_text(
+                f"🎬 Welcome to Afrigen Bot, {user.first_name}!\n\n"
+                "Africa Creates, AI Generates 🌍\n\n"
+                "What would you like to do?",
+                reply_markup=reply_markup
+            )
+
+        async def handle_message(update, context):
+            user_prompt = update.message.text
+            style = context.user_data.get('style', 'cinematic')
+            mode = context.user_data.get('mode', 'video')
+
+            await update.message.chat.send_action("typing")
+            await update.message.reply_text("⏳ Refining your prompt with AI...")
+
+            try:
+                response = groq_client.chat.completions.create(
+                    model="llama-3.3-70b-versatile",
+                    messages=[
+                        {"role": "system",
+                         "content": f"You are an African {mode} prompt engineer. Refine this {style} {mode} prompt into a detailed description. Keep under 200 words. Return ONLY the prompt."},
+                        {"role": "user", "content": f"Refine: {user_prompt}"}
+                    ],
+                    max_tokens=300
+                )
+                refined = response.choices[0].message.content
+
+                keyboard = [
+                    [InlineKeyboardButton("🎬 Video Prompt", callback_data="menu_video"),
+                     InlineKeyboardButton("🖼️ Image Prompt", callback_data="menu_image")],
+                    [InlineKeyboardButton("🎨 Choose Style", callback_data="menu_styles"),
+                     InlineKeyboardButton("❓ Help", callback_data="menu_help")],
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+
+                await update.message.reply_text(
+                    f"✨ AI Refined {mode.title()} Prompt:\n\n"
+                    f"{refined}\n\n"
+                    f"─────────────────\n"
+                    f"📋 Copy and use this prompt!\n"
+                    f"🚀 Full platform: afrigen.onrender.com\n\n"
+                    f"Africa Creates, AI Generates 🌍",
+                    reply_markup=reply_markup
+                )
+            except Exception as e:
+                await update.message.reply_text("❌ Sorry, something went wrong! Try again.")
+                print(f"Bot error: {e}")
+
+        async def handle_callback(update, context):
+            query = update.callback_query
+            await query.answer()
+            data = query.data
+
+            if data == "menu_video":
+                context.user_data['mode'] = 'video'
+                await query.edit_message_text("🎬 Video Prompt Mode!\n\nType your video idea!")
+            elif data == "menu_image":
+                context.user_data['mode'] = 'image'
+                await query.edit_message_text("🖼️ Image Prompt Mode!\n\nType your image idea!")
+            elif data == "menu_help":
+                await query.edit_message_text(
+                    "❓ Help\n\n"
+                    "/start - Main menu\n"
+                    "/styles - Choose style\n\n"
+                    "Just type your idea and get a refined prompt!\n\n"
+                    "Africa Creates, AI Generates 🌍"
+                )
+            elif data == "menu_styles":
+                keyboard = [
+                    [InlineKeyboardButton("🎬 Cinematic", callback_data="style_cinematic")],
+                    [InlineKeyboardButton("🎌 Anime", callback_data="style_anime")],
+                    [InlineKeyboardButton("🌍 Realistic", callback_data="style_realistic")],
+                    [InlineKeyboardButton("👑 African", callback_data="style_african")],
+                    [InlineKeyboardButton("📱 Social Media", callback_data="style_social")],
+                ]
+                await query.edit_message_text("Choose style:", reply_markup=InlineKeyboardMarkup(keyboard))
+            elif data.startswith("style_"):
+                style = data.replace("style_", "")
+                context.user_data['style'] = style
+                await query.edit_message_text(f"✅ Style set to: {style.title()}!\n\nNow type your idea!")
+
+        telegram_app = Application.builder().token(TELEGRAM_TOKEN).build()
+        telegram_app.add_handler(CommandHandler("start", start))
+        telegram_app.add_handler(CallbackQueryHandler(handle_callback))
+        telegram_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+
+        await telegram_app.initialize()
+        print("Telegram webhook bot ready!")
     from telegram.ext import CommandHandler, MessageHandler, CallbackQueryHandler, filters
 
     telegram_app = Application.builder().token(TELEGRAM_TOKEN).build()
