@@ -36,23 +36,46 @@ MODELS = {
 
 def generate_with_fal(prompt, style="cinematic", aspect_ratio="16:9", duration="5"):
     os.environ["FAL_KEY"] = os.environ.get("FAL_API_KEY", "")
+
     MODELS = {
-        "cinematic": "fal-ai/kling-video/v2.1/standard/text-to-video",
-        "anime": "fal-ai/animatediff-v2v",
+        "cinematic": "fal-ai/ltx-video-v095/text-to-video",
+        "anime": "fal-ai/fast-animatediff/text-to-video",
         "realistic": "fal-ai/luma-dream-machine",
         "african": "fal-ai/minimax-video",
         "social": "fal-ai/kling-video/v1.6/standard/text-to-video"
     }
+
     model = MODELS.get(style, MODELS["cinematic"])
+
     result = fal_client.subscribe(
         model,
         arguments={
             "prompt": prompt,
-            "duration": duration,
             "aspect_ratio": aspect_ratio
         }
     )
-    return result["video"]["url"]
+
+    print("FAL RESPONSE:", result)
+
+    # Try all possible response structures
+    if isinstance(result, dict):
+
+        if result.get("video"):
+            return result["video"]["url"]
+
+        if result.get("data") and result["data"].get("video"):
+            return result["data"]["video"]["url"]
+
+        if result.get("outputs"):
+            outputs = result["outputs"]
+
+            if isinstance(outputs, list) and len(outputs) > 0:
+                first = outputs[0]
+
+                if isinstance(first, dict):
+                    return first.get("url")
+
+    raise Exception(f"Video URL not found in response: {result}")
 
 
 def generate_with_replicate(prompt):
