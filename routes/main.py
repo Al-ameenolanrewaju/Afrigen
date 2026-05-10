@@ -154,7 +154,6 @@ def refine_prompt_free():
         return jsonify({"error": str(e)}), 500
 
 
-@login_required
 @main.route('/history')
 @login_required
 def history():
@@ -481,7 +480,7 @@ def generate_image():
         return render_template('main/image_result.html',
                                original=prompt,
                                refined=refined,
-                               image_url=image_url)
+                               image_url=image)
 
     except Exception as e:
         flash(f'Error: {e}', 'danger')
