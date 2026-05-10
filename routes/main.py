@@ -41,71 +41,100 @@ def dashboard():
 @main.route('/generate', methods=['POST'])
 @login_required
 def generate():
+
     prompt = request.form.get('prompt')
     style = request.form.get('style', 'cinematic')
     action = request.form.get('action', 'generate')
-    add_voiceover = request.form.get('add_voiceover')  # ← new!
+    add_voiceover = request.form.get('add_voiceover')
     aspect_ratio = request.form.get('aspect_ratio', '16:9')
-    duration = request.form.get('duration', '5')
 
-    print(f"Prompt: {prompt}")  # ← add this
-    print(f"Style: {style}")  # ← add this
-    print(f"Action: {action}")  # ← add this
-    print(f"Voiceover: {add_voiceover}")  # ← add this
+    print(f"Prompt: {prompt}")
+    print(f"Style: {style}")
+    print(f"Action: {action}")
 
     if not prompt:
         flash('Please enter a video idea!', 'danger')
         return redirect(url_for('main.dashboard'))
 
-    # Refine prompt first
     refined = refine_prompt(prompt, style)
 
-    # If refine only
     if action == 'refine_only':
-        return render_template('main/result.html',
-                             original=prompt,
-                             refined=refined,
-                             video_url=None,
-                             audio_filename=None,
-                             style=style)
+        return render_template(
+            'main/result.html',
+            original=prompt,
+            refined=refined,
+            video_url=None,
+            audio_filename=None,
+            style=style
+        )
 
     if current_user.credits <= 0:
         flash('No credits remaining! Upgrade to Pro.', 'danger')
         return redirect(url_for('main.dashboard'))
 
     try:
-        # Generate video
-        video_url = generate_video(refined, style, aspect_ratio, duration)
 
-        # Generate voiceover if requested
+        # Generate actual video
+        result = generate_video(
+            refined,
+            style,
+            aspect_ratio
+        )
+
+        print("VIDEO RESULT:", result)
+
+        if not result["success"]:
+            raise Exception(result["error"])
+
+        video_url = result["video_url"]
+
+        # Voiceover
         audio_filename = None
+
         if add_voiceover and current_user.plan == 'pro':
             script = generate_video_script(prompt, style)
             audio_filename = generate_voiceover(script)
 
-        # Save to database
+        # Save generation
         generation = Generation(
             user_id=current_user.id,
             original_prompt=prompt,
             refined_prompt=refined,
             video_url=video_url,
             audio_url=audio_filename,
-            status="completed" if video_url else "failed"
+            status="completed"
         )
+
         db.session.add(generation)
+
         current_user.credits -= 1
+
         db.session.commit()
 
-        return render_template('main/result.html',
-                             original=prompt,
-                             refined=refined,
-                             video_url=video_url,
-                             audio_filename=audio_filename,
-                             style=style)
+        return render_template(
+            'main/result.html',
+            original=prompt,
+            refined=refined,
+            video_url=video_url,
+            audio_filename=audio_filename,
+            style=style
+        )
 
     except Exception as e:
-        flash(f'Error: {e}', 'danger')
-        return redirect(url_for('main.dashboard'))
+
+        print("VIDEO GENERATION ERROR:", str(e))
+
+        flash(f'Video generation failed: {str(e)}', 'danger')
+
+        return render_template(
+            'main/result.html',
+            original=prompt,
+            refined=refined,
+            video_url=None,
+            audio_filename=None,
+            style=style,
+            error=str(e)
+        )
 
 
 
