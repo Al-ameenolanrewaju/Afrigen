@@ -387,6 +387,7 @@ def refine_image_prompt_free():
 @main.route('/generate-from-image', methods=['POST'])
 @login_required
 def generate_from_image():
+    print("generate_from_image called")
     # Pro only!
     if current_user.plan != 'pro':
         flash('Image to Video is a Pro feature!', 'danger')

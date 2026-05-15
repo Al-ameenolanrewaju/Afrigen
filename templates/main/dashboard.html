@@ -51,190 +51,194 @@
     </div>
 
     <!-- Generate Video Form -->
-<div class="card p-4">
-    <h3 style="color: #F5A623;" class="mb-4">
-        🎬 Generate A Video
-    </h3>
+    <div class="card p-4">
+        <h3 style="color: #F5A623;" class="mb-4">
+            🎬 Generate A Video
+        </h3>
 
-    {% if current_user.credits > 0 %}
+        {% if current_user.credits > 0 %}
 
-    <!-- Type Selector -->
-    <div class="mb-4">
-        <label class="form-label">Generation Type</label>
-        <div class="row">
-            <div class="col-6">
-                <input type="radio" name="genType"
-                       id="gen_text" value="text"
-                       class="btn-check" checked
-                       onchange="toggleGenType()">
-                <label for="gen_text" class="btn w-100"
-                       style="border: 2px solid #30363D; color: #F0F6FC;">
-                    ✍️ Text to Video
-                </label>
-            </div>
-            <div class="col-6">
-                <input type="radio" name="genType"
-                       id="gen_image" value="image"
-                       class="btn-check"
-                       onchange="toggleGenType()"
-                       {% if current_user.plan != 'pro' %}disabled{% endif %}>
-                <label for="gen_image" class="btn w-100"
-                       style="border: 2px solid #30363D; color: #F0F6FC;">
-                    🖼️ Image to Video
-                    {% if current_user.plan != 'pro' %}
-                    <small style="color: #F5A623;">(Pro)</small>
-                    {% endif %}
-                </label>
-            </div>
-        </div>
-    </div>
-
-    <!-- Text to Video Form -->
-    <form id="textForm" method="POST" action="{{ url_for('main.generate') }}">
-        <!-- Style Selector -->
-        <div class="mb-3">
-            <label class="form-label">Video Style</label>
+        <!-- Type Selector -->
+        <div class="mb-4">
+            <label class="form-label">Generation Type</label>
             <div class="row">
-                <div class="col-6 col-md-4 mb-2">
-                    <input type="radio" name="style"
-                           id="cinematic" value="cinematic"
-                           class="btn-check" checked>
-                    <label for="cinematic" class="btn w-100"
+                <div class="col-6">
+                    <input type="radio" name="genType"
+                           id="gen_text" value="text"
+                           class="btn-check" checked
+                           onchange="toggleGenType()">
+                    <label for="gen_text" class="btn w-100"
                            style="border: 2px solid #30363D; color: #F0F6FC;">
-                        🎬 Cinematic
+                        ✍️ Text to Video
                     </label>
                 </div>
-                <div class="col-6 col-md-4 mb-2">
-                    <input type="radio" name="style"
-                           id="anime" value="anime"
-                           class="btn-check">
-                    <label for="anime" class="btn w-100"
+                <div class="col-6">
+                    <input type="radio" name="genType"
+                           id="gen_image" value="image"
+                           class="btn-check"
+                           onchange="toggleGenType()"
+                           {% if current_user.plan != 'pro' %}disabled{% endif %}>
+                    <label for="gen_image" class="btn w-100"
                            style="border: 2px solid #30363D; color: #F0F6FC;">
-                        🎌 Anime
-                    </label>
-                </div>
-                <div class="col-6 col-md-4 mb-2">
-                    <input type="radio" name="style"
-                           id="realistic" value="realistic"
-                           class="btn-check">
-                    <label for="realistic" class="btn w-100"
-                           style="border: 2px solid #30363D; color: #F0F6FC;">
-                        🌍 Realistic
-                    </label>
-                </div>
-                <div class="col-6 col-md-4 mb-2">
-                    <input type="radio" name="style"
-                           id="african" value="african"
-                           class="btn-check">
-                    <label for="african" class="btn w-100"
-                           style="border: 2px solid #30363D; color: #F0F6FC;">
-                        👑 African
-                    </label>
-                </div>
-                <div class="col-6 col-md-4 mb-2">
-                    <input type="radio" name="style"
-                           id="social" value="social"
-                           class="btn-check">
-                    <label for="social" class="btn w-100"
-                           style="border: 2px solid #30363D; color: #F0F6FC;">
-                        📱 Social Media
+                        🖼️ Image to Video
+                        {% if current_user.plan != 'pro' %}
+                        <small style="color: #F5A623;">(Pro)</small>
+                        {% endif %}
                     </label>
                 </div>
             </div>
         </div>
 
-        <!-- Voiceover option - Pro only -->
-        {% if current_user.plan == 'pro' %}
-        <div class="mb-3">
-            <div class="form-check">
-                <input class="form-check-input" type="checkbox"
-                       name="add_voiceover" id="add_voiceover" value="1">
-                <label class="form-check-label" for="add_voiceover"
-                       style="color: #F5A623;">
-                    🎙️ Add AI Voiceover (Pro Feature)
-                </label>
-            </div>
+        <!-- Text to Video Form -->
+        <div id="textForm">
+            <form method="POST" action="{{ url_for('main.generate') }}">
+                <!-- Style Selector -->
+                <div class="mb-3">
+                    <label class="form-label">Video Style</label>
+                    <div class="row">
+                        <div class="col-6 col-md-4 mb-2">
+                            <input type="radio" name="style"
+                                   id="cinematic" value="cinematic"
+                                   class="btn-check" checked>
+                            <label for="cinematic" class="btn w-100"
+                                   style="border: 2px solid #30363D; color: #F0F6FC;">
+                                🎬 Cinematic
+                            </label>
+                        </div>
+                        <div class="col-6 col-md-4 mb-2">
+                            <input type="radio" name="style"
+                                   id="anime" value="anime"
+                                   class="btn-check">
+                            <label for="anime" class="btn w-100"
+                                   style="border: 2px solid #30363D; color: #F0F6FC;">
+                                🎌 Anime
+                            </label>
+                        </div>
+                        <div class="col-6 col-md-4 mb-2">
+                            <input type="radio" name="style"
+                                   id="realistic" value="realistic"
+                                   class="btn-check">
+                            <label for="realistic" class="btn w-100"
+                                   style="border: 2px solid #30363D; color: #F0F6FC;">
+                                🌍 Realistic
+                            </label>
+                        </div>
+                        <div class="col-6 col-md-4 mb-2">
+                            <input type="radio" name="style"
+                                   id="african" value="african"
+                                   class="btn-check">
+                            <label for="african" class="btn w-100"
+                                   style="border: 2px solid #30363D; color: #F0F6FC;">
+                                👑 African
+                            </label>
+                        </div>
+                        <div class="col-6 col-md-4 mb-2">
+                            <input type="radio" name="style"
+                                   id="social" value="social"
+                                   class="btn-check">
+                            <label for="social" class="btn w-100"
+                                   style="border: 2px solid #30363D; color: #F0F6FC;">
+                                📱 Social Media
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Voiceover option - Pro only -->
+                {% if current_user.plan == 'pro' %}
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox"
+                               name="add_voiceover" id="add_voiceover" value="1">
+                        <label class="form-check-label" for="add_voiceover"
+                               style="color: #F5A623;">
+                            🎙️ Add AI Voiceover (Pro Feature)
+                        </label>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Prompt Input -->
+                <div class="mb-3">
+                    <label class="form-label">Your Video Idea</label>
+                    <textarea name="prompt" class="form-control" rows="4"
+                        placeholder="Describe your video idea..."
+                        required></textarea>
+                    <small style="color: #888;">
+                        AI will refine it automatically! 🤖
+                    </small>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" name="action" value="generate"
+                            id="generateBtn" class="btn btn-afrigen px-4">
+                        Generate Video 🚀
+                    </button>
+                    <button type="submit" name="action" value="refine_only"
+                            class="btn btn-outline-warning px-4">
+                        Refine Prompt Only 🤖
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Image to Video Form -->
+        <div id="imageForm" style="display:none;">
+            <form method="POST"
+                  action="{{ url_for('main.generate_from_image') }}"
+                  enctype="multipart/form-data">
+
+                <div class="mb-3">
+                    <label class="form-label">Upload Your Image</label>
+                    <input type="file" name="image" class="form-control"
+                           accept="image/*" required>
+                    <small style="color: #888;">
+                        Upload any image and AI will animate it! 🎬
+                    </small>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">What Should Happen?</label>
+                    <textarea name="prompt" class="form-control" rows="3"
+                        placeholder="e.g. Camera slowly zooms in, golden light fills the scene..."
+                        required></textarea>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Aspect Ratio</label>
+                        <select name="aspect_ratio" class="form-control">
+                            <option value="16:9">16:9 (Landscape/YouTube)</option>
+                            <option value="9:16">9:16 (Portrait/TikTok)</option>
+                            <option value="1:1">1:1 (Square/Instagram)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Duration</label>
+                        <select name="duration" class="form-control">
+                            <option value="5">5 seconds</option>
+                            <option value="10">10 seconds</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button type="submit" id="imageBtn" class="btn btn-afrigen px-4">
+                    Generate from Image 🖼️
+                </button>
+            </form>
+        </div>
+
+        {% else %}
+        <div class="text-center p-4">
+            <h4 style="color: #C9D1D9;">You've used all your free credits! 😔</h4>
+            <p style="color: #888;">Upgrade to Pro for unlimited video generation</p>
+            <a href="{{ url_for('main.upgrade') }}" class="btn btn-afrigen px-5">
+                Upgrade to Pro ⭐
+            </a>
         </div>
         {% endif %}
-
-        <!-- Prompt Input -->
-        <div class="mb-3">
-            <label class="form-label">Your Video Idea</label>
-            <textarea name="prompt" class="form-control" rows="4"
-                placeholder="Describe your video idea..."
-                required></textarea>
-            <small style="color: #888;">
-                AI will refine it automatically! 🤖
-            </small>
-        </div>
-
-        <div class="d-flex gap-2">
-            <button type="submit" name="action" value="generate"
-                    id="generateBtn" class="btn btn-afrigen px-4">
-                Generate Video 🚀
-            </button>
-            <button type="submit" name="action" value="refine_only"
-                    class="btn btn-outline-warning px-4">
-                Refine Prompt Only 🤖
-            </button>
-        </div>
-    </form>
-
-    <!-- Image to Video Form -->
-    <form id="imageForm" method="POST"
-          action="{{ url_for('main.generate_from_image') }}"
-          enctype="multipart/form-data"
-          style="display:none;">
-
-        <div class="mb-3">
-            <label class="form-label">Upload Your Image</label>
-            <input type="file" name="image" class="form-control"
-                   accept="image/*">
-            <small style="color: #888;">
-                Upload any image and AI will animate it! 🎬
-            </small>
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">What Should Happen?</label>
-            <textarea name="prompt" class="form-control" rows="3"
-                placeholder="e.g. Camera slowly zooms in, golden light fills the scene...">
-            </textarea>
-        </div>
-        <!-- Video Settings -->
-        <div class="row mb-3">
-            <div class="col-md-6 mb-3">
-                <label class="form-label">Aspect Ratio</label>
-                <select name="aspect_ratio" class="form-control">
-                    <option value="16:9">16:9 (Landscape/YouTube)</option>
-                    <option value="9:16">9:16 (Portrait/TikTok)</option>
-                    <option value="1:1">1:1 (Square/Instagram)</option>
-                </select>
-            </div>
-            <div class="col-md-6 mb-3">
-                <label class="form-label">Duration</label>
-                <select name="duration" class="form-control">
-                    <option value="5">5 seconds</option>
-                    <option value="10">10 seconds</option>
-                </select>
-            </div>
-        </div>
-
-        <button type="submit" class="btn btn-afrigen px-4"
-                onclick="this.innerHTML='⏳ Generating...'; this.disabled=true;">
-            Generate from Image 🖼️
-        </button>
-    </form>
-
-    {% else %}
-    <div class="text-center p-4">
-        <h4 style="color: #C9D1D9;">You've used all your free credits! 😔</h4>
-        <p style="color: #888;">Upgrade to Pro for unlimited video generation</p>
-        <a href="{{ url_for('main.upgrade') }}" class="btn btn-afrigen px-5">
-            Upgrade to Pro ⭐
-        </a>
     </div>
-    {% endif %}
+
 </div>
 
 <script>
@@ -250,9 +254,16 @@ function toggleGenType() {
     }
 }
 
-document.getElementById('generateBtn').addEventListener('click', function(e) {
+document.getElementById('generateBtn').addEventListener('click', function() {
     setTimeout(() => {
         this.innerHTML = '⏳ Generating... Please wait 60 seconds';
+        this.disabled = true;
+    }, 500);
+});
+
+document.getElementById('imageBtn').addEventListener('click', function() {
+    setTimeout(() => {
+        this.innerHTML = '⏳ Generating...';
         this.disabled = true;
     }, 500);
 });
