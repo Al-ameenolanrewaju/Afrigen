@@ -121,10 +121,11 @@ def generate():
         )
 
     except Exception as e:
-
         print("VIDEO GENERATION ERROR:", str(e))
 
-        flash(f'Video generation failed: {str(e)}', 'danger')
+        flash(
+            'Video generation is temporarily unavailable. Please try again later. If problem persists, contact support.',
+            'warning')
 
         return render_template(
             'main/result.html',
@@ -133,7 +134,7 @@ def generate():
             video_url=None,
             audio_filename=None,
             style=style,
-            error=str(e)
+            error=None  # ← hide real error from user!
         )
 
 
