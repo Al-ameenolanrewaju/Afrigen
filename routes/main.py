@@ -593,3 +593,51 @@ def initialize_payment_annual():
     else:
         flash('Payment initialization failed!', 'danger')
         return redirect(url_for('main.upgrade'))
+
+
+@main.route('/contact', methods=['GET', 'POST'])
+def contact():
+    if request.method == 'POST':
+        name = request.form.get('name')
+        email = request.form.get('email')
+        message = request.form.get('message')
+
+        try:
+            from services.email import send_contact_email
+            send_contact_email(name, email, message)
+            flash('Message sent successfully! We will get back to you soon.', 'success')
+        except Exception as e:
+            print(f"Contact email error: {e}")
+            flash('Message received! We will get back to you soon.', 'success')
+
+        return redirect(url_for('main.contact'))
+
+    return render_template('main/contact.html')
+
+
+@main.route('/feedback', methods=['GET', 'POST'])
+def feedback():
+    if request.method == 'POST':
+        rating = request.form.get('rating')
+        feedback_text = request.form.get('feedback')
+        feature = request.form.get('feature')
+
+        try:
+            from services.email import send_feedback_email
+            send_feedback_email(
+                current_user.email if current_user.is_authenticated else 'Anonymous',
+                rating, feedback_text, feature
+            )
+            flash('Thank you for your feedback! 🙏', 'success')
+        except Exception as e:
+            print(f"Feedback email error: {e}")
+            flash('Thank you for your feedback! 🙏', 'success')
+
+        return redirect(url_for('main.feedback'))
+
+    return render_template('main/feedback.html')
+
+
+@main.route('/docs')
+def docs():
+    return render_template('main/docs.html')

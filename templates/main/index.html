@@ -327,6 +327,113 @@ function copyPrompt() {
     </div>
 </section>
 
+
+<!-- FEATURES -->
+<section style="padding: 80px 0;">
+    <div class="container">
+        <h2 class="text-center mb-5" style="color: #F5A623;">Why Choose Afrigen?</h2>
+        <div class="row">
+            <div class="col-md-4 mb-4">
+                <div class="card p-4">
+                    <h4 style="color: #F5A623;">🌍 Built For Africa</h4>
+                    <p style="color: #C9D1D9;">
+                        Unlike other AI tools, Afrigen understands African culture,
+                        languages and aesthetics. Your content will look authentically African!
+                    </p>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card p-4">
+                    <h4 style="color: #F5A623;">💰 Affordable</h4>
+                    <p style="color: #C9D1D9;">
+                        Professional video ads cost ₦50,000-₦500,000.
+                        With Afrigen, get unlimited videos for just ₦5,000/month!
+                    </p>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card p-4">
+                    <h4 style="color: #F5A623;">⚡ Instant</h4>
+                    <p style="color: #C9D1D9;">
+                        Generate professional videos in seconds, not days.
+                        No cameraman, no studio, no location fees needed!
+                    </p>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card p-4">
+                    <h4 style="color: #F5A623;">🤖 AI-Powered</h4>
+                    <p style="color: #C9D1D9;">
+                        Our AI automatically refines your prompts into
+                        professional cinematic descriptions. No technical skills needed!
+                    </p>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card p-4">
+                    <h4 style="color: #F5A623;">📱 Multi-Platform</h4>
+                    <p style="color: #C9D1D9;">
+                        Generate videos optimized for YouTube, TikTok, Instagram
+                        and Facebook. Multiple aspect ratios supported!
+                    </p>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card p-4">
+                    <h4 style="color: #F5A623;">🔒 Secure</h4>
+                    <p style="color: #C9D1D9;">
+                        Your content is yours. We use Paystack for secure Nigerian
+                        payments and never share your data.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- STATS -->
+<section style="padding: 60px 0; background: #161B22;">
+    <div class="container">
+        <div class="row text-center">
+            <div class="col-md-3 mb-4">
+                <h2 style="color: #F5A623;">5+</h2>
+                <p style="color: #C9D1D9;">Video Styles</p>
+            </div>
+            <div class="col-md-3 mb-4">
+                <h2 style="color: #F5A623;">🇳🇬</h2>
+                <p style="color: #C9D1D9;">Made in Nigeria</p>
+            </div>
+            <div class="col-md-3 mb-4">
+                <h2 style="color: #F5A623;">24/7</h2>
+                <p style="color: #C9D1D9;">Telegram Bot</p>
+            </div>
+            <div class="col-md-3 mb-4">
+                <h2 style="color: #F5A623;">₦0</h2>
+                <p style="color: #C9D1D9;">To Start</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA -->
+<section style="padding: 80px 0; text-align: center;">
+    <div class="container">
+        <h2 style="color: #F5A623;">Ready To Create? 🚀</h2>
+        <p style="color: #C9D1D9; font-size: 18px; margin: 20px 0;">
+            Join African creators already using Afrigen!
+        </p>
+        {% if not current_user.is_authenticated %}
+        <a href="{{ url_for('auth.register') }}" class="btn btn-afrigen btn-lg px-5 me-3">
+            Start Free Today 🌍
+        </a>
+        <a href="https://t.me/AfrigenBot" target="_blank"
+           class="btn btn-outline-warning btn-lg px-5">
+            Try Bot First 📱
+        </a>
+        {% endif %}
+    </div>
+</section>
+
 <!-- PRICING -->
 <section style="padding: 80px 0;">
     <div class="container">
@@ -381,11 +488,5 @@ function copyPrompt() {
 
 {% endblock %}
 {% block footer %}
-<!-- FOOTER -->
-<footer style="background: #161B22; padding: 40px 0; text-align: center; border-top: 1px solid #F5A623;">
-    <p style="color: #C9D1D9;">
-        🎬 Afrigen — Africa Creates, AI Generates 🌍
-    </p>
 
-</footer>
 {% endblock %}

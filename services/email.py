@@ -228,3 +228,57 @@ def send_reset_password_email(user_email, username, reset_url):
         print("Reset email sent!")
     except Exception as e:
         print(f"Email error: {e}")
+
+
+
+def send_contact_email(name, email, message):
+    try:
+        from app import mail
+        msg = Message(
+            subject=f"New Contact from {name} - Afrigen",
+            recipients=["afrigenng@gmail.com"],
+            html=f"""
+            <div style="font-family: Arial; background: #0D1117; 
+                        color: #F0F6FC; padding: 40px; max-width: 600px;">
+                <h1 style="color: #F5A623;">📬 New Contact Message</h1>
+                <p><strong>Name:</strong> {name}</p>
+                <p><strong>Email:</strong> {email}</p>
+                <p><strong>Message:</strong></p>
+                <p style="background: #161B22; padding: 15px; border-radius: 8px;">
+                    {message}
+                </p>
+                <hr style="border-color: #21262D;">
+                <p style="color: #888;">Africa Creates, AI Generates 🌍</p>
+            </div>
+            """
+        )
+        mail.send(msg)
+    except Exception as e:
+        print(f"Contact email error: {e}")
+
+
+def send_feedback_email(user_email, rating, feedback_text, feature):
+    try:
+        from app import mail
+        msg = Message(
+            subject=f"New Feedback - {rating}/5 Stars - Afrigen",
+            recipients=["afrigenng@gmail.com"],
+            html=f"""
+            <div style="font-family: Arial; background: #0D1117; 
+                        color: #F0F6FC; padding: 40px; max-width: 600px;">
+                <h1 style="color: #F5A623;">⭐ New Feedback</h1>
+                <p><strong>From:</strong> {user_email}</p>
+                <p><strong>Rating:</strong> {'⭐' * int(rating)}</p>
+                <p><strong>Feature:</strong> {feature}</p>
+                <p><strong>Feedback:</strong></p>
+                <p style="background: #161B22; padding: 15px; border-radius: 8px;">
+                    {feedback_text}
+                </p>
+                <hr style="border-color: #21262D;">
+                <p style="color: #888;">Africa Creates, AI Generates 🌍</p>
+            </div>
+            """
+        )
+        mail.send(msg)
+    except Exception as e:
+        print(f"Feedback email error: {e}")

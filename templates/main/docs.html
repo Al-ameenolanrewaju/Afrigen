@@ -1,0 +1,293 @@
+{% extends "base.html" %}
+{% block title %}Documentation{% endblock %}
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+
+        <!-- Sidebar -->
+        <div class="col-md-3 mb-4">
+            <div class="card p-3" style="position: sticky; top: 20px;">
+                <h6 style="color: #F5A623;">📖 Documentation</h6>
+                <ul style="list-style: none; padding: 0;">
+                    <li class="mb-2">
+                        <a href="#getting-started" style="color: #C9D1D9; text-decoration: none;">
+                            🚀 Getting Started
+                        </a>
+                    </li>
+                    <li class="mb-2">
+                        <a href="#video-generation" style="color: #C9D1D9; text-decoration: none;">
+                            🎬 Video Generation
+                        </a>
+                    </li>
+                    <li class="mb-2">
+                        <a href="#image-generation" style="color: #C9D1D9; text-decoration: none;">
+                            🖼️ Image Generation
+                        </a>
+                    </li>
+                    <li class="mb-2">
+                        <a href="#prompt-refiner" style="color: #C9D1D9; text-decoration: none;">
+                            🤖 Prompt Refiner
+                        </a>
+                    </li>
+                    <li class="mb-2">
+                        <a href="#telegram-bot" style="color: #C9D1D9; text-decoration: none;">
+                            📱 Telegram Bot
+                        </a>
+                    </li>
+                    <li class="mb-2">
+                        <a href="#credits" style="color: #C9D1D9; text-decoration: none;">
+                            💳 Credits & Plans
+                        </a>
+                    </li>
+                    <li class="mb-2">
+                        <a href="#faq" style="color: #C9D1D9; text-decoration: none;">
+                            ❓ FAQ
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-md-9">
+
+            <!-- Getting Started -->
+            <div id="getting-started" class="card p-4 mb-4">
+                <h3 style="color: #F5A623;">🚀 Getting Started</h3>
+                <hr style="border-color: #30363D;">
+                <p style="color: #C9D1D9;">
+                    Welcome to Afrigen — the AI video generation platform built for African creators!
+                </p>
+                <h6 style="color: #F5A623;">Step 1 — Create Your Account</h6>
+                <p style="color: #C9D1D9;">
+                    Click <strong>Sign Up</strong> and create a free account.
+                    You get <strong style="color: #F5A623;">5 free credits</strong> immediately!
+                </p>
+                <h6 style="color: #F5A623;">Step 2 — Go to Dashboard</h6>
+                <p style="color: #C9D1D9;">
+                    After logging in, visit your dashboard to start generating content.
+                </p>
+                <h6 style="color: #F5A623;">Step 3 — Generate Your First Video</h6>
+                <p style="color: #C9D1D9;">
+                    Type a simple idea like "A Nigerian businessman in Lagos" and click Generate!
+                    Our AI will refine your prompt and generate a stunning video.
+                </p>
+            </div>
+
+            <!-- Video Generation -->
+            <div id="video-generation" class="card p-4 mb-4">
+                <h3 style="color: #F5A623;">🎬 Video Generation</h3>
+                <hr style="border-color: #30363D;">
+                <p style="color: #C9D1D9;">
+                    Afrigen uses multiple AI models to generate videos from your ideas.
+                </p>
+
+                <h6 style="color: #F5A623;">Available Video Styles</h6>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <ul style="color: #C9D1D9;">
+                            <li>🎬 <strong>Cinematic</strong> — Hollywood quality</li>
+                            <li>🎌 <strong>Anime</strong> — Japanese animation style</li>
+                            <li>🌍 <strong>Realistic</strong> — Hyper-realistic</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <ul style="color: #C9D1D9;">
+                            <li>👑 <strong>African</strong> — Rich cultural aesthetic</li>
+                            <li>📱 <strong>Social Media</strong> — TikTok/Instagram ready</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h6 style="color: #F5A623;">Aspect Ratios</h6>
+                <ul style="color: #C9D1D9;">
+                    <li><strong>16:9</strong> — Landscape (YouTube, Facebook)</li>
+                    <li><strong>9:16</strong> — Portrait (TikTok, Instagram Stories)</li>
+                    <li><strong>1:1</strong> — Square (Instagram Posts)</li>
+                </ul>
+
+                <h6 style="color: #F5A623;">Tips for Better Videos</h6>
+                <ul style="color: #C9D1D9;">
+                    <li>Be specific about location (Lagos, Abuja, etc.)</li>
+                    <li>Mention time of day (golden hour, sunset, etc.)</li>
+                    <li>Include cultural elements (Yoruba, Igbo, Hausa, etc.)</li>
+                    <li>Use the AI Prompt Refiner for best results!</li>
+                </ul>
+            </div>
+
+            <!-- Image Generation -->
+            <div id="image-generation" class="card p-4 mb-4">
+                <h3 style="color: #F5A623;">🖼️ Image Generation</h3>
+                <hr style="border-color: #30363D;">
+                <p style="color: #C9D1D9;">
+                    Generate stunning AI images from your ideas using our free image generator.
+                </p>
+                <h6 style="color: #F5A623;">Image Styles</h6>
+                <ul style="color: #C9D1D9;">
+                    <li>📷 <strong>Realistic</strong> — Photorealistic images</li>
+                    <li>🎨 <strong>Artistic</strong> — Painting/art style</li>
+                    <li>🎬 <strong>Cinematic</strong> — Movie still quality</li>
+                    <li>👑 <strong>African</strong> — African cultural aesthetic</li>
+                    <li>🎌 <strong>Anime</strong> — Japanese anime style</li>
+                </ul>
+                <div class="p-3" style="background: #21262D; border-radius: 8px; border-left: 3px solid #F5A623;">
+                    <p style="color: #C9D1D9; margin: 0;">
+                        💡 <strong style="color: #F5A623;">Pro Tip:</strong>
+                        Use the free AI Prompt Refiner first to get the best image prompts!
+                    </p>
+                </div>
+            </div>
+
+            <!-- Prompt Refiner -->
+            <div id="prompt-refiner" class="card p-4 mb-4">
+                <h3 style="color: #F5A623;">🤖 AI Prompt Refiner</h3>
+                <hr style="border-color: #30363D;">
+                <p style="color: #C9D1D9;">
+                    The FREE Prompt Refiner transforms your simple ideas into professional prompts!
+                </p>
+                <h6 style="color: #F5A623;">How It Works</h6>
+                <div class="p-3 mb-3" style="background: #21262D; border-radius: 8px;">
+                    <p style="color: #888; margin: 0;">You type:</p>
+                    <p style="color: #C9D1D9; margin: 0;">"A Nigerian man in Lagos"</p>
+                </div>
+                <div class="text-center mb-3">
+                    <span style="color: #F5A623; font-size: 24px;">↓ AI Magic ↓</span>
+                </div>
+                <div class="p-3" style="background: #21262D; border-radius: 8px; border-left: 3px solid #F5A623;">
+                    <p style="color: #888; margin: 0;">AI returns:</p>
+                    <p style="color: #C9D1D9; margin: 0; font-size: 14px;">
+                        "In 4K cinematic quality, capture a Nigerian man walking
+                        confidently through Lagos Island at golden hour, wearing
+                        traditional agbada, Afrobeats playing in the background..."
+                    </p>
+                </div>
+                <p style="color: #C9D1D9; margin-top: 15px;">
+                    ✅ No account needed! Available to everyone for FREE!
+                </p>
+            </div>
+
+            <!-- Telegram Bot -->
+            <div id="telegram-bot" class="card p-4 mb-4">
+                <h3 style="color: #F5A623;">📱 Telegram Bot</h3>
+                <hr style="border-color: #30363D;">
+                <p style="color: #C9D1D9;">
+                    Access Afrigen's AI directly from Telegram — completely FREE!
+                </p>
+                <h6 style="color: #F5A623;">How to Use</h6>
+                <ol style="color: #C9D1D9;">
+                    <li>Open Telegram and search <strong>@AfrigenBot</strong></li>
+                    <li>Send <code style="background: #21262D; padding: 2px 6px; border-radius: 4px;">/start</code></li>
+                    <li>Choose Video or Image mode</li>
+                    <li>Select your style</li>
+                    <li>Type your idea and get refined prompt!</li>
+                </ol>
+                <h6 style="color: #F5A623;">Bot Commands</h6>
+                <ul style="color: #C9D1D9;">
+                    <li><code style="background: #21262D; padding: 2px 6px; border-radius: 4px;">/start</code> — Main menu</li>
+                    <li><code style="background: #21262D; padding: 2px 6px; border-radius: 4px;">/styles</code> — Choose video style</li>
+                    <li><code style="background: #21262D; padding: 2px 6px; border-radius: 4px;">/credits</code> — Check your stats</li>
+                    <li><code style="background: #21262D; padding: 2px 6px; border-radius: 4px;">/help</code> — Get help</li>
+                </ul>
+                <a href="https://t.me/AfrigenBot" target="_blank" class="btn btn-afrigen">
+                    Open @AfrigenBot 📱
+                </a>
+            </div>
+
+            <!-- Credits & Plans -->
+            <div id="credits" class="card p-4 mb-4">
+                <h3 style="color: #F5A623;">💳 Credits & Plans</h3>
+                <hr style="border-color: #30363D;">
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="card p-3" style="border-color: #30363D;">
+                            <h5 style="color: #F0F6FC;">Free Plan</h5>
+                            <h3 style="color: #F5A623;">₦0/month</h3>
+                            <ul style="color: #C9D1D9; font-size: 14px;">
+                                <li>5 credits per month</li>
+                                <li>1 credit = 1 video generation</li>
+                                <li>Credits reset monthly</li>
+                                <li>Standard quality</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="card p-3" style="border-color: #F5A623;">
+                            <h5 style="color: #F5A623;">Pro Plan ⭐</h5>
+                            <h3 style="color: #F5A623;">₦5,000/month</h3>
+                            <ul style="color: #C9D1D9; font-size: 14px;">
+                                <li>Unlimited credits</li>
+                                <li>HD quality videos</li>
+                                <li>AI voiceover</li>
+                                <li>No watermark</li>
+                                <li>Image to Video</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <h6 style="color: #F5A623;">Referral Program</h6>
+                <p style="color: #C9D1D9;">
+                    Invite friends and earn free credits!
+                    Each successful referral gives you <strong style="color: #F5A623;">2 bonus credits</strong>!
+                </p>
+            </div>
+
+            <!-- FAQ -->
+            <div id="faq" class="card p-4 mb-4">
+                <h3 style="color: #F5A623;">❓ FAQ</h3>
+                <hr style="border-color: #30363D;">
+
+                <div class="mb-4">
+                    <h6 style="color: #F5A623;">How long does video generation take?</h6>
+                    <p style="color: #C9D1D9;">
+                        Video generation typically takes 30-90 seconds depending on the API used.
+                    </p>
+                </div>
+
+                <div class="mb-4">
+                    <h6 style="color: #F5A623;">Why did my video generation fail?</h6>
+                    <p style="color: #C9D1D9;">
+                        Video APIs occasionally fail due to high demand. Simply try again
+                        and our fallback system will use a different API automatically.
+                    </p>
+                </div>
+
+                <div class="mb-4">
+                    <h6 style="color: #F5A623;">Can I use generated videos commercially?</h6>
+                    <p style="color: #C9D1D9;">
+                        Pro plan users can use videos for commercial purposes.
+                        Free plan videos are for personal use only.
+                    </p>
+                </div>
+
+                <div class="mb-4">
+                    <h6 style="color: #F5A623;">How do I upgrade to Pro?</h6>
+                    <p style="color: #C9D1D9;">
+                        Click the "Go Pro" button in your dashboard or navbar.
+                        We accept payments via Paystack (cards, bank transfer, USSD).
+                    </p>
+                </div>
+
+                <div class="mb-4">
+                    <h6 style="color: #F5A623;">Do credits roll over?</h6>
+                    <p style="color: #C9D1D9;">
+                        Free plan credits reset on the 1st of every month and do not roll over.
+                        Pro plan users have unlimited credits so rollover doesn't apply.
+                    </p>
+                </div>
+
+                <div class="mb-4">
+                    <h6 style="color: #F5A623;">How do I contact support?</h6>
+                    <p style="color: #C9D1D9;">
+                        Email us at <a href="mailto:afrigenng@gmail.com" style="color: #F5A623;">afrigenng@gmail.com</a>
+                        or use our <a href="{{ url_for('main.contact') }}" style="color: #F5A623;">Contact Page</a>.
+                        We respond within 24 hours!
+                    </p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
