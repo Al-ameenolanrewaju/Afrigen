@@ -87,6 +87,10 @@ def generate():
             raise Exception(result["error"])
 
         video_url = result["video_url"]
+        video_url = result["video_url"]
+
+        if not video_url:
+            raise Exception("No video URL returned")
 
         # Voiceover
         audio_filename = None
@@ -107,7 +111,7 @@ def generate():
 
         db.session.add(generation)
 
-        current_user.credits -= 1
+        current_user.credits -= 5
 
         db.session.commit()
 
@@ -123,9 +127,23 @@ def generate():
     except Exception as e:
         print("VIDEO GENERATION ERROR:", str(e))
 
+        # Save failed generation
+        generation = Generation(
+            user_id=current_user.id,
+            original_prompt=prompt,
+            refined_prompt=refined,
+            video_url=None,
+            audio_url=None,
+            status="failed"
+        )
+
+        db.session.add(generation)
+        db.session.commit()
+
         flash(
-            'Video generation is temporarily unavailable. Please try again later. If problem persists, contact support.',
-            'warning')
+            'Video generation is temporarily unavailable. Please try again later.',
+            'warning'
+        )
 
         return render_template(
             'main/result.html',
@@ -134,7 +152,7 @@ def generate():
             video_url=None,
             audio_filename=None,
             style=style,
-            error=None  # ← hide real error from user!
+            error=None
         )
 
 
@@ -211,7 +229,7 @@ def upgrade_user(user_id):
     user = User.query.get(user_id)
     if user:
         user.plan = 'pro'
-        user.credits = 999999  # Unlimited
+        user.credits = 50  # Unlimited
         db.session.commit()
 
         # Send upgrade email
@@ -350,7 +368,7 @@ def payment_callback():
     if result['status'] and result['data']['status'] == 'success':
         # Upgrade user to Pro!
         current_user.plan = 'pro'
-        current_user.credits = 999999
+        current_user.credits = 50
         db.session.commit()
 
         # Send upgrade email
@@ -435,7 +453,7 @@ def generate_from_image():
 
         )
         db.session.add(generation)
-        current_user.credits -= 1
+        current_user.credits -= 10
         db.session.commit()
 
         return render_template('main/result.html',

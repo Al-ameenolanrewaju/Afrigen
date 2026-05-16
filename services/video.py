@@ -51,54 +51,56 @@ def generate_video(
         }
 
 
-def generate_video_from_image(
-    image_url,
-    prompt,
-    style="cinematic",
-    aspect_ratio="16:9"
-):
+def generate_video_from_image(image_url, prompt):
+    import os
+    import fal_client
 
-    MODELS = {
-        "cinematic": "fal-ai/ltx-video-v095/image-to-video",
-        "realistic": "fal-ai/kling-video/v2.1/image-to-video",
-        "social": "fal-ai/kling-video/v1.6/image-to-video"
-    }
+    os.environ["FAL_KEY"] = os.environ.get("FAL_API_KEY", "")
 
-    model = MODELS.get(style, MODELS["cinematic"])
+    models = [
+        "fal-ai/kling-video/v1.6/pro/image-to-video",
+        "fal-ai/ltx-video-v095/image-to-video",
+    ]
 
-    try:
+    for model in models:
+        try:
+            print(f"Trying image-to-video: {model}")
 
-        result = fal_client.subscribe(
-            model,
-            arguments={
-                "prompt": prompt,
-                "image_url": image_url,
-                "aspect_ratio": aspect_ratio
-            }
-        )
+            result = fal_client.subscribe(
+                model,
+                arguments={
+                    "prompt": str(prompt),
+                    "image_url": str(image_url),
+                    "duration": 5,
+                    "aspect_ratio": "16:9"
+                }
+            )
 
-        video_url = None
+            print("SUCCESS:", result)
 
-        if isinstance(result, dict):
+            if result and "video" in result:
+                return result["video"]["url"]
 
-            if result.get("video"):
+        except Exception as e:
+            print(f"{model} failed: {e}")
 
-                video = result.get("video")
+            # Better user-friendly errors
+            if "Exhausted balance" in str(e):
+                raise Exception(
+                    "Video generation service balance exhausted."
+                )
 
-                if isinstance(video, dict):
-                    video_url = video.get("url")
+            elif "403" in str(e):
+                raise Exception(
+                    "Access denied by video provider."
+                )
 
-        return {
-            "success": True,
-            "video_url": video_url
-        }
+            elif "404" in str(e):
+                print(f"Skipping invalid model: {model}")
 
-    except Exception as e:
+            continue
 
-        return {
-            "success": False,
-            "error": str(e)
-        }
+    return None
 
 
 def generate_image(
