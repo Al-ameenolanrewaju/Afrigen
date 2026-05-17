@@ -1,7 +1,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
-from datetime import datetime
 import secrets
+from datetime import datetime, date
 
 def generate_referral_code():
     return secrets.token_urlsafe(16)
@@ -10,15 +10,17 @@ db = SQLAlchemy()
 
 class User(UserMixin, db.Model):
     __tablename__ = "users"
-
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
-    plan =db.Column(db.String(20), default="free")
-    credits =db.Column(db.Integer, default=5)
+    plan = db.Column(db.String(20), default="free")
+    credits = db.Column(db.Integer, default=2)
+    daily_credits_used = db.Column(db.Integer, default=0)
+    last_credit_reset = db.Column(db.Date, default=date.today)
     is_banned = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    user = db.relationship("Generation", backref="user")
 
     def __repr__(self):
         return f"<User {self.username}>"

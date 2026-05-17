@@ -68,8 +68,21 @@ def generate():
             style=style
         )
 
-    if current_user.credits <= 0:
-        flash('No credits remaining! Upgrade to Pro.', 'danger')
+    # Check credits
+    if current_user.plan == 'free':
+
+        if current_user.credits < 5:
+            flash(
+                'Not enough credits! Free users get 2 videos daily.',
+                'warning'
+            )
+            return redirect(url_for('main.dashboard'))
+
+    elif current_user.plan == 'pro':
+        pass  # Unlimited for pro users
+
+    else:
+        flash('Your account is restricted.', 'danger')
         return redirect(url_for('main.dashboard'))
 
     try:
@@ -86,7 +99,6 @@ def generate():
         if not result["success"]:
             raise Exception(result["error"])
 
-        video_url = result["video_url"]
         video_url = result["video_url"]
 
         if not video_url:
@@ -111,7 +123,9 @@ def generate():
 
         db.session.add(generation)
 
-        current_user.credits -= 5
+        # Deduct credits only for free users
+        if current_user.plan == 'free':
+            current_user.credits -= 5
 
         db.session.commit()
 
