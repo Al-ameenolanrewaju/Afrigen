@@ -17,7 +17,7 @@ def send_welcome_email(user_email, username):
                 <p>Hi {username}! 👋</p>
                 <p>You're now part of the African AI revolution!</p>
                 <p style="color: #C9D1D9;">
-                    You have <strong style="color: #F5A623;">5 free credits</strong> 
+                    You have <strong style="color: #F5A623;">10 free credits</strong> 
                     to generate AI videos!
                 </p>
                 <a href="http://127.0.0.1:5000/dashboard" 

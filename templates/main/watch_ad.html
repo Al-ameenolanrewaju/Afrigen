@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Watch Ad to Download</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #0f172a;
+            color: white;
+            text-align: center;
+            padding: 60px;
+        }
+
+        .box {
+            max-width: 500px;
+            margin: auto;
+            background: #1e293b;
+            padding: 40px;
+            border-radius: 12px;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+        }
+
+        p {
+            color: #cbd5e1;
+        }
+
+        .btn {
+            display: inline-block;
+            margin-top: 20px;
+            background: #10b981;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h1>Unlock Your Download</h1>
+        <p>Watch a short ad to download your generated video.</p>
+
+        <!-- Placeholder Ad -->
+        <div style="margin: 25px 0; padding: 30px; background: #334155; border-radius: 10px;">
+            Ad will appear here
+        </div>
+
+        <form method="POST" action="{{ url_for('main.unlock_download', generation_id=generation.id) }}">
+            <button type="submit" class="btn">
+                I Watched the Ad → Download Video
+            </button>
+        </form>
+    </div>
+</body>
+</html>

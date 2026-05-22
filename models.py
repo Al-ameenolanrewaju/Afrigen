@@ -52,6 +52,9 @@ class Generation(db.Model):
     generation_type = db.Column(db.String(20), default="text")
     status = db.Column(db.String(20), default="pending")
 
+
+    ad_watched = db.Column(db.Boolean, default=False)
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # ONLY relationship definition
