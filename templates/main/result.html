@@ -18,7 +18,7 @@
             <!-- Original Prompt -->
             <div class="card p-4 mb-4">
                 <h5 style="color: #888;">Your Original Idea:</h5>
-                <p style="color: #C9D1D9; font-style: italic;">
+                <p id="original" style="color: #C9D1D9; font-style: italic;">
                     "{{ original }}"
                 </p>
             </div>
@@ -27,7 +27,7 @@
             <div class="card p-3 mb-4 text-center">
                 <p style="color: #888; margin: 0;">
                     Video Style:
-                    <strong style="color: #F5A623;">
+                    <strong id="styleLabel" style="color: #F5A623;">
                         {% if style == 'cinematic' %}🎬 Cinematic
                         {% elif style == 'anime' %}🎌 Anime
                         {% elif style == 'realistic' %}🌍 Realistic
@@ -41,107 +41,112 @@
             <!-- Refined Prompt -->
             <div class="card p-4 mb-4" style="border-color: #F5A623;">
                 <h5 style="color: #F5A623;">✨ AI Refined Prompt:</h5>
-                <p style="color: #F0F6FC;">{{ refined }}</p>
+                <p id="refined" style="color: #F0F6FC;">{{ refined }}</p>
             </div>
 
             <!-- Video Result -->
-            {% if video_url %}
-            <div class="card p-4 mb-4 text-center" style="border-color: #27AE60;">
-                <h5 style="color: #27AE60;">🎬 Your Video Is Ready!</h5>
-                <video width="100%" controls autoplay style="border-radius: 8px; margin-top: 15px;">
-                    <source src="{{ video_url }}" type="video/mp4">
-                    <source src="{{ video_url }}" type="video/webm">
-                    Your browser does not support video.
-                </video>
-                <br><br>
-                <a href="{{ video_url }}"
-                   class="btn btn-afrigen mt-3 px-4 me-3"
-                   target="_blank">
-                    🎬 Open Video
-                </a>
-                <a href="{{ video_url }}"
-                   class="btn btn-outline-warning mt-3 px-4"
-                   download>
-                    ⬇️ Download Video
-                </a>
-            </div>
-            <!-- Share Buttons -->
+            <div id="videoSection" style="display:none;">
+                <div class="card p-4 mb-4 text-center" style="border-color: #27AE60;">
+                    <h5 style="color: #27AE60;">🎬 Your Video Is Ready!</h5>
+                    <video id="videoPlayer" width="100%" controls autoplay style="border-radius: 8px; margin-top: 15px;">
+                        <source id="videoSrcMp4" src="" type="video/mp4">
+                        <source id="videoSrcWebm" src="" type="video/webm">
+                        Your browser does not support video.
+                    </video>
+                    <br><br>
+                    <a id="videoOpenBtn" href="#" class="btn btn-afrigen mt-3 px-4 me-3" target="_blank">
+                        🎬 Open Video
+                    </a>
+                    <a id="videoDownloadBtn" href="#" class="btn btn-outline-warning mt-3 px-4" download>
+                        ⬇️ Download Video
+                    </a>
+                </div>
 
-            <div class="card p-4 mb-4 text-center">
-                <h5 style="color: #F5A623;">📤 Share Your Video!</h5>
-                <div class="d-flex justify-content-center gap-2 mt-3 flex-wrap">
-                    <a href="https://wa.me/?text=Check out this AI video I generated with Afrigen! {{ video_url }}"
-                       target="_blank"
-                       class="btn btn-success px-3">
-                        📱 WhatsApp
-                    </a>
-                    <a href="https://twitter.com/intent/tweet?text=Just generated this amazing AI video with @AfrigenAI! 🎬🌍&url={{ video_url }}"
-                       target="_blank"
-                       class="btn btn-info px-3" style="color: white;">
-                        🐦 Twitter
-                    </a>
-                    <a href="https://www.facebook.com/sharer/sharer.php?u={{ video_url }}"
-                       target="_blank"
-                       class="btn btn-primary px-3">
-                        📘 Facebook
-                    </a>
-                    <button onclick="copyLink('{{ video_url }}')"
-                            class="btn btn-outline-warning px-3">
-                        🔗 Copy Link
-                    </button>
+                <!-- Share Buttons -->
+                <div class="card p-4 mb-4 text-center">
+                    <h5 style="color: #F5A623;">📤 Share Your Video!</h5>
+                    <div class="d-flex justify-content-center gap-2 mt-3 flex-wrap">
+                        <a id="shareWhatsapp" href="#" target="_blank" class="btn btn-success px-3">📱 WhatsApp</a>
+                        <a id="shareTwitter" href="#" target="_blank" class="btn btn-info px-3" style="color:white;">🐦 Twitter</a>
+                        <a id="shareFacebook" href="#" target="_blank" class="btn btn-primary px-3">📘 Facebook</a>
+                        <button onclick="copyLink()" class="btn btn-outline-warning px-3">🔗 Copy Link</button>
+                    </div>
                 </div>
             </div>
 
-            <script>
-            function copyLink(url) {
-                navigator.clipboard.writeText(url);
-                alert('Video link copied! 📋');
-            }
-            </script>
-            {% endif %}
-
-            <!-- Audio Voiceover -->
             {% if audio_filename %}
             <div class="card p-4 mb-4" style="border-color: #27AE60;">
                 <h5 style="color: #27AE60;">🎙️ AI Voiceover Ready!</h5>
                 <audio controls class="w-100 mt-2">
-                    <source src="{{ url_for('static', filename='audio/' ~ audio_filename) }}"
-                            type="audio/flac">
-                    <source src="{{ url_for('static', filename='audio/' ~ audio_filename) }}"
-                            type="audio/mpeg">
+                    <source src="{{ url_for('static', filename='audio/' ~ audio_filename) }}" type="audio/flac">
+                    <source src="{{ url_for('static', filename='audio/' ~ audio_filename) }}" type="audio/mpeg">
                     Your browser does not support audio.
                 </audio>
                 <a href="{{ url_for('static', filename='audio/' ~ audio_filename) }}"
-                   class="btn btn-outline-success mt-2 btn-sm"
-                   download>
+                   class="btn btn-outline-success mt-2 btn-sm" download>
                     ⬇️ Download Audio
                 </a>
             </div>
             {% endif %}
 
             <!-- Action Buttons -->
-<div class="text-center mt-3">
-    <button onclick="copyPrompt()"
-            class="btn btn-outline-warning px-4 me-2">
-        📋 Copy Prompt
-    </button>
-    <button onclick="savePrompt()"
-            class="btn btn-outline-warning px-4 me-2">
-        💾 Save Prompt
-    </button>
-    <a href="{{ url_for('main.dashboard') }}"
-       class="btn btn-afrigen px-4 me-2">
-        🔄 Generate Another
-    </a>
-    <a href="{{ url_for('main.history') }}"
-       class="btn btn-outline-warning px-4">
-        📜 View History
-    </a>
+            <div class="text-center mt-3">
+                <button onclick="copyPrompt()" class="btn btn-outline-warning px-4 me-2">📋 Copy Prompt</button>
+                <button onclick="savePrompt()" class="btn btn-outline-warning px-4 me-2">💾 Save Prompt</button>
+                <a href="{{ url_for('main.dashboard') }}" class="btn btn-afrigen px-4 me-2">🔄 Generate Another</a>
+                <a href="{{ url_for('main.history') }}" class="btn btn-outline-warning px-4">📜 View History</a>
+            </div>
+
+        </div>
+    </div>
 </div>
 
 <script>
+// Load data from sessionStorage
+const resultData = JSON.parse(sessionStorage.getItem('resultData') || '{}');
+sessionStorage.removeItem('resultData');
+
+console.log('Raw sessionStorage:', sessionStorage.getItem('resultData'));
+
+document.addEventListener('DOMContentLoaded', function() {
+    if (resultData.original) {
+        document.getElementById('original').textContent = '"' + resultData.original + '"';
+    }
+    if (resultData.refined) {
+        document.getElementById('refined').textContent = resultData.refined;
+    }
+    if (resultData.style) {
+        const styleMap = {
+            'cinematic': '🎬 Cinematic',
+            'anime': '🎌 Anime',
+            'realistic': '🌍 Realistic',
+            'african': '👑 African',
+            'social': '📱 Social Media'
+        };
+        document.getElementById('styleLabel').textContent = styleMap[resultData.style] || resultData.style;
+    }
+    if (resultData.video_url) {
+        const url = resultData.video_url;
+        document.getElementById('videoSection').style.display = 'block';
+        document.getElementById('videoSrcMp4').src = url;
+        document.getElementById('videoSrcWebm').src = url;
+        document.getElementById('videoPlayer').load();
+        document.getElementById('videoOpenBtn').href = url;
+        document.getElementById('videoDownloadBtn').href = url;
+        document.getElementById('shareWhatsapp').href = `https://wa.me/?text=Check out this AI video I generated with Afrigen! ${url}`;
+        document.getElementById('shareTwitter').href = `https://twitter.com/intent/tweet?text=Just generated this amazing AI video with @AfrigenAI! 🎬🌍&url=${url}`;
+        document.getElementById('shareFacebook').href = `https://www.facebook.com/sharer/sharer.php?u=${url}`;
+    }
+});
+
+function copyLink() {
+    const url = resultData.video_url || '';
+    navigator.clipboard.writeText(url);
+    alert('Video link copied! 📋');
+}
+
 function copyPrompt() {
-    const prompt = `{{ refined }}`;
+    const prompt = resultData.refined || document.getElementById('refined').textContent;
     navigator.clipboard.writeText(prompt);
     alert('Prompt copied! 📋');
 }
@@ -152,16 +157,14 @@ async function savePrompt() {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
-                original: "{{ original }}",
-                refined: "{{ refined }}",
-                type: "video",
-                style: "{{ style }}"
+                original: resultData.original || '',
+                refined: resultData.refined || '',
+                type: 'video',
+                style: resultData.style || ''
             })
         });
         const data = await response.json();
-        if (data.success) {
-            alert('Prompt saved! 💾');
-        }
+        if (data.success) alert('Prompt saved! 💾');
     } catch(e) {
         alert('Error saving prompt!');
     }

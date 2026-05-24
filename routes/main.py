@@ -52,8 +52,15 @@ def allowed_file(filename):
 
 # ---------- Routes ----------
 @main.route("/")
+@main.route("/")
 def index():
-    return render_template("main/index.html")
+    from models import Generation, User
+    total_users = User.query.count()
+    total_generations = Generation.query.filter_by(status='completed').count()
+    return render_template("main/index.html",
+        total_users=total_users,
+        total_generations=total_generations
+    )
 
 
 @main.route("/dashboard")
@@ -76,6 +83,7 @@ def generate():
     prompt = request.form.get('prompt')
     style = request.form.get('style', 'cinematic')
     action = request.form.get('action', 'generate')
+    print("ACTION RECEIVED:", action)
     add_voiceover = request.form.get('add_voiceover')
     aspect_ratio = request.form.get('aspect_ratio', '16:9')
 
@@ -86,14 +94,7 @@ def generate():
     refined = refine_prompt(prompt, style)
 
     if action == 'refine_only':
-        return render_template(
-            'main/result.html',
-            original=prompt,
-            refined=refined,
-            video_url=None,
-            audio_filename=None,
-            style=style
-        )
+        return jsonify({"success": True, "type": "refine_only", "refined": refined, "original": prompt})
 
     # Daily limit for free users
     if current_user.plan == 'free':
@@ -139,14 +140,7 @@ def generate():
 
         db.session.commit()
 
-        return render_template(
-            'main/result.html',
-            original=prompt,
-            refined=refined,
-            video_url=video_url,
-            audio_filename=audio_filename,
-            style=style
-        )
+        return jsonify({"success": True, "type": "video", "video_url": video_url, "refined": refined, "original": prompt, "style": style})
 
     except Exception as e:
         db.session.rollback()
@@ -163,15 +157,7 @@ def generate():
         db.session.commit()
 
         flash('Video generation is temporarily unavailable. Please try again later.', 'warning')
-        return render_template(
-            'main/result.html',
-            original=prompt,
-            refined=refined,
-            video_url=None,
-            audio_filename=None,
-            style=style,
-            error=None
-        )
+        return jsonify({"success": False, "error": "Video generation failed. Please try again."})
 
 
 @main.route('/refine-prompt', methods=['POST'])
@@ -252,20 +238,14 @@ def generate_from_image():
 
         db.session.commit()
 
-        return render_template(
-            'main/result.html',
-            original=prompt,
-            refined=refined,
-            video_url=video_url,
-            audio_filename=None,
-            style="cinematic"
-        )
+        return jsonify(
+            {"success": True, "type": "video", "video_url": video_url, "refined": refined, "original": prompt,
+             "style": "cinematic"})
 
     except Exception as e:
         db.session.rollback()
         print("IMAGE-TO-VIDEO ERROR:", str(e))
-        flash('Image-to-video generation failed. Please try again later.', 'danger')
-        return redirect(url_for('main.dashboard'))
+        return jsonify({"success": False, "error": "Image-to-video failed. Please try again."})
     finally:
         # Clean up temp file
         if 'filepath' in locals() and os.path.exists(filepath):
@@ -288,7 +268,12 @@ def generate_image():
 
     try:
         refined = refine_image_prompt(prompt, style)
-        image = generate_ai_image(refined)
+        result = generate_ai_image(refined, style)
+
+        if not result["success"]:
+            raise Exception(result["error"])
+
+        image = result["image_url"]
 
         generation = Generation(
             user_id=current_user.id,
@@ -306,19 +291,33 @@ def generate_image():
 
         db.session.commit()
 
-        return render_template(
-            'main/image_result.html',
-            original=prompt,
-            refined=refined,
-            image_url=image
-        )
+        return jsonify({"success": True, "type": "image", "image_url": image, "refined": refined, "original": prompt})
 
     except Exception as e:
         db.session.rollback()
         print("IMAGE GENERATION ERROR:", str(e))
-        flash('Image generation failed. Please try again later.', 'danger')
-        return redirect(url_for('main.dashboard'))
+        return jsonify({"success": False, "error": "Image generation failed. Please try again."})
 
+
+@main.route('/result/video')
+@login_required
+def video_result():
+    return render_template('main/result.html',
+        video_url=request.args.get('video_url', ''),
+        original=request.args.get('original', ''),
+        refined=request.args.get('refined', ''),
+        style=request.args.get('style', ''),
+        audio_filename=None
+    )
+
+@main.route('/result/image')
+@login_required
+def image_result():
+    return render_template('main/image_result.html',
+        image_url=request.args.get('image_url', ''),
+        original=request.args.get('original', ''),
+        refined=request.args.get('refined', '')
+    )
 
 @main.route('/history')
 @login_required
@@ -332,6 +331,9 @@ def history():
 @main.route('/admin')
 @admin_required
 def admin():
+    from sqlalchemy import func
+    from datetime import datetime, timedelta
+
     users = User.query.order_by(User.created_at.desc()).all()
     generations = Generation.query.order_by(Generation.created_at.desc()).all()
     telegram_users = TelegramUser.query.order_by(TelegramUser.joined_at.desc()).all()
@@ -340,7 +342,46 @@ def admin():
     total_generations = Generation.query.count()
     pro_users = User.query.filter_by(plan='pro').count()
     free_users = User.query.filter_by(plan='free').count()
+    banned_users = User.query.filter_by(plan='banned').count()
     total_telegram = TelegramUser.query.count()
+
+    # Generation stats
+    completed_generations = Generation.query.filter_by(status='completed').count()
+    failed_generations = Generation.query.filter_by(status='failed').count()
+    video_generations = Generation.query.filter(
+        Generation.status == 'completed',
+        Generation.image_url == None
+    ).count()
+    image_generations = Generation.query.filter(
+        Generation.generation_type == 'image',
+        Generation.status == 'completed'
+    ).count()
+    success_rate = round((completed_generations / total_generations * 100) if total_generations > 0 else 0)
+
+    # Last 7 days signups
+    signups_7days = []
+    for i in range(6, -1, -1):
+        day = date.today() - timedelta(days=i)
+        count = User.query.filter(
+            func.date(User.created_at) == day
+        ).count()
+        signups_7days.append({"day": day.strftime('%a'), "count": count})
+
+    # Last 7 days generations
+    generations_7days = []
+    for i in range(6, -1, -1):
+        day = date.today() - timedelta(days=i)
+        count = Generation.query.filter(
+            func.date(Generation.created_at) == day
+        ).count()
+        generations_7days.append({"day": day.strftime('%a'), "count": count})
+
+    # Top 5 most active users
+    top_users = db.session.query(
+        User, func.count(Generation.id).label('gen_count')
+    ).join(Generation).group_by(User.id).order_by(
+        func.count(Generation.id).desc()
+    ).limit(5).all()
 
     return render_template(
         'main/admin.html',
@@ -351,7 +392,16 @@ def admin():
         total_generations=total_generations,
         pro_users=pro_users,
         free_users=free_users,
-        total_telegram=total_telegram
+        banned_users=banned_users,
+        total_telegram=total_telegram,
+        completed_generations=completed_generations,
+        failed_generations=failed_generations,
+        video_generations=video_generations,
+        image_generations=image_generations,
+        success_rate=success_rate,
+        signups_7days=signups_7days,
+        generations_7days=generations_7days,
+        top_users=top_users
     )
 
 
@@ -645,3 +695,92 @@ def feedback():
 @main.route('/docs')
 def docs():
     return render_template('main/docs.html')
+
+@main.route('/generate-image', methods=['POST'])
+@login_required
+def generate_image_route():
+    prompt = request.form.get('prompt')
+    style = request.form.get('style', 'realistic')
+    aspect_ratio = request.form.get('aspect_ratio', '1:1')
+
+    if not prompt:
+        flash('Please enter an image prompt!', 'danger')
+        return redirect(url_for('main.dashboard'))
+
+    try:
+        result = generate_image(
+            prompt,
+            style,
+            aspect_ratio
+        )
+
+        if not result["success"]:
+            raise Exception(result["error"])
+
+        image_url = result["image_url"]
+
+        return render_template(
+            'main/image_result.html',
+            prompt=prompt,
+            image_url=image_url,
+            style=style
+        )
+
+    except Exception as e:
+        print("IMAGE GENERATION ERROR:", e)
+
+        flash(
+            'Image generation failed. Try again later.',
+            'warning'
+        )
+
+        return redirect(url_for('main.dashboard'))
+
+
+@main.route('/analytics')
+@login_required
+def analytics():
+    from sqlalchemy import func
+    from datetime import datetime, timedelta
+
+    # Basic stats
+    total = Generation.query.filter_by(user_id=current_user.id).count()
+    completed = Generation.query.filter_by(user_id=current_user.id, status='completed').count()
+    failed = Generation.query.filter_by(user_id=current_user.id, status='failed').count()
+    videos = Generation.query.filter_by(user_id=current_user.id, generation_type=None).count()
+    images = Generation.query.filter_by(user_id=current_user.id, generation_type='image').count()
+
+    # Last 7 days activity
+    seven_days = []
+    for i in range(6, -1, -1):
+        day = date.today() - timedelta(days=i)
+        count = Generation.query.filter(
+            Generation.user_id == current_user.id,
+            func.date(Generation.created_at) == day
+        ).count()
+        seven_days.append({"day": day.strftime('%a'), "count": count})
+
+    # Most used style
+    from collections import Counter
+    styles = [g.refined_prompt for g in Generation.query.filter_by(
+        user_id=current_user.id, status='completed'
+    ).all()]
+
+    style_counts = Generation.query.filter_by(user_id=current_user.id).all()
+    style_map = {}
+    for g in style_counts:
+        if g.refined_prompt:
+            for s in ['cinematic', 'anime', 'realistic', 'african', 'social']:
+                if s in (g.refined_prompt or '').lower():
+                    style_map[s] = style_map.get(s, 0) + 1
+
+    return render_template('main/analytics.html',
+        total=total,
+        completed=completed,
+        failed=failed,
+        videos=videos,
+        images=images,
+        success_rate=round((completed / total * 100) if total > 0 else 0),
+        seven_days=seven_days,
+        style_map=style_map
+    )

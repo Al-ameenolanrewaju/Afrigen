@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}My Analytics{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card p-4">
+                <h2 style="color: #F5A623;">📊 My Analytics</h2>
+                <p style="color: #888;">Track your generation activity and performance</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-6 col-md-3 mb-3">
+            <div class="card p-4 text-center">
+                <h1 style="color: #F5A623;">{{ total }}</h1>
+                <p style="color: #888; font-size: 14px;">Total Generations</p>
+            </div>
+        </div>
+        <div class="col-6 col-md-3 mb-3">
+            <div class="card p-4 text-center">
+                <h1 style="color: #27AE60;">{{ completed }}</h1>
+                <p style="color: #888; font-size: 14px;">Successful</p>
+            </div>
+        </div>
+        <div class="col-6 col-md-3 mb-3">
+            <div class="card p-4 text-center">
+                <h1 style="color: #E74C3C;">{{ failed }}</h1>
+                <p style="color: #888; font-size: 14px;">Failed</p>
+            </div>
+        </div>
+        <div class="col-6 col-md-3 mb-3">
+            <div class="card p-4 text-center">
+                <h1 style="color: #F5A623;">{{ success_rate }}%</h1>
+                <p style="color: #888; font-size: 14px;">Success Rate</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Videos vs Images -->
+    <div class="row mb-4">
+        <div class="col-md-6 mb-3">
+            <div class="card p-4 text-center">
+                <h1 style="color: #F5A623;">{{ videos }}</h1>
+                <p style="color: #888;">🎬 Videos Generated</p>
+            </div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <div class="card p-4 text-center">
+                <h1 style="color: #F5A623;">{{ images }}</h1>
+                <p style="color: #888;">🖼️ Images Generated</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Last 7 Days Chart -->
+    <div class="card p-4 mb-4">
+        <h5 style="color: #F5A623;" class="mb-3">📅 Last 7 Days Activity</h5>
+        <div style="display: flex; align-items: flex-end; gap: 12px; height: 120px;">
+            {% set max_count = seven_days | map(attribute='count') | max %}
+            {% for day in seven_days %}
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%;">
+                <div style="
+                    flex: 1;
+                    width: 100%;
+                    display: flex;
+                    align-items: flex-end;
+                ">
+                    <div style="
+                        width: 100%;
+                        background: #F5A623;
+                        border-radius: 4px 4px 0 0;
+                        height: {% if max_count > 0 %}{{ (day.count / max_count * 100) | int }}%{% else %}4px{% endif %};
+                        min-height: 4px;
+                        transition: height 0.3s;
+                    "></div>
+                </div>
+                <p style="color: #888; font-size: 11px; margin-top: 6px;">{{ day.day }}</p>
+                <p style="color: #F5A623; font-size: 12px; font-weight: bold; margin: 0;">{{ day.count }}</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Style Breakdown -->
+    {% if style_map %}
+    <div class="card p-4 mb-4">
+        <h5 style="color: #F5A623;" class="mb-3">🎨 Style Breakdown</h5>
+        {% set style_icons = {'cinematic': '🎬', 'anime': '🎌', 'realistic': '🌍', 'african': '👑', 'social': '📱'} %}
+        {% set total_styles = style_map.values() | sum %}
+        {% for style, count in style_map.items() %}
+        <div class="mb-3">
+            <div class="d-flex justify-content-between mb-1">
+                <span style="color: #C9D1D9;">{{ style_icons.get(style, '🎬') }} {{ style | capitalize }}</span>
+                <span style="color: #F5A623;">{{ count }}</span>
+            </div>
+            <div style="background: #30363D; border-radius: 99px; height: 8px;">
+                <div style="
+                    background: #F5A623;
+                    border-radius: 99px;
+                    height: 8px;
+                    width: {{ (count / total_styles * 100) | int }}%;
+                "></div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Credits -->
+    <div class="card p-4 mb-4">
+        <h5 style="color: #F5A623;" class="mb-3">💳 Credits</h5>
+        <div class="row text-center">
+            <div class="col-6">
+                <h2 style="color: #F5A623;">{{ current_user.credits }}</h2>
+                <p style="color: #888;">Remaining</p>
+            </div>
+            <div class="col-6">
+                <h2 style="color: #F5A623;">{{ current_user.plan.upper() }}</h2>
+                <p style="color: #888;">Current Plan</p>
+            </div>
+        </div>
+        {% if current_user.plan == 'free' %}
+        <div class="text-center mt-3">
+            <a href="{{ url_for('main.upgrade') }}" class="btn btn-afrigen px-4">⭐ Upgrade to Pro</a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Back Button -->
+    <div class="text-center mb-4">
+        <a href="{{ url_for('main.dashboard') }}" class="btn btn-afrigen px-4">← Back to Dashboard</a>
+    </div>
+
+</div>
+
+<style>
+    .btn-afrigen {
+        background: #F5A623;
+        color: #0D1117;
+        border: none;
+        font-weight: 600;
+    }
+    .btn-afrigen:hover {
+        background: #e09515;
+        color: #0D1117;
+    }
+    .card {
+        background: #161B22;
+        border: 1px solid #30363D;
+        border-radius: 16px;
+    }
+</style>
+
+{% endblock %}

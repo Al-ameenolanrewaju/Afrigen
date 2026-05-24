@@ -58,11 +58,11 @@
 
         {% if current_user.credits > 0 %}
 
-        <!-- Type Selector -->
+        <!-- Type Selector - NOW WITH THREE OPTIONS -->
         <div class="mb-4">
             <label class="form-label">Generation Type</label>
             <div class="row">
-                <div class="col-6">
+                <div class="col-4">
                     <input type="radio" name="genType"
                            id="gen_text" value="text"
                            class="btn-check" checked
@@ -72,7 +72,7 @@
                         ✍️ Text to Video
                     </label>
                 </div>
-                <div class="col-6">
+                <div class="col-4">
                     <input type="radio" name="genType"
                            id="gen_image" value="image"
                            class="btn-check"
@@ -84,6 +84,16 @@
                         {% if current_user.plan != 'pro' %}
                         <small style="color: #F5A623;">(Pro)</small>
                         {% endif %}
+                    </label>
+                </div>
+                <div class="col-4">
+                    <input type="radio" name="genType"
+                           id="gen_text_to_image" value="text_to_image"
+                           class="btn-check"
+                           onchange="toggleGenType()">
+                    <label for="gen_text_to_image" class="btn w-100"
+                           style="border: 2px solid #30363D; color: #F0F6FC;">
+                        🖼️ Text to Image
                     </label>
                 </div>
             </div>
@@ -228,6 +238,46 @@
             </form>
         </div>
 
+        <!-- Text to Image Form (NEW - THIRD TOGGLE) -->
+        <div id="textToImageForm" style="display:none;">
+            <form method="POST" action="{{ url_for('main.generate_image_route') }}">
+                <div class="mb-3">
+                    <label class="form-label">Describe the image</label>
+                    <textarea name="prompt" class="form-control" rows="4"
+                        placeholder="Describe the image you want to generate in detail..."
+                        required></textarea>
+                    <small style="color: #888;">
+                        Be specific for best results! 🎨
+                    </small>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Art Style</label>
+                        <select name="style" class="form-control">
+                            <option value="realistic">Realistic</option>
+                            <option value="anime">Anime</option>
+                            <option value="cinematic">Cinematic</option>
+                            <option value="social">Social</option>
+                            <option value="african">African Art</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Aspect Ratio</label>
+                        <select name="aspect_ratio" class="form-control">
+                            <option value="1:1">Square (1:1)</option>
+                            <option value="16:9">Landscape (16:9)</option>
+                            <option value="9:16">Portrait (9:16)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button type="submit" id="textToImageBtn" class="btn btn-afrigen px-4">
+                    Generate Image 🖼️
+                </button>
+            </form>
+        </div>
+
         {% else %}
         <div class="text-center p-4">
             <h4 style="color: #C9D1D9;">You've used all your free credits! 😔</h4>
@@ -241,31 +291,199 @@
 
 </div>
 
+<!-- Progress Overlay -->
+<div id="generation-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:9999; flex-direction:column; align-items:center; justify-content:center;">
+  <div style="background:#161B22; border:1px solid #30363D; border-radius:16px; padding:40px; text-align:center; width:320px;">
+    <h3 id="overlay-title" style="color:#F5A623; margin-bottom:8px;">Generating...</h3>
+    <p id="overlay-subtitle" style="color:#888; font-size:14px; margin-bottom:24px;">Please wait</p>
+    <div style="background:#30363D; border-radius:99px; height:10px; overflow:hidden; margin-bottom:12px;">
+      <div id="overlay-bar" style="height:100%; width:0%; background:linear-gradient(90deg,#F5A623,#e09515); border-radius:99px; transition:width 0.5s ease;"></div>
+    </div>
+    <p id="overlay-percent" style="color:#F5A623; font-weight:bold; font-size:22px;">0%</p>
+  </div>
+</div>
+
 <script>
+console.log('Script loaded');
+const testForm = document.getElementById('generateBtn')?.closest('form');
+console.log('Form found:', testForm);
+
 function toggleGenType() {
     const type = document.querySelector('input[name="genType"]:checked').value;
+    document.getElementById('textForm').style.display = type === 'text' ? 'block' : 'none';
+    document.getElementById('imageForm').style.display = type === 'image' ? 'block' : 'none';
+    document.getElementById('textToImageForm').style.display = type === 'text_to_image' ? 'block' : 'none';
+}
 
-    if (type === 'text') {
-        document.getElementById('textForm').style.display = 'block';
-        document.getElementById('imageForm').style.display = 'none';
-    } else {
-        document.getElementById('textForm').style.display = 'none';
-        document.getElementById('imageForm').style.display = 'block';
+function startProgress(title, subtitle, duration) {
+    const overlay = document.getElementById('generation-overlay');
+    const bar = document.getElementById('overlay-bar');
+    const percent = document.getElementById('overlay-percent');
+    document.getElementById('overlay-title').textContent = title;
+    document.getElementById('overlay-subtitle').textContent = subtitle;
+    overlay.style.display = 'flex';
+    bar.style.width = '0%';
+    percent.textContent = '0%';
+
+    const steps = duration / 500;
+    let current = 0;
+    window._progressTimer = setInterval(() => {
+        current++;
+        const progress = Math.min(90, Math.round((current / steps) * 90));
+        bar.style.width = progress + '%';
+        percent.textContent = progress + '%';
+        if (progress >= 90) clearInterval(window._progressTimer);
+    }, 500);
+}
+
+function finishProgress(success) {
+    clearInterval(window._progressTimer);
+    const bar = document.getElementById('overlay-bar');
+    const percent = document.getElementById('overlay-percent');
+    bar.style.width = '100%';
+    percent.textContent = '100%';
+    if (!success) {
+        bar.style.background = '#e53e3e';
+        document.getElementById('overlay-title').textContent = 'Generation Failed ❌';
+        document.getElementById('overlay-subtitle').textContent = 'Please try again.';
+        setTimeout(() => {
+            document.getElementById('generation-overlay').style.display = 'none';
+            bar.style.background = 'linear-gradient(90deg,#F5A623,#e09515)';
+        }, 2500);
     }
 }
 
-document.getElementById('generateBtn').addEventListener('click', function() {
+function showResult(data) {
+    finishProgress(true);
     setTimeout(() => {
-        this.innerHTML = '⏳ Generating... Please wait 60 seconds';
-        this.disabled = true;
+        document.getElementById('generation-overlay').style.display = 'none';
+        if (data.type === 'image') {
+            window.location.href = `/result/image?image_url=${encodeURIComponent(data.image_url)}&original=${encodeURIComponent(data.original)}&refined=${encodeURIComponent(data.refined)}`;
+        } else {
+            window.location.href = `/result/video?video_url=&original=${encodeURIComponent(data.original)}&refined=${encodeURIComponent(data.refined)}&style=`;
+        }
     }, 500);
+}
+
+function submitForm(formEl, url, title, subtitle, duration) {
+    const formData = new FormData(formEl);
+    startProgress(title, subtitle, duration);
+
+    fetch(url, { method: 'POST', body: formData })
+    .then(res => res.json())
+    .then(data => {
+        console.log('Response:', data);
+        if (data.success) {
+            showResult(data);
+        } else {
+            finishProgress(false);
+            document.getElementById('overlay-subtitle').textContent = data.error || 'Something went wrong.';
+        }
+    })
+    .catch(() => {
+        finishProgress(false);
+        document.getElementById('overlay-subtitle').textContent = 'Network error. Please try again.';
+    });
+}
+
+// Track which button was clicked
+let lastClickedAction = 'generate';
+document.querySelectorAll('form button[name="action"]').forEach(btn => {
+    btn.addEventListener('click', function() {
+        lastClickedAction = this.value;
+        console.log('Button clicked:', lastClickedAction);
+    });
 });
 
-document.getElementById('imageBtn').addEventListener('click', function() {
-    setTimeout(() => {
-        this.innerHTML = '⏳ Generating...';
-        this.disabled = true;
-    }, 500);
+// Text to Video
+document.getElementById('generateBtn')?.closest('form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('Submit fired, action:', lastClickedAction);
+
+    if (lastClickedAction === 'refine_only') {
+    const formData = new FormData(this);
+    formData.append('action', 'refine_only');
+    fetch('/generate', { method: 'POST', body: formData })
+    .then(res => res.json())
+    .then(data => {
+    console.log('Refine response:', data);
+    lastClickedAction = 'generate'; // reset after use
+    if (data.success && data.type === 'refine_only') {
+    sessionStorage.setItem('resultData', JSON.stringify(data));
+    window.location.href = '/result/video';
+}
+})
+    .catch(err => console.log('Refine error:', err));
+    return;
+}
+
+    submitForm(this, '/generate', 'Generating Video... 🎬', 'Videos take 30–90 seconds', 80000);
+});
+
+// Image to Video
+document.getElementById('imageBtn')?.closest('form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    submitForm(this, '/generate-from-image', 'Animating Image... 🖼️', 'Image-to-video takes 30–60 seconds', 60000);
+});
+
+// Text to Image
+document.getElementById('textToImageBtn')?.closest('form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    submitForm(this, '/generate-image', 'Generating Image... 🎨', 'Images take 10–30 seconds', 25000);
 });
 </script>
+
+<style>
+    .btn-afrigen {
+        background: #F5A623;
+        color: #0D1117;
+        border: none;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+    .btn-afrigen:hover {
+        background: #e09515;
+        color: #0D1117;
+        transform: translateY(-1px);
+    }
+    .btn-outline-warning {
+        border-color: #F5A623;
+        color: #F5A623;
+    }
+    .btn-outline-warning:hover {
+        background: rgba(245, 166, 35, 0.1);
+        color: #F5A623;
+    }
+    .form-control, .form-select {
+        background: #0D1117;
+        border: 1px solid #30363D;
+        color: #F0F6FC;
+    }
+    .form-control:focus, .form-select:focus {
+        background: #0D1117;
+        border-color: #F5A623;
+        box-shadow: 0 0 0 0.2rem rgba(245, 166, 35, 0.25);
+        color: #F0F6FC;
+    }
+    .card {
+        background: #161B22;
+        border: 1px solid #30363D;
+        border-radius: 16px;
+    }
+    body {
+        background: #0D1117;
+    }
+    .btn-check:checked + label {
+        background: #F5A623 !important;
+        color: #0D1117 !important;
+        border-color: #F5A623 !important;
+    }
+    .btn-check:disabled + label {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+</style>
 {% endblock %}

@@ -24,7 +24,7 @@ class Config:
 
     # Video APIs
     KLING_API_KEY = os.environ.get("KLING_API_KEY")
-    FAL_API_KEY = os.environ.get("FAL_API_KEY")
+    FAL_API_KEY = os.environ.get("FAL_KEY")
 
     MAIL_SERVER = 'smtp.gmail.com'
     MAIL_PORT = 465

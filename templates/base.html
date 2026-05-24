@@ -81,47 +81,94 @@ content="Create AI-powered videos and content with Afrigen.">
         }
         .alert-success { background: #1A3A2A; border-color: #27AE60; color: #98D4A3; }
         .alert-danger  { background: #3A1A1A; border-color: #E74C3C; color: #F1948A; }
+
+        @media (min-width: 992px) {
+    .navbar-toggler {
+        display: none !important;
+    }
+}
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark">
+    <nav class="navbar navbar-dark" style="background: #161B22; border-bottom: 1px solid #F5A623;">
     <div class="container">
         <a class="navbar-brand" href="/">🎬 Afrigen</a>
-        <a class="nav-link" href="{{ url_for('main.docs') }}">📖 Docs</a>
-        <a class="nav-link" href="{{ url_for('main.contact') }}">📬 Contact</a>
 
-        <!-- Toggle button for mobile -->
+        <!-- Offcanvas Toggle -->
         <button class="navbar-toggler" type="button"
-                data-bs-toggle="collapse"
-                data-bs-target="#navbarNav">
+                data-bs-toggle="offcanvas"
+                data-bs-target="#offcanvasNav">
             <span class="navbar-toggler-icon"></span>
         </button>
 
-        <!-- Collapsible menu -->
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <div class="navbar-nav ms-auto">
-                {% if current_user.is_authenticated %}
-        <a class="nav-link" href="{{ url_for('main.dashboard') }}">Dashboard</a>
-        <a class="nav-link" href="{{ url_for('main.history') }}">My Videos</a>
-        <a class="nav-link" href="{{ url_for('main.saved_prompts') }}">💾 Saved</a>
-        <a class="nav-link" href="{{ url_for('main.referral') }}">🎁 Referral</a>
-        {% if current_user.email == 'oadedamola07@gmail.com' %}
-        <a class="nav-link" style="color: #F5A623 !important;"
-           href="{{ url_for('main.admin') }}">⚙️ Admin</a>
-        {% endif %}
-        {% if current_user.plan == 'free' %}
-        <a class="nav-link" style="color: #F5A623 !important;"
-           href="{{ url_for('main.upgrade') }}">⭐ Go Pro</a>
-        {% endif %}
-        <a class="nav-link" href="{{ url_for('auth.logout') }}">Logout</a>
-                {% else %}
-                    <a class="nav-link" href="{{ url_for('auth.login') }}">Login</a>
-                    <a class="nav-link" href="{{ url_for('auth.register') }}">Register</a>
-                {% endif %}
+        <!-- Desktop links -->
+        <div class="d-none d-lg-flex align-items-center gap-3">
+            <a class="nav-link" href="{{ url_for('main.docs') }}">📖 Docs</a>
+            <a class="nav-link" href="{{ url_for('main.contact') }}">📬 Contact</a>
+            {% if current_user.is_authenticated %}
+            <a class="nav-link" href="{{ url_for('main.dashboard') }}">Dashboard</a>
+            <div class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                    My Account
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end" style="background: #161B22; border: 1px solid #30363D;">
+                    <li><a class="dropdown-item" href="{{ url_for('main.history') }}" style="color: #F0F6FC;">🎬 My Videos</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('main.analytics') }}" style="color: #F0F6FC;">📊 Analytics</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('main.saved_prompts') }}" style="color: #F0F6FC;">💾 Saved Prompts</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('main.referral') }}" style="color: #F0F6FC;">🎁 Referral</a></li>
+                    <li><hr class="dropdown-divider" style="border-color: #30363D;"></li>
+                    {% if current_user.plan == 'free' %}
+                    <li><a class="dropdown-item" href="{{ url_for('main.upgrade') }}" style="color: #F5A623;">⭐ Go Pro</a></li>
+                    {% endif %}
+                    {% if current_user.email == 'oadedamola07@gmail.com' %}
+                    <li><a class="dropdown-item" href="{{ url_for('main.admin') }}" style="color: #F5A623;">⚙️ Admin</a></li>
+                    {% endif %}
+                    <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}" style="color: #E74C3C;">🚪 Logout</a></li>
+                </ul>
             </div>
+            {% else %}
+            <a class="nav-link" href="{{ url_for('auth.login') }}">Login</a>
+            <a class="nav-link" href="{{ url_for('auth.register') }}">Register</a>
+            {% endif %}
         </div>
     </div>
 </nav>
+
+<!-- Offcanvas Sidebar (mobile) -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasNav"
+     style="background: #161B22; border-left: 1px solid #30363D; width: 260px;">
+    <div class="offcanvas-header" style="border-bottom: 1px solid #30363D;">
+        <h5 style="color: #F5A623;">🎬 Afrigen</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body">
+        <ul class="nav flex-column gap-2">
+            <li><a class="nav-link" href="{{ url_for('main.docs') }}" style="color: #F0F6FC;">📖 Docs</a></li>
+            <li><a class="nav-link" href="{{ url_for('main.contact') }}" style="color: #F0F6FC;">📬 Contact</a></li>
+
+            {% if current_user.is_authenticated %}
+            <li><hr style="border-color: #30363D;"></li>
+            <li><a class="nav-link" href="{{ url_for('main.dashboard') }}" style="color: #F0F6FC;">🏠 Dashboard</a></li>
+            <li><a class="nav-link" href="{{ url_for('main.history') }}" style="color: #F0F6FC;">🎬 My Videos</a></li>
+            <li><a class="nav-link" href="{{ url_for('main.analytics') }}" style="color: #F0F6FC;">📊 Analytics</a></li>
+            <li><a class="nav-link" href="{{ url_for('main.saved_prompts') }}" style="color: #F0F6FC;">💾 Saved Prompts</a></li>
+            <li><a class="nav-link" href="{{ url_for('main.referral') }}" style="color: #F0F6FC;">🎁 Referral</a></li>
+            <li><hr style="border-color: #30363D;"></li>
+            {% if current_user.plan == 'free' %}
+            <li><a class="nav-link" href="{{ url_for('main.upgrade') }}" style="color: #F5A623;">⭐ Go Pro</a></li>
+            {% endif %}
+            {% if current_user.email == 'oadedamola07@gmail.com' %}
+            <li><a class="nav-link" href="{{ url_for('main.admin') }}" style="color: #F5A623;">⚙️ Admin</a></li>
+            {% endif %}
+            <li><a class="nav-link" href="{{ url_for('auth.logout') }}" style="color: #E74C3C;">🚪 Logout</a></li>
+            {% else %}
+            <li><hr style="border-color: #30363D;"></li>
+            <li><a class="nav-link" href="{{ url_for('auth.login') }}" style="color: #F0F6FC;">Login</a></li>
+            <li><a class="nav-link" href="{{ url_for('auth.register') }}" style="color: #F0F6FC;">Register</a></li>
+            {% endif %}
+        </ul>
+    </div>
+</div>
 
     <div class="container mt-4">
         {% with messages = get_flashed_messages(with_categories=true) %}

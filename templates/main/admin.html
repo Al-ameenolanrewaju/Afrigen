@@ -8,78 +8,205 @@
     <!-- Header -->
     <div class="card p-4 mb-4">
         <h2 style="color: #F5A623;">⚙️ Afrigen Admin Panel</h2>
-        <p style="color: #C9D1D9;">Manage users and monitor platform!</p>
+        <p style="color: #C9D1D9;">Monitor platform performance and manage users</p>
     </div>
 
-    <!-- Stats -->
+    <!-- Top Stats -->
     <div class="row mb-4">
-        <div class="col-md-3 mb-3">
-            <div class="stat-card">
-                <div class="stat-number">{{ total_users }}</div>
-                <div class="stat-label">Total Users</div>
+        <div class="col-6 col-md-3 mb-3">
+            <div class="card p-4 text-center">
+                <h1 style="color: #F5A623;">{{ total_users }}</h1>
+                <p style="color: #888; font-size: 13px;">Total Users</p>
             </div>
         </div>
-        <div class="col-md-3 mb-3">
-            <div class="stat-card">
-                <div class="stat-number">{{ total_generations }}</div>
-                <div class="stat-label">Videos Generated</div>
+        <div class="col-6 col-md-3 mb-3">
+            <div class="card p-4 text-center">
+                <h1 style="color: #F5A623;">{{ total_generations }}</h1>
+                <p style="color: #888; font-size: 13px;">Total Generations</p>
             </div>
         </div>
-        <div class="col-md-3 mb-3">
-            <div class="stat-card">
-                <div class="stat-number" style="color: #F5A623;">
-                    {{ pro_users }}
-                </div>
-                <div class="stat-label">Pro Users</div>
+        <div class="col-6 col-md-3 mb-3">
+            <div class="card p-4 text-center">
+                <h1 style="color: #F5A623;">{{ pro_users }}</h1>
+                <p style="color: #888; font-size: 13px;">Pro Users</p>
             </div>
         </div>
-        <div class="col-md-3 mb-3">
-            <div class="stat-card">
-                <div class="stat-number" style="color: #27AE60;">
-                    {{ free_users }}
-                </div>
-                <div class="stat-label">Free Users</div>
+        <div class="col-6 col-md-3 mb-3">
+            <div class="card p-4 text-center">
+                <h1 style="color: #27AE60;">{{ success_rate }}%</h1>
+                <p style="color: #888; font-size: 13px;">Success Rate</p>
             </div>
         </div>
     </div>
 
+    <!-- Secondary Stats -->
+    <div class="row mb-4">
+        <div class="col-6 col-md-3 mb-3">
+            <div class="card p-4 text-center">
+                <h2 style="color: #27AE60;">{{ free_users }}</h2>
+                <p style="color: #888; font-size: 13px;">Free Users</p>
+            </div>
+        </div>
+        <div class="col-6 col-md-3 mb-3">
+            <div class="card p-4 text-center">
+                <h2 style="color: #E74C3C;">{{ banned_users }}</h2>
+                <p style="color: #888; font-size: 13px;">Banned Users</p>
+            </div>
+        </div>
+        <div class="col-6 col-md-3 mb-3">
+            <div class="card p-4 text-center">
+                <h2 style="color: #F5A623;">{{ video_generations }}</h2>
+                <p style="color: #888; font-size: 13px;">🎬 Videos Generated</p>
+            </div>
+        </div>
+        <div class="col-6 col-md-3 mb-3">
+            <div class="card p-4 text-center">
+                <h2 style="color: #F5A623;">{{ image_generations }}</h2>
+                <p style="color: #888; font-size: 13px;">🖼️ Images Generated</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row mb-4">
+        <!-- Signups Chart -->
+        <div class="col-md-6 mb-3">
+            <div class="card p-4">
+                <h5 style="color: #F5A623;" class="mb-3">👥 New Signups (Last 7 Days)</h5>
+                <div style="display: flex; align-items: flex-end; gap: 8px; height: 100px;">
+                    {% set max_signups = signups_7days | map(attribute='count') | max %}
+                    {% for day in signups_7days %}
+                    <div style="flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%;">
+                        <div style="flex: 1; width: 100%; display: flex; align-items: flex-end;">
+                            <div style="
+                                width: 100%;
+                                background: #F5A623;
+                                border-radius: 4px 4px 0 0;
+                                height: {% if max_signups > 0 %}{{ (day.count / max_signups * 100) | int }}%{% else %}4px{% endif %};
+                                min-height: 4px;
+                            "></div>
+                        </div>
+                        <p style="color: #888; font-size: 10px; margin-top: 4px;">{{ day.day }}</p>
+                        <p style="color: #F5A623; font-size: 11px; font-weight: bold; margin: 0;">{{ day.count }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Generations Chart -->
+        <div class="col-md-6 mb-3">
+            <div class="card p-4">
+                <h5 style="color: #F5A623;" class="mb-3">🎬 Generations (Last 7 Days)</h5>
+                <div style="display: flex; align-items: flex-end; gap: 8px; height: 100px;">
+                    {% set max_gens = generations_7days | map(attribute='count') | max %}
+                    {% for day in generations_7days %}
+                    <div style="flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%;">
+                        <div style="flex: 1; width: 100%; display: flex; align-items: flex-end;">
+                            <div style="
+                                width: 100%;
+                                background: #27AE60;
+                                border-radius: 4px 4px 0 0;
+                                height: {% if max_gens > 0 %}{{ (day.count / max_gens * 100) | int }}%{% else %}4px{% endif %};
+                                min-height: 4px;
+                            "></div>
+                        </div>
+                        <p style="color: #888; font-size: 10px; margin-top: 4px;">{{ day.day }}</p>
+                        <p style="color: #27AE60; font-size: 11px; font-weight: bold; margin: 0;">{{ day.count }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Generation Health -->
+    <div class="card p-4 mb-4">
+        <h5 style="color: #F5A623;" class="mb-3">⚡ Generation Health</h5>
+        <div class="row text-center">
+            <div class="col-4">
+                <h3 style="color: #27AE60;">{{ completed_generations }}</h3>
+                <p style="color: #888; font-size: 13px;">Completed</p>
+            </div>
+            <div class="col-4">
+                <h3 style="color: #E74C3C;">{{ failed_generations }}</h3>
+                <p style="color: #888; font-size: 13px;">Failed</p>
+            </div>
+            <div class="col-4">
+                <h3 style="color: #2AABEE;">{{ total_telegram }}</h3>
+                <p style="color: #888; font-size: 13px;">Telegram Users</p>
+            </div>
+        </div>
+        <div class="mt-3">
+            <div class="d-flex justify-content-between mb-1">
+                <span style="color: #888; font-size: 13px;">Success Rate</span>
+                <span style="color: #27AE60; font-size: 13px;">{{ success_rate }}%</span>
+            </div>
+            <div style="background: #30363D; border-radius: 99px; height: 8px;">
+                <div style="background: #27AE60; border-radius: 99px; height: 8px; width: {{ success_rate }}%;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top 5 Most Active Users -->
+    <div class="card p-4 mb-4">
+        <h5 style="color: #F5A623;" class="mb-3">🏆 Top 5 Most Active Users</h5>
+        <div class="table-responsive">
+            <table class="table" style="color: #F0F6FC;">
+                <thead style="color: #F5A623;">
+                    <tr>
+                        <th>#</th>
+                        <th>Username</th>
+                        <th>Plan</th>
+                        <th>Generations</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user, count in top_users %}
+                    <tr>
+                        <td style="color: #F5A623;">{{ loop.index }}</td>
+                        <td>{{ user.username }}</td>
+                        <td>
+                            <span class="badge" style="background: {% if user.plan == 'pro' %}#F5A623{% else %}#21262D{% endif %}; color: {% if user.plan == 'pro' %}#0D1117{% else %}#C9D1D9{% endif %};">
+                                {{ user.plan.upper() }}
+                            </span>
+                        </td>
+                        <td style="color: #27AE60;">{{ count }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 
     <!-- Telegram Users Table -->
-<div class="card p-4 mt-4">
-    <h4 style="color: #2AABEE;" class="mb-3">🤖 Telegram Users</h4>
-    <div class="table-responsive">
-        <table class="table" style="color: #F0F6FC;">
-            <thead style="color: #2AABEE;">
-                <tr>
-                    <th>Username</th>
-                    <th>First Name</th>
-                    <th>Prompts Refined</th>
-                    <th>Joined</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for tuser in telegram_users %}
-                <tr>
-                    <td>@{{ tuser.username or 'No username' }}</td>
-                    <td>{{ tuser.first_name or 'N/A' }}</td>
-                    <td>{{ tuser.prompts_refined }}</td>
-                    <td>
-                    {% if tuser.joined_at %}
-                        {{ tuser.joined_at.strftime('%b %d, %Y') }}
-                    {% else %}
-                        N/A
-                    {% endif %}
-                </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <div class="card p-4 mb-4">
+        <h4 style="color: #2AABEE;" class="mb-3">🤖 Telegram Users</h4>
+        <div class="table-responsive">
+            <table class="table" style="color: #F0F6FC;">
+                <thead style="color: #2AABEE;">
+                    <tr>
+                        <th>Username</th>
+                        <th>First Name</th>
+                        <th>Prompts Refined</th>
+                        <th>Joined</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tuser in telegram_users %}
+                    <tr>
+                        <td>@{{ tuser.username or 'No username' }}</td>
+                        <td>{{ tuser.first_name or 'N/A' }}</td>
+                        <td>{{ tuser.prompts_refined }}</td>
+                        <td>{% if tuser.joined_at %}{{ tuser.joined_at.strftime('%b %d, %Y') }}{% else %}N/A{% endif %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
-</div>
 
-    <!-- Users Table -->
+    <!-- All Users Table -->
     <div class="card p-4 mb-4">
         <h4 style="color: #F5A623;" class="mb-3">👥 All Users</h4>
         <div class="table-responsive">
@@ -91,7 +218,7 @@
                         <th>Plan</th>
                         <th>Credits</th>
                         <th>Joined</th>
-                        <th>Action</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -100,52 +227,29 @@
                         <td>{{ user.username }}</td>
                         <td>{{ user.email }}</td>
                         <td>
-                            <span class="badge" style="
-                                background: {% if user.plan == 'pro' %}#F5A623
-                                           {% else %}#21262D{% endif %};
-                                color: {% if user.plan == 'pro' %}#0D1117
-                                       {% else %}#C9D1D9{% endif %};">
+                            <span class="badge" style="background: {% if user.plan == 'pro' %}#F5A623{% elif user.plan == 'banned' %}#E74C3C{% else %}#21262D{% endif %}; color: {% if user.plan == 'pro' %}#0D1117{% else %}#C9D1D9{% endif %};">
                                 {{ user.plan.upper() }}
                             </span>
                         </td>
                         <td>{{ user.credits }}</td>
                         <td>{{ user.created_at.strftime('%b %d, %Y') }}</td>
                         <td>
-    {% if user.email != 'oadedamola07@gmail.com' %}
-        {% if user.plan == 'free' %}
-        <a href="{{ url_for('main.upgrade_user', user_id=user.id) }}"
-           class="btn btn-afrigen btn-sm me-1">
-            ⭐ Upgrade
-        </a>
-        {% elif user.plan == 'pro' %}
-        <a href="{{ url_for('main.downgrade_user', user_id=user.id) }}"
-           class="btn btn-outline-warning btn-sm me-1">
-            Downgrade
-        </a>
-        {% endif %}
-
-        {% if user.plan != 'banned' %}
-        <a href="{{ url_for('main.ban_user', user_id=user.id) }}"
-           class="btn btn-warning btn-sm me-1"
-           onclick="return confirm('Ban {{ user.username }}?')">
-            🚫 Ban
-        </a>
-        {% else %}
-        <a href="{{ url_for('main.upgrade_user', user_id=user.id) }}"
-           class="btn btn-success btn-sm me-1">
-            ✅ Unban
-        </a>
-        {% endif %}
-
-        <a href="{{ url_for('main.delete_user', user_id=user.id) }}"
-           class="btn btn-danger btn-sm"
-           onclick="return confirm('DELETE {{ user.username }}? This cannot be undone!')">
-            🗑️ Delete
-        </a>
-    {% else %}
-        <span style="color: #F5A623;">👑 Admin</span>
-    {% endif %}
-</td>
+                            {% if user.email != 'oadedamola07@gmail.com' %}
+                                {% if user.plan == 'free' %}
+                                <a href="{{ url_for('main.upgrade_user', user_id=user.id) }}" class="btn btn-afrigen btn-sm me-1">⭐ Upgrade</a>
+                                {% elif user.plan == 'pro' %}
+                                <a href="{{ url_for('main.downgrade_user', user_id=user.id) }}" class="btn btn-outline-warning btn-sm me-1">Downgrade</a>
+                                {% endif %}
+                                {% if user.plan != 'banned' %}
+                                <a href="{{ url_for('main.ban_user', user_id=user.id) }}" class="btn btn-warning btn-sm me-1" onclick="return confirm('Ban {{ user.username }}?')">🚫 Ban</a>
+                                {% else %}
+                                <a href="{{ url_for('main.upgrade_user', user_id=user.id) }}" class="btn btn-success btn-sm me-1">✅ Unban</a>
+                                {% endif %}
+                                <a href="{{ url_for('main.delete_user', user_id=user.id) }}" class="btn btn-danger btn-sm" onclick="return confirm('DELETE {{ user.username }}?')">🗑️ Delete</a>
+                            {% else %}
+                                <span style="color: #F5A623;">👑 Admin</span>
+                            {% endif %}
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -154,39 +258,37 @@
     </div>
 
     <!-- Recent Generations -->
-    <div class="card p-4">
+    <div class="card p-4 mb-4">
         <h4 style="color: #F5A623;" class="mb-3">🎬 Recent Generations</h4>
         <div class="table-responsive">
             <table class="table" style="color: #F0F6FC;">
                 <thead style="color: #F5A623;">
                     <tr>
                         <th>User</th>
-                        <th>Original Prompt</th>
+                        <th>Prompt</th>
+                        <th>Type</th>
                         <th>Status</th>
                         <th>Date</th>
-                        <th>Video</th>
+                        <th>Link</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for gen in generations %}
                     <tr>
                         <td>{{ gen.user.username }}</td>
-                        <td>{{ gen.original_prompt[:50] }}...</td>
+                        <td>{{ gen.original_prompt[:40] }}...</td>
+                        <td style="color: #888;">{{ gen.generation_type or 'video' }}</td>
                         <td>
-                            <span class="badge" style="
-                                background: {% if gen.status == 'completed' %}#27AE60
-                                           {% else %}#E74C3C{% endif %};">
+                            <span class="badge" style="background: {% if gen.status == 'completed' %}#27AE60{% else %}#E74C3C{% endif %};">
                                 {{ gen.status }}
                             </span>
                         </td>
                         <td>{{ gen.created_at.strftime('%b %d, %Y') }}</td>
                         <td>
                             {% if gen.video_url %}
-                            <a href="{{ gen.video_url }}"
-                               target="_blank"
-                               class="btn btn-sm btn-outline-warning">
-                                Watch
-                            </a>
+                            <a href="{{ gen.video_url }}" target="_blank" class="btn btn-sm btn-outline-warning">Watch</a>
+                            {% elif gen.image_url %}
+                            <a href="{{ gen.image_url }}" target="_blank" class="btn btn-sm btn-outline-warning">View</a>
                             {% endif %}
                         </td>
                     </tr>
@@ -197,4 +299,30 @@
     </div>
 
 </div>
+
+<style>
+    .btn-afrigen {
+        background: #F5A623;
+        color: #0D1117;
+        border: none;
+        font-weight: 600;
+    }
+    .btn-afrigen:hover {
+        background: #e09515;
+        color: #0D1117;
+    }
+    .card {
+        background: #161B22;
+        border: 1px solid #30363D;
+        border-radius: 16px;
+    }
+    .table thead th {
+        border-bottom: 1px solid #30363D;
+    }
+    .table td {
+        border-bottom: 1px solid #21262D;
+        vertical-align: middle;
+    }
+</style>
+
 {% endblock %}
