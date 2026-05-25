@@ -16,6 +16,21 @@ import secrets
 from datetime import date
 from functools import wraps
 
+
+
+def get_country_from_ip(ip):
+    try:
+        import requests as req
+        response = req.get(f'https://ipapi.co/{ip}/json/', timeout=3)
+        data = response.json()
+        return data.get('country_name', 'Unknown')
+    except:
+        return 'Unknown'
+
+def get_real_ip():
+    if request.headers.get('X-Forwarded-For'):
+        return request.headers.get('X-Forwarded-For').split(',')[0].strip()
+    return request.remote_addr
 def generate_referral_code():
     return secrets.token_urlsafe(8)
 
@@ -51,7 +66,7 @@ def allowed_file(filename):
 
 
 # ---------- Routes ----------
-@main.route("/")
+
 @main.route("/")
 def index():
     from models import Generation, User
@@ -194,7 +209,7 @@ def generate_from_image():
         flash('Image to Video is a Pro feature!', 'danger')
         return redirect(url_for('main.dashboard'))
 
-    if current_user.credits < 10:
+    if current_user.credits < 5:
         flash('You need at least 10 credits for image-to-video!', 'danger')
         return redirect(url_for('main.dashboard'))
 
@@ -234,7 +249,7 @@ def generate_from_image():
 
         # Only deduct credits if video generation succeeded
         if video_url:
-            current_user.credits -= 10
+            current_user.credits -= 5
 
         db.session.commit()
 
@@ -333,6 +348,7 @@ def history():
 def admin():
     from sqlalchemy import func
     from datetime import datetime, timedelta
+    from collections import Counter
 
     users = User.query.order_by(User.created_at.desc()).all()
     generations = Generation.query.order_by(Generation.created_at.desc()).all()
@@ -383,6 +399,18 @@ def admin():
         func.count(Generation.id).desc()
     ).limit(5).all()
 
+    # Country breakdown
+    country_counts = Counter(
+        u.country for u in users if u.country and u.country != 'Unknown'
+    )
+    top_countries = country_counts.most_common(5)
+
+    # Source breakdown
+    source_counts = Counter(
+        u.signup_source for u in users if u.signup_source
+    )
+    source_breakdown = dict(source_counts)
+
     return render_template(
         'main/admin.html',
         users=users,
@@ -401,7 +429,9 @@ def admin():
         success_rate=success_rate,
         signups_7days=signups_7days,
         generations_7days=generations_7days,
-        top_users=top_users
+        top_users=top_users,
+        top_countries=top_countries,
+        source_breakdown=source_breakdown
     )
 
 
@@ -411,7 +441,7 @@ def upgrade_user(user_id):
     user = db.session.get(User, user_id)
     if user:
         user.plan = 'pro'
-        user.credits = 50
+        user.credits = 100
         db.session.commit()
         try:
             from services.email import send_pro_upgrade_email
@@ -543,7 +573,7 @@ def payment_callback():
         and str(result['data']['metadata']['user_id']) == str(current_user.id)
     ):
         current_user.plan = 'pro'
-        current_user.credits = 50
+        current_user.credits = 100
         db.session.commit()
         try:
             from services.email import send_pro_upgrade_email
@@ -649,10 +679,38 @@ def referral():
         )
         db.session.add(referral)
         db.session.commit()
+
     referral_link = url_for('auth.register', ref=referral.referral_code, _external=True)
+
+    # Get all successful referrals
+    used_referrals = Referral.query.filter_by(
+        referrer_id=current_user.id,
+        is_used=True
+    ).all()
+
+    # Get referred users
+    referred_users = []
+    for r in used_referrals:
+        if r.referred_id:
+            from models import User
+            user = User.query.get(r.referred_id)
+            if user:
+                referred_users.append({
+                    "username": user.username,
+                    "joined": user.created_at.strftime('%b %d, %Y'),
+                    "plan": user.plan
+                })
+
+    total_referrals = len(used_referrals)
+    credits_earned = total_referrals * 2
+
     return render_template('main/referral.html',
-                           referral_link=referral_link,
-                           referral_code=referral.referral_code)
+        referral_link=referral_link,
+        referral_code=referral.referral_code,
+        referred_users=referred_users,
+        total_referrals=total_referrals,
+        credits_earned=credits_earned
+    )
 
 
 @main.route('/contact', methods=['GET', 'POST'])
@@ -743,12 +801,32 @@ def analytics():
     from sqlalchemy import func
     from datetime import datetime, timedelta
 
-    # Basic stats
-    total = Generation.query.filter_by(user_id=current_user.id).count()
-    completed = Generation.query.filter_by(user_id=current_user.id, status='completed').count()
-    failed = Generation.query.filter_by(user_id=current_user.id, status='failed').count()
-    videos = Generation.query.filter_by(user_id=current_user.id, generation_type=None).count()
-    images = Generation.query.filter_by(user_id=current_user.id, generation_type='image').count()
+    total = Generation.query.filter(
+        Generation.user_id == current_user.id,
+        Generation.status.in_(['completed', 'failed'])
+    ).count()
+
+    completed = Generation.query.filter_by(
+        user_id=current_user.id, status='completed'
+    ).count()
+
+    failed = Generation.query.filter_by(
+        user_id=current_user.id, status='failed'
+    ).count()
+
+    videos = Generation.query.filter(
+        Generation.user_id == current_user.id,
+        Generation.status == 'completed',
+        Generation.image_url == None
+    ).count()
+
+    images = Generation.query.filter(
+        Generation.user_id == current_user.id,
+        Generation.status == 'completed',
+        Generation.generation_type == 'image',
+        Generation.image_url != None,
+        Generation.video_url == None
+    ).count()
 
     # Last 7 days activity
     seven_days = []
@@ -756,23 +834,10 @@ def analytics():
         day = date.today() - timedelta(days=i)
         count = Generation.query.filter(
             Generation.user_id == current_user.id,
+            Generation.status.in_(['completed', 'failed']),
             func.date(Generation.created_at) == day
         ).count()
         seven_days.append({"day": day.strftime('%a'), "count": count})
-
-    # Most used style
-    from collections import Counter
-    styles = [g.refined_prompt for g in Generation.query.filter_by(
-        user_id=current_user.id, status='completed'
-    ).all()]
-
-    style_counts = Generation.query.filter_by(user_id=current_user.id).all()
-    style_map = {}
-    for g in style_counts:
-        if g.refined_prompt:
-            for s in ['cinematic', 'anime', 'realistic', 'african', 'social']:
-                if s in (g.refined_prompt or '').lower():
-                    style_map[s] = style_map.get(s, 0) + 1
 
     return render_template('main/analytics.html',
         total=total,
@@ -782,5 +847,14 @@ def analytics():
         images=images,
         success_rate=round((completed / total * 100) if total > 0 else 0),
         seven_days=seven_days,
-        style_map=style_map
+        style_map={}
     )
+
+
+@main.route('/terms')
+def terms():
+    return render_template('main/terms.html')
+
+@main.route('/privacy')
+def privacy():
+    return render_template('main/privacy.html')

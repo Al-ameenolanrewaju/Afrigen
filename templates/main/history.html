@@ -12,107 +12,132 @@
                 <div class="row align-items-center">
                     <div class="col-md-8">
                         <h2 style="color: #F5A623;">🎬 My Generations</h2>
-                        <p style="color: #C9D1D9;">
-                            All your AI generated videos in one place!
-                        </p>
+                        <p style="color: #C9D1D9;">All your AI generated content in one place!</p>
                     </div>
                     <div class="col-md-4 text-end">
-                        <a href="{{ url_for('main.dashboard') }}"
-                           class="btn btn-afrigen">
-                            + Generate New
-                        </a>
+                        <a href="{{ url_for('main.dashboard') }}" class="btn btn-afrigen">+ Generate New</a>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Generations List -->
     {% if generations %}
         {% for gen in generations %}
         <div class="card p-4 mb-3">
             <div class="row">
-                <!-- Video -->
-                <div class="col-md-4">
+
+                <!-- Preview -->
+                <div class="col-md-4 mb-3 mb-md-0">
                     {% if gen.video_url %}
                     <video width="100%" controls style="border-radius: 8px;">
                         <source src="{{ gen.video_url }}" type="video/mp4">
                     </video>
+                    {% elif gen.image_url and gen.generation_type == 'image' %}
+                    <img src="{{ gen.image_url }}" width="100%"
+                         style="border-radius: 8px; object-fit: cover; max-height: 200px;">
                     {% else %}
-                    <div style="background: #21262D; border-radius: 8px;
-                                height: 150px; display: flex;
-                                align-items: center; justify-content: center;">
-                        <p style="color: #888;">No video yet</p>
+                    <div style="background: #21262D; border-radius: 8px; height: 150px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                        {% if gen.status == 'failed' %}
+                        <p style="color: #E74C3C; font-size: 24px; margin: 0;">❌</p>
+                        <p style="color: #888; font-size: 13px; margin-top: 8px;">Generation Failed</p>
+                        {% else %}
+                        <p style="color: #888;">No preview</p>
+                        {% endif %}
                     </div>
                     {% endif %}
                 </div>
 
                 <!-- Details -->
                 <div class="col-md-8">
+
+                    <!-- Type + Status badges -->
+                    <div class="d-flex gap-2 mb-2 flex-wrap">
+                        <span class="badge" style="background: #21262D; color: #F5A623;">
+                            {% if gen.generation_type == 'image' %}🖼️ Image
+                            {% elif gen.generation_type == 'text' %}🎬 Text to Video
+                            {% else %}🎬 Video{% endif %}
+                        </span>
+                        <span class="badge" style="background: {% if gen.status == 'completed' %}#27AE60{% elif gen.status == 'failed' %}#E74C3C{% else %}#F5A623{% endif %}; color: white;">
+                            {{ gen.status.upper() }}
+                        </span>
+                        <small style="color: #888; align-self: center;">
+                            📅 {{ gen.created_at.strftime('%b %d, %Y') }}
+                        </small>
+                    </div>
+
+                    <!-- Prompts -->
                     <div class="mb-2">
                         <small style="color: #888;">Original Idea:</small>
-                        <p style="color: #C9D1D9; font-style: italic;">
+                        <p style="color: #C9D1D9; font-style: italic; margin: 0;">
                             "{{ gen.original_prompt }}"
                         </p>
                     </div>
 
-                    <div class="mb-2">
+                    {% if gen.refined_prompt %}
+                    <div class="mb-3">
                         <small style="color: #F5A623;">AI Refined Prompt:</small>
-                        <p style="color: #F0F6FC; font-size: 14px;">
-                            {{ gen.refined_prompt[:200] }}...
+                        <p style="color: #F0F6FC; font-size: 13px; margin: 0;">
+                            {{ gen.refined_prompt[:150] }}...
                         </p>
                     </div>
-
-                    <div class="row">
-                        <div class="col-md-6">
-                            <small style="color: #888;">
-                                📅 {{ gen.created_at.strftime('%B %d, %Y') }}
-                            </small>
-                        </div>
-                        <div class="col-md-6">
-                            <span class="badge" style="
-                                background: {% if gen.status == 'completed' %}#27AE60
-                                           {% else %}#E74C3C{% endif %};
-                                color: white;">
-                                {{ gen.status.upper() }}
-                            </span>
-                        </div>
-                    </div>
+                    {% endif %}
 
                     <!-- Action Buttons -->
-                    <div class="mt-3">
+                    <div class="d-flex gap-2 flex-wrap">
                         {% if gen.video_url %}
-                        <a href="{{ gen.video_url }}"
-                           class="btn btn-afrigen btn-sm me-2"
-                           target="_blank">
-                            🎬 Watch
-                        </a>
-                        <a href="{{ gen.video_url }}"
-                           class="btn btn-outline-warning btn-sm"
-                           download>
-                            ⬇️ Download
+                        <a href="{{ gen.video_url }}" class="btn btn-afrigen btn-sm" target="_blank">🎬 Watch</a>
+                        {% if current_user.plan == 'pro' %}
+                        <a href="{{ gen.video_url }}" class="btn btn-outline-warning btn-sm" download>⬇️ Download</a>
+                        {% else %}
+                        <a href="{{ url_for('main.download_video', generation_id=gen.id) }}" class="btn btn-outline-warning btn-sm">⬇️ Download</a>
+                        {% endif %}
+                        {% endif %}
+
+                        {% if gen.image_url and gen.generation_type == 'image' and not gen.video_url %}
+                        <a href="{{ gen.image_url }}" class="btn btn-afrigen btn-sm" target="_blank">🖼️ View</a>
+                        <a href="{{ gen.image_url }}" class="btn btn-outline-warning btn-sm" download>⬇️ Download</a>
+                        {% endif %}
+
+                        {% if gen.status == 'failed' %}
+                        <a href="{{ url_for('main.dashboard') }}" class="btn btn-sm" style="background: #21262D; color: #F5A623; border: 1px solid #F5A623;">
+                            🔄 Try Again
                         </a>
                         {% endif %}
                     </div>
+
                 </div>
             </div>
         </div>
         {% endfor %}
 
     {% else %}
-    <!-- No generations yet -->
     <div class="card p-5 text-center">
         <h3>🎬</h3>
-        <h4 style="color: #F5A623;">No videos yet!</h4>
-        <p style="color: #C9D1D9;">
-            Generate your first AI video now!
-        </p>
-        <a href="{{ url_for('main.dashboard') }}"
-           class="btn btn-afrigen px-5">
-            Generate First Video 🚀
-        </a>
+        <h4 style="color: #F5A623;">No generations yet!</h4>
+        <p style="color: #C9D1D9;">Generate your first AI video or image now!</p>
+        <a href="{{ url_for('main.dashboard') }}" class="btn btn-afrigen px-5">Generate Now 🚀</a>
     </div>
     {% endif %}
 
 </div>
+
+<style>
+.btn-afrigen {
+    background: #F5A623;
+    color: #0D1117;
+    border: none;
+    font-weight: 600;
+}
+.btn-afrigen:hover {
+    background: #e09515;
+    color: #0D1117;
+}
+.card {
+    background: #161B22;
+    border: 1px solid #30363D;
+    border-radius: 16px;
+}
+</style>
+
 {% endblock %}

@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}Terms of Service — Afrigen{% endblock %}
+
+{% block content %}
+<div class="container mt-4" style="max-width: 800px;">
+
+    <div class="card p-4 mb-4">
+        <h2 style="color: #F5A623;">📋 Terms of Service</h2>
+        <p style="color: #888;">Last updated: May 2026</p>
+    </div>
+
+    <div class="card p-4 mb-4">
+        <h5 style="color: #F5A623;">1. Acceptance of Terms</h5>
+        <p style="color: #C9D1D9;">
+            By accessing or using Afrigen ("the Platform"), you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use the Platform. Afrigen is owned and operated by Al-ameen Olanrewaju, based in Nigeria.
+        </p>
+    </div>
+
+    <div class="card p-4 mb-4">
+        <h5 style="color: #F5A623;">2. Description of Service</h5>
+        <p style="color: #C9D1D9;">
+            Afrigen is an AI-powered content generation platform that allows users to generate videos, images, and other creative content using artificial intelligence. We provide both free and paid subscription plans.
+        </p>
+    </div>
+
+    <div class="card p-4 mb-4">
+        <h5 style="color: #F5A623;">3. User Accounts</h5>
+        <p style="color: #C9D1D9;">To access certain features, you must create an account. You are responsible for:</p>
+        <ul style="color: #C9D1D9;">
+            <li class="mb-2">Maintaining the confidentiality of your account credentials</li>
+            <li class="mb-2">All activities that occur under your account</li>
+            <li class="mb-2">Providing accurate and complete information during registration</li>
+            <li class="mb-2">Notifying us immediately of any unauthorized use of your account</li>
+        </ul>
+    </div>
+
+    <div class="card p-4 mb-4">
+        <h5 style="color: #F5A623;">4. Acceptable Use</h5>
+        <p style="color: #C9D1D9;">You agree NOT to use Afrigen to generate content that:</p>
+        <ul style="color: #C9D1D9;">
+            <li class="mb-2">Is illegal, harmful, threatening, abusive, or harassing</li>
+            <li class="mb-2">Infringes on any intellectual property rights</li>
+            <li class="mb-2">Contains explicit, sexual, or pornographic material</li>
+            <li class="mb-2">Promotes violence, discrimination, or hatred</li>
+            <li class="mb-2">Is used for spam, fraud, or deceptive practices</li>
+            <li class="mb-2">Violates any applicable Nigerian or international laws</li>
+        </ul>
+        <p style="color: #C9D1D9;">We reserve the right to suspend or terminate accounts that violate these terms.</p>
+    </div>
+
+    <div class="card p-4 mb-4">
+        <h5 style="color: #F5A623;">5. Credits and Payments</h5>
+        <p style="color: #C9D1D9;">
+            Afrigen operates on a credit-based system. Free users receive 10 starting credits and 2 video generations per day. Pro users receive 100 credits per month with unlimited video generation. Credits are non-transferable and non-refundable. Payments are processed securely via Paystack. All prices are in Nigerian Naira (₦).
+        </p>
+        <p style="color: #C9D1D9;">
+            We reserve the right to change pricing at any time with reasonable notice to existing subscribers.
+        </p>
+    </div>
+
+    <div class="card p-4 mb-4">
+        <h5 style="color: #F5A623;">6. Intellectual Property</h5>
+        <p style="color: #C9D1D9;">
+            Content you generate using Afrigen belongs to you. However, by using our platform, you grant Afrigen a non-exclusive license to use generated content for improving our services. The Afrigen platform, logo, and branding remain the intellectual property of Al-ameen Olanrewaju.
+        </p>
+    </div>
+
+    <div class="card p-4 mb-4">
+        <h5 style="color: #F5A623;">7. Disclaimer of Warranties</h5>
+        <p style="color: #C9D1D9;">
+            Afrigen is provided "as is" without warranties of any kind. We do not guarantee that the service will be uninterrupted, error-free, or that generated content will meet your expectations. AI-generated content may sometimes produce unexpected results.
+        </p>
+    </div>
+
+    <div class="card p-4 mb-4">
+        <h5 style="color: #F5A623;">8. Limitation of Liability</h5>
+        <p style="color: #C9D1D9;">
+            To the maximum extent permitted by law, Afrigen and Al-ameen Olanrewaju shall not be liable for any indirect, incidental, special, or consequential damages arising from your use of the platform, including but not limited to loss of data, revenue, or profits.
+        </p>
+    </div>
+
+    <div class="card p-4 mb-4">
+        <h5 style="color: #F5A623;">9. Termination</h5>
+        <p style="color: #C9D1D9;">
+            We reserve the right to suspend or terminate your account at any time for violations of these terms. You may delete your account at any time by contacting us at afrigenng@gmail.com.
+        </p>
+    </div>
+
+    <div class="card p-4 mb-4">
+        <h5 style="color: #F5A623;">10. Changes to Terms</h5>
+        <p style="color: #C9D1D9;">
+            We may update these terms from time to time. Continued use of the platform after changes constitutes acceptance of the new terms. We will notify users of significant changes via email.
+        </p>
+    </div>
+
+    <div class="card p-4 mb-4">
+        <h5 style="color: #F5A623;">11. Governing Law</h5>
+        <p style="color: #C9D1D9;">
+            These terms are governed by the laws of the Federal Republic of Nigeria. Any disputes shall be resolved in Nigerian courts.
+        </p>
+    </div>
+
+    <div class="card p-4 mb-4">
+        <h5 style="color: #F5A623;">12. Contact</h5>
+        <p style="color: #C9D1D9;">
+            For questions about these Terms of Service:<br>
+            📧 <a href="mailto:afrigenng@gmail.com" style="color: #F5A623;">afrigenng@gmail.com</a><br>
+            👤 Al-ameen Olanrewaju, Nigeria 🇳🇬
+        </p>
+    </div>
+
+    <div class="text-center mb-4">
+        <a href="{{ url_for('main.privacy') }}" class="btn btn-outline-warning px-4 me-2">🔒 Privacy Policy</a>
+        <a href="{{ url_for('main.index') }}" class="btn btn-afrigen px-4">← Back to Home</a>
+    </div>
+
+</div>
+
+<style>
+.card { background: #161B22; border: 1px solid #30363D; border-radius: 16px; }
+.btn-afrigen { background: #F5A623; color: #0D1117; border: none; font-weight: 600; }
+.btn-afrigen:hover { background: #e09515; color: #0D1117; }
+</style>
+
+{% endblock %}

@@ -26,6 +26,8 @@ class User(UserMixin, db.Model):
     is_banned = db.Column(db.Boolean, default=False)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    country = db.Column(db.String(100), nullable=True)
+    signup_source = db.Column(db.String(100), nullable=True, default='direct')
 
     def __repr__(self):
         return f"<User {self.username}>"

@@ -5,79 +5,162 @@
 {% block content %}
 <div class="container mt-4">
     <div class="row justify-content-center">
-        <div class="col-md-6">
+        <div class="col-md-8">
 
             <!-- Header -->
             <div class="text-center mb-4">
                 <h2 style="color: #F5A623;">⭐ Upgrade to Afrigen Pro</h2>
-                <p style="color: #C9D1D9;">Unlock unlimited AI video generation!</p>
+                <p style="color: #C9D1D9;">Unlock unlimited AI video generation and premium features!</p>
             </div>
 
-            <!-- Pro Features -->
-            <div class="card p-4 mb-4" style="border-color: #F5A623;">
-                <h4 style="color: #F5A623;" class="mb-3">What You Get:</h4>
-                <ul style="list-style: none; padding: 0; color: #C9D1D9;">
-                    <li class="mb-2">✅ Unlimited video generation</li>
-                    <li class="mb-2">✅ HD quality videos</li>
-                    <li class="mb-2">✅ All 5 video styles</li>
-                    <li class="mb-2">✅ AI voiceover (ElevenLabs)</li>
-                    <li class="mb-2">✅ No watermark</li>
-                    <li class="mb-2">✅ Priority generation</li>
-                    <li class="mb-2">✅ Email notifications</li>
-                </ul>
-
-                <div class="text-center mt-3">
-                    <h2 style="color: #F5A623;">₦5,000<small style="font-size: 16px; color: #888;">/month</small></h2>
+            <!-- Comparison Table -->
+            <div class="card p-4 mb-4">
+                <h5 style="color: #F5A623;" class="mb-3">Free vs Pro</h5>
+                <div class="table-responsive">
+                    <table class="table" style="color: #F0F6FC;">
+                        <thead>
+                            <tr>
+                                <th style="color: #888;">Feature</th>
+                                <th class="text-center" style="color: #888;">Free</th>
+                                <th class="text-center" style="color: #F5A623;">Pro ⭐</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Video Generation</td>
+                                <td class="text-center" style="color: #888;">2/day</td>
+                                <td class="text-center" style="color: #27AE60;">Unlimited</td>
+                            </tr>
+                            <tr>
+                                <td>Starting Credits</td>
+                                <td class="text-center" style="color: #888;">10</td>
+                                <td class="text-center" style="color: #27AE60;">100/month</td>
+                            </tr>
+                            <tr>
+                                <td>Image Generation</td>
+                                <td class="text-center" style="color: #E74C3C;">❌</td>
+                                <td class="text-center" style="color: #27AE60;">✅ 2 credits</td>
+                            </tr>
+                            <tr>
+                                <td>Image to Video</td>
+                                <td class="text-center" style="color: #E74C3C;">❌</td>
+                                <td class="text-center" style="color: #27AE60;">✅ 5 credits</td>
+                            </tr>
+                            <tr>
+                                <td>AI Voiceover</td>
+                                <td class="text-center" style="color: #E74C3C;">❌</td>
+                                <td class="text-center" style="color: #27AE60;">✅</td>
+                            </tr>
+                            <tr>
+                                <td>Direct Download</td>
+                                <td class="text-center" style="color: #E74C3C;">❌ (watch ad)</td>
+                                <td class="text-center" style="color: #27AE60;">✅</td>
+                            </tr>
+                            <tr>
+                                <td>All Video Styles</td>
+                                <td class="text-center" style="color: #27AE60;">✅</td>
+                                <td class="text-center" style="color: #27AE60;">✅</td>
+                            </tr>
+                            <tr>
+                                <td>Telegram Bot</td>
+                                <td class="text-center" style="color: #27AE60;">✅</td>
+                                <td class="text-center" style="color: #27AE60;">✅</td>
+                            </tr>
+                            <tr>
+                                <td>Email Notifications</td>
+                                <td class="text-center" style="color: #27AE60;">✅</td>
+                                <td class="text-center" style="color: #27AE60;">✅</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
-            <!-- Payment Button -->
-            <div class="card p-4 text-center">
-                <p style="color: #C9D1D9;" class="mb-3">
-                    Secure payment powered by Paystack 🔒
-                </p>
-
-                <form method="POST" action="{{ url_for('main.initialize_payment') }}">
-                    <button type="submit" class="btn btn-afrigen btn-lg w-100">
-                        Pay ₦5,000 with Paystack 💳
-                    </button>
-                </form>
-
-                <p style="color: #888; font-size: 12px; margin-top: 15px;">
-                    You will be redirected to Paystack's secure payment page.
-                    Supports cards, bank transfer and USSD.
-                </p>
-            </div>
-            <!-- Annual Plan -->
-            <div class="card p-4 mb-4 mt-3" style="border-color: #27AE60;">
-                <div class="text-center">
-                    <span class="badge" style="background: #27AE60; padding: 5px 15px;">
-                        SAVE 2 MONTHS! 🎉
-                    </span>
-                    <h4 style="color: #F5A623;" class="mt-2">Annual Plan</h4>
-                    <h2 style="color: #F5A623;">
-                        ₦50,000
-                        <small style="font-size: 16px; color: #888;">/year</small>
-                    </h2>
-                    <p style="color: #27AE60;">Save ₦10,000 vs monthly!</p>
+            <div class="row">
+                <!-- Monthly Plan -->
+                <div class="col-md-6 mb-4">
+                    <div class="card p-4 text-center" style="border-color: #F5A623;">
+                        <div style="position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: #F5A623; color: #0D1117; padding: 4px 16px; border-radius: 99px; font-size: 12px; font-weight: bold;">
+                            MOST POPULAR
+                        </div>
+                        <h4 style="color: #F5A623;" class="mt-2">Monthly Plan</h4>
+                        <h2 style="color: #F0F6FC;">₦5,000</h2>
+                        <p style="color: #888;">per month</p>
+                        <ul style="list-style: none; padding: 0; color: #C9D1D9; text-align: left;">
+                            <li class="mb-2">✅ Unlimited videos</li>
+                            <li class="mb-2">✅ 100 credits/month</li>
+                            <li class="mb-2">✅ All Pro features</li>
+                            <li class="mb-2">✅ Cancel anytime</li>
+                        </ul>
+                        <form method="POST" action="{{ url_for('main.initialize_payment') }}">
+                            <button type="submit" class="btn btn-afrigen w-100 mt-2">
+                                Pay ₦5,000 💳
+                            </button>
+                        </form>
+                    </div>
                 </div>
 
-                <form method="POST" action="{{ url_for('main.initialize_payment_annual') }}">
-                    <button type="submit" class="btn btn-success w-100 mt-3">
-                        Pay ₦50,000/year 💳
-                    </button>
-                </form>
+                <!-- Annual Plan -->
+                <div class="col-md-6 mb-4">
+                    <div class="card p-4 text-center" style="border-color: #27AE60;">
+                        <div style="position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: #27AE60; color: #fff; padding: 4px 16px; border-radius: 99px; font-size: 12px; font-weight: bold;">
+                            SAVE ₦10,000
+                        </div>
+                        <h4 style="color: #27AE60;" class="mt-2">Annual Plan</h4>
+                        <h2 style="color: #F0F6FC;">₦50,000</h2>
+                        <p style="color: #888;">per year</p>
+                        <ul style="list-style: none; padding: 0; color: #C9D1D9; text-align: left;">
+                            <li class="mb-2">✅ Everything in Monthly</li>
+                            <li class="mb-2">✅ 2 months free</li>
+                            <li class="mb-2">✅ 100 credits/month</li>
+                            <li class="mb-2">✅ Priority support</li>
+                        </ul>
+                        <form method="POST" action="{{ url_for('main.initialize_payment_annual') }}">
+                            <button type="submit" class="btn btn-success w-100 mt-2">
+                                Pay ₦50,000/year 💳
+                            </button>
+                        </form>
+                    </div>
+                </div>
             </div>
 
-            <!-- Back Button -->
-            <div class="text-center mt-3">
-                <a href="{{ url_for('main.dashboard') }}"
-                   style="color: #888;">
-                    ← Back to Dashboard
-                </a>
+            <!-- Trust -->
+            <div class="card p-3 mb-4 text-center">
+                <p style="color: #888; margin: 0; font-size: 14px;">
+                    🔒 Secure payment powered by Paystack &nbsp;|&nbsp;
+                    Supports cards, bank transfer and USSD &nbsp;|&nbsp;
+                    Cancel anytime
+                </p>
+            </div>
+
+            <!-- Back -->
+            <div class="text-center mt-2 mb-4">
+                <a href="{{ url_for('main.dashboard') }}" style="color: #888;">← Back to Dashboard</a>
             </div>
 
         </div>
     </div>
 </div>
+
+<style>
+.btn-afrigen {
+    background: #F5A623;
+    color: #0D1117;
+    border: none;
+    font-weight: 600;
+}
+.btn-afrigen:hover {
+    background: #e09515;
+    color: #0D1117;
+}
+.card {
+    background: #161B22;
+    border: 1px solid #30363D;
+    border-radius: 16px;
+    position: relative;
+}
+.table thead th { border-bottom: 1px solid #30363D; color: #888; }
+.table td { border-bottom: 1px solid #21262D; vertical-align: middle; }
+</style>
+
 {% endblock %}

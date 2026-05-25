@@ -3,14 +3,34 @@
 {% block content %}
 <div class="container mt-4">
     <div class="row justify-content-center">
-        <div class="col-md-6">
+        <div class="col-md-8">
 
             <!-- Header -->
             <div class="card p-4 mb-4 text-center">
                 <h2 style="color: #F5A623;">🎁 Referral Program</h2>
-                <p style="color: #C9D1D9;">
-                    Invite friends and earn free credits!
-                </p>
+                <p style="color: #C9D1D9;">Invite friends and earn free credits!</p>
+            </div>
+
+            <!-- Stats -->
+            <div class="row mb-4">
+                <div class="col-4">
+                    <div class="card p-4 text-center">
+                        <h2 style="color: #F5A623;">{{ total_referrals }}</h2>
+                        <p style="color: #888; font-size: 13px;">Friends Referred</p>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="card p-4 text-center">
+                        <h2 style="color: #27AE60;">{{ credits_earned }}</h2>
+                        <p style="color: #888; font-size: 13px;">Credits Earned</p>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="card p-4 text-center">
+                        <h2 style="color: #F5A623;">{{ current_user.credits }}</h2>
+                        <p style="color: #888; font-size: 13px;">Current Credits</p>
+                    </div>
+                </div>
             </div>
 
             <!-- How It Works -->
@@ -28,13 +48,9 @@
             <div class="card p-4 mb-4">
                 <h5 style="color: #F5A623;">Your Referral Link:</h5>
                 <div class="input-group mt-2">
-                    <input type="text"
-                           id="referralLink"
-                           class="form-control"
-                           value="{{ referral_link }}"
-                           readonly>
-                    <button onclick="copyReferralLink()"
-                            class="btn btn-afrigen">
+                    <input type="text" id="referralLink" class="form-control"
+                           value="{{ referral_link }}" readonly>
+                    <button onclick="copyReferralLink()" class="btn btn-afrigen">
                         📋 Copy
                     </button>
                 </div>
@@ -44,25 +60,60 @@
             </div>
 
             <!-- Share Buttons -->
-            <div class="card p-4 text-center">
+            <div class="card p-4 mb-4 text-center">
                 <h5 style="color: #F5A623;">Share Via:</h5>
                 <div class="d-flex justify-content-center gap-2 mt-3 flex-wrap">
                     <a href="https://wa.me/?text=Join Afrigen - The AI Video Platform for Africa! Use my referral link: {{ referral_link }}"
-                       target="_blank"
-                       class="btn btn-success px-3">
-                        📱 WhatsApp
-                    </a>
+                       target="_blank" class="btn btn-success px-3">📱 WhatsApp</a>
                     <a href="https://twitter.com/intent/tweet?text=Join @AfrigenAI - Turn your ideas into AI videos! Use my referral link: {{ referral_link }}"
-                       target="_blank"
-                       class="btn btn-info px-3" style="color: white;">
-                        🐦 Twitter
-                    </a>
+                       target="_blank" class="btn btn-info px-3" style="color:white;">🐦 Twitter</a>
                     <a href="https://www.facebook.com/sharer/sharer.php?u={{ referral_link }}"
-                       target="_blank"
-                       class="btn btn-primary px-3">
-                        📘 Facebook
-                    </a>
+                       target="_blank" class="btn btn-primary px-3">📘 Facebook</a>
                 </div>
+            </div>
+
+            <!-- Referred Users -->
+            <div class="card p-4 mb-4">
+                <h5 style="color: #F5A623;" class="mb-3">
+                    👥 Friends You Referred
+                    <span style="color: #888; font-size: 14px; font-weight: normal;">
+                        ({{ total_referrals }} total)
+                    </span>
+                </h5>
+
+                {% if referred_users %}
+                <div class="table-responsive">
+                    <table class="table" style="color: #F0F6FC;">
+                        <thead style="color: #F5A623;">
+                            <tr>
+                                <th>Username</th>
+                                <th>Plan</th>
+                                <th>Joined</th>
+                                <th>Credits Earned</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in referred_users %}
+                            <tr>
+                                <td>{{ user.username }}</td>
+                                <td>
+                                    <span class="badge" style="background: {% if user.plan == 'pro' %}#F5A623{% else %}#21262D{% endif %}; color: {% if user.plan == 'pro' %}#0D1117{% else %}#C9D1D9{% endif %};">
+                                        {{ user.plan.upper() }}
+                                    </span>
+                                </td>
+                                <td style="color: #888;">{{ user.joined }}</td>
+                                <td style="color: #27AE60;">+2 credits</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center p-4">
+                    <p style="color: #888;">No referrals yet. Share your link to get started!</p>
+                    <p style="color: #F5A623; font-size: 14px;">Each referral earns you 2 free credits 🎉</p>
+                </div>
+                {% endif %}
             </div>
 
         </div>
@@ -76,5 +127,30 @@ function copyReferralLink() {
     alert('Referral link copied! 📋');
 }
 </script>
+
+<style>
+.btn-afrigen {
+    background: #F5A623;
+    color: #0D1117;
+    border: none;
+    font-weight: 600;
+}
+.btn-afrigen:hover {
+    background: #e09515;
+    color: #0D1117;
+}
+.card {
+    background: #161B22;
+    border: 1px solid #30363D;
+    border-radius: 16px;
+}
+.form-control {
+    background: #21262D;
+    border: 1px solid #30363D;
+    color: #F0F6FC;
+}
+.table thead th { border-bottom: 1px solid #30363D; }
+.table td { border-bottom: 1px solid #21262D; vertical-align: middle; }
+</style>
 
 {% endblock %}

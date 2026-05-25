@@ -12,11 +12,37 @@ logger = logging.getLogger(__name__)
 
 @auth.route('/register', methods=['GET', 'POST'])
 def register():
+    # Capture UTM source from GET params and store in session
+    if request.method == 'GET':
+        utm_source = request.args.get('utm_source', '')
+        ref_code = request.args.get('ref', '')
+        if utm_source:
+            session['signup_source'] = utm_source
+        if ref_code:
+            session['ref_code'] = ref_code
+
     if request.method == 'POST':
         username = request.form.get('username')
         email = request.form.get('email')
         password = request.form.get('password')
-        ref_code = request.args.get('ref')  # ← get referral code!
+        ref_code = session.get('ref_code') or request.args.get('ref')
+        signup_source = session.get('signup_source', 'direct')
+
+        # Detect source from referrer header if no UTM
+        if signup_source == 'direct' and request.referrer:
+            referrer = request.referrer.lower()
+            if 'facebook' in referrer:
+                signup_source = 'facebook'
+            elif 'twitter' in referrer or 'x.com' in referrer:
+                signup_source = 'twitter'
+            elif 'instagram' in referrer:
+                signup_source = 'instagram'
+            elif 'linkedin' in referrer:
+                signup_source = 'linkedin'
+            elif 'google' in referrer:
+                signup_source = 'google'
+            elif 'telegram' in referrer:
+                signup_source = 'telegram'
 
         existing_user = User.query.filter_by(email=email).first()
         if existing_user:
@@ -24,15 +50,22 @@ def register():
             flash('Email already registered!', 'danger')
             return redirect(url_for('auth.register'))
 
+        # Get country from IP
+        from main import get_country_from_ip, get_real_ip
+        ip = get_real_ip()
+        country = get_country_from_ip(ip)
+
         hashed_password = generate_password_hash(password)
         new_user = User(
             username=username,
             email=email,
             password=hashed_password,
-            credits=5  # default credits
+            credits=5,
+            country=country,
+            signup_source=signup_source
         )
         db.session.add(new_user)
-        db.session.flush()  # get new user id
+        db.session.flush()
 
         # Handle referral
         if ref_code:
@@ -42,23 +75,21 @@ def register():
             ).first()
 
             if referral:
-                # Give bonus credits to new user
                 new_user.credits = 7  # 5 + 2 bonus
-
-                # Give bonus credits to referrer
                 referrer = User.query.get(referral.referrer_id)
                 if referrer:
                     referrer.credits += 2
-
-                # Mark referral as used
                 referral.referred_id = new_user.id
                 referral.is_used = True
-
                 flash('Bonus credits added! 🎁', 'success')
 
         db.session.commit()
 
-        logger.info(f"New user registered: {username} ({email})")
+        # Clear session
+        session.pop('signup_source', None)
+        session.pop('ref_code', None)
+
+        logger.info(f"New user registered: {username} ({email}) from {country} via {signup_source}")
 
         try:
             send_welcome_email(email, username)
