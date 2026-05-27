@@ -121,13 +121,8 @@ def refine_image_prompt(user_prompt, style="realistic"):
     return response.choices[0].message.content
 
 def get_db_connection():
-    import mysql.connector
-    return mysql.connector.connect(
-        host=os.environ.get("DB_HOST", "localhost"),
-        user=os.environ.get("DB_USER", "root"),
-        password=os.environ.get("DB_PASSWORD", ""),
-        database=os.environ.get("DB_NAME", "afrigen")
-    )
+    import psycopg2
+    return psycopg2.connect(os.environ.get("DATABASE_URL"))
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
