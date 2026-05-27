@@ -355,6 +355,21 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         logger.error(f"Error: {e}")
 
+from flask import Flask
+import threading
+
+health_app = Flask(__name__)
+
+@health_app.route('/')
+def health():
+    return "Afrigen Bot is running! 🤖", 200
+
+def run_health_server():
+    health_app.run(host='0.0.0.0', port=8080)
+
+# Add this before run_bot() call
+threading.Thread(target=run_health_server, daemon=True).start()
+
 def run_bot():
     try:
         print("🚀 Starting bot...")
