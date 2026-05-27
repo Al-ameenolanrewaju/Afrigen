@@ -4,7 +4,7 @@ import os
 resend.api_key = os.environ.get("RESEND_API_KEY")
 
 BASE_URL = os.environ.get("BASE_URL", "https://afrigen.com.ng")
-FROM_EMAIL = "Afrigen <onboarding@resend.dev>"
+FROM_EMAIL = "Afrigen <hello@afrigen.com.ng>"
 
 
 def send_welcome_email(user_email, username):
