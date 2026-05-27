@@ -378,6 +378,6 @@ def run_bot():
     app.run_webhook(
         listen="0.0.0.0",
         port=PORT,
-        webhook_url="https://afrigen-bot.com.ng",
+        webhook_url="https://afrigen-bot.onrender.com",
         secret_token="afrigen_secret"
     )
