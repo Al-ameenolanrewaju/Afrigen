@@ -362,6 +362,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def run_bot():
     app = Application.builder().token(TOKEN).build()
+
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("styles", styles_command))
@@ -369,8 +370,14 @@ def run_bot():
     app.add_handler(CommandHandler("history", history_command))
     app.add_handler(CallbackQueryHandler(handle_style_selection))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    print("🤖 AfrigenBot is running!")
-    app.run_polling()
 
-if __name__ == "__main__":
-    run_bot()
+    PORT = int(os.environ.get("PORT", 10000))
+
+    print("🤖 AfrigenBot webhook is running!")
+
+    app.run_webhook(
+        listen="0.0.0.0",
+        port=PORT,
+        webhook_url="https://afrigen-bot.com.ng",
+        secret_token="afrigen_secret"
+    )
