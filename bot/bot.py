@@ -361,23 +361,35 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.error(f"Error: {e}")
 
 def run_bot():
-    app = Application.builder().token(TOKEN).build()
+    try:
+        print("🚀 Starting bot...")
 
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("help", help_command))
-    app.add_handler(CommandHandler("styles", styles_command))
-    app.add_handler(CommandHandler("credits", credits_command))
-    app.add_handler(CommandHandler("history", history_command))
-    app.add_handler(CallbackQueryHandler(handle_style_selection))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+        print("TOKEN:", bool(TOKEN))
 
-    PORT = int(os.environ.get("PORT", 10000))
+        PORT = int(os.environ.get("PORT", 10000))
+        print("PORT:", PORT)
 
-    print("🤖 AfrigenBot webhook is running!")
+        app = Application.builder().token(TOKEN).build()
 
-    app.run_webhook(
-        listen="0.0.0.0",
-        port=PORT,
-        webhook_url="https://afrigen-bot.onrender.com",
-        secret_token="afrigen_secret"
-    )
+        app.add_handler(CommandHandler("start", start))
+        app.add_handler(CommandHandler("help", help_command))
+        app.add_handler(CommandHandler("styles", styles_command))
+        app.add_handler(CommandHandler("credits", credits_command))
+        app.add_handler(CommandHandler("history", history_command))
+        app.add_handler(CallbackQueryHandler(handle_style_selection))
+        app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+
+        print("🤖 Starting webhook server...")
+
+        app.run_webhook(
+            listen="0.0.0.0",
+            port=PORT,
+            webhook_url="https://afrigen-bot.onrender.com",
+            secret_token="afrigen_secret"
+        )
+
+    except Exception as e:
+        import traceback
+
+        print("❌ FULL ERROR:")
+        traceback.print_exc()
