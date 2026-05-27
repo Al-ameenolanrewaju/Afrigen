@@ -373,14 +373,25 @@ threading.Thread(target=run_health_server, daemon=True).start()
 def run_bot():
     try:
         print("🚀 Starting bot...")
-
         print("TOKEN:", bool(TOKEN))
 
+        # Start health check server
+        import threading
+        from flask import Flask
+        health_app = Flask(__name__)
+
+        @health_app.route('/')
+        def health():
+            return "Afrigen Bot is running! 🤖", 200
+
         PORT = int(os.environ.get("PORT", 10000))
-        print("PORT:", PORT)
+        threading.Thread(
+            target=lambda: health_app.run(host='0.0.0.0', port=PORT),
+            daemon=True
+        ).start()
 
+        # Start bot with polling
         app = Application.builder().token(TOKEN).build()
-
         app.add_handler(CommandHandler("start", start))
         app.add_handler(CommandHandler("help", help_command))
         app.add_handler(CommandHandler("styles", styles_command))
@@ -389,20 +400,15 @@ def run_bot():
         app.add_handler(CallbackQueryHandler(handle_style_selection))
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-        print("🤖 Starting webhook server...")
-
-        app.run_webhook(
-            listen="0.0.0.0",
-            port=PORT,
-            webhook_url="https://afrigen-bot.onrender.com",
-            secret_token="afrigen_secret"
-        )
+        print("🤖 Bot running with polling...")
+        app.run_polling()
 
     except Exception as e:
         import traceback
-
-        print("❌ FULL ERROR:")
+        print("❌ STARTUP ERROR:")
         traceback.print_exc()
+        import time
+        time.sleep(30)
 
 if __name__ == "__main__":
     try:
