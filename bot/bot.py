@@ -388,3 +388,13 @@ def run_bot():
 
         print("❌ FULL ERROR:")
         traceback.print_exc()
+
+if __name__ == "__main__":
+    try:
+        run_bot()
+    except Exception as e:
+        import traceback
+        print("❌ STARTUP ERROR:")
+        traceback.print_exc()
+        import time
+        time.sleep(30)  # keeps process alive so Render shows the error
