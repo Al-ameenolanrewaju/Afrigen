@@ -858,3 +858,7 @@ def terms():
 @main.route('/privacy')
 def privacy():
     return render_template('main/privacy.html')
+
+@main.route('/founder')
+def founder():
+    return render_template('main/founder.html')

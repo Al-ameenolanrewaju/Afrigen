@@ -22,4 +22,19 @@
         <priority>0.70</priority>
     </url>
 
+    <url>
+        <loc>https://afrigen.com.ng/founder</loc>
+        <priority>0.70</priority>
+    </url>
+
+    <url>
+        <loc>https://afrigen.com.ng/contact</loc>
+        <priority>0.60</priority>
+    </url>
+
+    <url>
+        <loc>https://afrigen.com.ng/upgrade</loc>
+        <priority>0.60</priority>
+    </url>
+
 </urlset>
