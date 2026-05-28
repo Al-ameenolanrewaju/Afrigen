@@ -862,3 +862,20 @@ def privacy():
 @main.route('/founder')
 def founder():
     return render_template('main/founder.html')
+
+@main.route('/f3dd6d35491e4a168ba565d6e14ccffc.txt')
+def indexnow_key():
+    return 'f3dd6d35491e4a168ba565d6e14ccffc', 200, {'Content-Type': 'text/plain'}
+
+
+def submit_to_indexnow(urls):
+    payload = {
+        "host": "afrigen.com.ng",
+        "key": "f3dd6d35491e4a168ba565d6e14ccffc",
+        "keyLocation": "https://afrigen.com.ng/f3dd6d35491e4a168ba565d6e14ccffc.txt",
+        "urlList": urls
+    }
+    http_requests.post(
+        "https://api.indexnow.org/indexnow",
+        json=payload
+    )
