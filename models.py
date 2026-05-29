@@ -21,7 +21,12 @@ class User(UserMixin, db.Model):
     # Daily credits
     credits = db.Column(db.Integer, default=10)
     daily_credits_used = db.Column(db.Integer, default=0)
-    last_credit_reset = db.Column(db.Date, default=date.today)
+    last_credit_reset = db.Column(db.Date, nullable=True)
+    monthly_videos_used = db.Column(db.Integer, default=0)
+    last_video_reset = db.Column(db.Date, nullable=True)
+
+    monthly_images_used = db.Column(db.Integer, default=0)
+    last_image_reset = db.Column(db.Date, nullable=True)
 
     is_banned = db.Column(db.Boolean, default=False)
 

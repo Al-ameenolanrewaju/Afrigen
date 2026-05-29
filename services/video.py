@@ -127,10 +127,11 @@ def generate_image(
         aspect_ratio="1:1"
 ):
     MODELS = {
-        "realistic": "fal-ai/flux/dev",
-        "anime": "fal-ai/anime-image-generator",
-        "cinematic": "fal-ai/flux-pro/v1.1",
-        "social": "fal-ai/flux/schnell"
+        "cinematic": "fal-ai/ltx-video-v095/text-to-video",
+        "anime": "fal-ai/fast-animatediff/text-to-video",
+        "realistic": "fal-ai/ltx-video-v095/text-to-video",
+        "african": "fal-ai/ltx-video-v095/text-to-video",
+        "social": "fal-ai/fast-animatediff/text-to-video"
     }
 
     model = MODELS.get(style, MODELS["realistic"])

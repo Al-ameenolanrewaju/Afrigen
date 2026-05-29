@@ -111,23 +111,29 @@ def generate():
     if action == 'refine_only':
         return jsonify({"success": True, "type": "refine_only", "refined": refined, "original": prompt})
 
-    # Daily limit for free users
+    # Plan checks
     if current_user.plan == 'free':
+        from datetime import date
         today = date.today()
-        if current_user.last_credit_reset != today:
-            current_user.daily_credits_used = 0
-            current_user.last_credit_reset = today
+        if current_user.last_video_reset is None or current_user.last_video_reset.month != today.month:
+            current_user.monthly_videos_used = 0
+            current_user.last_video_reset = today
             db.session.commit()
-        if current_user.daily_credits_used >= 2:
-            flash('You’ve used your 2 free videos today. Upgrade to Pro for unlimited!', 'warning')
-            return redirect(url_for('main.dashboard'))
+        if current_user.monthly_videos_used >= 3:
+            return jsonify({"success": False,
+                            "error": "You have used your 3 free videos this month. Upgrade to Pro for unlimited!"})
     elif current_user.plan == 'pro':
-        pass
+        if current_user.credits < 5:
+            return jsonify({"success": False,
+                            "error": "Not enough credits! Please renew your Pro plan at afrigen.com.ng/upgrade"})
     else:
         flash('Your account is restricted.', 'danger')
         return redirect(url_for('main.dashboard'))
 
     try:
+        # Force cheapest model for free users
+        if current_user.plan == 'free':
+            style = 'cinematic'
         result = generate_video(refined, style, aspect_ratio)
         if not result["success"]:
             raise Exception(result["error"])
@@ -151,7 +157,17 @@ def generate():
         db.session.add(generation)
 
         if current_user.plan == 'free':
-            current_user.daily_credits_used += 1
+            current_user.monthly_videos_used += 1
+        elif current_user.plan == 'pro':
+            current_user.credits -= 5
+            if current_user.credits <= 5:
+                try:
+                    from services.email import send_credits_low_email
+                    send_credits_low_email(current_user.email, current_user.username, current_user.credits)
+                except Exception as e:
+                    print(f"Email error: {e}")
+            if current_user.credits < 0:
+                current_user.credits = 0
 
         db.session.commit()
 
@@ -277,9 +293,23 @@ def generate_image():
         flash('Please enter an image idea!', 'danger')
         return redirect(url_for('main.dashboard'))
 
-    if current_user.credits < 2:
-        flash('Not enough credits! You need 2 credits to generate an image.', 'warning')
-        return redirect(url_for('main.dashboard'))
+    # Free user limit
+    if current_user.plan == 'free':
+        from datetime import date
+        today = date.today()
+        if current_user.last_image_reset is None or current_user.last_image_reset.month != today.month:
+            current_user.monthly_images_used = 0
+            current_user.last_image_reset = today
+            db.session.commit()
+        if current_user.monthly_images_used >= 2:
+            return jsonify({"success": False,
+                            "error": "You have used your 2 free images this month. Upgrade to Pro!"})
+
+    # Pro user credit check
+    if current_user.plan == 'pro':
+        if current_user.credits < 2:
+            return jsonify({"success": False,
+                            "error": "Not enough credits! Please renew your Pro plan."})
 
     try:
         refined = refine_image_prompt(prompt, style)
@@ -300,9 +330,11 @@ def generate_image():
         )
         db.session.add(generation)
 
-        # Only deduct credits if image was generated
         if image:
-            current_user.credits -= 2
+            if current_user.plan == 'free':
+                current_user.monthly_images_used += 1
+            elif current_user.plan == 'pro':
+                current_user.credits -= 2
 
         db.session.commit()
 

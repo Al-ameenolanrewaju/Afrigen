@@ -37,11 +37,14 @@
             </div>
         </div>
         <div class="col-md-4 mb-3">
-            <div class="card p-4 text-center">
-                <h1 style="color: #F5A623;">{{ total_generations }}</h1>
-                <p style="color: #C9D1D9;">Videos Generated</p>
-            </div>
-        </div>
+    <div class="card p-4 text-center">
+        <h1 style="color: #F5A623;">{{ total_generations }}</h1>
+        <p style="color: #C9D1D9;">Videos Generated</p>
+        {% if current_user.plan == 'free' %}
+        <small style="color: #888;">{{ current_user.monthly_videos_used }}/3 free videos used this month</small>
+        {% endif %}
+    </div>
+</div>
         <div class="col-md-4 mb-3">
             <div class="card p-4 text-center">
                 <h1 style="color: #F5A623;">🌍</h1>
