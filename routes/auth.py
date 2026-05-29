@@ -6,6 +6,7 @@ from services.email import generate_reset_token, verify_reset_token, send_reset_
 from services.email import send_welcome_email
 import logging
 import os
+from routes.main import get_country_from_ip, get_real_ip
 
 auth = Blueprint('auth', __name__)
 logger = logging.getLogger(__name__)
@@ -51,7 +52,7 @@ def register():
             return redirect(url_for('auth.register'))
 
         # Get country from IP
-        from main import get_country_from_ip, get_real_ip
+
         ip = get_real_ip()
         country = get_country_from_ip(ip)
 
