@@ -879,3 +879,38 @@ def submit_to_indexnow(urls):
         "https://api.indexnow.org/indexnow",
         json=payload
     )
+
+@main.route('/payment/webhook', methods=['POST'])
+def payment_webhook():
+    import hmac
+    import hashlib
+
+    paystack_secret = os.environ.get('PAYSTACK_SECRET_KEY')
+    signature = request.headers.get('x-paystack-signature')
+    body = request.get_data()
+
+    expected = hmac.new(
+        paystack_secret.encode('utf-8'),
+        body,
+        hashlib.sha512
+    ).hexdigest()
+
+    if signature != expected:
+        return '', 400
+
+    data = request.get_json()
+
+    if data['event'] == 'charge.success':
+        user_id = data['data']['metadata'].get('user_id')
+        user = User.query.get(user_id)
+        if user and user.plan != 'pro':
+            user.plan = 'pro'
+            user.credits = 100
+            db.session.commit()
+            try:
+                from services.email import send_pro_upgrade_email
+                send_pro_upgrade_email(user.email, user.username)
+            except Exception as e:
+                print(f"Email error: {e}")
+
+    return '', 200
