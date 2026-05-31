@@ -70,6 +70,32 @@ def generate_video(
     return {"success": False, "error": f"Failed after {MAX_RETRIES} attempts. Last error: {last_error}"}
 
 
+def generate_video_async(prompt, style="cinematic", aspect_ratio="16:9", webhook_url=None):
+    MODELS = {
+        "cinematic": "fal-ai/ltx-video-v095/text-to-video",
+        "anime": "fal-ai/fast-animatediff/text-to-video",
+        "realistic": "fal-ai/ltx-video-v095/text-to-video",
+        "african": "fal-ai/ltx-video-v095/text-to-video",
+        "social": "fal-ai/fast-animatediff/text-to-video"
+    }
+
+    model = MODELS.get(style, MODELS["cinematic"])
+
+    try:
+        handler = fal_client.submit(
+            model,
+            arguments={
+                "prompt": prompt,
+                "aspect_ratio": aspect_ratio
+            },
+            webhook_url=webhook_url
+        )
+        return {"success": True, "request_id": handler.request_id}
+    except Exception as e:
+        print(f"FAL submit error: {e}")
+        return {"success": False, "error": str(e)}
+
+
 def generate_video_from_image(image_url, prompt):
     models = [
         "fal-ai/kling-video/v1.6/pro/image-to-video",

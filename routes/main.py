@@ -7,6 +7,7 @@ from models import db, Generation, User, TelegramUser, SavedPrompt, Referral
 from services.claude import refine_prompt, refine_image_prompt
 from services.video import (
     generate_video,
+    generate_video_async,
     generate_video_from_image,
     generate_image as generate_ai_image   # aliased to avoid conflict with route name
 )
@@ -131,28 +132,22 @@ def generate():
         return redirect(url_for('main.dashboard'))
 
     try:
-        # Force cheapest model for free users
         if current_user.plan == 'free':
             style = 'cinematic'
-        result = generate_video(refined, style, aspect_ratio)
+
+        webhook_url = url_for('main.fal_webhook', _external=True)
+        result = generate_video_async(refined, style, aspect_ratio, webhook_url=webhook_url)
+
         if not result["success"]:
             raise Exception(result["error"])
-        video_url = result["video_url"]
-        if not video_url:
-            raise Exception("No video URL returned")
-
-        audio_filename = None
-        if add_voiceover and current_user.plan == 'pro':
-            script = generate_video_script(prompt, style)
-            audio_filename = generate_voiceover(script)
 
         generation = Generation(
             user_id=current_user.id,
             original_prompt=prompt,
             refined_prompt=refined,
-            video_url=video_url,
-            audio_url=audio_filename,
-            status="completed"
+            video_url=None,
+            status="processing",
+            fal_request_id=result["request_id"]
         )
         db.session.add(generation)
 
@@ -171,7 +166,12 @@ def generate():
 
         db.session.commit()
 
-        return jsonify({"success": True, "type": "video", "video_url": video_url, "refined": refined, "original": prompt, "style": style})
+        return jsonify({
+            "success": True,
+            "type": "processing",
+            "message": "Your video is being generated! You'll receive an email when it's ready.",
+            "generation_id": generation.id
+        })
 
     except Exception as e:
         db.session.rollback()
@@ -181,15 +181,11 @@ def generate():
             original_prompt=prompt,
             refined_prompt=refined,
             video_url=None,
-            audio_url=None,
             status="failed"
         )
         db.session.add(generation)
         db.session.commit()
-
-        flash('Video generation is temporarily unavailable. Please try again later.', 'warning')
         return jsonify({"success": False, "error": "Video generation failed. Please try again."})
-
 
 @main.route('/refine-prompt', methods=['POST'])
 def refine_prompt_free():
@@ -944,5 +940,47 @@ def payment_webhook():
                 send_pro_upgrade_email(user.email, user.username)
             except Exception as e:
                 print(f"Email error: {e}")
+
+    return '', 200
+
+@main.route('/fal/webhook', methods=['POST'])
+def fal_webhook():
+    data = request.get_json()
+    print("FAL WEBHOOK:", data)
+
+    request_id = data.get('request_id')
+    if not request_id:
+        return '', 400
+
+    # Find generation by request_id
+    generation = Generation.query.filter_by(fal_request_id=request_id).first()
+    if not generation:
+        return '', 404
+
+    # Get video URL from webhook payload
+    video_url = None
+    if data.get('payload') and data['payload'].get('video'):
+        video_url = data['payload']['video'].get('url')
+
+    if video_url:
+        generation.video_url = video_url
+        generation.status = 'completed'
+        db.session.commit()
+
+        # Send email notification
+        try:
+            user = User.query.get(generation.user_id)
+            from services.email import send_video_ready_email
+            send_video_ready_email(
+                user.email,
+                user.username,
+                generation.original_prompt,
+                video_url
+            )
+        except Exception as e:
+            print(f"Email error: {e}")
+    else:
+        generation.status = 'failed'
+        db.session.commit()
 
     return '', 200

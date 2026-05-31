@@ -63,6 +63,7 @@ class Generation(db.Model):
     ad_watched = db.Column(db.Boolean, default=False)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    fal_request_id = db.Column(db.String(200), nullable=True)
 
     # ONLY relationship definition
     user = db.relationship("User", backref="generations")
