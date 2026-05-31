@@ -261,6 +261,8 @@ def sitemap():
 
 with app.app_context():
     db.create_all()
+    from flask_migrate import upgrade
+    upgrade()
     print("Afrigen database ready")
 
 if __name__ == '__main__':
