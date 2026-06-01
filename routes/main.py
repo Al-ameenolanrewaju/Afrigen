@@ -136,6 +136,7 @@ def generate():
             style = 'cinematic'
 
         webhook_url = url_for('main.fal_webhook', _external=True)
+        print("WEBHOOK URL:", webhook_url)
         result = generate_video_async(refined, style, aspect_ratio, webhook_url=webhook_url)
 
         if not result["success"]:
