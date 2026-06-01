@@ -72,10 +72,10 @@ def generate_video(
 
 def generate_video_async(prompt, style="cinematic", aspect_ratio="16:9", webhook_url=None):
     MODELS = {
-        "cinematic": "fal-ai/ltx-video-v095/text-to-video",
+        "cinematic": "fal-ai/ltx-video-v095",
         "anime": "fal-ai/fast-animatediff/text-to-video",
-        "realistic": "fal-ai/ltx-video-v095/text-to-video",
-        "african": "fal-ai/ltx-video-v095/text-to-video",
+        "realistic": "fal-ai/ltx-video-v095",
+        "african": "fal-ai/ltx-video-v095",
         "social": "fal-ai/fast-animatediff/text-to-video"
     }
 
@@ -147,17 +147,13 @@ def generate_video_from_image(image_url, prompt):
     return None
 
 
-def generate_image(
-        prompt,
-        style="realistic",
-        aspect_ratio="1:1"
-):
+def generate_image(prompt, style="realistic", aspect_ratio="1:1"):
     MODELS = {
-        "cinematic": "fal-ai/ltx-video-v095/text-to-video",
-        "anime": "fal-ai/fast-animatediff/text-to-video",
-        "realistic": "fal-ai/ltx-video-v095/text-to-video",
-        "african": "fal-ai/ltx-video-v095/text-to-video",
-        "social": "fal-ai/fast-animatediff/text-to-video"
+        "realistic": "fal-ai/flux/dev",
+        "anime": "fal-ai/flux/dev",
+        "cinematic": "fal-ai/flux-pro/v1.1",
+        "african": "fal-ai/flux/dev",
+        "social": "fal-ai/flux/schnell"
     }
 
     model = MODELS.get(style, MODELS["realistic"])
