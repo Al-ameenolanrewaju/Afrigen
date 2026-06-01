@@ -946,7 +946,7 @@ def payment_webhook():
 @main.route('/fal/webhook', methods=['POST'])
 def fal_webhook():
     data = request.get_json()
-    print("FAL WEBHOOK:", data)
+    print("FAL WEBHOOK RECEIVED:", data)
 
     request_id = data.get('request_id')
     if not request_id:

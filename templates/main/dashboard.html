@@ -360,7 +360,14 @@ function showResult(data) {
     finishProgress(true);
     setTimeout(() => {
         document.getElementById('generation-overlay').style.display = 'none';
-        if (data.type === 'image') {
+        if (data.type === 'processing') {
+            // Async generation - redirect to history
+            document.getElementById('overlay-title').textContent = '🎬 Video Queued!';
+            document.getElementById('overlay-subtitle').textContent = data.message;
+            setTimeout(() => {
+                window.location.href = '/history';
+            }, 2000);
+        } else if (data.type === 'image') {
             window.location.href = `/result/image?image_url=${encodeURIComponent(data.image_url)}&original=${encodeURIComponent(data.original)}&refined=${encodeURIComponent(data.refined)}`;
         } else {
             window.location.href = `/result/video?video_url=&original=${encodeURIComponent(data.original)}&refined=${encodeURIComponent(data.refined)}&style=`;
