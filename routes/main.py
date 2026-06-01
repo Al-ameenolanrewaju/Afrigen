@@ -153,16 +153,6 @@ def generate():
 
         if current_user.plan == 'free':
             current_user.monthly_videos_used += 1
-        elif current_user.plan == 'pro':
-            current_user.credits -= 5
-            if current_user.credits <= 5:
-                try:
-                    from services.email import send_credits_low_email
-                    send_credits_low_email(current_user.email, current_user.username, current_user.credits)
-                except Exception as e:
-                    print(f"Email error: {e}")
-            if current_user.credits < 0:
-                current_user.credits = 0
 
         db.session.commit()
 
@@ -952,12 +942,15 @@ def fal_webhook():
     if not request_id:
         return '', 400
 
-    # Find generation by request_id
     generation = Generation.query.filter_by(fal_request_id=request_id).first()
     if not generation:
         return '', 404
 
-    # Get video URL from webhook payload
+    if data.get('status') == 'ERROR':
+        generation.status = 'failed'
+        db.session.commit()
+        return '', 200
+
     video_url = None
     if data.get('payload') and data['payload'].get('video'):
         video_url = data['payload']['video'].get('url')
@@ -965,18 +958,28 @@ def fal_webhook():
     if video_url:
         generation.video_url = video_url
         generation.status = 'completed'
+
+        # Deduct credits only on success
+        user = User.query.get(generation.user_id)
+        if user:
+            if user.plan == 'pro':
+                user.credits -= 5
+                if user.credits <= 5:
+                    try:
+                        from services.email import send_credits_low_email
+                        send_credits_low_email(user.email, user.username, user.credits)
+                    except Exception as e:
+                        print(f"Email error: {e}")
+                if user.credits < 0:
+                    user.credits = 0
+            elif user.plan == 'free':
+                user.monthly_videos_used += 1
+
         db.session.commit()
 
-        # Send email notification
         try:
-            user = User.query.get(generation.user_id)
             from services.email import send_video_ready_email
-            send_video_ready_email(
-                user.email,
-                user.username,
-                generation.original_prompt,
-                video_url
-            )
+            send_video_ready_email(user.email, user.username, generation.original_prompt, video_url)
         except Exception as e:
             print(f"Email error: {e}")
     else:
