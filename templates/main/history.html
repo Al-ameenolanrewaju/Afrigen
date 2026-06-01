@@ -21,7 +21,16 @@
             </div>
         </div>
     </div>
+    {% if generations %}
+    {% set processing = generations | selectattr('status', 'equalto', 'processing') | list %}
+    {% if processing %}
+    <div class="alert mb-4" style="background: rgba(245,166,35,0.1); border: 1px solid #F5A623; border-radius: 12px; color: #F5A623;">
+        <strong>🎬 Video generating!</strong>
+        We'll send you an email at <strong>{{ current_user.email }}</strong> when it's ready.
 
+    </div>
+    {% endif %}
+    {% endif %}
     {% if generations %}
         {% for gen in generations %}
         <div class="card p-4 mb-3">
@@ -135,5 +144,14 @@
     border-radius: 16px;
 }
 </style>
+<script>
+{% set processing = generations | selectattr('status', 'equalto', 'processing') | list %}
+{% if processing %}
+// Auto refresh every 15 seconds while videos are processing
+setTimeout(function() {
+    window.location.reload();
+}, 15000);
+{% endif %}
+</script>
 
 {% endblock %}
