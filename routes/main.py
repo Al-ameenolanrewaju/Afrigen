@@ -988,3 +988,41 @@ def fal_webhook():
         db.session.commit()
 
     return '', 200
+
+@main.route('/download/video/<int:generation_id>')
+@login_required
+def download_video_file(generation_id):
+    generation = Generation.query.get_or_404(generation_id)
+    if generation.user_id != current_user.id:
+        abort(403)
+    if not generation.video_url:
+        flash('Video not available.', 'danger')
+        return redirect(url_for('main.history'))
+
+    # Stream the video file from FAL
+    response = http_requests.get(generation.video_url, stream=True)
+    from flask import Response
+    return Response(
+        response.iter_content(chunk_size=8192),
+        content_type='video/mp4',
+        headers={'Content-Disposition': f'attachment; filename="afrigen-video-{generation_id}.mp4"'}
+    )
+
+
+@main.route('/download/image/<int:generation_id>')
+@login_required
+def download_image_file(generation_id):
+    generation = Generation.query.get_or_404(generation_id)
+    if generation.user_id != current_user.id:
+        abort(403)
+    if not generation.image_url:
+        flash('Image not available.', 'danger')
+        return redirect(url_for('main.history'))
+
+    response = http_requests.get(generation.image_url, stream=True)
+    from flask import Response
+    return Response(
+        response.iter_content(chunk_size=8192),
+        content_type='image/jpeg',
+        headers={'Content-Disposition': f'attachment; filename="afrigen-image-{generation_id}.jpg"'}
+    )
