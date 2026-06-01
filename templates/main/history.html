@@ -84,28 +84,23 @@
                     {% endif %}
 
                     <!-- Action Buttons -->
-                    <div class="d-flex gap-2 flex-wrap">
-                        {% if gen.video_url %}
-                        <a href="{{ gen.video_url }}" class="btn btn-afrigen btn-sm" target="_blank">🎬 Watch</a>
-                        {% if current_user.plan == 'pro' %}
-                        {% if current_user.plan == 'pro' %}
-<a href="{{ url_for('main.download_video_file', generation_id=gen.id) }}" class="btn btn-outline-warning btn-sm">⬇️ Download</a>
-{% else %}
-<a href="{{ url_for('main.download_video', generation_id=gen.id) }}" class="btn btn-outline-warning btn-sm">⬇️ Download</a>
-{% endif %}
-                        {% endif %}
+<div class="d-flex gap-2 flex-wrap">
+    {% if gen.video_url %}
+    <a href="{{ url_for('main.download_video_file', generation_id=gen.id) }}" class="btn btn-afrigen btn-sm" target="_blank">🎬 Watch</a>
+    <a href="{{ url_for('main.download_video_file', generation_id=gen.id) }}" class="btn btn-outline-warning btn-sm">⬇️ Download</a>
+    {% endif %}
 
-                        {% if gen.image_url and gen.generation_type == 'image' and not gen.video_url %}
-                        <a href="{{ gen.image_url }}" class="btn btn-afrigen btn-sm" target="_blank">🖼️ View</a>
-                        <a href="{{ url_for('main.download_image_file', generation_id=gen.id) }}" class="btn btn-outline-warning btn-sm">⬇️ Download</a>
-                        {% endif %}
+    {% if gen.image_url and gen.generation_type == 'image' and not gen.video_url %}
+    <a href="{{ url_for('main.download_image_file', generation_id=gen.id) }}" class="btn btn-afrigen btn-sm" target="_blank">🖼️ View</a>
+    <a href="{{ url_for('main.download_image_file', generation_id=gen.id) }}" class="btn btn-outline-warning btn-sm">⬇️ Download</a>
+    {% endif %}
 
-                        {% if gen.status == 'failed' %}
-                        <a href="{{ url_for('main.dashboard') }}" class="btn btn-sm" style="background: #21262D; color: #F5A623; border: 1px solid #F5A623;">
-                            🔄 Try Again
-                        </a>
-                        {% endif %}
-                    </div>
+    {% if gen.status == 'failed' %}
+    <a href="{{ url_for('main.dashboard') }}" class="btn btn-sm" style="background: #21262D; color: #F5A623; border: 1px solid #F5A623;">
+        🔄 Try Again
+    </a>
+    {% endif %}
+</div>
 
                 </div>
             </div>
