@@ -15,11 +15,11 @@ def generate_video(
     aspect_ratio="16:9"
 ):
     MODELS = {
-        "cinematic": "fal-ai/ltx-video-v095/text-to-video",
+        "cinematic": "fal-ai/ltx-video-v095",
         "anime": "fal-ai/fast-animatediff/text-to-video",
-        "realistic": "fal-ai/kling-video/v2.1/standard/text-to-video",
-        "african": "fal-ai/minimax-video",
-        "social": "fal-ai/kling-video/v1.6/standard/text-to-video"
+        "realistic": "fal-ai/ltx-video-v095",
+        "african": "fal-ai/ltx-video-v095",
+        "social": "fal-ai/fast-animatediff/text-to-video"
     }
 
     model = MODELS.get(style, MODELS["cinematic"])
