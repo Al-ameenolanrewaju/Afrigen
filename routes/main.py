@@ -662,7 +662,7 @@ def unlock_download(generation_id):
 
     generation.ad_watched = True
     db.session.commit()
-    return redirect(url_for('main.download_video', generation_id=generation.id))
+    return redirect(url_for('main.download_video_file', generation_id=generation.id))
 
 
 # ---------- Saved prompts, referrals, contact, docs ----------
@@ -984,6 +984,10 @@ def download_video_file(generation_id):
     if not generation.video_url:
         flash('Video not available.', 'danger')
         return redirect(url_for('main.history'))
+
+    # Free users must watch an ad before downloading. Pro users skip the gate.
+    if current_user.plan == 'free' and not generation.ad_watched:
+        return redirect(url_for('main.watch_ad', generation_id=generation.id))
 
     # Stream the video file from FAL
     response = http_requests.get(generation.video_url, stream=True)

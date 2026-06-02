@@ -105,7 +105,7 @@
                     <!-- Action Buttons -->
 <div class="d-flex gap-2 flex-wrap">
     {% if gen.video_url %}
-    <a href="{{ url_for('main.download_video_file', generation_id=gen.id) }}" class="btn btn-afrigen btn-sm" target="_blank">🎬 Watch</a>
+    <a href="{{ gen.video_url }}" class="btn btn-afrigen btn-sm" target="_blank">🎬 Watch</a>
     <a href="{{ url_for('main.download_video_file', generation_id=gen.id) }}" class="btn btn-outline-warning btn-sm">⬇️ Download</a>
     {% endif %}
 
