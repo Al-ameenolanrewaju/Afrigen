@@ -3,7 +3,8 @@ from flask import (
     jsonify, abort, session
 )
 from flask_login import login_required, current_user
-from models import db, Generation, User, TelegramUser, SavedPrompt, Referral
+from models import db, Generation, User, TelegramUser, SavedPrompt, Referral, Payment
+from sqlalchemy.exc import IntegrityError
 from services.claude import refine_prompt, refine_image_prompt
 from services.video import (
     generate_video,
@@ -107,7 +108,11 @@ def generate():
         flash('Please enter a video idea!', 'danger')
         return redirect(url_for('main.dashboard'))
 
-    refined = refine_prompt(prompt, style)
+    try:
+        refined = refine_prompt(prompt, style)
+    except Exception as e:
+        print("REFINE ERROR:", str(e))
+        return jsonify({"success": False, "error": "Could not refine your prompt right now. Please try again."})
 
     if action == 'refine_only':
         return jsonify({"success": True, "type": "refine_only", "refined": refined, "original": prompt})
@@ -589,27 +594,56 @@ def payment_callback():
         headers=headers
     )
     result = response.json()
+    data = result.get('data', {}) if result.get('status') else {}
+    amount = data.get('amount')
 
-    # Verify payment status, payer email, AND metadata user_id
-    if (
-        result['status']
-        and result['data']['status'] == 'success'
-        and result['data']['customer']['email'] == current_user.email
-        and str(result['data']['metadata']['user_id']) == str(current_user.id)
-    ):
-        current_user.plan = 'pro'
-        current_user.credits = 100
-        db.session.commit()
-        try:
-            from services.email import send_pro_upgrade_email
-            send_pro_upgrade_email(current_user.email, current_user.username)
-        except Exception as e:
-            print(f"Email error: {e}")
-        flash('Payment successful! Welcome to Pro! ⭐', 'success')
-        return redirect(url_for('main.dashboard'))
-    else:
+    # Verify payment status, payer email, metadata user_id, AND that the amount
+    # is one we actually charge (so the tier can't be downgraded by paying less).
+    verified = (
+        result.get('status')
+        and data.get('status') == 'success'
+        and data.get('customer', {}).get('email') == current_user.email
+        and str((data.get('metadata') or {}).get('user_id')) == str(current_user.id)
+        and amount in (500000, 5000000)
+    )
+
+    if not verified:
         flash('Payment verification failed!', 'danger')
         return redirect(url_for('main.upgrade'))
+
+    # Idempotency: each Paystack reference may grant credits exactly once.
+    # Without this, revisiting an old successful callback URL would refill
+    # credits for free (Paystack keeps returning "success" for the reference).
+    if Payment.query.filter_by(reference=reference).first():
+        flash('This payment has already been applied. ⭐', 'info')
+        return redirect(url_for('main.dashboard'))
+
+    # Tier is derived from the verified amount, not the (spoofable) metadata.
+    is_annual = amount == 5000000
+    current_user.plan = 'pro'
+    current_user.credits = 1200 if is_annual else 100
+    db.session.add(Payment(
+        user_id=current_user.id,
+        reference=reference,
+        amount=amount,
+        plan='annual' if is_annual else 'monthly'
+    ))
+
+    try:
+        db.session.commit()
+    except IntegrityError:
+        # Reference was recorded concurrently (e.g. the webhook beat us to it).
+        db.session.rollback()
+        flash('This payment has already been applied. ⭐', 'info')
+        return redirect(url_for('main.dashboard'))
+
+    try:
+        from services.email import send_pro_upgrade_email
+        send_pro_upgrade_email(current_user.email, current_user.username)
+    except Exception as e:
+        print(f"Email error: {e}")
+    flash('Payment successful! Welcome to Pro! ⭐', 'success')
+    return redirect(url_for('main.dashboard'))
 
 
 # ---------- Downloads with ad gate ----------
@@ -885,13 +919,36 @@ def payment_webhook():
 
     data = request.get_json()
 
-    if data['event'] == 'charge.success':
-        user_id = data['data']['metadata'].get('user_id')
-        user = User.query.get(user_id)
-        if user and user.plan != 'pro':
+    if data.get('event') == 'charge.success':
+        charge = data.get('data', {})
+        reference = charge.get('reference')
+        user_id = (charge.get('metadata') or {}).get('user_id')
+        amount = charge.get('amount')
+        user = User.query.get(user_id) if user_id else None
+
+        # Grant exactly once per reference (shared with payment_callback), and
+        # derive the tier from the amount Paystack actually charged.
+        if (
+            user
+            and reference
+            and amount in (500000, 5000000)
+            and not Payment.query.filter_by(reference=reference).first()
+        ):
+            is_annual = amount == 5000000
             user.plan = 'pro'
-            user.credits = 100
-            db.session.commit()
+            user.credits = 1200 if is_annual else 100
+            db.session.add(Payment(
+                user_id=user.id,
+                reference=reference,
+                amount=amount,
+                plan='annual' if is_annual else 'monthly'
+            ))
+            try:
+                db.session.commit()
+            except IntegrityError:
+                # payment_callback recorded it first; nothing more to do.
+                db.session.rollback()
+                return '', 200
             try:
                 from services.email import send_pro_upgrade_email
                 send_pro_upgrade_email(user.email, user.username)

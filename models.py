@@ -77,6 +77,26 @@ class Generation(db.Model):
         return f"<Generation {self.id}>"
 
 
+class Payment(db.Model):
+    __tablename__ = "payments"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+
+    # Paystack transaction reference. Unique so a given payment can only ever
+    # grant credits once (prevents reference-replay credit refills).
+    reference = db.Column(db.String(200), unique=True, nullable=False)
+    amount = db.Column(db.Integer, nullable=True)
+    plan = db.Column(db.String(20), default="monthly")
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship("User", backref="payments")
+
+    def __repr__(self):
+        return f"<Payment {self.reference}>"
+
+
 class TelegramUser(db.Model):
     __tablename__ = "telegram_users"
 

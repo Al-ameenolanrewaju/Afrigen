@@ -20,7 +20,7 @@ def send_welcome_email(user_email, username):
                 <p>Hi {username}! 👋</p>
                 <p>You're now part of the African AI revolution!</p>
                 <p style="color: #C9D1D9;">
-                    You have <strong style="color: #F5A623;">10 free credits</strong>
+                    You have <strong style="color: #F5A623;">5 free credits</strong>
                     to generate AI videos!
                 </p>
                 <a href="{BASE_URL}/dashboard"
@@ -253,6 +253,10 @@ def send_contact_email(name, email, message):
 
 def send_feedback_email(user_email, rating, feedback_text, feature):
     try:
+        try:
+            stars = '⭐' * int(rating)
+        except (TypeError, ValueError):
+            stars = str(rating or 'N/A')
         resend.Emails.send({
             "from": FROM_EMAIL,
             "to": "afrigenng@gmail.com",
@@ -262,7 +266,7 @@ def send_feedback_email(user_email, rating, feedback_text, feature):
                         color: #F0F6FC; padding: 40px; max-width: 600px;">
                 <h1 style="color: #F5A623;">⭐ New Feedback</h1>
                 <p><strong>From:</strong> {user_email}</p>
-                <p><strong>Rating:</strong> {'⭐' * int(rating)}</p>
+                <p><strong>Rating:</strong> {stars}</p>
                 <p><strong>Feature:</strong> {feature}</p>
                 <p><strong>Feedback:</strong></p>
                 <p style="background: #161B22; padding: 15px; border-radius: 8px;">
