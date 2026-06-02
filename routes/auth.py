@@ -163,14 +163,44 @@ def google_callback():
         user = User.query.filter_by(email=email).first()
 
         if not user:
-            # Create new user
+            # username comes from the Google profile name, which is not unique;
+            # disambiguate so the unique constraint doesn't 500 the callback.
+            if User.query.filter_by(username=username).first():
+                username = f"{username}_{os.urandom(3).hex()}"
+
+            ip = get_real_ip()
+            country = get_country_from_ip(ip)
+
+            # Create new user (match email signup: 5 starting credits)
             user = User(
                 username=username,
                 email=email,
-                password=generate_password_hash(os.urandom(24).hex())
+                password=generate_password_hash(os.urandom(24).hex()),
+                credits=5,
+                country=country,
+                signup_source=session.get('signup_source', 'google')
             )
             db.session.add(user)
+            db.session.flush()
+
+            # Honor a referral code if the user arrived via a referral link
+            ref_code = session.get('ref_code')
+            if ref_code:
+                referral = Referral.query.filter_by(
+                    referral_code=ref_code, is_used=False
+                ).first()
+                if referral:
+                    user.credits = 7  # 5 + 2 bonus
+                    referrer = User.query.get(referral.referrer_id)
+                    if referrer:
+                        referrer.credits += 2
+                    referral.referred_id = user.id
+                    referral.is_used = True
+
             db.session.commit()
+
+            session.pop('signup_source', None)
+            session.pop('ref_code', None)
 
             # Send welcome email
             try:
