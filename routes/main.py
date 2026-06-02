@@ -779,46 +779,6 @@ def feedback():
 def docs():
     return render_template('main/docs.html')
 
-@main.route('/generate-image', methods=['POST'])
-@login_required
-def generate_image_route():
-    prompt = request.form.get('prompt')
-    style = request.form.get('style', 'realistic')
-    aspect_ratio = request.form.get('aspect_ratio', '1:1')
-
-    if not prompt:
-        flash('Please enter an image prompt!', 'danger')
-        return redirect(url_for('main.dashboard'))
-
-    try:
-        result = generate_image(
-            prompt,
-            style,
-            aspect_ratio
-        )
-
-        if not result["success"]:
-            raise Exception(result["error"])
-
-        image_url = result["image_url"]
-
-        return render_template(
-            'main/image_result.html',
-            prompt=prompt,
-            image_url=image_url,
-            style=style
-        )
-
-    except Exception as e:
-        print("IMAGE GENERATION ERROR:", e)
-
-        flash(
-            'Image generation failed. Try again later.',
-            'warning'
-        )
-
-        return redirect(url_for('main.dashboard'))
-
 
 @main.route('/analytics')
 @login_required

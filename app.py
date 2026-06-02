@@ -49,20 +49,23 @@ google = oauth.register(
     client_kwargs={'scope': 'openid email profile'}
 )
 
-@scheduler.task('cron', id='reset_credits', hour=0)
-def reset_daily_credits():
+@scheduler.task('cron', id='reset_monthly_limits', day=1, hour=0)
+def reset_monthly_limits():
     with app.app_context():
         from models import User
 
         free_users = User.query.filter_by(plan='free').all()
 
         for user in free_users:
+            # Reset the free-tier monthly usage limits.
+            user.monthly_videos_used = 0
+            user.monthly_images_used = 0
             if user.credits < 10:
                 user.credits = 10
 
         db.session.commit()
 
-        print("✅ Daily credits reset for free users!")
+        print("✅ Monthly limits reset for free users!")
 
 import logging
 from logging.handlers import RotatingFileHandler

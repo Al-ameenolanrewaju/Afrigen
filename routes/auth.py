@@ -51,6 +51,13 @@ def register():
             flash('Email already registered!', 'danger')
             return redirect(url_for('auth.register'))
 
+        # username is also unique in the DB; check it too, otherwise the commit
+        # below raises an IntegrityError and 500s instead of a friendly message.
+        if User.query.filter_by(username=username).first():
+            logger.warning(f"Registration failed - username taken: {username}")
+            flash('Username already taken!', 'danger')
+            return redirect(url_for('auth.register'))
+
         # Get country from IP
 
         ip = get_real_ip()
