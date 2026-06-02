@@ -4,7 +4,8 @@ from sqlalchemy import text
 
 with app.app_context():
     with db.engine.connect() as conn:
-        conn.execute(text('ALTER TABLE users ADD COLUMN monthly_videos_used INTEGER DEFAULT 0'))
-        conn.execute(text('ALTER TABLE users ADD COLUMN last_video_reset DATE NULL'))
+        conn.execute(text(
+            'ALTER TABLE generations ADD COLUMN IF NOT EXISTS wants_voiceover BOOLEAN DEFAULT FALSE'
+        ))
         conn.commit()
     print('Columns added!')

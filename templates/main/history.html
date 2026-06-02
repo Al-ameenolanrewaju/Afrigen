@@ -92,6 +92,16 @@
                     </div>
                     {% endif %}
 
+                    {% if gen.audio_url %}
+                    <div class="mb-3">
+                        <small style="color: #F5A623;">🎙️ AI Voiceover:</small>
+                        <audio controls class="w-100 mt-1" style="height: 36px;">
+                            <source src="{{ gen.audio_url }}" type="audio/mpeg">
+                            Your browser does not support audio.
+                        </audio>
+                    </div>
+                    {% endif %}
+
                     <!-- Action Buttons -->
 <div class="d-flex gap-2 flex-wrap">
     {% if gen.video_url %}

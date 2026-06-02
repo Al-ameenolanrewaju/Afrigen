@@ -19,16 +19,11 @@ def generate_voiceover(script, voice_style="nigerian_male"):
         if not audio_url:
             raise Exception("No audio URL returned")
 
-        response = requests.get(audio_url)
-        filename = f"voiceover_{os.urandom(8).hex()}.mp3"
-        filepath = os.path.join("static", "audio", filename)
-        os.makedirs(os.path.join("static", "audio"), exist_ok=True)
-
-        with open(filepath, "wb") as f:
-            f.write(response.content)
-
-        print(f"Voiceover generated: {filename}")
-        return filename
+        # Return the fal-hosted CDN URL directly (matches how video_url is
+        # stored). Avoids relying on local disk, which is ephemeral on
+        # Railway/Render and would lose the file on redeploy.
+        print(f"Voiceover generated: {audio_url}")
+        return audio_url
 
     except Exception as e:
         print(f"FAL TTS error: {e}")

@@ -59,6 +59,11 @@ class Generation(db.Model):
     generation_type = db.Column(db.String(20), default="text")
     status = db.Column(db.String(20), default="pending")
 
+    # Whether the user requested an AI voiceover (Pro). The voiceover is
+    # generated in the fal webhook once the video actually succeeds, so we
+    # remember the choice here at request time.
+    wants_voiceover = db.Column(db.Boolean, default=False)
+
 
     ad_watched = db.Column(db.Boolean, default=False)
 

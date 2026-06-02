@@ -142,11 +142,17 @@ def generate():
         if not result["success"]:
             raise Exception(result["error"])
 
+        # Voiceover is a Pro feature. We only remember the choice here; the
+        # audio is generated later in the fal webhook, but only if the video
+        # actually succeeds, so we never pay for a voiceover on a failed video.
+        wants_voiceover = (add_voiceover == '1' and current_user.plan == 'pro')
+
         generation = Generation(
             user_id=current_user.id,
             original_prompt=prompt,
             refined_prompt=refined,
             video_url=None,
+            wants_voiceover=wants_voiceover,
             status="processing",
             fal_request_id=result["request_id"]
         )
@@ -959,6 +965,15 @@ def fal_webhook():
     if video_url:
         generation.video_url = video_url
         generation.status = 'completed'
+
+        # Generate the voiceover now that the video has actually succeeded,
+        # so we never pay for TTS on a failed generation.
+        if generation.wants_voiceover and not generation.audio_url:
+            try:
+                vo_script = generate_video_script(generation.original_prompt)
+                generation.audio_url = generate_voiceover(vo_script)
+            except Exception as e:
+                print("VOICEOVER ERROR:", str(e))
 
         # Deduct credits only on success
         user = User.query.get(generation.user_id)
