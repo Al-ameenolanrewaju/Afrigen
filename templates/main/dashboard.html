@@ -243,7 +243,7 @@
 
         <!-- Text to Image Form (NEW - THIRD TOGGLE) -->
         <div id="textToImageForm" style="display:none;">
-            <form method="POST" action="{{ url_for('main.generate_image_route') }}">
+            <form method="POST" action="{{ url_for('main.generate_image') }}">
                 <div class="mb-3">
                     <label class="form-label">Describe the image</label>
                     <textarea name="prompt" class="form-control" rows="4"
