@@ -963,17 +963,14 @@ def fal_webhook():
         video_url = data['payload']['video'].get('url')
 
     if video_url:
+        # Idempotency: fal retries the webhook if it thinks the first call
+        # failed (e.g. a slow response). Don't re-charge credits or resend the
+        # email if we've already processed this completion.
+        if generation.status == 'completed':
+            return '', 200
+
         generation.video_url = video_url
         generation.status = 'completed'
-
-        # Generate the voiceover now that the video has actually succeeded,
-        # so we never pay for TTS on a failed generation.
-        if generation.wants_voiceover and not generation.audio_url:
-            try:
-                vo_script = generate_video_script(generation.original_prompt)
-                generation.audio_url = generate_voiceover(vo_script)
-            except Exception as e:
-                print("VOICEOVER ERROR:", str(e))
 
         # Deduct credits only on success
         user = User.query.get(generation.user_id)
@@ -991,6 +988,9 @@ def fal_webhook():
             elif user.plan == 'free':
                 user.monthly_videos_used += 1
 
+        # Persist completion + credit charge BEFORE the slow voiceover step, so
+        # the video is marked ready promptly and a webhook retry hits the
+        # idempotency guard above instead of double-charging.
         db.session.commit()
 
         try:
@@ -998,6 +998,17 @@ def fal_webhook():
             send_video_ready_email(user.email, user.username, generation.original_prompt, video_url)
         except Exception as e:
             print(f"Email error: {e}")
+
+        # Voiceover last: it's best-effort and slower (script + TTS), so it must
+        # not delay marking the video ready. Generated only after the video
+        # actually succeeded, so we never pay for TTS on a failed generation.
+        if generation.wants_voiceover and not generation.audio_url:
+            try:
+                vo_script = generate_video_script(generation.original_prompt)
+                generation.audio_url = generate_voiceover(vo_script)
+                db.session.commit()
+            except Exception as e:
+                print("VOICEOVER ERROR:", str(e))
     else:
         generation.status = 'failed'
         db.session.commit()
