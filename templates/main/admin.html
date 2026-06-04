@@ -6,9 +6,12 @@
 <div class="container mt-4">
 
     <!-- Header -->
-    <div class="card p-4 mb-4">
-        <h2 style="color: #F5A623;">⚙️ Afrigen Admin Panel</h2>
-        <p style="color: #C9D1D9;">Monitor platform performance and manage users</p>
+    <div class="card p-4 mb-4 d-flex flex-row flex-wrap justify-content-between align-items-center gap-2">
+        <div>
+            <h2 style="color: #F5A623;">⚙️ Afrigen Admin Panel</h2>
+            <p style="color: #C9D1D9; margin: 0;">Monitor platform performance and manage users</p>
+        </div>
+        <a href="{{ url_for('main.admin_newsletter') }}" class="btn btn-afrigen">📰 Weekly Newsletter</a>
     </div>
 
     <!-- Top Stats -->

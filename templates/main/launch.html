@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}Launching Soon — Afrigen{% endblock %}
+
+{% block content %}
+
+<!-- HERO / WAITLIST -->
+<section style="padding: 70px 0 60px; text-align: center; background: linear-gradient(180deg, #0D1117 0%, #161B22 100%);">
+    <div class="container">
+        <div class="mb-3">
+            <span style="background: rgba(245,166,35,0.15); color: #F5A623; padding: 6px 16px; border-radius: 99px; font-size: 14px; border: 1px solid rgba(245,166,35,0.3);">
+                🚀 Launching Soon
+            </span>
+        </div>
+
+        <h1 style="color: #F0F6FC; font-size: clamp(2.4rem, 6vw, 4rem); font-weight: 800; line-height: 1.2; margin-bottom: 18px;">
+            The Future of African<br>
+            <span style="color: #F5A623;">AI Content Creation</span>
+        </h1>
+        <p style="color: #888; font-size: clamp(1rem, 2.5vw, 1.2rem); max-width: 620px; margin: 0 auto 36px;">
+            Be first in line. Join the waitlist and we'll send you early access
+            the moment Afrigen goes live.
+        </p>
+
+        <!-- COUNTDOWN -->
+        <div id="countdown" class="d-flex justify-content-center flex-wrap gap-2 gap-md-3 mb-3">
+            <div class="cd-box"><span id="cd-days">--</span><small>Days</small></div>
+            <div class="cd-box"><span id="cd-hours">--</span><small>Hours</small></div>
+            <div class="cd-box"><span id="cd-mins">--</span><small>Minutes</small></div>
+            <div class="cd-box"><span id="cd-secs">--</span><small>Seconds</small></div>
+        </div>
+
+        <p id="count" class="mb-4" style="color: #888;">{{ count }} people on the waitlist</p>
+
+        <!-- SIGNUP CARD -->
+        <div class="row justify-content-center">
+            <div class="col-11 col-md-7 col-lg-5">
+                <div class="card p-4 text-start">
+                    <h5 class="mb-3" style="color: #F0F6FC; font-weight: 700;">Get early access</h5>
+                    <form id="f">
+                        <div class="mb-3">
+                            <label class="form-label" for="name">Full Name</label>
+                            <input id="name" class="form-control" placeholder="Your name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="email">Email Address</label>
+                            <input id="email" type="email" class="form-control" placeholder="you@example.com" required>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="newsletter" checked>
+                            <label class="form-check-label" for="newsletter" style="color: #C9D1D9;">
+                                Send me the Afrigen newsletter &amp; product updates
+                            </label>
+                        </div>
+                        <button type="submit" class="btn btn-afrigen w-100 py-2">Join the Waitlist 🚀</button>
+                    </form>
+                    <div id="result" class="mt-3"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- SNEAK PEEK -->
+<section style="padding: 70px 0; background: #161B22;">
+    <div class="container">
+        <h2 class="text-center mb-2" style="color: #F0F6FC; font-weight: 700;">A Sneak Peek</h2>
+        <p class="text-center mb-5" style="color: #888;">A taste of what you'll create with Afrigen</p>
+        <div class="row g-3 justify-content-center">
+            <div class="col-md-6">
+                <img src="{{ url_for('static', filename='launch/hero1.jpg') }}" alt="Afrigen preview 1"
+                     class="w-100" style="border-radius: 16px; border: 1px solid #30363D;">
+            </div>
+            <div class="col-md-6">
+                <img src="{{ url_for('static', filename='launch/hero2.jpg') }}" alt="Afrigen preview 2"
+                     class="w-100" style="border-radius: 16px; border: 1px solid #30363D;">
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- WHAT'S COMING -->
+<section style="padding: 70px 0;">
+    <div class="container">
+        <h2 class="text-center mb-2" style="color: #F0F6FC; font-weight: 700;">What's Coming</h2>
+        <p class="text-center mb-5" style="color: #888;">Everything African creators need in one platform</p>
+        <div class="row">
+            <div class="col-md-4 mb-4">
+                <div class="card p-4" style="border-color: #30363D;">
+                    <h4 style="color: #F5A623;">🎬 AI Video Generation</h4>
+                    <p style="color: #888;">Describe an idea in plain English or Pidgin and get a professional video in seconds — no camera or studio needed.</p>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card p-4" style="border-color: #30363D;">
+                    <h4 style="color: #F5A623;">🌍 Built For Africa</h4>
+                    <p style="color: #888;">Afrigen understands African culture, languages and aesthetics, so your content looks authentically African.</p>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card p-4" style="border-color: #30363D;">
+                    <h4 style="color: #F5A623;">🤖 Telegram Bot</h4>
+                    <p style="color: #888;">Refine prompts on the go with our Telegram bot — available 24/7, even before the full platform lands.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- SOCIAL -->
+<section style="padding: 70px 0; background: #161B22; text-align: center;">
+    <div class="container">
+        <h2 style="color: #F0F6FC; font-weight: 700;">Follow Afrigen</h2>
+        <p style="color: #888;">Stay updated with launch news, AI updates, and exclusive content.</p>
+        <div class="d-flex flex-wrap justify-content-center gap-2 gap-md-3 mt-4">
+            <a href="https://facebook.com/YOUR_PAGE" target="_blank" class="btn btn-outline-warning">Facebook</a>
+            <a href="https://x.com/YOUR_ACCOUNT" target="_blank" class="btn btn-outline-warning">X (Twitter)</a>
+            <a href="https://instagram.com/YOUR_ACCOUNT" target="_blank" class="btn btn-outline-warning">Instagram</a>
+            <a href="https://youtube.com/YOUR_CHANNEL" target="_blank" class="btn btn-outline-warning">YouTube</a>
+            <a href="https://linkedin.com/company/YOUR_COMPANY" target="_blank" class="btn btn-outline-warning">LinkedIn</a>
+            <a href="https://t.me/AfrigenBot" target="_blank" class="btn btn-afrigen">📱 Telegram Bot</a>
+        </div>
+    </div>
+</section>
+
+<style>
+.cd-box {
+    background: #161B22;
+    border: 1px solid #30363D;
+    border-radius: 14px;
+    padding: 14px 10px;
+    min-width: 78px;
+}
+.cd-box span {
+    display: block;
+    font-size: clamp(1.6rem, 5vw, 2.4rem);
+    font-weight: 800;
+    color: #F5A623;
+    line-height: 1;
+}
+.cd-box small {
+    color: #888;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+</style>
+
+<script src="{{ url_for('static', filename='launch/launch.js') }}"></script>
+
+{% endblock %}

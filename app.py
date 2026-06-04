@@ -67,6 +67,28 @@ def reset_monthly_limits():
 
         print("✅ Monthly limits reset for free users!")
 
+
+@scheduler.task('cron', id='generate_weekly_newsletter', day_of_week='sat', hour=9)
+def generate_weekly_newsletter():
+    """Saturday 9am: build this week's draft so the admin can review it."""
+    with app.app_context():
+        try:
+            from services.newsletter import run_weekly_generation
+            run_weekly_generation()
+        except Exception as e:
+            print(f"Weekly newsletter generation failed: {e}")
+
+
+@scheduler.task('cron', id='send_weekly_newsletter', day_of_week='mon', hour=9)
+def send_weekly_newsletter():
+    """Monday 9am: send the current draft to all users + waitlist."""
+    with app.app_context():
+        try:
+            from services.newsletter import run_weekly_send
+            run_weekly_send()
+        except Exception as e:
+            print(f"Weekly newsletter send failed: {e}")
+
 import logging
 from logging.handlers import RotatingFileHandler
 

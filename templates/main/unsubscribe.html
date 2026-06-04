@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Unsubscribe — Afrigen{% endblock %}
+
+{% block content %}
+
+<section style="padding: 80px 0; text-align: center;">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card p-5">
+                    {% if ok %}
+                    <div style="font-size: 48px;">✅</div>
+                    <h2 style="color: #F0F6FC; font-weight: 700;">You're unsubscribed</h2>
+                    <p style="color: #888;">
+                        <strong style="color: #C9D1D9;">{{ email }}</strong> won't receive any more
+                        Afrigen newsletters. You can keep using Afrigen as normal.
+                    </p>
+                    <a href="{{ url_for('main.index') }}" class="btn btn-afrigen mt-2">Back to Afrigen 🌍</a>
+                    {% else %}
+                    <div style="font-size: 48px;">⚠️</div>
+                    <h2 style="color: #F0F6FC; font-weight: 700;">Link not valid</h2>
+                    <p style="color: #888;">
+                        This unsubscribe link is invalid or has already been used.
+                        If you keep receiving emails, contact us at
+                        <a href="mailto:afrigenng@gmail.com" style="color: #F5A623;">afrigenng@gmail.com</a>.
+                    </p>
+                    <a href="{{ url_for('main.index') }}" class="btn btn-outline-warning mt-2">Back to Afrigen</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% endblock %}

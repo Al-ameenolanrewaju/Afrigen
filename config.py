@@ -38,6 +38,12 @@ class Config:
     GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
     GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
 
+    # Pre-launch waitlist page. Set LAUNCH_ACTIVE=false after launch to retire /launch.
+    LAUNCH_ACTIVE = os.environ.get("LAUNCH_ACTIVE", "True").lower() in ("true", "1", "yes")
+
+    # Secret for protecting the HTTP cron endpoints (weekly newsletter triggers).
+    CRON_SECRET = os.environ.get("CRON_SECRET")
+
 class DevelopmentConfig(Config):
     DEBUG = True
 

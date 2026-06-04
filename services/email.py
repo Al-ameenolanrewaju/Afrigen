@@ -190,6 +190,22 @@ def verify_reset_token(token, expiration=3600):
         return None
 
 
+def generate_unsub_token(email):
+    from itsdangerous import URLSafeTimedSerializer
+    serializer = URLSafeTimedSerializer(os.environ.get("SECRET_KEY"))
+    return serializer.dumps(email, salt='newsletter-unsub')
+
+
+def verify_unsub_token(token):
+    from itsdangerous import URLSafeTimedSerializer
+    serializer = URLSafeTimedSerializer(os.environ.get("SECRET_KEY"))
+    try:
+        # No expiry: an unsubscribe link should work indefinitely.
+        return serializer.loads(token, salt='newsletter-unsub')
+    except Exception:
+        return None
+
+
 def send_reset_password_email(user_email, username, reset_url):
     try:
         resend.Emails.send({
@@ -249,6 +265,105 @@ def send_contact_email(name, email, message):
         print("Contact email sent!")
     except Exception as e:
         print(f"Contact email error: {e}")
+
+
+def send_launch_confirmation(user_email, name):
+    """Confirm a pre-launch waitlist signup from the /launch page."""
+    try:
+        resend.Emails.send({
+            "from": FROM_EMAIL,
+            "to": user_email,
+            "subject": "You're on the AFRIGEN launch list! 🎬",
+            "html": f"""
+            <div style="font-family: Arial; background: #0D1117;
+                        color: #F0F6FC; padding: 40px; max-width: 600px;">
+                <h1 style="color: #F5A623;">🎬 You're on the list!</h1>
+                <p>Hi {name}! 👋</p>
+                <p>Thanks for joining the AFRIGEN launch list.
+                   We'll email you the moment we go live.</p>
+                <a href="{BASE_URL}/launch"
+                   style="background: #F5A623; color: #0D1117;
+                          padding: 12px 24px; border-radius: 8px;
+                          text-decoration: none; font-weight: bold;">
+                    View Launch Page 🚀
+                </a>
+                <hr style="border-color: #21262D; margin: 30px 0;">
+                <p style="color: #888;">Africa Creates, AI Generates 🌍</p>
+            </div>
+            """
+        })
+        print("Launch confirmation email sent!")
+    except Exception as e:
+        print(f"Launch confirmation email error: {e}")
+
+
+def send_newsletter(recipients, subject, body, base_url=BASE_URL, is_html=False):
+    """Send a newsletter to the given recipients.
+
+    recipients: iterable of (email, name) tuples.
+    is_html:    True if `body` is already HTML (e.g. the auto-generated digest);
+                False treats `body` as plain text and converts newlines to <br>.
+    Each email gets a per-recipient unsubscribe link.
+    Returns the number of emails successfully sent.
+    """
+    html_body = body if is_html else (body or "").replace("\n", "<br>")
+    sent = 0
+    for email, name in recipients:
+        try:
+            unsub_url = f"{base_url}/unsubscribe/{generate_unsub_token(email)}"
+            resend.Emails.send({
+                "from": FROM_EMAIL,
+                "to": email,
+                "subject": subject or "AFRIGEN Newsletter",
+                "html": f"""
+                <div style="font-family: Arial; background: #0D1117;
+                            color: #F0F6FC; padding: 40px; max-width: 600px;">
+                    <h1 style="color: #F5A623;">AFRIGEN</h1>
+                    <p>Hi {name or 'there'}! 👋</p>
+                    <div style="color: #C9D1D9; line-height: 1.6;">{html_body}</div>
+                    <hr style="border-color: #21262D; margin: 30px 0;">
+                    <p style="color: #888;">Africa Creates, AI Generates 🌍</p>
+                    <p style="color: #555; font-size: 12px;">
+                        You're receiving this because you joined Afrigen.
+                        <a href="{unsub_url}" style="color: #888;">Unsubscribe</a>
+                    </p>
+                </div>
+                """
+            })
+            sent += 1
+        except Exception as e:
+            print(f"Newsletter send error for {email}: {e}")
+    return sent
+
+
+def send_admin_notice(to_email, heading, message, button_url=None, button_text=None):
+    """Small branded internal notice to an admin (e.g. newsletter reminders)."""
+    button_html = ""
+    if button_url and button_text:
+        button_html = f"""
+            <a href="{button_url}"
+               style="background: #F5A623; color: #0D1117; padding: 12px 24px;
+                      border-radius: 8px; text-decoration: none; font-weight: bold;
+                      display: inline-block; margin-top: 12px;">{button_text}</a>"""
+    try:
+        resend.Emails.send({
+            "from": FROM_EMAIL,
+            "to": to_email,
+            "subject": heading,
+            "html": f"""
+            <div style="font-family: Arial; background: #0D1117;
+                        color: #F0F6FC; padding: 40px; max-width: 600px;">
+                <h1 style="color: #F5A623;">{heading}</h1>
+                <p style="color: #C9D1D9; line-height: 1.6;">{message}</p>
+                {button_html}
+                <hr style="border-color: #21262D; margin: 30px 0;">
+                <p style="color: #888;">Africa Creates, AI Generates 🌍</p>
+            </div>
+            """
+        })
+        print("Admin notice sent!")
+    except Exception as e:
+        print(f"Admin notice email error: {e}")
 
 
 def send_feedback_email(user_email, rating, feedback_text, feature):

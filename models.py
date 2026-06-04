@@ -136,6 +136,52 @@ class SavedPrompt(db.Model):
     user = db.relationship("User", backref="saved_prompts")
 
 
+class Subscriber(db.Model):
+    """Pre-launch waitlist / newsletter signup (from the /launch page)."""
+    __tablename__ = "subscribers"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    newsletter = db.Column(db.Boolean, default=True)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<Subscriber {self.email}>"
+
+
+class NewsletterIssue(db.Model):
+    """A weekly newsletter. The most recent row with status='draft' is the
+    'current draft' the admin can edit before it ships."""
+    __tablename__ = "newsletter_issues"
+
+    id = db.Column(db.Integer, primary_key=True)
+    subject = db.Column(db.String(300), nullable=False, default="")
+    body = db.Column(db.Text, nullable=False, default="")  # HTML body, editable
+    status = db.Column(db.String(20), default="draft")      # draft | sent
+    auto_generated = db.Column(db.Boolean, default=True)
+    recipients_count = db.Column(db.Integer, default=0)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    sent_at = db.Column(db.DateTime, nullable=True)
+
+    def __repr__(self):
+        return f"<NewsletterIssue {self.id} {self.status}>"
+
+
+class EmailOptOut(db.Model):
+    """Emails that have unsubscribed from the newsletter."""
+    __tablename__ = "email_opt_outs"
+
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<EmailOptOut {self.email}>"
+
+
 class Referral(db.Model):
     __tablename__ = "referrals"
 

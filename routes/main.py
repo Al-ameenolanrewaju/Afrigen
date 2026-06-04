@@ -1,6 +1,6 @@
 from flask import (
     Blueprint, render_template, request, flash, redirect, url_for,
-    jsonify, abort, session
+    jsonify, abort, session, current_app
 )
 from flask_login import login_required, current_user
 from models import db, Generation, User, TelegramUser, SavedPrompt, Referral, Payment
@@ -881,6 +881,275 @@ def privacy():
 @main.route('/founder')
 def founder():
     return render_template('main/founder.html')
+
+
+# ---------- Pre-launch waitlist (/launch) ----------
+
+@main.route('/launch')
+def launch():
+    # Retired after launch via LAUNCH_ACTIVE=false — send visitors to the live site.
+    if not current_app.config.get('LAUNCH_ACTIVE', True):
+        return redirect(url_for('main.index'))
+    from models import Subscriber
+    count = Subscriber.query.count()
+    # Where the "Join Launch Event" button sends people once they subscribe.
+    launch_link = os.environ.get('LAUNCH_LINK') or url_for('auth.register')
+    return render_template('main/launch.html', count=count, launch_link=launch_link)
+
+
+@main.route('/launch/subscribe', methods=['POST'])
+def launch_subscribe():
+    if not current_app.config.get('LAUNCH_ACTIVE', True):
+        abort(404)
+    from models import Subscriber
+    from services.email import send_launch_confirmation
+
+    data = request.get_json(silent=True) or request.form
+    name = (data.get('name') or '').strip()
+    email = (data.get('email') or '').strip().lower()
+    newsletter = bool(data.get('newsletter'))
+
+    if not name or not email:
+        return jsonify({'success': False, 'error': 'Name and email are required.'}), 400
+
+    launch_link = os.environ.get('LAUNCH_LINK') or url_for('auth.register')
+
+    existing = Subscriber.query.filter_by(email=email).first()
+    if existing:
+        # Idempotent: re-subscribing just confirms they're already on the list.
+        return jsonify({'success': True, 'link': launch_link, 'already': True})
+
+    subscriber = Subscriber(name=name, email=email, newsletter=newsletter)
+    db.session.add(subscriber)
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify({'success': True, 'link': launch_link, 'already': True})
+
+    send_launch_confirmation(email, name)
+    return jsonify({'success': True, 'link': launch_link})
+
+
+@main.route('/launch/count')
+def launch_count():
+    if not current_app.config.get('LAUNCH_ACTIVE', True):
+        abort(404)
+    from models import Subscriber
+    return jsonify({'count': Subscriber.query.count()})
+
+
+@main.route('/launch/admin')
+@admin_required
+def launch_admin():
+    return render_template('main/launch_admin.html')
+
+
+@main.route('/launch/admin/data')
+@admin_required
+def launch_admin_data():
+    from models import Subscriber
+    subscribers = Subscriber.query.order_by(Subscriber.created_at.asc()).all()
+    return jsonify([
+        {
+            'name': s.name,
+            'email': s.email,
+            'newsletter': s.newsletter,
+            'date': s.created_at.isoformat() if s.created_at else None,
+        }
+        for s in subscribers
+    ])
+
+
+@main.route('/launch/admin/export')
+@admin_required
+def launch_admin_export():
+    import csv
+    import io
+    from models import Subscriber
+    from flask import Response
+
+    subscribers = Subscriber.query.order_by(Subscriber.created_at.asc()).all()
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['name', 'email', 'newsletter', 'date'])
+    for s in subscribers:
+        writer.writerow([
+            s.name,
+            s.email,
+            'yes' if s.newsletter else 'no',
+            s.created_at.isoformat() if s.created_at else '',
+        ])
+    return Response(
+        output.getvalue(),
+        mimetype='text/csv',
+        headers={'Content-Disposition': 'attachment; filename=subscribers.csv'},
+    )
+
+
+@main.route('/launch/admin/newsletter', methods=['POST'])
+@admin_required
+def launch_admin_newsletter():
+    from models import Subscriber
+    from services.email import send_newsletter
+
+    data = request.get_json(silent=True) or request.form
+    subject = (data.get('subject') or '').strip()
+    body = (data.get('body') or '').strip()
+
+    if not body:
+        return jsonify({'sent': 0, 'error': 'Newsletter body is required.'}), 400
+
+    recipients = [
+        (s.email, s.name)
+        for s in Subscriber.query.filter_by(newsletter=True).all()
+        if s.email
+    ]
+    if not recipients:
+        return jsonify({'sent': 0, 'message': 'No newsletter subscribers to send to.'})
+
+    sent = send_newsletter(recipients, subject, body)
+    return jsonify({'sent': sent})
+
+
+# ---------- Weekly auto-generated newsletter ----------
+
+@main.route('/admin/newsletter')
+@admin_required
+def admin_newsletter():
+    from services.newsletter import get_current_draft, audience_size
+    from models import NewsletterIssue
+
+    draft = get_current_draft()
+    last_sent = (
+        NewsletterIssue.query.filter_by(status='sent')
+        .order_by(NewsletterIssue.sent_at.desc())
+        .first()
+    )
+    return render_template(
+        'main/newsletter_admin.html',
+        draft=draft,
+        last_sent=last_sent,
+        audience=audience_size(),
+    )
+
+
+@main.route('/admin/newsletter/generate', methods=['POST'])
+@admin_required
+def admin_newsletter_generate():
+    from services.newsletter import run_weekly_generation
+    try:
+        issue = run_weekly_generation()
+    except Exception as e:
+        current_app.logger.exception("Newsletter generation failed")
+        return jsonify({'ok': False, 'error': str(e)}), 500
+    return jsonify({'ok': True, 'subject': issue.subject, 'body': issue.body})
+
+
+@main.route('/admin/newsletter/save', methods=['POST'])
+@admin_required
+def admin_newsletter_save():
+    from services.newsletter import get_current_draft, create_draft, save_draft
+
+    data = request.get_json(silent=True) or request.form
+    subject = (data.get('subject') or '').strip()
+    body = (data.get('body') or '').strip()
+
+    draft = get_current_draft()
+    if draft is None:
+        draft = create_draft(subject, body, auto_generated=False)
+    else:
+        save_draft(draft, subject, body)
+    return jsonify({'ok': True, 'id': draft.id, 'status': draft.status})
+
+
+@main.route('/admin/newsletter/approve', methods=['POST'])
+@admin_required
+def admin_newsletter_approve():
+    from services.newsletter import get_current_draft, create_draft, approve_draft
+
+    data = request.get_json(silent=True) or request.form
+    subject = (data.get('subject') or '').strip()
+    body = (data.get('body') or '').strip()
+
+    draft = get_current_draft()
+    if draft is None:
+        draft = create_draft(subject, body, auto_generated=False)
+    if not (body or draft.body):
+        return jsonify({'ok': False, 'error': 'Nothing to approve — the draft is empty.'}), 400
+
+    approve_draft(draft, subject=subject, body=body)
+    return jsonify({'ok': True, 'id': draft.id, 'status': draft.status})
+
+
+@main.route('/admin/newsletter/send', methods=['POST'])
+@admin_required
+def admin_newsletter_send():
+    from services.newsletter import get_current_draft, create_draft, save_draft, send_issue
+
+    data = request.get_json(silent=True) or request.form
+    subject = (data.get('subject') or '').strip()
+    body = (data.get('body') or '').strip()
+
+    # Persist whatever is currently in the editor before sending.
+    draft = get_current_draft()
+    if draft is None:
+        draft = create_draft(subject, body, auto_generated=False)
+    elif subject or body:
+        save_draft(draft, subject, body)
+
+    if not draft.body:
+        return jsonify({'ok': False, 'error': 'Newsletter body is empty.'}), 400
+
+    try:
+        sent = send_issue(draft)
+    except Exception as e:
+        current_app.logger.exception("Newsletter send failed")
+        return jsonify({'ok': False, 'error': str(e)}), 500
+    return jsonify({'ok': True, 'sent': sent})
+
+
+@main.route('/unsubscribe/<token>')
+def unsubscribe(token):
+    from services.email import verify_unsub_token
+    from models import EmailOptOut
+
+    email = verify_unsub_token(token)
+    if not email:
+        return render_template('main/unsubscribe.html', ok=False, email=None), 400
+
+    email = email.lower()
+    if not EmailOptOut.query.filter_by(email=email).first():
+        db.session.add(EmailOptOut(email=email))
+        try:
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+    return render_template('main/unsubscribe.html', ok=True, email=email)
+
+
+def _cron_authorized():
+    secret = current_app.config.get('CRON_SECRET')
+    return bool(secret) and request.args.get('key') == secret
+
+
+@main.route('/cron/newsletter/generate', methods=['POST', 'GET'])
+def cron_newsletter_generate():
+    if not _cron_authorized():
+        abort(403)
+    from services.newsletter import run_weekly_generation
+    issue = run_weekly_generation()
+    return jsonify({'ok': True, 'issue_id': issue.id})
+
+
+@main.route('/cron/newsletter/weekly', methods=['POST', 'GET'])
+def cron_newsletter_weekly():
+    if not _cron_authorized():
+        abort(403)
+    from services.newsletter import run_weekly_send
+    sent = run_weekly_send()
+    return jsonify({'ok': True, 'sent': sent})
+
 
 @main.route('/f3dd6d35491e4a168ba565d6e14ccffc.txt')
 def indexnow_key():

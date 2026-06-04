@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}Weekly Newsletter — Afrigen{% endblock %}
+
+{% block content %}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+    <div>
+        <h2 style="color: #F5A623; font-weight: 700; margin: 0;">📰 Weekly Newsletter</h2>
+        <p style="color: #888; margin: 0;">Auto-generated each week — review, edit, then send to everyone.</p>
+    </div>
+    <a href="{{ url_for('main.admin') }}" class="btn btn-outline-warning btn-sm">← Back to Admin</a>
+</div>
+
+<!-- STATUS ROW -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card p-3 text-center">
+            <p style="color: #888; margin-bottom: 6px;">Audience (will receive)</p>
+            <h3 style="color: #F5A623; font-weight: 800; margin: 0;">{{ audience }}</h3>
+            <small style="color: #555;">accounts + waitlist, minus unsubscribes</small>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card p-3 text-center">
+            <p style="color: #888; margin-bottom: 6px;">Current Draft</p>
+            {% if draft and draft.status == 'approved' %}
+            <h3 style="color: #27AE60; font-weight: 800; margin: 0;">✅ Approved</h3>
+            <small style="color: #555;">will auto-send Monday 9am</small>
+            {% elif draft %}
+            <h3 style="color: #F5A623; font-weight: 800; margin: 0;">Draft</h3>
+            <small style="color: #555;">not approved — won't auto-send</small>
+            {% else %}
+            <h3 style="color: #888; font-weight: 800; margin: 0;">None</h3>
+            <small style="color: #555;">generate one below</small>
+            {% endif %}
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card p-3 text-center">
+            <p style="color: #888; margin-bottom: 6px;">Last Sent</p>
+            <h3 style="color: #F0F6FC; font-weight: 800; margin: 0; font-size: 1.2rem;">
+                {{ last_sent.sent_at.strftime('%b %d, %Y') if last_sent else '—' }}
+            </h3>
+            <small style="color: #555;">
+                {% if last_sent %}to {{ last_sent.recipients_count }} recipients{% else %}never{% endif %}
+            </small>
+        </div>
+    </div>
+</div>
+
+<!-- EDITOR -->
+<div class="card p-4 mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+        <h5 style="color: #F0F6FC; font-weight: 700; margin: 0;">Draft</h5>
+        <button id="generateBtn" class="btn btn-outline-warning btn-sm">🤖 Generate with AI + web</button>
+    </div>
+
+    <label class="form-label" for="subject">Subject</label>
+    <input type="text" id="subject" class="form-control mb-3"
+           placeholder="This week at Afrigen..." value="{{ draft.subject if draft else '' }}">
+
+    <label class="form-label" for="body">Body (HTML)</label>
+    <textarea id="body" class="form-control mb-2" rows="14"
+              placeholder="Click 'Generate with AI + web' to draft this week's issue, or write your own HTML here.">{{ draft.body if draft else '' }}</textarea>
+
+    <div class="d-flex flex-wrap gap-2 mt-2">
+        <button id="previewBtn" class="btn btn-outline-warning btn-sm">👁 Preview</button>
+        <button id="saveBtn" class="btn btn-outline-warning">💾 Save draft</button>
+        <button id="approveBtn" class="btn btn-success">✅ Approve for Monday send</button>
+        <button id="sendBtn" class="btn btn-afrigen">📤 Send now to {{ audience }} people</button>
+        <span id="status" class="align-self-center ms-2" style="color: #888;"></span>
+    </div>
+    <p class="mt-2 mb-0" style="color: #555; font-size: 13px;">
+        Monday's automatic send only goes out if the draft is <strong>Approved</strong>.
+        Editing the text un-approves it, so approve once you're happy with it.
+    </p>
+</div>
+
+<!-- PREVIEW -->
+<div id="previewCard" class="card p-4 mb-5" style="display:none;">
+    <h5 style="color: #F0F6FC; font-weight: 700;">Preview</h5>
+    <div id="previewBody" style="background:#fff; color:#111; border-radius:10px; padding:20px; margin-top:10px;"></div>
+</div>
+
+<script>
+const subjectEl = document.getElementById('subject');
+const bodyEl = document.getElementById('body');
+const statusEl = document.getElementById('status');
+
+function setStatus(msg, color = '#888') {
+    statusEl.style.color = color;
+    statusEl.innerText = msg;
+}
+
+async function post(url, payload) {
+    const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload || {}),
+    });
+    return res.json().catch(() => ({ ok: false, error: 'Bad response' }));
+}
+
+document.getElementById('generateBtn').addEventListener('click', async () => {
+    setStatus('Generating with AI + web search… this can take ~30s', '#F5A623');
+    const data = await post('{{ url_for("main.admin_newsletter_generate") }}');
+    if (data.ok) {
+        subjectEl.value = data.subject || '';
+        bodyEl.value = data.body || '';
+        setStatus('Draft generated ✓', '#27AE60');
+    } else {
+        setStatus('Generate failed: ' + (data.error || 'unknown error'), '#E74C3C');
+    }
+});
+
+document.getElementById('saveBtn').addEventListener('click', async () => {
+    setStatus('Saving…');
+    const data = await post('{{ url_for("main.admin_newsletter_save") }}', {
+        subject: subjectEl.value, body: bodyEl.value,
+    });
+    setStatus(data.ok ? 'Saved ✓' : 'Save failed', data.ok ? '#27AE60' : '#E74C3C');
+});
+
+document.getElementById('approveBtn').addEventListener('click', async () => {
+    setStatus('Approving…');
+    const data = await post('{{ url_for("main.admin_newsletter_approve") }}', {
+        subject: subjectEl.value, body: bodyEl.value,
+    });
+    if (data.ok) {
+        setStatus('Approved ✓ — will auto-send Monday 9am', '#27AE60');
+    } else {
+        setStatus('Approve failed: ' + (data.error || 'unknown error'), '#E74C3C');
+    }
+});
+
+document.getElementById('previewBtn').addEventListener('click', () => {
+    document.getElementById('previewBody').innerHTML = bodyEl.value;
+    document.getElementById('previewCard').style.display = 'block';
+});
+
+document.getElementById('sendBtn').addEventListener('click', async () => {
+    if (!confirm('Send this newsletter to everyone now? This cannot be undone.')) return;
+    setStatus('Sending…', '#F5A623');
+    const data = await post('{{ url_for("main.admin_newsletter_send") }}', {
+        subject: subjectEl.value, body: bodyEl.value,
+    });
+    if (data.ok) {
+        setStatus(`Sent to ${data.sent} recipients ✓`, '#27AE60');
+    } else {
+        setStatus('Send failed: ' + (data.error || 'unknown error'), '#E74C3C');
+    }
+});
+</script>
+
+{% endblock %}
