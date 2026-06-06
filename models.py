@@ -67,6 +67,11 @@ class Generation(db.Model):
 
     ad_watched = db.Column(db.Boolean, default=False)
 
+    # Credits charged for this generation. Premium (Kling) videos cost more than
+    # the cheaper AnimateDiff path, so we record the price at request time and
+    # deduct exactly that amount once the video succeeds.
+    credit_cost = db.Column(db.Integer, nullable=False, default=5, server_default="5")
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     fal_request_id = db.Column(db.String(200), nullable=True)
 

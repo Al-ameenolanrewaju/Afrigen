@@ -70,24 +70,70 @@ def generate_video(
     return {"success": False, "error": f"Failed after {MAX_RETRIES} attempts. Last error: {last_error}"}
 
 
-def generate_video_async(prompt, style="cinematic", aspect_ratio="16:9", webhook_url=None):
-    MODELS = {
-        "cinematic": "fal-ai/ltx-video-v095",
-        "anime": "fal-ai/fast-animatediff/text-to-video",
-        "realistic": "fal-ai/ltx-video-v095",
-        "african": "fal-ai/ltx-video-v095",
-        "social": "fal-ai/fast-animatediff/text-to-video"
-    }
+# Text-to-video models, by length capability:
+#   LTX            - no length control at all (~short fixed clip).
+#   AnimateDiff    - frame count up to 32 @ 8fps (~4s); uses video_size, not aspect_ratio.
+#   Kling t2v pro  - real duration control: "5" or "10" seconds.
+LTX_MODEL = "fal-ai/ltx-video-v095"
+ANIMATEDIFF_MODEL = "fal-ai/fast-animatediff/text-to-video"
+KLING_T2V_MODEL = "fal-ai/kling-video/v1.6/pro/text-to-video"
 
-    model = MODELS.get(style, MODELS["cinematic"])
+ANIMATEDIFF_STYLES = {"anime", "social"}
+
+# Credit pricing. Premium Kling videos cost more than the cheaper AnimateDiff path.
+KLING_VIDEO_COST = 10
+CHEAP_VIDEO_COST = 5
+
+
+def text_to_video_cost(style, extended):
+    """Credits to charge for a text-to-video generation.
+
+    Mirrors generate_video_async's model choice: the AnimateDiff styles
+    (anime/social) use the cheap model; everything else routes to premium Kling
+    for Pro users (extended=True). Free users (extended=False) aren't charged
+    credits, so their cost is irrelevant.
+    """
+    if style in ANIMATEDIFF_STYLES:
+        return CHEAP_VIDEO_COST
+    return KLING_VIDEO_COST if extended else CHEAP_VIDEO_COST
+
+# AnimateDiff takes a video_size enum instead of an aspect_ratio string.
+ANIMATEDIFF_VIDEO_SIZE = {
+    "16:9": "landscape_16_9",
+    "9:16": "portrait_16_9",
+    "1:1": "square_hd",
+}
+
+
+def generate_video_async(prompt, style="cinematic", aspect_ratio="16:9", webhook_url=None, extended=False):
+    if style in ANIMATEDIFF_STYLES:
+        model = ANIMATEDIFF_MODEL
+    elif extended:
+        # Pro users get Kling for a full 10s clip on cinematic/realistic/african,
+        # which LTX cannot produce (it has no length parameter).
+        model = KLING_T2V_MODEL
+    else:
+        model = LTX_MODEL
+
+    arguments = {"prompt": prompt}
+
+    if model == ANIMATEDIFF_MODEL:
+        # AnimateDiff ignores aspect_ratio; translate it to a video_size enum.
+        arguments["video_size"] = ANIMATEDIFF_VIDEO_SIZE.get(aspect_ratio, "landscape_16_9")
+        # Pro users get the longer clip AnimateDiff supports: 32 frames @ 8fps (~4s).
+        if extended:
+            arguments["num_frames"] = 32
+            arguments["fps"] = 8
+    elif model == KLING_T2V_MODEL:
+        arguments["aspect_ratio"] = aspect_ratio if aspect_ratio in ("16:9", "9:16", "1:1") else "16:9"
+        arguments["duration"] = "10"
+    else:  # LTX supports only 16:9 / 9:16
+        arguments["aspect_ratio"] = aspect_ratio if aspect_ratio in ("16:9", "9:16") else "16:9"
 
     try:
         handler = fal_client.submit(
             model,
-            arguments={
-                "prompt": prompt,
-                "aspect_ratio": aspect_ratio
-            },
+            arguments=arguments,
             webhook_url=webhook_url
         )
         return {"success": True, "request_id": handler.request_id}
@@ -96,7 +142,15 @@ def generate_video_async(prompt, style="cinematic", aspect_ratio="16:9", webhook
         return {"success": False, "error": str(e)}
 
 
-def generate_video_from_image(image_url, prompt):
+def generate_video_from_image(image_url, prompt, duration="5", aspect_ratio="16:9"):
+    # Kling expects duration as the string "5" or "10". Guard against anything else.
+    duration = str(duration)
+    if duration not in ("5", "10"):
+        duration = "5"
+
+    if aspect_ratio not in ("16:9", "9:16", "1:1"):
+        aspect_ratio = "16:9"
+
     models = [
         "fal-ai/kling-video/v1.6/pro/image-to-video",
         "fal-ai/ltx-video-v095/image-to-video",
@@ -113,8 +167,8 @@ def generate_video_from_image(image_url, prompt):
                     arguments={
                         "prompt": str(prompt),
                         "image_url": str(image_url),
-                        "duration": 5,
-                        "aspect_ratio": "16:9"
+                        "duration": duration,
+                        "aspect_ratio": aspect_ratio
                     }
                 )
 
@@ -145,6 +199,26 @@ def generate_video_from_image(image_url, prompt):
                     time.sleep(RETRY_DELAY)
 
     return None
+
+
+def merge_audio_into_video(video_url, audio_url):
+    """Bake an audio track into a video via fal's hosted ffmpeg endpoint.
+
+    Returns the merged video's CDN URL, or None on failure (caller falls back
+    to the original silent video).
+    """
+    try:
+        result = fal_client.subscribe(
+            "fal-ai/ffmpeg-api/merge-audio-video",
+            arguments={
+                "video_url": video_url,
+                "audio_url": audio_url,
+            }
+        )
+        return result.get("video", {}).get("url")
+    except Exception as e:
+        print(f"MERGE ERROR: {e}")
+        return None
 
 
 def generate_image(prompt, style="realistic", aspect_ratio="1:1"):

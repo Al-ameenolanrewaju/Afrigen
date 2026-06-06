@@ -10,8 +10,12 @@ from services.video import (
     generate_video,
     generate_video_async,
     generate_video_from_image,
+    merge_audio_into_video,
+    text_to_video_cost,
     generate_image as generate_ai_image   # aliased to avoid conflict with route name
 )
+# Premium Kling image-to-video is charged at the higher rate.
+IMAGE_TO_VIDEO_COST = 10
 from services.audio import generate_voiceover, generate_video_script
 import os
 import secrets
@@ -121,7 +125,8 @@ def generate():
     if current_user.plan == 'free':
         from datetime import date
         today = date.today()
-        if current_user.last_video_reset is None or current_user.last_video_reset.month != today.month:
+        last_reset = current_user.last_video_reset
+        if last_reset is None or (last_reset.year, last_reset.month) != (today.year, today.month):
             current_user.monthly_videos_used = 0
             current_user.last_video_reset = today
             db.session.commit()
@@ -129,7 +134,10 @@ def generate():
             return jsonify({"success": False,
                             "error": "You have used your 3 free videos this month. Upgrade to Pro for unlimited!"})
     elif current_user.plan == 'pro':
-        if current_user.credits < 5:
+        # Pro videos are charged on success in the webhook; make sure they can
+        # afford the chosen model (premium Kling costs more than AnimateDiff).
+        video_cost = text_to_video_cost(style, extended=True)
+        if current_user.credits < video_cost:
             return jsonify({"success": False,
                             "error": "Not enough credits! Please renew your Pro plan at afrigen.com.ng/upgrade"})
     else:
@@ -142,7 +150,11 @@ def generate():
 
         webhook_url = url_for('main.fal_webhook', _external=True)
         print("WEBHOOK URL:", webhook_url)
-        result = generate_video_async(refined, style, aspect_ratio, webhook_url=webhook_url)
+        # Pro users get the longer clip on styles that support it (anime/social),
+        # and the premium 10s Kling model on cinematic/realistic/african.
+        extended = (current_user.plan == 'pro')
+        video_cost = text_to_video_cost(style, extended=extended)
+        result = generate_video_async(refined, style, aspect_ratio, webhook_url=webhook_url, extended=extended)
 
         if not result["success"]:
             raise Exception(result["error"])
@@ -159,6 +171,7 @@ def generate():
             video_url=None,
             wants_voiceover=wants_voiceover,
             status="processing",
+            credit_cost=video_cost,
             fal_request_id=result["request_id"]
         )
         db.session.add(generation)
@@ -223,8 +236,8 @@ def generate_from_image():
         flash('Image to Video is a Pro feature!', 'danger')
         return redirect(url_for('main.dashboard'))
 
-    if current_user.credits < 5:
-        flash('You need at least 10 credits for image-to-video!', 'danger')
+    if current_user.credits < IMAGE_TO_VIDEO_COST:
+        flash(f'You need at least {IMAGE_TO_VIDEO_COST} credits for image-to-video!', 'danger')
         return redirect(url_for('main.dashboard'))
 
     prompt = request.form.get('prompt')
@@ -232,6 +245,16 @@ def generate_from_image():
     if not prompt or not image_file:
         flash('Please provide both image and prompt!', 'danger')
         return redirect(url_for('main.dashboard'))
+
+    # Pro users choose clip length via the dashboard dropdown (5s or 10s).
+    duration = request.form.get('duration', '5')
+    if duration not in ('5', '10'):
+        duration = '5'
+
+    # Honour the form's aspect-ratio dropdown instead of forcing 16:9.
+    aspect_ratio = request.form.get('aspect_ratio', '16:9')
+    if aspect_ratio not in ('16:9', '9:16', '1:1'):
+        aspect_ratio = '16:9'
 
     # Validate file extension
     if not allowed_file(image_file.filename):
@@ -248,7 +271,7 @@ def generate_from_image():
 
         image_url = url_for('static', filename=f'uploads/{filename}', _external=True)
         refined = refine_image_prompt(prompt, "cinematic")
-        video_url = generate_video_from_image(image_url, refined)
+        video_url = generate_video_from_image(image_url, refined, duration=duration, aspect_ratio=aspect_ratio)
 
         generation = Generation(
             user_id=current_user.id,
@@ -258,12 +281,13 @@ def generate_from_image():
             image_url=image_url,
             generation_type="image",
             status="completed" if video_url else "failed",
+            credit_cost=IMAGE_TO_VIDEO_COST,
         )
         db.session.add(generation)
 
         # Only deduct credits if video generation succeeded
         if video_url:
-            current_user.credits -= 5
+            current_user.credits -= IMAGE_TO_VIDEO_COST
 
         db.session.commit()
 
@@ -295,7 +319,8 @@ def generate_image():
     if current_user.plan == 'free':
         from datetime import date
         today = date.today()
-        if current_user.last_image_reset is None or current_user.last_image_reset.month != today.month:
+        last_reset = current_user.last_image_reset
+        if last_reset is None or (last_reset.year, last_reset.month) != (today.year, today.month):
             current_user.monthly_images_used = 0
             current_user.last_image_reset = today
             db.session.commit()
@@ -352,7 +377,7 @@ def video_result():
         original=request.args.get('original', ''),
         refined=request.args.get('refined', ''),
         style=request.args.get('style', ''),
-        audio_filename=None
+        audio_url=request.args.get('audio_url')
     )
 
 @main.route('/result/image')
@@ -1262,7 +1287,7 @@ def fal_webhook():
         user = User.query.get(generation.user_id)
         if user:
             if user.plan == 'pro':
-                user.credits -= 5
+                user.credits -= generation.credit_cost
                 if user.credits <= 5:
                     try:
                         from services.email import send_credits_low_email
@@ -1274,27 +1299,38 @@ def fal_webhook():
             elif user.plan == 'free':
                 user.monthly_videos_used += 1
 
-        # Persist completion + credit charge BEFORE the slow voiceover step, so
-        # the video is marked ready promptly and a webhook retry hits the
-        # idempotency guard above instead of double-charging.
+        # Persist completion + credit charge BEFORE the slow voiceover/merge
+        # step, so a webhook retry hits the idempotency guard above instead of
+        # double-charging. The video is marked ready against the raw URL first.
         db.session.commit()
 
-        try:
-            from services.email import send_video_ready_email
-            send_video_ready_email(user.email, user.username, generation.original_prompt, video_url)
-        except Exception as e:
-            print(f"Email error: {e}")
-
-        # Voiceover last: it's best-effort and slower (script + TTS), so it must
-        # not delay marking the video ready. Generated only after the video
-        # actually succeeded, so we never pay for TTS on a failed generation.
+        # Voiceover + merge: best-effort and slower (script + TTS + ffmpeg), and
+        # only run after the video actually succeeded, so we never pay for it on
+        # a failed generation. When it works, the narration is baked into the
+        # video and generation.video_url is upgraded to the merged clip; on any
+        # failure we keep the raw (silent) video as a valid fallback.
         if generation.wants_voiceover and not generation.audio_url:
             try:
                 vo_script = generate_video_script(generation.original_prompt)
-                generation.audio_url = generate_voiceover(vo_script)
+                audio_url = generate_voiceover(vo_script)
+                generation.audio_url = audio_url
+                if audio_url:
+                    merged = merge_audio_into_video(video_url, audio_url)
+                    if merged:
+                        generation.video_url = merged
                 db.session.commit()
             except Exception as e:
                 print("VOICEOVER ERROR:", str(e))
+
+        # Email last, linking the final (merged, when available) video. Videos
+        # without voiceover skip the block above, so their email still goes
+        # out promptly.
+        try:
+            from services.email import send_video_ready_email
+            send_video_ready_email(user.email, user.username,
+                                   generation.original_prompt, generation.video_url)
+        except Exception as e:
+            print(f"Email error: {e}")
     else:
         generation.status = 'failed'
         db.session.commit()

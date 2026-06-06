@@ -1,33 +1,50 @@
 import os
+import asyncio
+import tempfile
 import requests
 
-def generate_voiceover(script, voice_style="nigerian_male"):
+# Nigerian English neural voice via Microsoft Edge TTS (free, no API key).
+# Options: "en-NG-AbeoNeural" (male) or "en-NG-EzinneNeural" (female).
+VOICEOVER_VOICE = os.environ.get("VOICEOVER_VOICE", "en-NG-AbeoNeural")
+
+
+def generate_voiceover(script):
+    """Synthesize a Nigerian-voice narration and return a public audio URL.
+
+    Renders an MP3 locally with edge-tts (free Microsoft neural voices), then
+    uploads it to fal storage so the ffmpeg merge step can fetch it by URL.
+    Returns None on failure, in which case the caller keeps the silent video.
+    """
     print("generate_voiceover called!")
+    tmp_path = os.path.join(tempfile.gettempdir(), f"vo_{os.urandom(8).hex()}.mp3")
     try:
+        import edge_tts
         import fal_client
 
-        result = fal_client.subscribe(
-            "fal-ai/kokoro/american-english",
-            arguments={
-                "text": script,
-                "voice": "am_adam",
-                "speed": 1.0
-            }
-        )
+        async def _synthesize():
+            communicate = edge_tts.Communicate(script, VOICEOVER_VOICE)
+            await communicate.save(tmp_path)
 
-        audio_url = result.get("audio", {}).get("url")
+        asyncio.run(_synthesize())
+
+        # The merge endpoint needs a publicly fetchable URL; fal storage gives a
+        # CDN link without relying on the app's ephemeral local disk.
+        audio_url = fal_client.upload_file(tmp_path)
         if not audio_url:
-            raise Exception("No audio URL returned")
+            raise Exception("No audio URL returned from upload")
 
-        # Return the fal-hosted CDN URL directly (matches how video_url is
-        # stored). Avoids relying on local disk, which is ephemeral on
-        # Railway/Render and would lose the file on redeploy.
         print(f"Voiceover generated: {audio_url}")
         return audio_url
 
     except Exception as e:
-        print(f"FAL TTS error: {e}")
+        print(f"TTS error: {e}")
         return None
+    finally:
+        try:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+        except Exception:
+            pass
 
 
 def generate_video_script(prompt, style="cinematic"):

@@ -74,15 +74,13 @@
                 </div>
             </div>
 
-            {% if audio_filename %}
+            {% if audio_url %}
             <div class="card p-4 mb-4" style="border-color: #27AE60;">
                 <h5 style="color: #27AE60;">🎙️ AI Voiceover Ready!</h5>
-                <audio controls class="w-100 mt-2">
-                    <source src="{{ url_for('static', filename='audio/' ~ audio_filename) }}" type="audio/flac">
-                    <source src="{{ url_for('static', filename='audio/' ~ audio_filename) }}" type="audio/mpeg">
+                <audio controls class="w-100 mt-2" src="{{ audio_url }}">
                     Your browser does not support audio.
                 </audio>
-                <a href="{{ url_for('static', filename='audio/' ~ audio_filename) }}"
+                <a href="{{ audio_url }}"
                    class="btn btn-outline-success mt-2 btn-sm" download>
                     ⬇️ Download Audio
                 </a>
