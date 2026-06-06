@@ -5,12 +5,13 @@ from flask import (
 from flask_login import login_required, current_user
 from models import db, Generation, User, TelegramUser, SavedPrompt, Referral, Payment
 from sqlalchemy.exc import IntegrityError
-from services.claude import refine_prompt, refine_image_prompt
+from services.claude import refine_prompt, refine_image_prompt, extract_on_screen_text
 from services.video import (
     generate_video,
     generate_video_async,
     generate_video_from_image,
     merge_audio_into_video,
+    add_text_overlay,
     text_to_video_cost,
     generate_image as generate_ai_image   # aliased to avoid conflict with route name
 )
@@ -273,6 +274,12 @@ def generate_from_image():
         refined = refine_image_prompt(prompt, "cinematic")
         video_url = generate_video_from_image(image_url, refined, duration=duration, aspect_ratio=aspect_ratio)
 
+        # Video models render text badly, so burn any words the user asked to
+        # show on screen onto the finished clip (best-effort; falls back to the
+        # raw video on failure).
+        if video_url:
+            video_url = add_text_overlay(video_url, extract_on_screen_text(prompt))
+
         generation = Generation(
             user_id=current_user.id,
             original_prompt=prompt,
@@ -310,6 +317,9 @@ def generate_from_image():
 def generate_image():
     prompt = request.form.get('prompt')
     style = request.form.get('style', 'realistic')
+    aspect_ratio = request.form.get('aspect_ratio', '1:1')
+    if aspect_ratio not in ('1:1', '16:9', '9:16'):
+        aspect_ratio = '1:1'
 
     if not prompt:
         flash('Please enter an image idea!', 'danger')
@@ -336,7 +346,7 @@ def generate_image():
 
     try:
         refined = refine_image_prompt(prompt, style)
-        result = generate_ai_image(refined, style)
+        result = generate_ai_image(refined, style, aspect_ratio)
 
         if not result["success"]:
             raise Exception(result["error"])
@@ -1321,6 +1331,19 @@ def fal_webhook():
                 db.session.commit()
             except Exception as e:
                 print("VOICEOVER ERROR:", str(e))
+
+        # Burn any requested on-screen words onto the final clip (after voiceover
+        # merge, so the caption sits on top of the delivered video). Best-effort:
+        # add_text_overlay returns the unchanged URL on any failure.
+        try:
+            on_screen = extract_on_screen_text(generation.original_prompt)
+            if on_screen:
+                captioned = add_text_overlay(generation.video_url, on_screen)
+                if captioned and captioned != generation.video_url:
+                    generation.video_url = captioned
+                    db.session.commit()
+        except Exception as e:
+            print("TEXT OVERLAY ERROR:", str(e))
 
         # Email last, linking the final (merged, when available) video. Videos
         # without voiceover skip the block above, so their email still goes

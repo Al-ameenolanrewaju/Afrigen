@@ -97,26 +97,45 @@ IMAGE_STYLE_PROMPTS = {
 }
 
 def refine_prompt(user_prompt, style="cinematic"):
-    system_message = STYLE_PROMPTS.get(style, STYLE_PROMPTS["cinematic"])
+    fidelity_rules = (
+        "\n\nFIDELITY: Keep the user's core subject, action and intent; enhance "
+        "with detail but never replace or drop what they asked for. Preserve any "
+        "named people, places, objects or counts. If any words should appear on "
+        "screen, copy them VERBATIM in double quotes and make them large, BOLD "
+        "and legible. Never paraphrase or invent on-screen words."
+    )
+    system_message = STYLE_PROMPTS.get(style, STYLE_PROMPTS["cinematic"]) + fidelity_rules
     response = groq_client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[
             {"role": "system", "content": system_message},
-            {"role": "user", "content": f"Refine this video prompt: {user_prompt}"}
+            {"role": "user", "content": (
+                "Refine this video prompt. Keep my subject and intent, and keep "
+                "any on-screen words exactly as written:\n\n" + user_prompt
+            )}
         ],
         max_tokens=300
     )
     return response.choices[0].message.content
 
 def refine_image_prompt(user_prompt, style="realistic"):
-    system_message = IMAGE_STYLE_PROMPTS.get(style, IMAGE_STYLE_PROMPTS["realistic"])
+    text_rules = (
+        "\n\nCRITICAL: If the idea contains any words to appear in the image "
+        "(flyer, billboard, poster, sign, logo), copy them VERBATIM, wrap them "
+        "in double quotes, and describe them as large, BOLD, high-contrast and "
+        "perfectly legible. Never paraphrase, drop, or invent wording."
+    )
+    system_message = IMAGE_STYLE_PROMPTS.get(style, IMAGE_STYLE_PROMPTS["realistic"]) + text_rules
     response = groq_client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[
             {"role": "system", "content": system_message},
-            {"role": "user", "content": f"Refine this image prompt: {user_prompt}"}
+            {"role": "user", "content": (
+                "Refine this image prompt. Keep any words meant to appear in the "
+                "image exactly as written and make them bold and legible:\n\n" + user_prompt
+            )}
         ],
-        max_tokens=200
+        max_tokens=300
     )
     return response.choices[0].message.content
 

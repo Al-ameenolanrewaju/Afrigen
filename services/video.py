@@ -1,5 +1,7 @@
 import os
 import time
+import subprocess
+import tempfile
 import requests
 import fal_client
 
@@ -7,6 +9,12 @@ os.environ["FAL_KEY"] = os.environ.get("FAL_KEY", "")
 
 MAX_RETRIES = 3
 RETRY_DELAY = 5  # seconds between retries
+
+# Bold TTF bundled in the repo so drawtext always has a font, regardless of host.
+FONT_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "static", "fonts", "DejaVuSans-Bold.ttf",
+)
 
 
 def generate_video(
@@ -199,6 +207,88 @@ def generate_video_from_image(image_url, prompt, duration="5", aspect_ratio="16:
                     time.sleep(RETRY_DELAY)
 
     return None
+
+
+def add_text_overlay(video_url, text):
+    """Burn `text` onto the finished video as a bold, legible caption.
+
+    The AI video models render text poorly, so we overlay it ourselves with a
+    real ffmpeg drawtext pass (ffmpeg binary shipped by the imageio-ffmpeg pip
+    package - no system install needed). The captioned file is re-uploaded to
+    fal's CDN so it survives the host's ephemeral disk.
+
+    Best-effort: on ANY problem (no text, download/ffmpeg/upload failure) the
+    original `video_url` is returned unchanged, so a caption never costs us the
+    video itself.
+    """
+    if not text or not text.strip():
+        return video_url
+
+    import textwrap
+
+    # Keep captions short and wrapped so they stay readable on screen.
+    wrapped = "\n".join(textwrap.wrap(text.strip()[:80], width=22)[:3])
+
+    in_path = out_path = txt_path = None
+    try:
+        import imageio_ffmpeg
+        ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
+
+        # Download the source video.
+        fd_in, in_path = tempfile.mkstemp(suffix=".mp4")
+        os.close(fd_in)
+        with requests.get(video_url, stream=True, timeout=120) as r:
+            r.raise_for_status()
+            with open(in_path, "wb") as f:
+                for chunk in r.iter_content(chunk_size=1 << 16):
+                    f.write(chunk)
+
+        # drawtext reads the caption from a file (textfile=), which sidesteps
+        # all the filter-string escaping headaches for arbitrary user text and
+        # handles multi-line cleanly.
+        fd_txt, txt_path = tempfile.mkstemp(suffix=".txt")
+        with os.fdopen(fd_txt, "w", encoding="utf-8") as f:
+            f.write(wrapped)
+
+        fd_out, out_path = tempfile.mkstemp(suffix=".mp4")
+        os.close(fd_out)
+
+        # Forward slashes + single quotes keep paths valid inside the filtergraph
+        # on both Windows (local) and Linux (Render).
+        font = FONT_PATH.replace("\\", "/")
+        txt = txt_path.replace("\\", "/")
+        drawtext = (
+            f"drawtext=fontfile='{font}':textfile='{txt}'"
+            ":fontcolor=white:fontsize=h/14:line_spacing=8"
+            ":box=1:boxcolor=black@0.5:boxborderw=20"
+            ":borderw=3:bordercolor=black@0.9"
+            ":x=(w-text_w)/2:y=h-text_h-(h*0.08)"
+        )
+
+        cmd = [
+            ffmpeg_exe, "-y", "-i", in_path,
+            "-vf", drawtext,
+            "-codec:a", "copy",
+            out_path,
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+        if result.returncode != 0:
+            print("DRAWTEXT FFMPEG ERROR:", result.stderr[-800:])
+            return video_url
+
+        new_url = fal_client.upload_file(out_path)
+        return new_url or video_url
+
+    except Exception as e:
+        print("TEXT OVERLAY ERROR:", str(e))
+        return video_url
+    finally:
+        for p in (in_path, out_path, txt_path):
+            if p and os.path.exists(p):
+                try:
+                    os.remove(p)
+                except OSError:
+                    pass
 
 
 def merge_audio_into_video(video_url, audio_url):
