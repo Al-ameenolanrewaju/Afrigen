@@ -20,31 +20,22 @@ FONT_PATH = os.path.join(
 def generate_video(
     prompt,
     style="cinematic",
-    aspect_ratio="16:9"
+    aspect_ratio="16:9",
+    extended=False
 ):
-    MODELS = {
-        "cinematic": "fal-ai/ltx-video-v095",
-        "anime": "fal-ai/fast-animatediff/text-to-video",
-        "realistic": "fal-ai/ltx-video-v095",
-        "african": "fal-ai/ltx-video-v095",
-        "social": "fal-ai/fast-animatediff/text-to-video"
-    }
-
-    model = MODELS.get(style, MODELS["cinematic"])
+    # Same model selection as the website's async path: Pro users (extended=True)
+    # get the premium 10s Kling clip on cinematic/realistic/african and a longer
+    # AnimateDiff clip on anime/social; everyone else gets the short LTX clip.
+    # This call is synchronous (fal_client.subscribe blocks until the video is
+    # ready), which is what the Telegram bot needs.
+    model, arguments = _build_t2v_request(prompt, style, aspect_ratio, extended)
     last_error = None
 
     for attempt in range(1, MAX_RETRIES + 1):
         try:
             print(f"Video attempt {attempt}/{MAX_RETRIES} - model: {model}")
-            print("FAL KEY LOADED:", os.getenv("FAL_KEY")[:12])
 
-            result = fal_client.subscribe(
-                model,
-                arguments={
-                    "prompt": prompt,
-                    "aspect_ratio": aspect_ratio
-                }
-            )
+            result = fal_client.subscribe(model, arguments=arguments)
 
             video_url = None
             if isinstance(result, dict):
@@ -113,12 +104,19 @@ ANIMATEDIFF_VIDEO_SIZE = {
 }
 
 
-def generate_video_async(prompt, style="cinematic", aspect_ratio="16:9", webhook_url=None, extended=False):
+def _build_t2v_request(prompt, style, aspect_ratio, extended):
+    """Pick the text-to-video model + arguments for a given style/quality.
+
+    The single source of truth shared by the website's async path
+    (generate_video_async) and the bot's synchronous path (generate_video), so
+    both produce identical videos:
+      - anime/social  -> AnimateDiff (longer 32-frame clip when extended)
+      - extended       -> premium Kling 10s clip (cinematic/realistic/african)
+      - otherwise      -> short LTX clip
+    """
     if style in ANIMATEDIFF_STYLES:
         model = ANIMATEDIFF_MODEL
     elif extended:
-        # Pro users get Kling for a full 10s clip on cinematic/realistic/african,
-        # which LTX cannot produce (it has no length parameter).
         model = KLING_T2V_MODEL
     else:
         model = LTX_MODEL
@@ -137,6 +135,12 @@ def generate_video_async(prompt, style="cinematic", aspect_ratio="16:9", webhook
         arguments["duration"] = "10"
     else:  # LTX supports only 16:9 / 9:16
         arguments["aspect_ratio"] = aspect_ratio if aspect_ratio in ("16:9", "9:16") else "16:9"
+
+    return model, arguments
+
+
+def generate_video_async(prompt, style="cinematic", aspect_ratio="16:9", webhook_url=None, extended=False):
+    model, arguments = _build_t2v_request(prompt, style, aspect_ratio, extended)
 
     try:
         handler = fal_client.submit(

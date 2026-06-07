@@ -17,6 +17,9 @@ from services.video import (
 )
 # Premium Kling image-to-video is charged at the higher rate.
 IMAGE_TO_VIDEO_COST = 10
+from services.credits import (
+    video_gate, image_gate, charge_video, charge_image, IMAGE_COST
+)
 from services.audio import generate_voiceover, generate_video_script
 import os
 import secrets
@@ -92,11 +95,30 @@ def dashboard():
     completed_generations = Generation.query.filter_by(
         user_id=current_user.id, status='completed'
     ).count()
+    # Telegram linking status + bot handle for the "Connect Telegram" card.
+    telegram_linked = TelegramUser.query.filter_by(user_id=current_user.id).first() is not None
+    telegram_bot_username = os.environ.get('TELEGRAM_BOT_USERNAME', '')
     return render_template(
         "main/dashboard.html",
         total_generations=total_generations,
-        completed_generations=completed_generations
+        completed_generations=completed_generations,
+        telegram_linked=telegram_linked,
+        telegram_bot_username=telegram_bot_username,
     )
+
+
+@main.route('/telegram/connect-code', methods=['POST'])
+@login_required
+def telegram_connect_code():
+    """Issue a one-time code the user sends to the bot as `/link <code>`."""
+    code = secrets.token_hex(3).upper()  # 6 hex chars, e.g. "A3F9C1"
+    current_user.telegram_link_code = code
+    db.session.commit()
+    return jsonify({
+        "success": True,
+        "code": code,
+        "bot_username": os.environ.get('TELEGRAM_BOT_USERNAME', ''),
+    })
 
 
 @main.route('/generate', methods=['POST'])
@@ -122,28 +144,12 @@ def generate():
     if action == 'refine_only':
         return jsonify({"success": True, "type": "refine_only", "refined": refined, "original": prompt})
 
-    # Plan checks
-    if current_user.plan == 'free':
-        from datetime import date
-        today = date.today()
-        last_reset = current_user.last_video_reset
-        if last_reset is None or (last_reset.year, last_reset.month) != (today.year, today.month):
-            current_user.monthly_videos_used = 0
-            current_user.last_video_reset = today
-            db.session.commit()
-        if current_user.monthly_videos_used >= 3:
-            return jsonify({"success": False,
-                            "error": "You have used your 3 free videos this month. Upgrade to Pro for unlimited!"})
-    elif current_user.plan == 'pro':
-        # Pro videos are charged on success in the webhook; make sure they can
-        # afford the chosen model (premium Kling costs more than AnimateDiff).
-        video_cost = text_to_video_cost(style, extended=True)
-        if current_user.credits < video_cost:
-            return jsonify({"success": False,
-                            "error": "Not enough credits! Please renew your Pro plan at afrigen.com.ng/upgrade"})
-    else:
-        flash('Your account is restricted.', 'danger')
-        return redirect(url_for('main.dashboard'))
+    # Plan / credit gate (shared with the Telegram bot via services.credits).
+    # Pro users get the premium 10s Kling model on supported styles, so we gate
+    # against the extended cost.
+    ok, error, _ = video_gate(current_user, style, extended=(current_user.plan == 'pro'))
+    if not ok:
+        return jsonify({"success": False, "error": error})
 
     try:
         if current_user.plan == 'free':
@@ -325,24 +331,10 @@ def generate_image():
         flash('Please enter an image idea!', 'danger')
         return redirect(url_for('main.dashboard'))
 
-    # Free user limit
-    if current_user.plan == 'free':
-        from datetime import date
-        today = date.today()
-        last_reset = current_user.last_image_reset
-        if last_reset is None or (last_reset.year, last_reset.month) != (today.year, today.month):
-            current_user.monthly_images_used = 0
-            current_user.last_image_reset = today
-            db.session.commit()
-        if current_user.monthly_images_used >= 2:
-            return jsonify({"success": False,
-                            "error": "You have used your 2 free images this month. Upgrade to Pro!"})
-
-    # Pro user credit check
-    if current_user.plan == 'pro':
-        if current_user.credits < 2:
-            return jsonify({"success": False,
-                            "error": "Not enough credits! Please renew your Pro plan."})
+    # Plan / credit gate (shared with the Telegram bot via services.credits).
+    ok, error = image_gate(current_user)
+    if not ok:
+        return jsonify({"success": False, "error": error})
 
     try:
         refined = refine_image_prompt(prompt, style)
@@ -364,10 +356,7 @@ def generate_image():
         db.session.add(generation)
 
         if image:
-            if current_user.plan == 'free':
-                current_user.monthly_images_used += 1
-            elif current_user.plan == 'pro':
-                current_user.credits -= 2
+            charge_image(current_user)
 
         db.session.commit()
 
@@ -1296,18 +1285,13 @@ def fal_webhook():
         # Deduct credits only on success
         user = User.query.get(generation.user_id)
         if user:
-            if user.plan == 'pro':
-                user.credits -= generation.credit_cost
-                if user.credits <= 5:
-                    try:
-                        from services.email import send_credits_low_email
-                        send_credits_low_email(user.email, user.username, user.credits)
-                    except Exception as e:
-                        print(f"Email error: {e}")
-                if user.credits < 0:
-                    user.credits = 0
-            elif user.plan == 'free':
-                user.monthly_videos_used += 1
+            charge_video(user, generation.credit_cost)
+            if user.plan == 'pro' and user.credits <= 5:
+                try:
+                    from services.email import send_credits_low_email
+                    send_credits_low_email(user.email, user.username, user.credits)
+                except Exception as e:
+                    print(f"Email error: {e}")
 
         # Persist completion + credit charge BEFORE the slow voiceover/merge
         # step, so a webhook retry hits the idempotency guard above instead of

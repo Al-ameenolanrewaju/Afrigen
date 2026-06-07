@@ -53,6 +53,36 @@
         </div>
     </div>
 
+    <!-- Connect Telegram -->
+    <div class="card p-4 mb-4">
+        <h3 style="color: #F5A623;" class="mb-2">🤖 Generate on Telegram</h3>
+        {% if telegram_linked %}
+        <p style="color: #7ee787; margin-bottom: 0;">
+            ✅ Your Telegram is connected. Message the bot and send your idea to
+            generate videos & photos — it uses these same credits.
+        </p>
+        {% else %}
+        <p style="color: #C9D1D9;">
+            Link your account to generate videos &amp; photos right inside Telegram.
+            Tap below to get a one-time code, then send it to the bot.
+        </p>
+        <button id="tgConnectBtn" class="btn btn-afrigen px-4" type="button"
+                onclick="generateTelegramCode()">
+            Get Connect Code 🔗
+        </button>
+        <div id="tgCodeBox" style="display:none; margin-top:16px; padding:16px;
+             background:#0D1117; border:1px solid #30363D; border-radius:12px;">
+            <p style="color:#888; margin-bottom:6px;">Your one-time code:</p>
+            <h2 id="tgCode" style="color:#F5A623; letter-spacing:3px; margin-bottom:12px;"></h2>
+            <p style="color:#C9D1D9; margin-bottom:0;">
+                Open <span id="tgBotLink" style="color:#F5A623;"></span> on Telegram and send:
+                <code id="tgLinkCmd" style="color:#7ee787;"></code>
+            </p>
+            <small style="color:#888;">The code works once and expires after you link.</small>
+        </div>
+        {% endif %}
+    </div>
+
     <!-- Generate Video Form -->
     <div class="card p-4">
         <h3 style="color: #F5A623;" class="mb-4">
@@ -444,6 +474,29 @@ document.getElementById('textToImageBtn')?.closest('form').addEventListener('sub
     e.stopPropagation();
     submitForm(this, '/generate-image', 'Generating Image... 🎨', 'Images take 10–30 seconds', 25000);
 });
+
+// Connect Telegram
+function generateTelegramCode() {
+    const btn = document.getElementById('tgConnectBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Generating...'; }
+    fetch('/telegram/connect-code', { method: 'POST' })
+        .then(res => res.json())
+        .then(data => {
+            if (!data.success) throw new Error('failed');
+            const botUsername = data.bot_username || '{{ telegram_bot_username }}';
+            const handle = botUsername ? '@' + botUsername : 'the Afrigen bot';
+            document.getElementById('tgCode').textContent = data.code;
+            document.getElementById('tgBotLink').textContent = handle;
+            document.getElementById('tgLinkCmd').textContent = '/link ' + data.code;
+            document.getElementById('tgCodeBox').style.display = 'block';
+            if (btn) { btn.disabled = false; btn.textContent = 'Get New Code 🔄'; }
+        })
+        .catch(() => {
+            if (btn) { btn.disabled = false; btn.textContent = 'Get Connect Code 🔗'; }
+            alert('Could not generate a code. Please try again.');
+        });
+}
+
 </script>
 
 <style>

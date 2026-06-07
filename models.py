@@ -30,6 +30,11 @@ class User(UserMixin, db.Model):
 
     is_banned = db.Column(db.Boolean, default=False)
 
+    # One-time code shown on the dashboard so a user can link their Telegram
+    # account to this website account (sent to the bot as `/link <code>`).
+    # Cleared once the link is established.
+    telegram_link_code = db.Column(db.String(20), nullable=True)
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     country = db.Column(db.String(100), nullable=True)
     signup_source = db.Column(db.String(100), nullable=True, default='direct')
@@ -112,6 +117,12 @@ class TelegramUser(db.Model):
     first_name = db.Column(db.String(80), nullable=True)
 
     prompts_refined = db.Column(db.Integer, default=0)
+
+    # Linked website account. Generation through the bot draws from this user's
+    # plan / credits / monthly limits, so the website and Telegram share one
+    # source of truth for billing.
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    user = db.relationship("User", backref="telegram_accounts")
 
     joined_at = db.Column(db.DateTime, default=datetime.utcnow)
 
