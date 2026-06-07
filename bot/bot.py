@@ -32,6 +32,11 @@ groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 # starts a scheduler, registers blueprints, etc. We only need the DB.
 flask_app = Flask(__name__)
 flask_app.config.from_object(Config)
+# SQLAlchemy 2.x only accepts the "postgresql://" scheme; some hosts still hand
+# out "postgres://" (which the old raw psycopg2 path tolerated). Normalize it.
+_db_uri = flask_app.config.get("SQLALCHEMY_DATABASE_URI") or ""
+if _db_uri.startswith("postgres://"):
+    flask_app.config["SQLALCHEMY_DATABASE_URI"] = _db_uri.replace("postgres://", "postgresql://", 1)
 db.init_app(flask_app)
 
 # Where the website lives, used in link instructions.
