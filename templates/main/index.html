@@ -5,46 +5,49 @@
 {% block content %}
 
 <!-- HERO -->
-<section style="padding: 100px 0 80px; text-align: center; background: linear-gradient(180deg, #0D1117 0%, #161B22 100%);">
-    <div class="container">
-        <div class="mb-3">
-            <span style="background: rgba(245,166,35,0.15); color: #F5A623; padding: 6px 16px; border-radius: 99px; font-size: 14px; border: 1px solid rgba(245,166,35,0.3);">
-                🇳🇬 Built for African Creators
-            </span>
+<section class="hero-section" style="overflow: hidden;">
+    <div class="glow-orb" style="width: 520px; height: 520px; background: rgba(245,166,35,0.22); top: -180px; left: 50%; transform: translateX(-50%);"></div>
+    <div class="glow-orb" style="width: 360px; height: 360px; background: rgba(120,90,255,0.16); bottom: -160px; left: -80px;"></div>
+    <div class="glow-orb" style="width: 320px; height: 320px; background: rgba(255,138,0,0.14); top: 40px; right: -100px;"></div>
+    <div class="container" style="position: relative; z-index: 1;">
+        <div class="mb-4 reveal">
+            <span class="pill">🇳🇬 Built for African Creators</span>
         </div>
-        <h1 style="color: #F0F6FC; font-size: clamp(2.5rem, 6vw, 4rem); font-weight: 800; line-height: 1.2; margin-bottom: 20px;">
+        <h1 class="hero-title reveal" style="margin-bottom: 22px;">
             Turn Your Ideas Into<br>
-            <span style="color: #F5A623;">Stunning AI Videos</span>
+            <span class="text-gradient">Stunning AI Videos</span>
         </h1>
-        <p style="color: #888; font-size: clamp(1rem, 2.5vw, 1.2rem); max-width: 600px; margin: 0 auto 40px;">
+        <p class="hero-description reveal">
             No camera. No studio. No technical skills. Just describe your idea and Afrigen generates professional videos in seconds.
         </p>
+        <div class="reveal d-flex flex-wrap justify-content-center gap-3">
         {% if current_user.is_authenticated %}
-        <a href="{{ url_for('main.dashboard') }}" class="btn btn-afrigen btn-lg px-5 me-3">
+        <a href="{{ url_for('main.dashboard') }}" class="btn btn-afrigen btn-lg px-5">
             Go to Dashboard 🚀
         </a>
         {% else %}
-        <a href="{{ url_for('auth.register') }}" class="btn btn-afrigen btn-lg px-5 me-3">
+        <a href="{{ url_for('auth.register') }}" class="btn btn-afrigen btn-lg px-5">
             Start Free 🌍
         </a>
         <a href="{{ url_for('auth.login') }}" class="btn btn-outline-warning btn-lg px-4">
             Login
         </a>
         {% endif %}
+        </div>
 
         <!-- Real Stats -->
-        <div class="row justify-content-center mt-5">
+        <div class="row justify-content-center mt-5 reveal">
             <div class="col-4 col-md-3">
-                <h3 style="color: #F5A623; font-weight: 800;">{{ total_users }}+</h3>
-                <p style="color: #888; font-size: 13px;">Creators</p>
+                <h3 class="text-gradient" style="font-weight: 800; font-size: 2rem;">{{ total_users }}+</h3>
+                <p style="color: var(--text-dim); font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em;">Creators</p>
             </div>
             <div class="col-4 col-md-3">
-                <h3 style="color: #F5A623; font-weight: 800;">{{ total_generations }}+</h3>
-                <p style="color: #888; font-size: 13px;">Videos Generated</p>
+                <h3 class="text-gradient" style="font-weight: 800; font-size: 2rem;">{{ total_generations }}+</h3>
+                <p style="color: var(--text-dim); font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em;">Videos Generated</p>
             </div>
             <div class="col-4 col-md-3">
-                <h3 style="color: #F5A623; font-weight: 800;">₦0</h3>
-                <p style="color: #888; font-size: 13px;">To Start</p>
+                <h3 class="text-gradient" style="font-weight: 800; font-size: 2rem;">₦0</h3>
+                <p style="color: var(--text-dim); font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em;">To Start</p>
             </div>
         </div>
     </div>
@@ -53,12 +56,10 @@
 <!-- FREE PROMPT REFINER -->
 <section style="padding: 80px 0; background: #161B22;">
     <div class="container">
-        <div class="text-center mb-5">
-            <span style="background: rgba(245,166,35,0.15); color: #F5A623; padding: 6px 16px; border-radius: 99px; font-size: 13px; border: 1px solid rgba(245,166,35,0.3);">
-                FREE — No Account Needed
-            </span>
-            <h2 style="color: #F0F6FC; margin-top: 16px; font-weight: 700;">Try Our AI Prompt Refiner</h2>
-            <p style="color: #888;">Type a rough idea, get a professional cinematic prompt instantly</p>
+        <div class="text-center mb-5 reveal">
+            <span class="pill">FREE — No Account Needed</span>
+            <h2 style="margin-top: 18px; font-weight: 700;">Try Our AI Prompt Refiner</h2>
+            <p style="color: var(--text-muted);">Type a rough idea, get a professional cinematic prompt instantly</p>
         </div>
 
         <div class="row justify-content-center">
@@ -163,9 +164,9 @@
 <!-- HOW IT WORKS -->
 <section style="padding: 80px 0;">
     <div class="container">
-        <h2 class="text-center mb-2" style="color: #F0F6FC; font-weight: 700;">How It Works</h2>
-        <p class="text-center mb-5" style="color: #888;">Three steps to your first AI video</p>
-        <div class="row text-center">
+        <h2 class="text-center mb-2 reveal" style="font-weight: 700;">How It Works</h2>
+        <p class="text-center mb-5" style="color: var(--text-muted);">Three steps to your first AI video</p>
+        <div class="row text-center reveal">
             <div class="col-md-4 mb-4">
                 <div class="card p-4" style="border-color: #30363D;">
                     <div style="font-size: 48px; margin-bottom: 16px;">✍️</div>
@@ -194,7 +195,7 @@
 <!-- FEATURES -->
 <section style="padding: 80px 0; background: #161B22;">
     <div class="container">
-        <h2 class="text-center mb-2" style="color: #F0F6FC; font-weight: 700;">Why Choose Afrigen?</h2>
+        <h2 class="text-center mb-2 reveal" style="font-weight: 700;">Why Choose Afrigen?</h2>
         <p class="text-center mb-5" style="color: #888;">Everything African creators need in one platform</p>
         <div class="row">
             <div class="col-md-4 mb-4">
@@ -240,7 +241,7 @@
 <!-- TESTIMONIALS -->
 <section style="padding: 80px 0;">
     <div class="container">
-        <h2 class="text-center mb-2" style="color: #F0F6FC; font-weight: 700;">What Creators Say</h2>
+        <h2 class="text-center mb-2 reveal" style="font-weight: 700;">What Creators Say</h2>
         <p class="text-center mb-5" style="color: #888;">African creators already using Afrigen</p>
         <div class="row">
             <div class="col-md-4 mb-4">
@@ -286,7 +287,7 @@
 <!-- PRICING -->
 <section style="padding: 80px 0; background: #161B22;">
     <div class="container">
-        <h2 class="text-center mb-2" style="color: #F0F6FC; font-weight: 700;">Simple Pricing</h2>
+        <h2 class="text-center mb-2 reveal" style="font-weight: 700;">Simple Pricing</h2>
         <p class="text-center mb-5" style="color: #888;">No hidden fees. Cancel anytime.</p>
         <div class="row justify-content-center">
             <div class="col-md-4 mb-4">
@@ -413,39 +414,5 @@ function copyPrompt() {
     alert('Prompt copied! 📋');
 }
 </script>
-
-<style>
-.btn-afrigen {
-    background: #F5A623;
-    color: #0D1117;
-    border: none;
-    font-weight: 600;
-}
-.btn-afrigen:hover {
-    background: #e09515;
-    color: #0D1117;
-}
-.card {
-    background: #161B22;
-    border: 1px solid #30363D;
-    border-radius: 16px;
-}
-.form-control {
-    background: #21262D;
-    border: 1px solid #30363D;
-    color: #F0F6FC;
-}
-.form-control:focus {
-    background: #21262D;
-    border-color: #F5A623;
-    color: #F0F6FC;
-    box-shadow: 0 0 0 2px rgba(245,166,35,0.2);
-}
-.btn-check:checked + label {
-    background: #F5A623 !important;
-    color: #0D1117 !important;
-    border-color: #F5A623 !important;
-}
-</style>
 
 {% endblock %}
