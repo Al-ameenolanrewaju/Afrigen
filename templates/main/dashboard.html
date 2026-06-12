@@ -79,6 +79,16 @@
                 <code id="tgLinkCmd" style="color:#7ee787;"></code>
             </p>
             <small style="color:#888;">The code works once and expires after you link.</small>
+            <p id="tgWaiting" style="display:none; color:#F5A623; margin:12px 0 0;">
+                ⏳ Waiting for you to send the code to the bot…
+            </p>
+        </div>
+
+        <!-- Live success message once the bot binds -->
+        <div id="tgLinkedBox" class="alert alert-success" style="display:none; margin-top:16px;">
+            ✅ <strong>Telegram connected successfully!</strong>
+            <span id="tgLinkedWho"></span> You can now generate videos &amp; photos
+            right inside Telegram using these same credits.
         </div>
         {% endif %}
     </div>
@@ -489,12 +499,48 @@ function generateTelegramCode() {
             document.getElementById('tgBotLink').textContent = handle;
             document.getElementById('tgLinkCmd').textContent = '/link ' + data.code;
             document.getElementById('tgCodeBox').style.display = 'block';
+            document.getElementById('tgWaiting').style.display = 'block';
             if (btn) { btn.disabled = false; btn.textContent = 'Get New Code 🔄'; }
+            startTelegramLinkPolling();
         })
         .catch(() => {
             if (btn) { btn.disabled = false; btn.textContent = 'Get Connect Code 🔗'; }
             alert('Could not generate a code. Please try again.');
         });
+}
+
+let _tgPollTimer = null;
+function startTelegramLinkPolling() {
+    if (_tgPollTimer) clearInterval(_tgPollTimer);
+    const deadline = Date.now() + 5 * 60 * 1000; // stop polling after 5 minutes
+    _tgPollTimer = setInterval(() => {
+        if (Date.now() > deadline) { clearInterval(_tgPollTimer); return; }
+        fetch('/telegram/link-status')
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.linked) {
+                    clearInterval(_tgPollTimer);
+                    onTelegramLinked(data);
+                }
+            })
+            .catch(() => { /* keep polling */ });
+    }, 3000);
+}
+
+function onTelegramLinked(data) {
+    const codeBox = document.getElementById('tgCodeBox');
+    const linkedBox = document.getElementById('tgLinkedBox');
+    const btn = document.getElementById('tgConnectBtn');
+    if (codeBox) codeBox.style.display = 'none';
+    if (btn) btn.style.display = 'none';
+    if (linkedBox) {
+        const who = data.telegram_username
+            ? ('(@' + data.telegram_username + ')')
+            : (data.telegram_name ? ('(' + data.telegram_name + ')') : '');
+        document.getElementById('tgLinkedWho').textContent = who ? ' ' + who : '';
+        linkedBox.style.display = 'block';
+        linkedBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
 }
 
 </script>

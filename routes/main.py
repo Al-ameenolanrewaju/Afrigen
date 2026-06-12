@@ -121,6 +121,19 @@ def telegram_connect_code():
     })
 
 
+@main.route('/telegram/link-status')
+@login_required
+def telegram_link_status():
+    """Poll target so the dashboard can confirm a successful bind in real time."""
+    tg = TelegramUser.query.filter_by(user_id=current_user.id).first()
+    return jsonify({
+        "success": True,
+        "linked": tg is not None,
+        "telegram_username": tg.username if tg else None,
+        "telegram_name": (tg.first_name if tg else None),
+    })
+
+
 @main.route('/generate', methods=['POST'])
 @login_required
 def generate():
