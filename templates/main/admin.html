@@ -11,7 +11,10 @@
             <h2 style="color: #F5A623;">⚙️ Afrigen Admin Panel</h2>
             <p style="color: #C9D1D9; margin: 0;">Monitor platform performance and manage users</p>
         </div>
-        <a href="{{ url_for('main.admin_newsletter') }}" class="btn btn-afrigen">📰 Weekly Newsletter</a>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{{ url_for('main.admin_blog') }}" class="btn btn-afrigen">📝 Blog Drafts</a>
+            <a href="{{ url_for('main.admin_newsletter') }}" class="btn btn-afrigen">📰 Weekly Newsletter</a>
+        </div>
     </div>
 
     <!-- Top Stats -->

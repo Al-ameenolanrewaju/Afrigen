@@ -186,6 +186,37 @@ class NewsletterIssue(db.Model):
         return f"<NewsletterIssue {self.id} {self.status}>"
 
 
+class BlogPost(db.Model):
+    """A blog article shown at /blog. Auto-generated posts land as status='draft'
+    and stay completely invisible to the public until an admin approves them at
+    /admin/blog (which sets status='published' + published_at). Mirrors the
+    NewsletterIssue draft→approve lifecycle."""
+    __tablename__ = "blog_posts"
+
+    id = db.Column(db.Integer, primary_key=True)
+    slug = db.Column(db.String(200), unique=True, nullable=False)
+    title = db.Column(db.String(300), nullable=False)
+    description = db.Column(db.String(320), nullable=False, default="")
+    body = db.Column(db.Text, nullable=False, default="")   # trusted HTML, rendered with | safe
+    tag = db.Column(db.String(60), default="")
+    read_time = db.Column(db.String(40), default="")
+
+    status = db.Column(db.String(20), default="draft")       # draft | published
+    auto_generated = db.Column(db.Boolean, default=False)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    published_at = db.Column(db.DateTime, nullable=True)
+
+    @property
+    def date(self):
+        """Human display date used by the templates (matches the old dict field)."""
+        d = self.published_at or self.created_at
+        return d.strftime("%B %d, %Y") if d else ""
+
+    def __repr__(self):
+        return f"<BlogPost {self.slug} {self.status}>"
+
+
 class EmailOptOut(db.Model):
     """Emails that have unsubscribed from the newsletter."""
     __tablename__ = "email_opt_outs"

@@ -851,6 +851,59 @@ def docs():
     return render_template('main/docs.html')
 
 
+@main.route('/blog')
+def blog():
+    from services.blog import get_all_posts
+    return render_template('main/blog.html', posts=get_all_posts())
+
+
+@main.route('/blog/<slug>')
+def blog_post(slug):
+    from services.blog import get_post
+    post = get_post(slug)
+    if not post:
+        abort(404)
+    return render_template('main/blog_post.html', post=post)
+
+
+# ---------- Blog draft review (admin only) ----------
+
+@main.route('/admin/blog')
+@admin_required
+def admin_blog():
+    from services.blog import get_drafts, get_all_posts
+    return render_template(
+        'main/blog_admin.html',
+        drafts=get_drafts(),
+        published=get_all_posts(),
+    )
+
+
+@main.route('/admin/blog/publish/<int:post_id>', methods=['POST'])
+@admin_required
+def admin_blog_publish(post_id):
+    from services.blog import get_post_by_id, publish_post
+    post = get_post_by_id(post_id)
+    if not post:
+        abort(404)
+    publish_post(post)
+    flash(f'Published "{post.title}" — it is now live on the blog.', 'success')
+    return redirect(url_for('main.admin_blog'))
+
+
+@main.route('/admin/blog/discard/<int:post_id>', methods=['POST'])
+@admin_required
+def admin_blog_discard(post_id):
+    from services.blog import get_post_by_id, discard_post
+    post = get_post_by_id(post_id)
+    if not post:
+        abort(404)
+    title = post.title
+    discard_post(post)
+    flash(f'Discarded draft "{title}".', 'warning')
+    return redirect(url_for('main.admin_blog'))
+
+
 @main.route('/analytics')
 @login_required
 def analytics():

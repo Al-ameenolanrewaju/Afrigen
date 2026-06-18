@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}Blog Drafts — Afrigen{% endblock %}
+{% block meta_description %}Afrigen admin — review and approve auto-generated blog drafts.{% endblock %}
+
+{% block content %}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+    <div>
+        <h2 style="color: #F5A623; font-weight: 700; margin: 0;">📝 Blog Drafts</h2>
+        <p style="color: #888; margin: 0;">Auto-generated daily — review, then publish or discard. Drafts are invisible to the public until you publish them.</p>
+    </div>
+    <a href="{{ url_for('main.admin') }}" class="btn btn-outline-warning btn-sm">← Back to Admin</a>
+</div>
+
+<!-- STATUS ROW -->
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card p-3 text-center">
+            <p style="color: #888; margin-bottom: 6px;">Pending drafts</p>
+            <h3 style="color: #F5A623; font-weight: 800; margin: 0;">{{ drafts|length }}</h3>
+            <small style="color: #555;">awaiting your review</small>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card p-3 text-center">
+            <p style="color: #888; margin-bottom: 6px;">Published (live)</p>
+            <h3 style="color: #27AE60; font-weight: 800; margin: 0;">{{ published|length }}</h3>
+            <small style="color: #555;">visible on /blog</small>
+        </div>
+    </div>
+</div>
+
+<!-- DRAFTS -->
+<h5 style="color: #F0F6FC; font-weight: 700;" class="mb-3">Pending Drafts</h5>
+
+{% if not drafts %}
+<div class="card p-4 mb-4">
+    <p style="color: #888; margin: 0;">No drafts right now. The daily cron job will add one each morning for you to review here.</p>
+</div>
+{% endif %}
+
+{% for post in drafts %}
+<div class="card p-4 mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+        <div>
+            {% if post.tag %}<span class="pill" style="align-self: flex-start;">{{ post.tag }}</span>{% endif %}
+            <h4 style="color: #F0F6FC; margin-top: 10px; margin-bottom: 4px;">{{ post.title }}</h4>
+            <small style="color: #555;">
+                /blog/{{ post.slug }} · {{ post.read_time or '—' }} ·
+                created {{ post.created_at.strftime('%b %d, %Y %H:%M') if post.created_at else '—' }}
+                {% if post.auto_generated %}· 🤖 auto-generated{% endif %}
+            </small>
+        </div>
+    </div>
+
+    <p style="color: #C9D1D9; font-style: italic;">{{ post.description }}</p>
+
+    <!-- Full draft body, collapsible -->
+    <details class="mb-3">
+        <summary style="color: #F5A623; cursor: pointer;">Read full draft</summary>
+        <div class="blog-body p-3 mt-2" style="background: #0d1117; border-radius: 8px; border: 1px solid #30363D;">
+            {{ post.body | safe }}
+        </div>
+    </details>
+
+    <div class="d-flex flex-wrap gap-2">
+        <form method="POST" action="{{ url_for('main.admin_blog_publish', post_id=post.id) }}">
+            <button type="submit" class="btn btn-success">✅ Approve &amp; Publish</button>
+        </form>
+        <form method="POST" action="{{ url_for('main.admin_blog_discard', post_id=post.id) }}"
+              onsubmit="return confirm('Discard this draft permanently?');">
+            <button type="submit" class="btn btn-outline-warning">🗑 Discard</button>
+        </form>
+        <a href="{{ url_for('main.blog_post', slug=post.slug) }}" target="_blank"
+           class="btn btn-outline-warning" style="opacity:.7;"
+           title="Drafts 404 publicly — preview the body above instead">Preview (live only)</a>
+    </div>
+</div>
+{% endfor %}
+
+<!-- PUBLISHED LIST -->
+<h5 style="color: #F0F6FC; font-weight: 700;" class="mb-3 mt-5">Published Posts</h5>
+<div class="card p-4 mb-5">
+    {% if not published %}
+    <p style="color: #888; margin: 0;">No published posts yet.</p>
+    {% else %}
+    <ul style="list-style: none; padding: 0; margin: 0;">
+        {% for post in published %}
+        <li class="d-flex flex-wrap justify-content-between align-items-center py-2"
+            style="border-bottom: 1px solid #30363D;">
+            <a href="{{ url_for('main.blog_post', slug=post.slug) }}" target="_blank"
+               style="color: #C9D1D9; text-decoration: none;">{{ post.title }}</a>
+            <small style="color: #555;">{{ post.date }}</small>
+        </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+</div>
+
+{% endblock %}

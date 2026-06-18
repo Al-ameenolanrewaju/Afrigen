@@ -12,7 +12,7 @@
       href="{{ url_for('static', filename='favicon.jpeg') }}">
     <title>{% block title %}Afrigen{% endblock %} — Africa Creates, AI Generates</title>
     <meta name="description"
-content="Afrigen is an AI-powered platform that helps creators generate videos, content, and creative media faster using artificial intelligence.">
+content="{% block meta_description %}Afrigen is an AI-powered platform that helps creators generate videos, content, and creative media faster using artificial intelligence.{% endblock %}">
 
 <meta name="keywords"
 content="Afrigen, AI video generator, AI content creator, African AI platform, video generation, artificial intelligence, creators tools">
@@ -65,6 +65,7 @@ content="Create AI-powered videos and content with Afrigen.">
 
         <!-- Desktop links -->
         <div class="d-none d-lg-flex align-items-center gap-3">
+            <a class="nav-link" href="{{ url_for('main.blog') }}">📝 Blog</a>
             <a class="nav-link" href="{{ url_for('main.docs') }}">📖 Docs</a>
             <a class="nav-link" href="{{ url_for('main.contact') }}">📬 Contact</a>
             {% if current_user.is_authenticated %}
@@ -105,6 +106,7 @@ content="Create AI-powered videos and content with Afrigen.">
     </div>
     <div class="offcanvas-body">
         <ul class="nav flex-column gap-2">
+            <li><a class="nav-link" href="{{ url_for('main.blog') }}" style="color: #F0F6FC;">📝 Blog</a></li>
             <li><a class="nav-link" href="{{ url_for('main.docs') }}" style="color: #F0F6FC;">📖 Docs</a></li>
             <li><a class="nav-link" href="{{ url_for('main.contact') }}" style="color: #F0F6FC;">📬 Contact</a></li>
 
@@ -160,6 +162,7 @@ content="Create AI-powered videos and content with Afrigen.">
                 <h6 style="color: #F5A623;">Product</h6>
                 <ul style="list-style: none; padding: 0;">
                     <li><a href="{{ url_for('main.index') }}" style="color: #888; text-decoration: none;">Home</a></li>
+                    <li><a href="{{ url_for('main.blog') }}" style="color: #888; text-decoration: none;">Blog</a></li>
                     <li><a href="{{ url_for('main.docs') }}" style="color: #888; text-decoration: none;">Documentation</a></li>
                     <li><a href="{{ url_for('main.upgrade') }}" style="color: #888; text-decoration: none;">Pricing</a></li>
                     <li><a href="https://t.me/AfrigenBot" style="color: #888; text-decoration: none;">Telegram Bot</a></li>

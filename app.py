@@ -282,12 +282,58 @@ def robots():
 
 @app.route('/sitemap.xml')
 def sitemap():
-    return send_from_directory('static', 'sitemap.xml')
+    # Built dynamically so blog drafts NEVER leak into the sitemap — only
+    # status='published' posts are queried. Static pages are listed first.
+    from flask import Response
+    from services.blog import get_all_posts
+
+    base = "https://afrigen.com.ng"
+    static_pages = [
+        ("/", "1.00"),
+        ("/login", "0.80"),
+        ("/register", "0.80"),
+        ("/dashboard", "0.70"),
+        ("/founder", "0.70"),
+        ("/contact", "0.60"),
+        ("/upgrade", "0.60"),
+        ("/blog", "0.80"),
+    ]
+
+    urls = [f"    <url>\n        <loc>{base}{path}</loc>\n        <priority>{pri}</priority>\n    </url>"
+            for path, pri in static_pages]
+
+    for post in get_all_posts():
+        urls.append(
+            f"    <url>\n        <loc>{base}/blog/{post.slug}</loc>\n"
+            f"        <priority>0.70</priority>\n    </url>"
+        )
+
+    xml = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        + "\n".join(urls)
+        + "\n</urlset>"
+    )
+    return Response(xml, mimetype="application/xml")
+
+@app.route('/ads.txt')
+def ads_txt():
+    # Served at the domain root (https://afrigen.com.ng/ads.txt) for Google AdSense
+    # verification. Force text/plain so AdSense's crawler accepts it.
+    return send_from_directory('static', 'ads.txt', mimetype='text/plain')
 
 with app.app_context():
     db.create_all()
     from flask_migrate import upgrade
     upgrade()
+    # Seed the original 6 blog posts as published (idempotent — no-op if present).
+    try:
+        from services.blog import seed_blog_posts
+        seeded = seed_blog_posts()
+        if seeded:
+            print(f"Seeded {seeded} blog posts")
+    except Exception as e:
+        print(f"Blog seed skipped: {e}")
     print("Afrigen database ready")
 
 if __name__ == '__main__':
