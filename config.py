@@ -9,8 +9,8 @@ class Config:
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    # Claude API
-    ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
+    # Groq API
+    GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 
     # ElevenLabs
     ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY")

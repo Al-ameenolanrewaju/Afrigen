@@ -10,12 +10,12 @@ It:
      DB (the same one the web service uses) via DATABASE_URL.
   2. Reads every existing title/slug (draft AND published) so it never repeats.
   3. Pulls fresh real-world headlines from Google News RSS for specificity.
-  4. Asks Claude (claude-sonnet-4-6) for one original 600-900 word post, with
+  4. Asks Groq (llama-3.3-70b-versatile) for one original 600-900 word post, with
      strict rules against generic/filler/"AI-sounding" content.
   5. Inserts the result as a draft and logs the outcome.
 
 Run locally to test:  python scripts/generate_blog_draft.py
-Requires env vars:    ANTHROPIC_API_KEY, DATABASE_URL
+Requires env vars:    GROQ_API_KEY, DATABASE_URL
 """
 import os
 import sys
@@ -28,15 +28,14 @@ from xml.etree import ElementTree
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import requests
-import anthropic
 from flask import Flask
 
 from config import Config
 from models import db
 
 
-# Model is overridable, but defaults to the one requested.
-BLOG_MODEL = os.environ.get("BLOG_MODEL", "claude-sonnet-4-6")
+# Model is overridable, but defaults to the same Groq model the rest of the app uses.
+BLOG_MODEL = os.environ.get("BLOG_MODEL", "llama-3.3-70b-versatile")
 
 # Fresh headlines give the model concrete, current hooks to write around.
 NEWS_QUERIES = [
@@ -140,7 +139,7 @@ The body_html MUST use this exact styling to match the existing site design:
 
 
 def strip_to_json(text):
-    """Claude is asked for raw JSON, but defensively strip ``` fences / stray prose."""
+    """The model is asked for raw JSON, but defensively strip ``` fences / stray prose."""
     text = text.strip()
     if text.startswith("```"):
         text = re.sub(r"^```[a-zA-Z]*\n", "", text)
@@ -157,21 +156,24 @@ def word_count(html):
 
 
 def generate_post(existing_titles, headlines):
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
-    if not api_key:
-        raise RuntimeError("ANTHROPIC_API_KEY is not set")
+    if not os.environ.get("GROQ_API_KEY"):
+        raise RuntimeError("GROQ_API_KEY is not set")
 
-    client = anthropic.Anthropic(api_key=api_key)
+    # Reuse the shared Groq client the rest of the app initialises.
+    from services.claude import client
+
     system, user = build_prompt(existing_titles, headlines)
 
-    log(f"Calling Claude ({BLOG_MODEL})...")
-    resp = client.messages.create(
+    log(f"Calling Groq ({BLOG_MODEL})...")
+    resp = client.chat.completions.create(
         model=BLOG_MODEL,
         max_tokens=4000,
-        system=system,
-        messages=[{"role": "user", "content": user}],
+        messages=[
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ],
     )
-    raw = "".join(block.text for block in resp.content if getattr(block, "type", None) == "text")
+    raw = resp.choices[0].message.content or ""
     data = json.loads(strip_to_json(raw))
 
     title = (data.get("title") or "").strip()

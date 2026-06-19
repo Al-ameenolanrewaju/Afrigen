@@ -23,7 +23,7 @@ services:
         value: 3.11.0
       # Secrets — NOT committed. Paste these in the Render dashboard for THIS
       # cron service (Environment tab). sync: false keeps them out of git.
-      - key: ANTHROPIC_API_KEY
+      - key: GROQ_API_KEY
         sync: false
       - key: DATABASE_URL
         sync: false
