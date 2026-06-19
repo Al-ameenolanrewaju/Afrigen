@@ -13,8 +13,13 @@ the public, search engines, and the sitemap until an admin approves them.
 Each post's `body` is trusted HTML matching the site's design system (gold
 #F5A623 headings, #C9D1D9 body text, .card containers), rendered with `| safe`.
 """
+import os
+import json
 import re
 from datetime import datetime
+from xml.etree import ElementTree
+
+import requests
 
 
 # Original hand-written posts. Seeded once into the DB as published; the DB is
@@ -405,3 +410,181 @@ def seed_blog_posts():
     if inserted:
         db.session.commit()
     return inserted
+
+
+# ---------- Daily auto-draft generation ----------
+# Generates ONE draft a day for an admin to review/approve at /admin/blog. It
+# NEVER publishes. Triggered by the daily scheduler in app.py (mirroring the
+# weekly newsletter), and reused by scripts/generate_blog_draft.py for manual
+# runs. The model defaults to the same Groq model the rest of the app uses.
+
+BLOG_MODEL = os.environ.get("BLOG_MODEL", "llama-3.3-70b-versatile")
+
+# Fresh headlines give the model concrete, current hooks to write around.
+_NEWS_QUERIES = [
+    "AI video generation tools",
+    "African content creators social media",
+    "TikTok Instagram creators Nigeria",
+]
+
+
+def _fetch_blog_headlines(max_per_query=4, timeout=8):
+    """Pull this week's real headlines from Google News RSS (free, no key).
+    Returns a list of '- Headline (Source)' strings; [] on any failure."""
+    headlines = []
+    for query in _NEWS_QUERIES:
+        q = requests.utils.quote(f"{query} when:14d")
+        url = f"https://news.google.com/rss/search?q={q}&hl=en-US&gl=US&ceid=US:en"
+        try:
+            resp = requests.get(url, timeout=timeout, headers={"User-Agent": "Mozilla/5.0"})
+            resp.raise_for_status()
+            root = ElementTree.fromstring(resp.content)
+            for item in root.findall("./channel/item")[:max_per_query]:
+                title = (item.findtext("title") or "").strip()
+                src_el = item.find("source")
+                source = (src_el.text or "").strip() if src_el is not None else ""
+                if title:
+                    headlines.append(f"- {title}" + (f" ({source})" if source else ""))
+        except Exception as e:
+            print(f"[blog-draft] news fetch failed for '{query}': {e}")
+
+    seen, deduped = set(), []
+    for h in headlines:
+        if h not in seen:
+            seen.add(h)
+            deduped.append(h)
+    return deduped
+
+
+def _build_blog_prompt(existing_titles, headlines):
+    titles_block = "\n".join(f"- {t}" for t in existing_titles) or "(none yet)"
+    headlines_block = "\n".join(headlines) if headlines else "(no fresh headlines available)"
+
+    system = (
+        "You are a senior content writer for Afrigen (tagline 'Africa Creates, AI "
+        "Generates'), an African AI platform that turns text prompts into videos and "
+        "images. You write for REAL Nigerian and African content creators, small "
+        "business owners, and marketers who use AI video tools. You write like a "
+        "knowledgeable local practitioner, not a generic blog mill."
+    )
+
+    user = f"""Write ONE original blog post for the Afrigen blog.
+
+POSTS THAT ALREADY EXIST — do NOT repeat or closely overlap any of these topics; pick a clearly different, fresh angle:
+{titles_block}
+
+FRESH REAL-WORLD HEADLINES (for grounding and specificity — reference ideas/trends naturally, do not fabricate quotes):
+{headlines_block}
+
+HARD REQUIREMENTS:
+- Length: 600 to 900 words in the body. Not shorter, not longer.
+- Audience: Nigerian / African creators and small businesses using AI video tools. Write to them directly.
+- Be CONCRETE. Use specific, real platforms by name (TikTok, Instagram Reels, YouTube Shorts, WhatsApp Status, Facebook). Use specific Nigerian/African places, scenarios, and content niches.
+- Where money is relevant, use REAL figures in Naira (₦) — e.g. realistic costs of a videographer, data, a Pro subscription, ad spend. Use believable, current ranges, not round hand-wavy numbers.
+- Give at least 2 concrete, worked examples (a real-sounding prompt, a real posting scenario, a before/after, a small calculation).
+- Genuinely useful and actionable: a reader should be able to DO something after reading.
+
+STRICTLY FORBIDDEN (this is content that previously got the site flagged by Google as low value):
+- Generic filler, padding, or restating the obvious.
+- Vague "AI-sounding" prose ("in today's fast-paced digital world", "unlock the power of", "the possibilities are endless", "game-changer", "in conclusion").
+- Empty intros/outros that say nothing specific.
+- Made-up statistics or fake quotes.
+
+FORMAT — return ONLY a valid JSON object (no markdown fences, no commentary) with exactly these keys:
+{{
+  "title": "specific, non-clickbait title, max ~70 chars",
+  "description": "one-sentence meta description for SEO, max 155 chars, specific",
+  "tag": "one or two words categorizing the post (e.g. Prompting, Business, Platforms, Cost, Craft, Strategy)",
+  "body_html": "the article body as inline-styled HTML"
+}}
+
+The body_html MUST use this exact styling to match the existing site design:
+- Section subheadings: <h4 style="color: #F5A623;">Subheading</h4>
+- Paragraphs: <p style="color: #C9D1D9; margin-bottom: 16px;">...</p>
+- Lists: <ul style="color: #C9D1D9; margin-bottom: 16px;"><li>...</li></ul>
+- Optional callout box: <div class="p-3 mb-3" style="background: #21262D; border-radius: 8px; border-left: 3px solid #F5A623;"><p style="color: #C9D1D9; margin: 0;">...</p></div>
+- Use <strong> for emphasis. Do NOT include <html>, <head>, <body>, <h1>, <style>, or <script> tags. Start directly with an opening <p> intro paragraph (no title inside the body — the title is separate)."""
+
+    return system, user
+
+
+def _strip_to_json(text):
+    """The model is asked for raw JSON, but defensively strip ``` fences / stray prose."""
+    text = text.strip()
+    if text.startswith("```"):
+        text = re.sub(r"^```[a-zA-Z]*\n", "", text)
+        text = re.sub(r"\n```$", "", text).strip()
+    # Grab the outermost {...} if there's leading/trailing chatter.
+    start, end = text.find("{"), text.rfind("}")
+    if start != -1 and end != -1 and end > start:
+        text = text[start:end + 1]
+    return text
+
+
+def _word_count(html):
+    return len(re.sub(r"<[^>]+>", " ", html).split())
+
+
+def _generate_post(existing_titles, headlines):
+    if not os.environ.get("GROQ_API_KEY"):
+        raise RuntimeError("GROQ_API_KEY is not set")
+
+    # Reuse the shared Groq client the rest of the app initialises.
+    from services.claude import client
+
+    system, user = _build_blog_prompt(existing_titles, headlines)
+
+    print(f"[blog-draft] calling Groq ({BLOG_MODEL})...")
+    resp = client.chat.completions.create(
+        model=BLOG_MODEL,
+        max_tokens=4000,
+        messages=[
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ],
+    )
+    raw = resp.choices[0].message.content or ""
+    data = json.loads(_strip_to_json(raw))
+
+    title = (data.get("title") or "").strip()
+    body = (data.get("body_html") or "").strip()
+    if not title or not body:
+        raise ValueError("Model response missing title or body_html")
+
+    return {
+        "title": title,
+        "description": (data.get("description") or "").strip(),
+        "tag": (data.get("tag") or "").strip(),
+        "body": body,
+    }
+
+
+def run_daily_draft_generation():
+    """Generate ONE blog draft and save it as status='draft' for the admin to
+    review/approve at /admin/blog. Called by the daily scheduler in app.py (and
+    by scripts/generate_blog_draft.py for manual runs). Assumes an app context is
+    active. NEVER publishes."""
+    titles, _slugs = existing_titles_and_slugs()
+    print(f"[blog-draft] {len(titles)} existing posts found (drafts + published).")
+
+    headlines = _fetch_blog_headlines()
+    print(f"[blog-draft] pulled {len(headlines)} fresh headlines for grounding.")
+
+    post = _generate_post(titles, headlines)
+
+    wc = _word_count(post["body"])
+    read_time = f"{max(1, round(wc / 200))} min read"
+    print(f'[blog-draft] generated: "{post["title"]}" — {wc} words, tag={post["tag"]!r}')
+    if not (550 <= wc <= 1000):
+        print(f"[blog-draft] word count {wc} outside the 600-900 target — saving anyway for review.")
+
+    draft = create_draft(
+        title=post["title"],
+        description=post["description"],
+        body=post["body"],
+        tag=post["tag"],
+        read_time=read_time,
+        auto_generated=True,
+    )
+    print(f'[blog-draft] saved draft id={draft.id} slug="{draft.slug}" status={draft.status}. Review at /admin/blog.')
+    return draft

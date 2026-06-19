@@ -89,6 +89,19 @@ def send_weekly_newsletter():
         except Exception as e:
             print(f"Weekly newsletter send failed: {e}")
 
+
+@scheduler.task('cron', id='generate_daily_blog_draft', hour=7)
+def generate_daily_blog_draft():
+    """7am daily: generate ONE blog draft for the admin to review at /admin/blog.
+    It never publishes itself. Runs in-process on the always-on web service, so
+    it costs nothing extra (no paid Render cron)."""
+    with app.app_context():
+        try:
+            from services.blog import run_daily_draft_generation
+            run_daily_draft_generation()
+        except Exception as e:
+            print(f"Daily blog draft generation failed: {e}")
+
 import logging
 from logging.handlers import RotatingFileHandler
 

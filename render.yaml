@@ -8,22 +8,8 @@ services:
       - key: PYTHON_VERSION
         value: 3.11.0
 
-  # Daily blog-draft generator. Writes ONE draft to the shared database, which
-  # an admin then reviews/publishes at /admin/blog. It never publishes itself.
-  # Schedule is UTC. "0 7 * * *" = 07:00 UTC daily (~08:00 West Africa Time).
-  # To change the time, edit the `schedule` line below (standard cron, UTC).
-  - type: cron
-    name: afrigen-blog-draft
-    env: python
-    schedule: "0 7 * * *"
-    buildCommand: pip install -r requirements.txt
-    startCommand: python scripts/generate_blog_draft.py
-    envVars:
-      - key: PYTHON_VERSION
-        value: 3.11.0
-      # Secrets — NOT committed. Paste these in the Render dashboard for THIS
-      # cron service (Environment tab). sync: false keeps them out of git.
-      - key: GROQ_API_KEY
-        sync: false
-      - key: DATABASE_URL
-        sync: false
+  # NOTE: the daily blog-draft generator is NOT a separate (paid) cron service.
+  # It runs in-process on the web service above via an APScheduler task in app.py
+  # (generate_daily_blog_draft, 7am daily) — exactly like the weekly newsletter.
+  # That web service already has GROQ_API_KEY and DATABASE_URL in its env, so
+  # there is nothing extra to configure and no extra cost.
