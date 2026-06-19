@@ -64,12 +64,13 @@
 
                 <!-- Share Buttons -->
                 <div class="card p-4 mb-4 text-center">
-                    <h5 style="color: #F5A623;">📤 Share Your Video!</h5>
+                    <h5 style="color: #F5A623;">📤 Share it — and let them ask "how?"</h5>
+                    <p style="color: #888; margin-bottom: 0;">Every share invites a friend to make their own free. That's how Afrigen grows. 🌍</p>
                     <div class="d-flex justify-content-center gap-2 mt-3 flex-wrap">
                         <a id="shareWhatsapp" href="#" target="_blank" class="btn btn-success px-3">📱 WhatsApp</a>
                         <a id="shareTwitter" href="#" target="_blank" class="btn btn-info px-3" style="color:white;">🐦 Twitter</a>
                         <a id="shareFacebook" href="#" target="_blank" class="btn btn-primary px-3">📘 Facebook</a>
-                        <button onclick="copyLink()" class="btn btn-outline-warning px-3">🔗 Copy Link</button>
+                        <button onclick="copyLink()" class="btn btn-outline-warning px-3">🔗 Copy Invite</button>
                     </div>
                 </div>
             </div>
@@ -100,6 +101,9 @@
 </div>
 
 <script>
+// Site root — used to invite recipients of shared clips back to sign up.
+const SITE_URL = "{{ request.host_url }}";
+
 // Load data from sessionStorage
 const resultData = JSON.parse(sessionStorage.getItem('resultData') || '{}');
 sessionStorage.removeItem('resultData');
@@ -131,16 +135,22 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('videoPlayer').load();
         document.getElementById('videoOpenBtn').href = url;
         document.getElementById('videoDownloadBtn').href = url;
-        document.getElementById('shareWhatsapp').href = `https://wa.me/?text=Check out this AI video I generated with Afrigen! ${url}`;
-        document.getElementById('shareTwitter').href = `https://twitter.com/intent/tweet?text=Just generated this amazing AI video with @AfrigenAI! 🎬🌍&url=${url}`;
-        document.getElementById('shareFacebook').href = `https://www.facebook.com/sharer/sharer.php?u=${url}`;
+
+        // Each share carries an invite back to Afrigen — that's the growth loop.
+        // Recipients watch the clip AND get a link to make their own free.
+        const waText = `I turned one sentence into this AI video with Afrigen 🎬🌍\nWatch: ${url}\n\nMake your own free 👉 ${SITE_URL}`;
+        const twText = `I made this with @AfrigenAI 🎬🌍 — one line of text became a video. Watch: ${url}\nMake yours free 👇`;
+        document.getElementById('shareWhatsapp').href = `https://wa.me/?text=${encodeURIComponent(waText)}`;
+        document.getElementById('shareTwitter').href = `https://twitter.com/intent/tweet?text=${encodeURIComponent(twText)}&url=${encodeURIComponent(SITE_URL)}`;
+        document.getElementById('shareFacebook').href = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(SITE_URL)}`;
     }
 });
 
 function copyLink() {
     const url = resultData.video_url || '';
-    navigator.clipboard.writeText(url);
-    alert('Video link copied! 📋');
+    const invite = `I made this AI video with Afrigen 🎬🌍\nWatch: ${url}\n\nMake your own free 👉 ${SITE_URL}`;
+    navigator.clipboard.writeText(invite);
+    alert('Invite copied! Paste it anywhere 📋');
 }
 
 function copyPrompt() {

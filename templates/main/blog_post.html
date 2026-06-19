@@ -29,6 +29,19 @@
                 <div class="blog-body">
                     {{ post.body | safe }}
                 </div>
+
+                <!-- Share this article -->
+                <hr style="border-color: #30363D; margin-top: 28px;">
+                <div class="d-flex align-items-center flex-wrap gap-2">
+                    <span style="color: #888;">📤 Share:</span>
+                    <a href="https://wa.me/?text={{ (post.title ~ ' — ' ~ request.url) | urlencode }}"
+                       target="_blank" class="btn btn-sm btn-success">WhatsApp</a>
+                    <a href="https://twitter.com/intent/tweet?text={{ post.title | urlencode }}&url={{ request.url | urlencode }}"
+                       target="_blank" class="btn btn-sm btn-info" style="color:white;">Twitter</a>
+                    <a href="https://www.facebook.com/sharer/sharer.php?u={{ request.url | urlencode }}"
+                       target="_blank" class="btn btn-sm btn-primary">Facebook</a>
+                    <button onclick="copyArticleLink(this)" class="btn btn-sm btn-outline-warning">🔗 Copy link</button>
+                </div>
             </article>
 
             <!-- CTA -->
@@ -46,4 +59,13 @@
         </div>
     </div>
 </div>
+
+<script>
+function copyArticleLink(btn) {
+    navigator.clipboard.writeText(window.location.href);
+    const original = btn.textContent;
+    btn.textContent = '✅ Copied!';
+    setTimeout(function () { btn.textContent = original; }, 1500);
+}
+</script>
 {% endblock %}

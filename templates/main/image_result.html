@@ -23,12 +23,22 @@
                        download>
                         ⬇️ Download Image
                     </a>
-                    <!-- Share Buttons -->
-                    <a href="https://wa.me/?text=Check out this AI image I generated with Afrigen! {{ request.host_url }}{{ image_url[1:] }}"
-                       target="_blank"
-                       class="btn btn-success px-3">
-                        📱 WhatsApp
-                    </a>
+                </div>
+
+                {# Full image URL (handle both absolute and /static-style paths). #}
+                {% set img_full = image_url if image_url.startswith('http') else request.host_url ~ image_url.lstrip('/') %}
+
+                <!-- Share — each share invites a friend to make their own free -->
+                <div class="mt-4 pt-3" style="border-top: 1px solid #30363D;">
+                    <p style="color: #888; margin-bottom: 10px;">📤 Share it — every share invites a friend to make their own free 🌍</p>
+                    <div class="d-flex justify-content-center gap-2 flex-wrap">
+                        <a href="https://wa.me/?text={{ ('I made this AI image with Afrigen 🖼️🌍\nSee it: ' ~ img_full ~ '\n\nMake your own free 👉 ' ~ request.host_url) | urlencode }}"
+                           target="_blank" class="btn btn-success px-3">📱 WhatsApp</a>
+                        <a href="https://twitter.com/intent/tweet?text={{ ('I made this with @AfrigenAI 🖼️🌍 — one line of text became an image. Make yours free 👇') | urlencode }}&url={{ request.host_url | urlencode }}"
+                           target="_blank" class="btn btn-info px-3" style="color:white;">🐦 Twitter</a>
+                        <a href="https://www.facebook.com/sharer/sharer.php?u={{ request.host_url | urlencode }}"
+                           target="_blank" class="btn btn-primary px-3">📘 Facebook</a>
+                    </div>
                 </div>
             </div>
             {% else %}
