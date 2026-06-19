@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Post — Afrigen{% endblock %}
+{% block meta_description %}Afrigen admin — edit a blog post.{% endblock %}
+
+{% block content %}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+    <div>
+        <h2 style="color: #F5A623; font-weight: 700; margin: 0;">✏️ Edit Post</h2>
+        <p style="color: #888; margin: 0;">
+            {% if post.status == 'published' %}
+            This post is <strong style="color:#27AE60;">live</strong> — changes show on the blog immediately after you save.
+            {% else %}
+            This is a <strong style="color:#F5A623;">draft</strong> — edit it before publishing.
+            {% endif %}
+        </p>
+    </div>
+    <a href="{{ url_for('main.admin_blog') }}" class="btn btn-outline-warning btn-sm">← Back to Blog Admin</a>
+</div>
+
+<form method="POST" action="{{ url_for('main.admin_blog_edit', post_id=post.id) }}">
+    <div class="card p-4 mb-4">
+        <div class="mb-3">
+            <label class="form-label" style="color:#C9D1D9;">Title</label>
+            <input type="text" name="title" class="form-control"
+                   value="{{ post.title }}" required maxlength="300"
+                   style="background:#0d1117; color:#F0F6FC; border:1px solid #30363D;">
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label" style="color:#C9D1D9;">Description <small style="color:#555;">(SEO meta, ≤320 chars)</small></label>
+            <textarea name="description" class="form-control" rows="2" maxlength="320"
+                      style="background:#0d1117; color:#F0F6FC; border:1px solid #30363D;">{{ post.description }}</textarea>
+        </div>
+
+        <div class="row g-3 mb-3">
+            <div class="col-md-6">
+                <label class="form-label" style="color:#C9D1D9;">Tag</label>
+                <input type="text" name="tag" class="form-control" value="{{ post.tag }}" maxlength="60"
+                       style="background:#0d1117; color:#F0F6FC; border:1px solid #30363D;">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label" style="color:#C9D1D9;">Read time</label>
+                <input type="text" name="read_time" class="form-control" value="{{ post.read_time }}" maxlength="40"
+                       placeholder="e.g. 6 min read"
+                       style="background:#0d1117; color:#F0F6FC; border:1px solid #30363D;">
+            </div>
+        </div>
+
+        <div class="mb-2">
+            <label class="form-label" style="color:#C9D1D9;">Body <small style="color:#555;">(HTML — uses the site's inline styles)</small></label>
+            <textarea id="bodyInput" name="body" class="form-control" rows="20"
+                      style="background:#0d1117; color:#F0F6FC; border:1px solid #30363D; font-family:monospace; font-size:13px;">{{ post.body }}</textarea>
+        </div>
+
+        <small style="color:#555;">
+            Slug <code style="color:#888;">/blog/{{ post.slug }}</code> stays fixed so the public URL never breaks.
+        </small>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2 mb-4">
+        <button type="submit" class="btn btn-success">💾 Save Changes</button>
+        <button type="button" id="previewBtn" class="btn btn-outline-warning">👁 Toggle Preview</button>
+        <a href="{{ url_for('main.admin_blog') }}" class="btn btn-outline-secondary">Cancel</a>
+    </div>
+</form>
+
+<!-- Live preview of the body HTML -->
+<div id="previewWrap" class="card p-4 mb-5" style="display:none;">
+    <h5 style="color:#F0F6FC; font-weight:700;">Preview</h5>
+    <div id="previewBody" class="blog-body p-3 mt-2"
+         style="background:#0d1117; border-radius:8px; border:1px solid #30363D;"></div>
+</div>
+
+<script>
+    (function () {
+        var btn = document.getElementById('previewBtn');
+        var wrap = document.getElementById('previewWrap');
+        var body = document.getElementById('previewBody');
+        var input = document.getElementById('bodyInput');
+        btn.addEventListener('click', function () {
+            if (wrap.style.display === 'none') {
+                body.innerHTML = input.value;
+                wrap.style.display = 'block';
+                wrap.scrollIntoView({ behavior: 'smooth' });
+            } else {
+                wrap.style.display = 'none';
+            }
+        });
+    })();
+</script>
+
+{% endblock %}

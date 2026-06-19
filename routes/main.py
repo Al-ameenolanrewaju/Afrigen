@@ -891,6 +891,27 @@ def admin_blog_publish(post_id):
     return redirect(url_for('main.admin_blog'))
 
 
+@main.route('/admin/blog/edit/<int:post_id>', methods=['GET', 'POST'])
+@admin_required
+def admin_blog_edit(post_id):
+    from services.blog import get_post_by_id, update_post
+    post = get_post_by_id(post_id)
+    if not post:
+        abort(404)
+    if request.method == 'POST':
+        update_post(
+            post,
+            title=request.form.get('title', ''),
+            description=request.form.get('description', ''),
+            body=request.form.get('body', ''),
+            tag=request.form.get('tag', ''),
+            read_time=request.form.get('read_time', ''),
+        )
+        flash(f'Saved changes to "{post.title}".', 'success')
+        return redirect(url_for('main.admin_blog'))
+    return render_template('main/blog_edit.html', post=post)
+
+
 @main.route('/admin/blog/discard/<int:post_id>', methods=['POST'])
 @admin_required
 def admin_blog_discard(post_id):

@@ -364,6 +364,25 @@ def create_draft(title, description, body, tag="", read_time="", auto_generated=
     return post
 
 
+def update_post(post, title=None, description=None, body=None, tag=None, read_time=None):
+    """Edit an existing post's content fields (draft OR published). Only fields
+    that are passed (not None) are changed. The slug and status are intentionally
+    left untouched so a published post's public URL never breaks."""
+    from models import db
+    if title is not None and title.strip():
+        post.title = title.strip()
+    if description is not None:
+        post.description = description.strip()[:320]
+    if body is not None:
+        post.body = body
+    if tag is not None:
+        post.tag = tag.strip()
+    if read_time is not None:
+        post.read_time = read_time.strip()
+    db.session.commit()
+    return post
+
+
 def publish_post(post):
     """Approve a draft: mark published and stamp published_at."""
     from models import db
