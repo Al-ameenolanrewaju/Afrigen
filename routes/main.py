@@ -319,7 +319,7 @@ def generate_from_image():
 
         return jsonify(
             {"success": True, "type": "video", "video_url": video_url, "refined": refined, "original": prompt,
-             "style": "cinematic"})
+             "style": "cinematic", "generation_id": generation.id, "share_url": share_url_for(generation.id)})
 
     except Exception as e:
         db.session.rollback()
@@ -373,7 +373,8 @@ def generate_image():
 
         db.session.commit()
 
-        return jsonify({"success": True, "type": "image", "image_url": image, "refined": refined, "original": prompt})
+        return jsonify({"success": True, "type": "image", "image_url": image, "refined": refined, "original": prompt,
+                        "generation_id": generation.id, "share_url": share_url_for(generation.id)})
 
     except Exception as e:
         db.session.rollback()
@@ -421,7 +422,8 @@ def image_result():
     return render_template('main/image_result.html',
         image_url=request.args.get('image_url', ''),
         original=request.args.get('original', ''),
-        refined=request.args.get('refined', '')
+        refined=request.args.get('refined', ''),
+        share_url=request.args.get('share_url', '')
     )
 
 @main.route('/history')

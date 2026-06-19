@@ -408,9 +408,13 @@ function showResult(data) {
                 window.location.href = '/history';
             }, 2000);
         } else if (data.type === 'image') {
-            window.location.href = `/result/image?image_url=${encodeURIComponent(data.image_url)}&original=${encodeURIComponent(data.original)}&refined=${encodeURIComponent(data.refined)}`;
+            window.location.href = `/result/image?image_url=${encodeURIComponent(data.image_url)}&original=${encodeURIComponent(data.original)}&refined=${encodeURIComponent(data.refined)}&share_url=${encodeURIComponent(data.share_url || '')}`;
         } else {
-            window.location.href = `/result/video?video_url=&original=${encodeURIComponent(data.original)}&refined=${encodeURIComponent(data.refined)}&style=`;
+            // Sync video (image-to-video): pass the full payload (video_url,
+            // share_url, etc.) via sessionStorage so result.html can render and
+            // share it.
+            sessionStorage.setItem('resultData', JSON.stringify(data));
+            window.location.href = '/result/video';
         }
     }, 500);
 }
