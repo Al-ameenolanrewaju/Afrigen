@@ -114,6 +114,11 @@
     <a href="{{ url_for('main.download_image_file', generation_id=gen.id) }}" class="btn btn-outline-warning btn-sm">⬇️ Download</a>
     {% endif %}
 
+    {% if gen.status == 'completed' and (gen.video_url or gen.image_url) %}
+    <a href="{{ share_url_for(gen.id) }}" target="_blank" class="btn btn-outline-warning btn-sm"
+       title="Public share page with a sign-up invite — every view can become a new user">🔗 Share</a>
+    {% endif %}
+
     {% if gen.status == 'failed' %}
     <a href="{{ url_for('main.dashboard') }}" class="btn btn-sm" style="background: #21262D; color: #F5A623; border: 1px solid #F5A623;">
         🔄 Try Again

@@ -381,6 +381,29 @@ def generate_image():
         return jsonify({"success": False, "error": "Image generation failed. Please try again."})
 
 
+@main.app_template_global('share_url_for')
+def share_url_for(gen_id):
+    """Build the public, signed share URL for a generation (used in templates)."""
+    from services.share import make_share_token
+    return url_for('main.public_share', token=make_share_token(gen_id), _external=True)
+
+
+@main.route('/v/<token>')
+def public_share(token):
+    """Public, no-login page for a single completed generation: shows the clip/
+    image with a 'make your own free' signup CTA, so every shared link converts
+    instead of dead-ending on a raw media file. Token is signed (services.share)
+    so generation IDs can't be enumerated."""
+    from services.share import load_share_token
+    gen_id = load_share_token(token)
+    if gen_id is None:
+        abort(404)
+    gen = Generation.query.get(gen_id)
+    if not gen or gen.status != 'completed' or not (gen.video_url or gen.image_url):
+        abort(404)
+    return render_template('main/share.html', gen=gen)
+
+
 @main.route('/result/video')
 @login_required
 def video_result():
