@@ -17,11 +17,15 @@ from services.email import send_newsletter, BASE_URL
 # Same model the rest of the app uses (Groq). Override with NEWSLETTER_MODEL if desired.
 NEWSLETTER_MODEL = os.environ.get("NEWSLETTER_MODEL", "llama-3.3-70b-versatile")
 
-# Topics we pull fresh weekly headlines for.
+# Topics we pull fresh weekly headlines for. Kept tight and audience-specific so
+# the feed surfaces news our readers (African AI creators + small businesses using
+# video/image tools) actually care about, instead of generic US tech/legal noise.
+# The first two track the tools themselves; the last two keep it local & relevant.
 NEWS_QUERIES = [
-    "AI video generation",
-    "generative AI tools",
-    "African tech startups creators",
+    "AI video generator",
+    "AI image generator",
+    "Nigeria creators AI tools",
+    "African startups AI funding",
 ]
 
 
@@ -29,11 +33,15 @@ NEWS_QUERIES = [
 
 def _fetch_web_headlines(max_per_query=4, timeout=8):
     """Pull this week's real headlines from Google News RSS. Returns a list of
-    '- Headline (Source)' strings; degrades gracefully to [] on any failure."""
+    '- Headline (Source)' strings; degrades gracefully to [] on any failure.
+
+    The feed is localized to Nigeria (gl=NG) so results skew toward African
+    creators/business rather than US-centric coverage — global tool launches
+    still surface, but the local angle our readers care about comes through."""
     headlines = []
     for query in NEWS_QUERIES:
         q = requests.utils.quote(f"{query} when:7d")
-        url = f"https://news.google.com/rss/search?q={q}&hl=en-US&gl=US&ceid=US:en"
+        url = f"https://news.google.com/rss/search?q={q}&hl=en-NG&gl=NG&ceid=NG:en"
         try:
             resp = requests.get(url, timeout=timeout, headers={"User-Agent": "Mozilla/5.0"})
             resp.raise_for_status()

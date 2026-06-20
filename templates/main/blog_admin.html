@@ -8,7 +8,7 @@
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
     <div>
         <h2 style="color: #F5A623; font-weight: 700; margin: 0;">📝 Blog Drafts</h2>
-        <p style="color: #888; margin: 0;">Auto-generated daily — review, then publish or discard. Drafts are invisible to the public until you publish them.</p>
+        <p style="color: #888; margin: 0;">Auto-generated daily — or generate one yourself below. Review, then publish or discard. Drafts are invisible to the public until you publish them.</p>
     </div>
     <a href="{{ url_for('main.admin') }}" class="btn btn-outline-warning btn-sm">← Back to Admin</a>
 </div>
@@ -27,6 +27,22 @@
             <p style="color: #888; margin-bottom: 6px;">Published (live)</p>
             <h3 style="color: #27AE60; font-weight: 800; margin: 0;">{{ published|length }}</h3>
             <small style="color: #555;">visible on /blog</small>
+        </div>
+    </div>
+</div>
+
+<!-- GENERATE -->
+<div class="card p-4 mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div>
+            <h5 style="color: #F0F6FC; font-weight: 700; margin: 0;">Generate a new draft</h5>
+            <p style="color: #888; margin: 4px 0 0; font-size: 14px;">
+                Writes one fresh post with AI, grounded in this week's real headlines. It is saved as a draft below for you to review — it never publishes itself. A draft is also generated automatically every morning.
+            </p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <span id="genStatus" style="color: #888;"></span>
+            <button id="generateBtn" class="btn btn-afrigen">🤖 Generate with AI + web</button>
         </div>
     </div>
 </div>
@@ -102,5 +118,38 @@
     </ul>
     {% endif %}
 </div>
+
+<script>
+const generateBtn = document.getElementById('generateBtn');
+const genStatus = document.getElementById('genStatus');
+
+generateBtn.addEventListener('click', async () => {
+    generateBtn.disabled = true;
+    genStatus.style.color = '#F5A623';
+    genStatus.innerText = 'Generating with AI + web search… this can take ~30s';
+    try {
+        const res = await fetch('{{ url_for("main.admin_blog_generate") }}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: '{}',
+        });
+        const data = await res.json().catch(() => ({ ok: false, error: 'Bad response' }));
+        if (data.ok) {
+            genStatus.style.color = '#27AE60';
+            genStatus.innerText = 'Draft generated ✓ reloading…';
+            // Reload so the new draft appears in the Pending Drafts list below.
+            window.location.reload();
+        } else {
+            genStatus.style.color = '#E74C3C';
+            genStatus.innerText = 'Generate failed: ' + (data.error || 'unknown error');
+            generateBtn.disabled = false;
+        }
+    } catch (e) {
+        genStatus.style.color = '#E74C3C';
+        genStatus.innerText = 'Generate failed: ' + e;
+        generateBtn.disabled = false;
+    }
+});
+</script>
 
 {% endblock %}

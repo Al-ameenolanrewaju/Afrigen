@@ -904,6 +904,21 @@ def admin_blog():
     )
 
 
+@main.route('/admin/blog/generate', methods=['POST'])
+@admin_required
+def admin_blog_generate():
+    """Generate ONE blog draft on demand (same code path as the daily 7am
+    scheduler). Mirrors /admin/newsletter/generate so the admin never has to wait
+    for the cron job — they can produce a draft to review whenever they want."""
+    from services.blog import run_daily_draft_generation
+    try:
+        draft = run_daily_draft_generation()
+    except Exception as e:
+        current_app.logger.exception("Blog draft generation failed")
+        return jsonify({'ok': False, 'error': str(e)}), 500
+    return jsonify({'ok': True, 'id': draft.id, 'title': draft.title, 'slug': draft.slug})
+
+
 @main.route('/admin/blog/publish/<int:post_id>', methods=['POST'])
 @admin_required
 def admin_blog_publish(post_id):
