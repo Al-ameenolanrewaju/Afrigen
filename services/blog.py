@@ -14,7 +14,6 @@ Each post's `body` is trusted HTML matching the site's design system (gold
 #F5A623 headings, #C9D1D9 body text, .card containers), rendered with `| safe`.
 """
 import os
-import json
 import re
 from datetime import datetime
 from xml.etree import ElementTree
@@ -509,15 +508,14 @@ STRICTLY FORBIDDEN (this is content that previously got the site flagged by Goog
 - Empty intros/outros that say nothing specific.
 - Made-up statistics or fake quotes.
 
-FORMAT — return ONLY a valid JSON object (no markdown fences, no commentary) with exactly these keys:
-{{
-  "title": "specific, non-clickbait title, max ~70 chars",
-  "description": "one-sentence meta description for SEO, max 155 chars, specific",
-  "tag": "one or two words categorizing the post (e.g. Prompting, Business, Platforms, Cost, Craft, Strategy)",
-  "body_html": "the article body as inline-styled HTML"
-}}
+FORMAT — return the post as PLAIN TEXT with these four labelled parts, in this exact order and nothing else (no JSON, no markdown fences, no commentary):
+TITLE: <specific, non-clickbait title, max ~70 chars>
+DESCRIPTION: <one-sentence meta description for SEO, max 155 chars, specific>
+TAG: <one or two words categorizing the post (e.g. Prompting, Business, Platforms, Cost, Craft, Strategy)>
+BODY:
+<the article body as inline-styled HTML — everything after the BODY: line, to the end of your response, is the HTML body>
 
-The body_html MUST use this exact styling to match the existing site design:
+The HTML body MUST use this exact styling to match the existing site design:
 - Section subheadings: <h4 style="color: #F5A623;">Subheading</h4>
 - Paragraphs: <p style="color: #C9D1D9; margin-bottom: 16px;">...</p>
 - Lists: <ul style="color: #C9D1D9; margin-bottom: 16px;"><li>...</li></ul>
@@ -527,17 +525,53 @@ The body_html MUST use this exact styling to match the existing site design:
     return system, user
 
 
-def _strip_to_json(text):
-    """The model is asked for raw JSON, but defensively strip ``` fences / stray prose."""
+def _strip_code_fences(text):
+    """llama sometimes wraps its output in ```html ... ``` fences — remove them so
+    the TITLE/BODY labels and HTML come through clean."""
     text = text.strip()
     if text.startswith("```"):
         text = re.sub(r"^```[a-zA-Z]*\n", "", text)
         text = re.sub(r"\n```$", "", text).strip()
-    # Grab the outermost {...} if there's leading/trailing chatter.
-    start, end = text.find("{"), text.rfind("}")
-    if start != -1 and end != -1 and end > start:
-        text = text[start:end + 1]
     return text
+
+
+def _parse_post(raw):
+    """Parse the model's labelled plain-text output into post fields.
+
+    We ask for TITLE:/DESCRIPTION:/TAG: lines followed by a BODY: marker, after
+    which everything is the raw HTML body. This deliberately avoids JSON: the body
+    is HTML full of double-quoted inline styles, and embedding that in a JSON
+    string made llama produce invalid JSON constantly (unescaped quotes/newlines).
+    Mirrors the proven plain-text contract in services/newsletter.py.
+
+    Returns {title, description, tag, body}. Raises ValueError if title or body
+    can't be recovered so the caller can retry.
+    """
+    text = _strip_code_fences(raw)
+
+    # Split on the BODY: marker — everything after it is the HTML, untouched.
+    m = re.search(r"(?im)^\s*BODY:\s*\n?", text)
+    if not m:
+        raise ValueError("Model response missing the BODY: marker")
+    header, body = text[: m.start()], text[m.end():].strip()
+
+    def _field(label):
+        fm = re.search(rf"(?im)^\s*{label}:\s*(.+)$", header)
+        return fm.group(1).strip() if fm else ""
+
+    title = _field("TITLE")
+    description = _field("DESCRIPTION")
+    tag = _field("TAG")
+
+    if not title or not body:
+        raise ValueError("Model response missing title or body")
+
+    return {
+        "title": title,
+        "description": description,
+        "tag": tag,
+        "body": body,
+    }
 
 
 def _word_count(html):
@@ -553,29 +587,27 @@ def _generate_post(existing_titles, headlines):
 
     system, user = _build_blog_prompt(existing_titles, headlines)
 
-    print(f"[blog-draft] calling Groq ({BLOG_MODEL})...")
-    resp = client.chat.completions.create(
-        model=BLOG_MODEL,
-        max_tokens=4000,
-        messages=[
-            {"role": "system", "content": system},
-            {"role": "user", "content": user},
-        ],
-    )
-    raw = resp.choices[0].message.content or ""
-    data = json.loads(_strip_to_json(raw))
+    # Retry once: if the model returns something we can't parse, a second attempt
+    # almost always succeeds. Surfaces the last error if both attempts fail.
+    last_error = None
+    for attempt in range(1, 3):
+        print(f"[blog-draft] calling Groq ({BLOG_MODEL}) attempt {attempt}/2...")
+        resp = client.chat.completions.create(
+            model=BLOG_MODEL,
+            max_tokens=4000,
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
+        )
+        raw = resp.choices[0].message.content or ""
+        try:
+            return _parse_post(raw)
+        except ValueError as e:
+            last_error = e
+            print(f"[blog-draft] parse failed on attempt {attempt}: {e}")
 
-    title = (data.get("title") or "").strip()
-    body = (data.get("body_html") or "").strip()
-    if not title or not body:
-        raise ValueError("Model response missing title or body_html")
-
-    return {
-        "title": title,
-        "description": (data.get("description") or "").strip(),
-        "tag": (data.get("tag") or "").strip(),
-        "body": body,
-    }
+    raise ValueError(f"Could not parse a valid post after 2 attempts: {last_error}")
 
 
 def run_daily_draft_generation():

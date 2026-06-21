@@ -93,11 +93,17 @@
                             <li class="mb-2">✅ All Pro features</li>
                             <li class="mb-2">✅ Cancel anytime</li>
                         </ul>
+                        {% if current_user.is_authenticated %}
                         <form method="POST" action="{{ url_for('main.initialize_payment') }}">
                             <button type="submit" class="btn btn-afrigen w-100 mt-2">
                                 Pay ₦5,000 💳
                             </button>
                         </form>
+                        {% else %}
+                        <a href="{{ url_for('auth.register') }}" class="btn btn-afrigen w-100 mt-2">
+                            Sign up to go Pro
+                        </a>
+                        {% endif %}
                     </div>
                 </div>
 
@@ -116,11 +122,17 @@
                             <li class="mb-2">✅ 100 credits/month</li>
                             <li class="mb-2">✅ Priority support</li>
                         </ul>
+                        {% if current_user.is_authenticated %}
                         <form method="POST" action="{{ url_for('main.initialize_payment_annual') }}">
                             <button type="submit" class="btn btn-success w-100 mt-2">
                                 Pay ₦50,000/year 💳
                             </button>
                         </form>
+                        {% else %}
+                        <a href="{{ url_for('auth.register') }}" class="btn btn-success w-100 mt-2">
+                            Sign up to go Pro
+                        </a>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -136,7 +148,11 @@
 
             <!-- Back -->
             <div class="text-center mt-2 mb-4">
+                {% if current_user.is_authenticated %}
                 <a href="{{ url_for('main.dashboard') }}" style="color: #888;">← Back to Dashboard</a>
+                {% else %}
+                <a href="{{ url_for('main.index') }}" style="color: #888;">← Back to Home</a>
+                {% endif %}
             </div>
 
         </div>

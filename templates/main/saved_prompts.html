@@ -27,7 +27,7 @@
                     <p style="color: #C9D1D9;">"{{ prompt.original_prompt }}"</p>
                     <small style="color: #F5A623;">Refined:</small>
                     <p style="color: #F0F6FC; font-size: 14px;">
-                        {{ prompt.refined_prompt[:200] }}...
+                        {{ prompt.refined_prompt }}
                     </p>
                 </div>
                 <div class="col-md-4 text-end">
@@ -39,6 +39,18 @@
                         {{ prompt.created_at.strftime('%b %d, %Y') }}
                     </small>
                 </div>
+            </div>
+            <div class="d-flex gap-2 mt-3 flex-wrap">
+                <button type="button" class="btn btn-afrigen btn-sm px-3 use-prompt-btn"
+                        data-refined="{{ (prompt.refined_prompt or prompt.original_prompt) | e }}"
+                        data-type="{{ prompt.prompt_type | e }}"
+                        data-style="{{ prompt.style | e }}">
+                    🚀 Generate from this
+                </button>
+                <button type="button" class="btn btn-outline-warning btn-sm px-3 copy-prompt-btn"
+                        data-refined="{{ (prompt.refined_prompt or prompt.original_prompt) | e }}">
+                    📋 Copy
+                </button>
             </div>
         </div>
         {% endfor %}
@@ -55,4 +67,30 @@
     {% endif %}
 
 </div>
+
+<script>
+// "Generate from this": hand the saved prompt to the dashboard via sessionStorage
+// (avoids URL-length/escaping issues with long prompts), then navigate there.
+// The dashboard reads it on load, fills the right form, and selects the style.
+document.querySelectorAll('.use-prompt-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+        sessionStorage.setItem('usePrompt', JSON.stringify({
+            prompt: btn.dataset.refined || '',
+            type: btn.dataset.type || 'video',
+            style: btn.dataset.style || ''
+        }));
+        window.location.href = "{{ url_for('main.dashboard') }}";
+    });
+});
+
+document.querySelectorAll('.copy-prompt-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+        navigator.clipboard.writeText(btn.dataset.refined || '').then(function () {
+            const original = btn.textContent;
+            btn.textContent = '✅ Copied';
+            setTimeout(function () { btn.textContent = original; }, 1500);
+        });
+    });
+});
+</script>
 {% endblock %}

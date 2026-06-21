@@ -3,7 +3,10 @@ services:
     name: afrigen
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app
+    # 1 worker keeps the in-process APScheduler jobs (newsletter/blog) single-
+    # instance; 8 threads give real concurrency since generation is I/O-bound
+    # (waiting on fal/Groq). 180s timeout covers slow synchronous image calls.
+    startCommand: gunicorn app:app --workers 1 --threads 8 --timeout 180
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0

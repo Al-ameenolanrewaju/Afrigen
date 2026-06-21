@@ -584,8 +584,9 @@ def delete_user(user_id):
 import requests as http_requests
 
 @main.route('/upgrade')
-@login_required
 def upgrade():
+    # Public so logged-out visitors can see pricing (transparency). The actual
+    # payment forms are still gated — anonymous users get a sign-up CTA instead.
     return render_template('main/upgrade.html',
                            paystack_public_key=os.environ.get('PAYSTACK_PUBLIC_KEY'))
 

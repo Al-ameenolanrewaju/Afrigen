@@ -358,6 +358,38 @@ function toggleGenType() {
     document.getElementById('textToImageForm').style.display = type === 'text_to_image' ? 'block' : 'none';
 }
 
+// Prefill from a saved prompt handed over by the Saved Prompts page.
+// (Saved prompt_type is 'video' or 'image'; map 'image' to the Text-to-Image
+// form since that's the text-driven image generator.)
+(function loadHandedOffPrompt() {
+    let payload;
+    try { payload = JSON.parse(sessionStorage.getItem('usePrompt') || 'null'); }
+    catch (e) { payload = null; }
+    if (!payload || !payload.prompt) return;
+    sessionStorage.removeItem('usePrompt');
+
+    const isImage = payload.type === 'image';
+    const typeRadio = document.getElementById(isImage ? 'gen_text_to_image' : 'gen_text');
+    if (typeRadio && !typeRadio.disabled) {
+        typeRadio.checked = true;
+        toggleGenType();
+    }
+
+    if (isImage) {
+        const ta = document.querySelector('#textToImageForm textarea[name="prompt"]');
+        if (ta) ta.value = payload.prompt;
+        const sel = document.querySelector('#textToImageForm select[name="style"]');
+        if (sel && payload.style) sel.value = payload.style;
+        if (ta) ta.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else {
+        const ta = document.querySelector('#textForm textarea[name="prompt"]');
+        if (ta) ta.value = payload.prompt;
+        const styleRadio = payload.style && document.getElementById(payload.style);
+        if (styleRadio && styleRadio.name === 'style') styleRadio.checked = true;
+        if (ta) ta.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+})();
+
 function startProgress(title, subtitle, duration) {
     const overlay = document.getElementById('generation-overlay');
     const bar = document.getElementById('overlay-bar');

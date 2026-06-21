@@ -22,6 +22,14 @@ from flask import send_from_directory
 
 load_dotenv()
 app = Flask(__name__)
+
+# Behind Render's proxy: trust X-Forwarded-* so url_for(_external=True) builds
+# correct https://afrigen... URLs. Without this the fal webhook URL can come out
+# with the wrong scheme/host and fal can't deliver the completion callback,
+# leaving videos stuck "processing" forever.
+from werkzeug.middleware.proxy_fix import ProxyFix
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+
 app.config.from_object(DevelopmentConfig)
 mail = Mail(app)
 oauth = OAuth(app)
@@ -66,6 +74,36 @@ def reset_monthly_limits():
         db.session.commit()
 
         print("✅ Monthly limits reset for free users!")
+
+
+@scheduler.task('interval', id='fail_stuck_generations', minutes=5)
+def fail_stuck_generations():
+    """Rescue videos orphaned in 'processing'.
+
+    Text-to-video is async: a row is created status='processing' and only flipped
+    to completed/failed by the fal webhook. If that webhook never arrives (delivery
+    failure, provider hiccup), the row is stuck forever and the user sees a
+    permanent spinner. Every 5 minutes, mark any video still 'processing' after
+    15 minutes as 'failed', and refund the free-tier monthly video count since the
+    user got nothing (Pro credits are only charged on success, so there's nothing
+    to refund there)."""
+    from datetime import datetime, timedelta
+    with app.app_context():
+        from models import db, Generation, User
+        cutoff = datetime.utcnow() - timedelta(minutes=15)
+        stuck = Generation.query.filter(
+            Generation.status == 'processing',
+            Generation.created_at < cutoff,
+        ).all()
+        if not stuck:
+            return
+        for gen in stuck:
+            gen.status = 'failed'
+            user = db.session.get(User, gen.user_id)
+            if user and user.plan == 'free' and (user.monthly_videos_used or 0) > 0:
+                user.monthly_videos_used -= 1
+        db.session.commit()
+        print(f"⏱️ Failed {len(stuck)} stuck generation(s) past the 15-min timeout.")
 
 
 @scheduler.task('cron', id='generate_weekly_newsletter', day_of_week='sat', hour=9)
