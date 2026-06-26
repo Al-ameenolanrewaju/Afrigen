@@ -974,6 +974,23 @@ def admin_blog_discard(post_id):
 
 # ---------- Content Distribution (admin only) ----------
 
+@main.route('/admin/facebook/trigger', methods=['POST'])
+@admin_required
+def admin_facebook_trigger():
+    """Manually trigger the daily Facebook automation engine."""
+    from services.facebook_engine import run_daily_facebook_engine
+    try:
+        result = run_daily_facebook_engine()
+        if result.get('ok'):
+            flash('Facebook daily post triggered successfully!', 'success')
+        else:
+            flash(f"Facebook trigger failed: {result.get('error')}", 'danger')
+    except Exception as e:
+        current_app.logger.exception("Facebook engine trigger failed")
+        flash(f"Facebook engine error: {str(e)}", 'danger')
+    return redirect(url_for('main.admin'))
+
+
 @main.route('/admin/distribution')
 @admin_required
 def admin_distribution():

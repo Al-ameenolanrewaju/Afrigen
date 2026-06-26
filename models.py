@@ -310,3 +310,19 @@ class DistributionResult(db.Model):
 
     def __repr__(self):
         return f"<DistributionResult {self.platform} ok={self.ok}>"
+
+
+class FacebookPostHistory(db.Model):
+    """Tracks what has been posted to Facebook to prevent duplicate content."""
+    __tablename__ = "facebook_post_history"
+
+    id = db.Column(db.Integer, primary_key=True)
+    content_type = db.Column(db.String(50), nullable=False) # 'blog_update' or 'brand_awareness'
+    blog_url = db.Column(db.String(500), nullable=True)
+    post_text = db.Column(db.Text, nullable=False)
+    facebook_post_id = db.Column(db.String(200), nullable=False)
+    image_used = db.Column(db.String(500), nullable=True)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<FacebookPostHistory {self.id} {self.content_type}>"

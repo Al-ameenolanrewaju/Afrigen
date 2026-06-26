@@ -140,6 +140,17 @@ def generate_daily_blog_draft():
         except Exception as e:
             print(f"Daily blog draft generation failed: {e}")
 
+@scheduler.task('cron', id='generate_daily_facebook_post', hour=10)
+def generate_daily_facebook_post():
+    """10am daily: run the Facebook page automation engine."""
+    with app.app_context():
+        try:
+            from services.facebook_engine import run_daily_facebook_engine
+            run_daily_facebook_engine()
+        except Exception as e:
+            print(f"Daily Facebook generation failed: {e}")
+
+
 import logging
 from logging.handlers import RotatingFileHandler
 
