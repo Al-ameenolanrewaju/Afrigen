@@ -8,7 +8,7 @@
 {% block meta_description %}{{ gen.original_prompt[:150] }}{% endblock %}
 
 {% block og_meta %}
-<meta property="og:title" content="An AI {{ kind }} made on Afrigen 🌍">
+<meta property="og:title" content="An AI {{ kind }} made on Afrigen">
 <meta property="og:description" content="{{ gen.original_prompt[:150] }}">
 {% if gen.image_url %}
 <meta property="og:image" content="{{ gen.image_url }}">
@@ -25,6 +25,8 @@
 <div class="container mt-4 mb-5">
     <div class="row justify-content-center">
         <div class="col-lg-8">
+
+            <h1 class="text-center" style="color: #F5A623; font-size: 1.5rem; margin-bottom: 16px;">An AI {{ kind }} made on Afrigen</h1>
 
             <!-- The clip / image -->
             <div class="card p-3 p-md-4 mb-4 text-center" style="border-color: #27AE60;">
@@ -48,28 +50,28 @@
 
             <!-- Signup CTA — this is why the page exists -->
             <div class="card p-4 mb-4 text-center" style="border-color: #F5A623;">
-                <h3 style="color: #F5A623; font-weight: 800;">Make your own — free 🌍</h3>
+                <h3 style="color: #F5A623; font-weight: 800;">Make your own — free <i class="fa-solid fa-earth-africa"></i></h3>
                 <p style="color: #C9D1D9;">
                     Afrigen turns one line of text into {{ 'videos' if is_video else 'images' }} like this.
                     No camera, no crew, no budget. <strong>Africa Creates, AI Generates.</strong>
                 </p>
                 <div class="d-flex justify-content-center gap-2 flex-wrap">
-                    <a href="{{ url_for('auth.register', _external=True) }}" class="btn btn-afrigen px-4">🚀 Get Started Free</a>
+                    <a href="{{ url_for('auth.register', _external=True) }}" class="btn btn-afrigen px-4"><i class="fa-solid fa-rocket"></i> Get Started Free</a>
                     <a href="{{ url_for('main.index', _external=True) }}" class="btn btn-outline-warning px-4">See how it works</a>
                 </div>
             </div>
 
             <!-- Share onward -->
             <div class="text-center">
-                <p style="color: #888; margin-bottom: 10px;">📤 Share it:</p>
+                <p style="color: #888; margin-bottom: 10px;"><i class="fa-solid fa-share-nodes"></i> Share it:</p>
                 <div class="d-flex justify-content-center gap-2 flex-wrap">
-                    <a href="https://wa.me/?text={{ ('Check out this AI ' ~ kind ~ ' made on Afrigen 🌍 — make your own free 👉 ' ~ request.url) | urlencode }}"
+                    <a href="https://wa.me/?text={{ ('Check out this AI ' ~ kind ~ ' made on Afrigen — make your own free ' ~ request.url) | urlencode }}"
                        target="_blank" class="btn btn-sm btn-success">WhatsApp</a>
-                    <a href="https://twitter.com/intent/tweet?text={{ ('This AI ' ~ kind ~ ' was made on @AfrigenAI from one line of text 🌍 Make yours free 👇') | urlencode }}&url={{ request.url | urlencode }}"
+                    <a href="https://twitter.com/intent/tweet?text={{ ('This AI ' ~ kind ~ ' was made on @AfrigenAI from one line of text. Make yours free') | urlencode }}&url={{ request.url | urlencode }}"
                        target="_blank" class="btn btn-sm btn-info" style="color:white;">Twitter</a>
                     <a href="https://www.facebook.com/sharer/sharer.php?u={{ request.url | urlencode }}"
                        target="_blank" class="btn btn-sm btn-primary">Facebook</a>
-                    <button onclick="copyShareLink(this)" class="btn btn-sm btn-outline-warning">🔗 Copy link</button>
+                    <button onclick="copyShareLink(this)" class="btn btn-sm btn-outline-warning"><i class="fa-solid fa-link"></i> Copy link</button>
                 </div>
             </div>
 
@@ -81,7 +83,7 @@
 function copyShareLink(btn) {
     navigator.clipboard.writeText(window.location.href);
     const original = btn.textContent;
-    btn.textContent = '✅ Copied!';
+    btn.textContent = 'Copied!';
     setTimeout(function () { btn.textContent = original; }, 1500);
 }
 </script>

@@ -9,7 +9,7 @@
             <!-- Breadcrumb -->
             <p style="margin-bottom: 20px;">
                 <a href="{{ url_for('main.blog') }}" style="color: #F5A623; text-decoration: none;">
-                    ← Back to Blog
+                    <i class="fa-solid fa-arrow-left"></i> Back to Blog
                 </a>
             </p>
 
@@ -33,14 +33,14 @@
                 <!-- Share this article -->
                 <hr style="border-color: #30363D; margin-top: 28px;">
                 <div class="d-flex align-items-center flex-wrap gap-2">
-                    <span style="color: #888;">📤 Share:</span>
+                    <span style="color: #888;"><i class="fa-solid fa-share-nodes"></i> Share:</span>
                     <a href="https://wa.me/?text={{ (post.title ~ ' — ' ~ request.url) | urlencode }}"
                        target="_blank" class="btn btn-sm btn-success">WhatsApp</a>
                     <a href="https://twitter.com/intent/tweet?text={{ post.title | urlencode }}&url={{ request.url | urlencode }}"
                        target="_blank" class="btn btn-sm btn-info" style="color:white;">Twitter</a>
                     <a href="https://www.facebook.com/sharer/sharer.php?u={{ request.url | urlencode }}"
                        target="_blank" class="btn btn-sm btn-primary">Facebook</a>
-                    <button onclick="copyArticleLink(this)" class="btn btn-sm btn-outline-warning">🔗 Copy link</button>
+                    <button onclick="copyArticleLink(this)" class="btn btn-sm btn-outline-warning"><i class="fa-solid fa-link"></i> Copy link</button>
                 </div>
             </article>
 
@@ -48,7 +48,7 @@
             <div class="card p-4 mt-4 text-center">
                 <h4 style="color: #F5A623;">Ready to create your own AI video?</h4>
                 <p style="color: #C9D1D9;">
-                    Put these tips into practice with Afrigen — Africa Creates, AI Generates 🌍
+                    Put these tips into practice with Afrigen — Africa Creates, AI Generates <i class="fa-solid fa-earth-africa"></i>
                 </p>
                 <div>
                     <a href="{{ url_for('auth.register') }}" class="btn btn-afrigen">Get Started Free</a>
@@ -64,7 +64,7 @@
 function copyArticleLink(btn) {
     navigator.clipboard.writeText(window.location.href);
     const original = btn.textContent;
-    btn.textContent = '✅ Copied!';
+    btn.textContent = 'Copied!';
     setTimeout(function () { btn.textContent = original; }, 1500);
 }
 </script>

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Afrigen — Africa Creates, AI Generates{% endblock %}
+{% block title %}Afrigen{% endblock %}
 
 {% block content %}
 
@@ -23,11 +23,11 @@
         <div class="reveal d-flex flex-wrap justify-content-center gap-3">
         {% if current_user.is_authenticated %}
         <a href="{{ url_for('main.dashboard') }}" class="btn btn-afrigen btn-lg px-5">
-            Go to Dashboard 🚀
+            Go to Dashboard <i class="fa-solid fa-rocket"></i>
         </a>
         {% else %}
         <a href="{{ url_for('auth.register') }}" class="btn btn-afrigen btn-lg px-5">
-            Start Free 🌍
+            Start Free <i class="fa-solid fa-earth-africa"></i>
         </a>
         <a href="{{ url_for('auth.login') }}" class="btn btn-outline-warning btn-lg px-4">
             Login
@@ -71,11 +71,11 @@
                         <div class="row">
                             <div class="col-6">
                                 <input type="radio" name="promptType" id="type_video" value="video" class="btn-check" checked onchange="updateStyles()">
-                                <label for="type_video" class="btn w-100" style="border: 2px solid #30363D; color: #F0F6FC;">🎬 Video Prompt</label>
+                                <label for="type_video" class="btn w-100" style="border: 2px solid #30363D; color: #F0F6FC;"><i class="fa-solid fa-clapperboard"></i> Video Prompt</label>
                             </div>
                             <div class="col-6">
                                 <input type="radio" name="promptType" id="type_image" value="image" class="btn-check" onchange="updateStyles()">
-                                <label for="type_image" class="btn w-100" style="border: 2px solid #30363D; color: #F0F6FC;">🖼️ Image Prompt</label>
+                                <label for="type_image" class="btn w-100" style="border: 2px solid #30363D; color: #F0F6FC;"><i class="fa-solid fa-image"></i> Image Prompt</label>
                             </div>
                         </div>
                     </div>
@@ -86,23 +86,23 @@
                         <div class="row">
                             <div class="col-6 col-md-4 mb-2">
                                 <input type="radio" name="style" id="cinematic" value="cinematic" class="btn-check" checked>
-                                <label for="cinematic" class="btn w-100" style="border: 2px solid #30363D; color: #F0F6FC;">🎬 Cinematic</label>
+                                <label for="cinematic" class="btn w-100" style="border: 2px solid #30363D; color: #F0F6FC;"><i class="fa-solid fa-clapperboard"></i> Cinematic</label>
                             </div>
                             <div class="col-6 col-md-4 mb-2">
                                 <input type="radio" name="style" id="anime" value="anime" class="btn-check">
-                                <label for="anime" class="btn w-100" style="border: 2px solid #30363D; color: #F0F6FC;">🎌 Anime</label>
+                                <label for="anime" class="btn w-100" style="border: 2px solid #30363D; color: #F0F6FC;"><i class="fa-solid fa-torii-gate"></i> Anime</label>
                             </div>
                             <div class="col-6 col-md-4 mb-2">
                                 <input type="radio" name="style" id="realistic" value="realistic" class="btn-check">
-                                <label for="realistic" class="btn w-100" style="border: 2px solid #30363D; color: #F0F6FC;">🌍 Realistic</label>
+                                <label for="realistic" class="btn w-100" style="border: 2px solid #30363D; color: #F0F6FC;"><i class="fa-solid fa-earth-africa"></i> Realistic</label>
                             </div>
                             <div class="col-6 col-md-4 mb-2">
                                 <input type="radio" name="style" id="african" value="african" class="btn-check">
-                                <label for="african" class="btn w-100" style="border: 2px solid #30363D; color: #F0F6FC;">👑 African</label>
+                                <label for="african" class="btn w-100" style="border: 2px solid #30363D; color: #F0F6FC;"><i class="fa-solid fa-crown"></i> African</label>
                             </div>
                             <div class="col-6 col-md-4 mb-2">
                                 <input type="radio" name="style" id="social" value="social" class="btn-check">
-                                <label for="social" class="btn w-100" style="border: 2px solid #30363D; color: #F0F6FC;">📱 Social Media</label>
+                                <label for="social" class="btn w-100" style="border: 2px solid #30363D; color: #F0F6FC;"><i class="fa-solid fa-mobile-screen-button"></i> Social Media</label>
                             </div>
                         </div>
                     </div>
@@ -113,19 +113,19 @@
                         <div class="row">
                             <div class="col-6 col-md-4 mb-2">
                                 <input type="radio" name="imgStyle" id="img_realistic" value="realistic" class="btn-check" checked>
-                                <label for="img_realistic" class="btn w-100" style="border: 2px solid #30363D; color: #F0F6FC;">📷 Realistic</label>
+                                <label for="img_realistic" class="btn w-100" style="border: 2px solid #30363D; color: #F0F6FC;"><i class="fa-solid fa-camera"></i> Realistic</label>
                             </div>
                             <div class="col-6 col-md-4 mb-2">
                                 <input type="radio" name="imgStyle" id="img_cinematic" value="cinematic" class="btn-check">
-                                <label for="img_cinematic" class="btn w-100" style="border: 2px solid #30363D; color: #F0F6FC;">🎬 Cinematic</label>
+                                <label for="img_cinematic" class="btn w-100" style="border: 2px solid #30363D; color: #F0F6FC;"><i class="fa-solid fa-clapperboard"></i> Cinematic</label>
                             </div>
                             <div class="col-6 col-md-4 mb-2">
                                 <input type="radio" name="imgStyle" id="img_african" value="african" class="btn-check">
-                                <label for="img_african" class="btn w-100" style="border: 2px solid #30363D; color: #F0F6FC;">👑 African</label>
+                                <label for="img_african" class="btn w-100" style="border: 2px solid #30363D; color: #F0F6FC;"><i class="fa-solid fa-crown"></i> African</label>
                             </div>
                             <div class="col-6 col-md-4 mb-2">
                                 <input type="radio" name="imgStyle" id="img_anime" value="anime" class="btn-check">
-                                <label for="img_anime" class="btn w-100" style="border: 2px solid #30363D; color: #F0F6FC;">🎌 Anime</label>
+                                <label for="img_anime" class="btn w-100" style="border: 2px solid #30363D; color: #F0F6FC;"><i class="fa-solid fa-torii-gate"></i> Anime</label>
                             </div>
                         </div>
                     </div>
@@ -138,21 +138,21 @@
                     </div>
 
                     <button onclick="refineAny()" class="btn btn-afrigen px-4 w-100">
-                        Refine My Prompt 🤖
+                        Refine My Prompt <i class="fa-solid fa-robot"></i>
                     </button>
 
                     <!-- Loading -->
                     <div id="loadingState" style="display:none;" class="mt-3 text-center">
-                        <p style="color: #F5A623;">⏳ AI is refining your prompt...</p>
+                        <p style="color: #F5A623;"><i class="fa-solid fa-hourglass-half"></i> AI is refining your prompt...</p>
                     </div>
 
                     <!-- Result -->
                     <div id="refinedResult" style="display:none;" class="mt-4">
-                        <label class="form-label" style="color: #F5A623;">✨ AI Refined Prompt:</label>
+                        <label class="form-label" style="color: #F5A623;"><i class="fa-solid fa-wand-magic-sparkles"></i> AI Refined Prompt:</label>
                         <div id="refinedText" class="p-3" style="background: #21262D; border-radius: 8px; color: #F0F6FC; border-left: 3px solid #F5A623;"></div>
                         <div class="mt-3 d-flex gap-2">
-                            <button onclick="copyPrompt()" class="btn btn-outline-warning flex-fill">📋 Copy</button>
-                            <a href="{{ url_for('auth.register') }}" class="btn btn-afrigen flex-fill">🎬 Generate Now!</a>
+                            <button onclick="copyPrompt()" class="btn btn-outline-warning flex-fill"><i class="fa-solid fa-clipboard"></i> Copy</button>
+                            <a href="{{ url_for('auth.register') }}" class="btn btn-afrigen flex-fill"><i class="fa-solid fa-clapperboard"></i> Generate Now!</a>
                         </div>
                     </div>
                 </div>
@@ -169,21 +169,21 @@
         <div class="row text-center reveal">
             <div class="col-md-4 mb-4">
                 <div class="card p-4" style="border-color: #30363D;">
-                    <div style="font-size: 48px; margin-bottom: 16px;">✍️</div>
+                    <div style="font-size: 48px; margin-bottom: 16px;"><i class="fa-solid fa-pen"></i></div>
                     <h4 style="color: #F5A623;">1. Describe Your Idea</h4>
                     <p style="color: #888;">Type your idea in plain English or Pidgin. No technical knowledge needed.</p>
                 </div>
             </div>
             <div class="col-md-4 mb-4">
                 <div class="card p-4" style="border-color: #30363D;">
-                    <div style="font-size: 48px; margin-bottom: 16px;">🤖</div>
+                    <div style="font-size: 48px; margin-bottom: 16px;"><i class="fa-solid fa-robot"></i></div>
                     <h4 style="color: #F5A623;">2. AI Refines It</h4>
                     <p style="color: #888;">Claude AI transforms your rough idea into a professional cinematic prompt automatically.</p>
                 </div>
             </div>
             <div class="col-md-4 mb-4">
                 <div class="card p-4" style="border-color: #30363D;">
-                    <div style="font-size: 48px; margin-bottom: 16px;">🎬</div>
+                    <div style="font-size: 48px; margin-bottom: 16px;"><i class="fa-solid fa-clapperboard"></i></div>
                     <h4 style="color: #F5A623;">3. Download & Share</h4>
                     <p style="color: #888;">Get your video in seconds. Share directly to TikTok, YouTube, or Instagram.</p>
                 </div>
@@ -200,37 +200,37 @@
         <div class="row">
             <div class="col-md-4 mb-4">
                 <div class="card p-4">
-                    <h4 style="color: #F5A623;">🌍 Built For Africa</h4>
+                    <h4 style="color: #F5A623;"><i class="fa-solid fa-earth-africa"></i> Built For Africa</h4>
                     <p style="color: #888;">Unlike other AI tools, Afrigen understands African culture, languages and aesthetics. Your content looks authentically African.</p>
                 </div>
             </div>
             <div class="col-md-4 mb-4">
                 <div class="card p-4">
-                    <h4 style="color: #F5A623;">💰 Affordable</h4>
+                    <h4 style="color: #F5A623;"><i class="fa-solid fa-sack-dollar"></i> Affordable</h4>
                     <p style="color: #888;">Professional video ads cost ₦50,000–₦500,000. with afrigen, get quality video at low cost</p>
                 </div>
             </div>
             <div class="col-md-4 mb-4">
                 <div class="card p-4">
-                    <h4 style="color: #F5A623;">⚡ Instant Results</h4>
+                    <h4 style="color: #F5A623;"><i class="fa-solid fa-bolt"></i> Instant Results</h4>
                     <p style="color: #888;">Generate professional videos in seconds. No cameraman, no studio, no location fees needed.</p>
                 </div>
             </div>
             <div class="col-md-4 mb-4">
                 <div class="card p-4">
-                    <h4 style="color: #F5A623;">🎨 Multiple Styles</h4>
+                    <h4 style="color: #F5A623;"><i class="fa-solid fa-palette"></i> Multiple Styles</h4>
                     <p style="color: #888;">Cinematic, Anime, Realistic, African, Social Media — pick the style that fits your brand.</p>
                 </div>
             </div>
             <div class="col-md-4 mb-4">
                 <div class="card p-4">
-                    <h4 style="color: #F5A623;">📱 Multi-Platform</h4>
+                    <h4 style="color: #F5A623;"><i class="fa-solid fa-mobile-screen-button"></i> Multi-Platform</h4>
                     <p style="color: #888;">Videos optimized for YouTube, TikTok, Instagram and Facebook. Multiple aspect ratios supported.</p>
                 </div>
             </div>
             <div class="col-md-4 mb-4">
                 <div class="card p-4">
-                    <h4 style="color: #F5A623;">🤖 Telegram Bot</h4>
+                    <h4 style="color: #F5A623;"><i class="fa-solid fa-robot"></i> Telegram Bot</h4>
                     <p style="color: #888;">Refine prompts on the go with our Telegram bot. Available 24/7 even without the app.</p>
                 </div>
             </div>
@@ -293,18 +293,18 @@
             <div class="col-md-4 mb-4">
                 <div class="card p-4 text-center">
                     <h3 style="color: #F0F6FC;">Free</h3>
-                    <h1 style="color: #F5A623;">₦0</h1>
+                    <div class="price-amount" style="color: #F5A623; font-size: 2.2rem; font-weight: 800;">₦0</div>
                     <p style="color: #888;">Forever free</p>
                     <hr style="border-color: #30363D;">
                     <ul style="list-style: none; padding: 0; color: #C9D1D9; text-align: left;">
-                        <li class="mb-2">✅ 3 videos per month</li>
-                        <li class="mb-2">✅ 2 images per month</li>
-                        <li class="mb-2">✅ All video styles</li>
-                        <li class="mb-2">✅ AI prompt refiner</li>
-                        <li class="mb-2">✅ Telegram bot access</li>
-                        <li class="mb-2" style="color: #555;">❌ Image to video</li>
-                        <li class="mb-2" style="color: #555;">❌ AI voiceover</li>
-                        <li class="mb-2" style="color: #555;">❌ Direct download</li>
+                        <li class="mb-2"><i class="fa-solid fa-circle-check" style="color:#27AE60;"></i> 3 videos per month</li>
+                        <li class="mb-2"><i class="fa-solid fa-circle-check" style="color:#27AE60;"></i> 2 images per month</li>
+                        <li class="mb-2"><i class="fa-solid fa-circle-check" style="color:#27AE60;"></i> All video styles</li>
+                        <li class="mb-2"><i class="fa-solid fa-circle-check" style="color:#27AE60;"></i> AI prompt refiner</li>
+                        <li class="mb-2"><i class="fa-solid fa-circle-check" style="color:#27AE60;"></i> Telegram bot access</li>
+                        <li class="mb-2" style="color: #555;"><i class="fa-solid fa-xmark"></i> Image to video</li>
+                        <li class="mb-2" style="color: #555;"><i class="fa-solid fa-xmark"></i> AI voiceover</li>
+                        <li class="mb-2" style="color: #555;"><i class="fa-solid fa-xmark"></i> Direct download</li>
                     </ul>
                     <a href="{{ url_for('auth.register') }}" class="btn btn-outline-warning w-100 mt-3">Get Started Free</a>
                 </div>
@@ -315,20 +315,20 @@
                         MOST POPULAR
                     </div>
                     <h3 style="color: #F0F6FC;">Pro</h3>
-                    <h1 style="color: #F5A623;">₦5,000</h1>
+                    <div class="price-amount" style="color: #F5A623; font-size: 2.2rem; font-weight: 800;">₦5,000</div>
                     <p style="color: #888;">per month</p>
                     <hr style="border-color: #30363D;">
                     <ul style="list-style: none; padding: 0; color: #C9D1D9; text-align: left;">
-                        <li class="mb-2">✅ Up to 20 videos per month</li>
-                        <li class="mb-2">✅ 50 images per month</li>
-                        <li class="mb-2">✅ 100 credits/month</li>
-                        <li class="mb-2">✅ All video styles</li>
-                        <li class="mb-2">✅ Image to video (10 credits)</li>
-                        <li class="mb-2">✅ AI voiceover</li>
-                        <li class="mb-2">✅ Priority support</li>
-                        <li class="mb-2">✅ Direct download (no ads)</li>
+                        <li class="mb-2"><i class="fa-solid fa-circle-check" style="color:#27AE60;"></i> Up to 20 videos per month</li>
+                        <li class="mb-2"><i class="fa-solid fa-circle-check" style="color:#27AE60;"></i> 50 images per month</li>
+                        <li class="mb-2"><i class="fa-solid fa-circle-check" style="color:#27AE60;"></i> 100 credits/month</li>
+                        <li class="mb-2"><i class="fa-solid fa-circle-check" style="color:#27AE60;"></i> All video styles</li>
+                        <li class="mb-2"><i class="fa-solid fa-circle-check" style="color:#27AE60;"></i> Image to video (10 credits)</li>
+                        <li class="mb-2"><i class="fa-solid fa-circle-check" style="color:#27AE60;"></i> AI voiceover</li>
+                        <li class="mb-2"><i class="fa-solid fa-circle-check" style="color:#27AE60;"></i> Priority support</li>
+                        <li class="mb-2"><i class="fa-solid fa-circle-check" style="color:#27AE60;"></i> Direct download (no ads)</li>
                     </ul>
-                    <a href="{{ url_for('auth.register') }}" class="btn btn-afrigen w-100 mt-3">Get Pro ⭐</a>
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-afrigen w-100 mt-3">Get Pro <i class="fa-solid fa-star"></i></a>
                 </div>
             </div>
         </div>
@@ -339,17 +339,17 @@
 <section style="padding: 80px 0; text-align: center;">
     <div class="container">
         <h2 style="color: #F0F6FC; font-weight: 700; font-size: clamp(1.8rem, 4vw, 2.5rem);">
-            Ready To Create? 🚀
+            Ready To Create? <i class="fa-solid fa-rocket"></i>
         </h2>
         <p style="color: #888; font-size: 18px; margin: 20px auto; max-width: 500px;">
             Join African creators already using Afrigen to make stunning content.
         </p>
         {% if not current_user.is_authenticated %}
         <a href="{{ url_for('auth.register') }}" class="btn btn-afrigen btn-lg px-5 me-3">
-            Start Free Today 🌍
+            Start Free Today <i class="fa-solid fa-earth-africa"></i>
         </a>
         <a href="https://t.me/AfrigenBot" target="_blank" class="btn btn-outline-warning btn-lg px-4">
-            Try Bot First 📱
+            Try Bot First <i class="fa-brands fa-telegram"></i>
         </a>
         {% endif %}
     </div>
@@ -411,7 +411,7 @@ async function refineAny() {
 
 function copyPrompt() {
     navigator.clipboard.writeText(document.getElementById('refinedText').innerText);
-    alert('Prompt copied! 📋');
+    alert('Prompt copied!');
 }
 </script>
 

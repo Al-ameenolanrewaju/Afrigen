@@ -929,6 +929,12 @@ def admin_blog_publish(post_id):
         abort(404)
     publish_post(post)
     flash(f'Published "{post.title}" — it is now live on the blog.', 'success')
+
+    # Fire the content distribution GitHub Action asynchronously so the admin
+    # doesn't wait. One failure here (e.g. no token configured) is non-fatal —
+    # the manual workflow_dispatch is always available as a fallback.
+    _trigger_distribution_async(f"https://afrigen.com.ng/blog/{post.slug}")
+
     return redirect(url_for('main.admin_blog'))
 
 
@@ -966,6 +972,93 @@ def admin_blog_discard(post_id):
     return redirect(url_for('main.admin_blog'))
 
 
+# ---------- Content Distribution (admin only) ----------
+
+@main.route('/admin/distribution')
+@admin_required
+def admin_distribution():
+    """Distribution dashboard — all runs + per-post status."""
+    from services.distribution import get_all_runs
+    from services.blog import get_all_posts
+    runs = get_all_runs(limit=30)
+    published = get_all_posts()
+    return render_template(
+        'main/distribution.html',
+        runs=runs,
+        published=published,
+    )
+
+
+@main.route('/admin/distribution/trigger/<int:post_id>', methods=['POST'])
+@admin_required
+def admin_distribution_trigger(post_id):
+    """Trigger distribution for a published blog post. Returns JSON for the
+    async frontend flow (button → spinner → results)."""
+    from services.distribution import trigger_distribution
+    try:
+        run_id = trigger_distribution(post_id)
+        return jsonify({"ok": True, "run_id": run_id})
+    except ValueError as e:
+        return jsonify({"ok": False, "error": str(e)}), 400
+    except Exception as e:
+        current_app.logger.exception("Distribution trigger failed")
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@main.route('/admin/distribution/run/<int:run_id>')
+@admin_required
+def admin_distribution_run(run_id):
+    """AJAX endpoint: return a single run's status as JSON (polled by the UI)."""
+    from services.distribution import get_run
+    run = get_run(run_id)
+    if not run:
+        abort(404)
+    post = run.blog_post
+    results = []
+    for r in run.results:
+        results.append({
+            "platform": r.platform,
+            "ok": r.ok,
+            "error": r.error,
+            "post_url": r.post_url,
+        })
+    return jsonify({
+        "ok": True,
+        "run": {
+            "id": run.id,
+            "status": run.status,
+            "total_platforms": run.total_platforms,
+            "success_count": run.success_count,
+            "fail_count": run.fail_count,
+            "started_at": run.started_at.isoformat() if run.started_at else None,
+            "finished_at": run.finished_at.isoformat() if run.finished_at else None,
+            "post": {
+                "id": post.id,
+                "title": post.title,
+                "slug": post.slug,
+                "url": f"https://afrigen.com.ng/blog/{post.slug}",
+            } if post else None,
+            "results": results,
+        },
+    })
+
+
+@main.route('/admin/distribution/retry/<int:run_id>/<platform>', methods=['POST'])
+@admin_required
+def admin_distribution_retry(run_id, platform):
+    """Retry a single failed platform within a run."""
+    from services.distribution import retry_platform
+    try:
+        ok = retry_platform(run_id, platform)
+        return jsonify({"ok": ok})
+    except ValueError as e:
+        return jsonify({"ok": False, "error": str(e)}), 400
+    except Exception as e:
+        current_app.logger.exception("Distribution retry failed")
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+# ---------- Analytics ----------
 @main.route('/analytics')
 @login_required
 def analytics():
@@ -1283,6 +1376,49 @@ def unsubscribe(token):
 def _cron_authorized():
     secret = current_app.config.get('CRON_SECRET')
     return bool(secret) and request.args.get('key') == secret
+
+
+def _trigger_distribution_async(blog_url: str):
+    """Fire the GitHub Actions content distribution workflow via repository_dispatch.
+
+    This runs in a background thread so the admin's publish flow returns
+    immediately.  If the token isn't configured or GitHub is unreachable, the
+    failure is logged but never surfaced to the admin — the manual
+    workflow_dispatch is always available as a fallback.
+    """
+    import threading
+    import requests as req
+
+    token = os.environ.get("GITHUB_DISPATCH_TOKEN", "")
+    if not token:
+        print("[distribute] GITHUB_DISPATCH_TOKEN not set — skipping automatic trigger.")
+        return
+
+    def _fire():
+        try:
+            resp = req.post(
+                "https://api.github.com/repos/Al-ameenolanrewaju/Afrigen/dispatches",
+                json={
+                    "event_type": "distribute_blog",
+                    "client_payload": {"blog_url": blog_url},
+                },
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "Accept": "application/vnd.github+json",
+                },
+                timeout=10,
+            )
+            if resp.status_code == 204:
+                print(f"[distribute] ✅ workflow triggered for {blog_url}")
+            else:
+                print(f"[distribute] ⚠️ GitHub dispatch returned {resp.status_code}: {resp.text}")
+        except Exception as e:
+            print(f"[distribute] ⚠️ GitHub dispatch failed (non-fatal): {e}")
+
+    threading.Thread(target=_fire, daemon=True).start()
+
+
+# ---------- Cron endpoints (key-protected) ----------
 
 
 @main.route('/cron/newsletter/generate', methods=['POST', 'GET'])

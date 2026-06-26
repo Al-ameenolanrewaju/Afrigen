@@ -1,0 +1,68 @@
+name: Distribute Blog Content
+
+on:
+  workflow_dispatch:
+    inputs:
+      blog_url:
+        description: "Blog post URL (e.g., https://afrigen.com.ng/blog/my-post)"
+        required: true
+        type: string
+  repository_dispatch:
+    types: [distribute_blog]
+
+jobs:
+  distribute:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # requests/groq: core + content generation. pillow: Pinterest/Instagram
+          # text cards. PyJWT + cryptography: Google Indexing service-account JWT
+          # signing (without these the Google Indexing step fails on every run).
+          pip install requests groq pillow PyJWT cryptography
+
+      - name: Run distribution
+        env:
+          # --- Groq ---
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+
+          # --- Telegram ---
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHANNEL_ID: ${{ secrets.TELEGRAM_CHANNEL_ID }}
+          TELEGRAM_ADMIN_CHAT_ID: ${{ secrets.TELEGRAM_ADMIN_CHAT_ID }}
+
+          # --- LinkedIn ---
+          LINKEDIN_ACCESS_TOKEN: ${{ secrets.LINKEDIN_ACCESS_TOKEN }}
+          LINKEDIN_PERSON_ID: ${{ secrets.LINKEDIN_PERSON_ID }}
+
+          # --- Dev.to ---
+          DEVTO_API_KEY: ${{ secrets.DEVTO_API_KEY }}
+
+          # --- Hashnode ---
+          HASHNODE_API_TOKEN: ${{ secrets.HASHNODE_API_TOKEN }}
+          HASHNODE_PUBLICATION_ID: ${{ secrets.HASHNODE_PUBLICATION_ID }}
+
+          # --- Google Indexing ---
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+
+          # --- Pinterest (future — API access pending, not required) ---
+          PINTEREST_APP_ID: ${{ secrets.PINTEREST_APP_ID }}
+          PINTEREST_APP_SECRET: ${{ secrets.PINTEREST_APP_SECRET }}
+          PINTEREST_ACCESS_TOKEN: ${{ secrets.PINTEREST_ACCESS_TOKEN }}
+          PINTEREST_BOARD_ID: ${{ secrets.PINTEREST_BOARD_ID }}
+
+          # --- Blog URL (from trigger) ---
+          BLOG_URL: ${{ github.event.inputs.blog_url || github.event.client_payload.blog_url }}
+
+        run: python scripts/distribute.py

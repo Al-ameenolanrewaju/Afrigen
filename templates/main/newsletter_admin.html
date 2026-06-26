@@ -6,10 +6,10 @@
 
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
     <div>
-        <h2 style="color: #F5A623; font-weight: 700; margin: 0;">📰 Weekly Newsletter</h2>
+        <h1 style="color: #F5A623; font-weight: 700; margin: 0; font-size: 1.6rem;"><i class="fa-solid fa-newspaper"></i> Weekly Newsletter</h1>
         <p style="color: #888; margin: 0;">Auto-generated each week — review, edit, then send to everyone.</p>
     </div>
-    <a href="{{ url_for('main.admin') }}" class="btn btn-outline-warning btn-sm">← Back to Admin</a>
+    <a href="{{ url_for('main.admin') }}" class="btn btn-outline-warning btn-sm"><i class="fa-solid fa-arrow-left"></i> Back to Admin</a>
 </div>
 
 <!-- STATUS ROW -->
@@ -25,7 +25,7 @@
         <div class="card p-3 text-center">
             <p style="color: #888; margin-bottom: 6px;">Current Draft</p>
             {% if draft and draft.status == 'approved' %}
-            <h3 style="color: #27AE60; font-weight: 800; margin: 0;">✅ Approved</h3>
+            <h3 style="color: #27AE60; font-weight: 800; margin: 0;"><i class="fa-solid fa-circle-check"></i> Approved</h3>
             <small style="color: #555;">will auto-send Monday 9am</small>
             {% elif draft %}
             <h3 style="color: #F5A623; font-weight: 800; margin: 0;">Draft</h3>
@@ -53,7 +53,7 @@
 <div class="card p-4 mb-4">
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
         <h5 style="color: #F0F6FC; font-weight: 700; margin: 0;">Draft</h5>
-        <button id="generateBtn" class="btn btn-outline-warning btn-sm">🤖 Generate with AI + web</button>
+        <button id="generateBtn" class="btn btn-outline-warning btn-sm"><i class="fa-solid fa-robot"></i> Generate with AI + web</button>
     </div>
 
     <label class="form-label" for="subject">Subject</label>
@@ -65,10 +65,10 @@
               placeholder="Click 'Generate with AI + web' to draft this week's issue, or write your own HTML here.">{{ draft.body if draft else '' }}</textarea>
 
     <div class="d-flex flex-wrap gap-2 mt-2">
-        <button id="previewBtn" class="btn btn-outline-warning btn-sm">👁 Preview</button>
-        <button id="saveBtn" class="btn btn-outline-warning">💾 Save draft</button>
-        <button id="approveBtn" class="btn btn-success">✅ Approve for Monday send</button>
-        <button id="sendBtn" class="btn btn-afrigen">📤 Send now to {{ audience }} people</button>
+        <button id="previewBtn" class="btn btn-outline-warning btn-sm"><i class="fa-solid fa-eye"></i> Preview</button>
+        <button id="saveBtn" class="btn btn-outline-warning"><i class="fa-solid fa-floppy-disk"></i> Save draft</button>
+        <button id="approveBtn" class="btn btn-success"><i class="fa-solid fa-circle-check"></i> Approve for Monday send</button>
+        <button id="sendBtn" class="btn btn-afrigen"><i class="fa-solid fa-share-nodes"></i> Send now to {{ audience }} people</button>
         <span id="status" class="align-self-center ms-2" style="color: #888;"></span>
     </div>
     <p class="mt-2 mb-0" style="color: #555; font-size: 13px;">

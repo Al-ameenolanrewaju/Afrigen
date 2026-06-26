@@ -7,13 +7,13 @@
 
             <!-- Header -->
             <div class="card p-4 mb-4 text-center">
-                <h2 style="color: #F5A623;">🖼️ Your AI Image Is Ready!</h2>
+                <h1 style="color: #F5A623; font-size: 1.6rem;"><i class="fa-solid fa-image"></i> Your AI Image Is Ready!</h1>
             </div>
 
             <!-- Image -->
             {% if image_url %}
             <div class="card p-4 mb-4 text-center" style="border-color: #27AE60;">
-                <h5 style="color: #27AE60;">✅ Image Generated!</h5>
+                <h5 style="color: #27AE60;"><i class="fa-solid fa-circle-check"></i> Image Generated!</h5>
                 <img src="{{ image_url }}"
                      class="img-fluid mt-3"
                      style="border-radius: 8px; max-width: 100%;">
@@ -21,7 +21,7 @@
                     <a href="{{ image_url }}"
                        class="btn btn-afrigen px-4 me-2"
                        download>
-                        ⬇️ Download Image
+                        <i class="fa-solid fa-download"></i> Download Image
                     </a>
                 </div>
 
@@ -31,30 +31,30 @@
 
                 <!-- Share — each share invites a friend to make their own free -->
                 <div class="mt-4 pt-3" style="border-top: 1px solid #30363D;">
-                    <p style="color: #888; margin-bottom: 10px;">📤 Share it — every share invites a friend to make their own free 🌍</p>
+                    <p style="color: #888; margin-bottom: 10px;"><i class="fa-solid fa-share-nodes"></i> Share it — every share invites a friend to make their own free <i class="fa-solid fa-earth-africa"></i></p>
                     <div class="d-flex justify-content-center gap-2 flex-wrap">
-                        <a href="https://wa.me/?text={{ ('I made this AI image with Afrigen 🖼️🌍 — see it & make your own free 👉 ' ~ share_target) | urlencode }}"
-                           target="_blank" class="btn btn-success px-3">📱 WhatsApp</a>
-                        <a href="https://twitter.com/intent/tweet?text={{ ('I made this with @AfrigenAI 🖼️🌍 — one line of text became an image. Make yours free 👇') | urlencode }}&url={{ share_target | urlencode }}"
-                           target="_blank" class="btn btn-info px-3" style="color:white;">🐦 Twitter</a>
+                        <a href="https://wa.me/?text={{ ('I made this AI image with Afrigen — see it & make your own free ' ~ share_target) | urlencode }}"
+                           target="_blank" class="btn btn-success px-3"><i class="fa-brands fa-whatsapp"></i> WhatsApp</a>
+                        <a href="https://twitter.com/intent/tweet?text={{ ('I made this with @AfrigenAI — one line of text became an image. Make yours free') | urlencode }}&url={{ share_target | urlencode }}"
+                           target="_blank" class="btn btn-info px-3" style="color:white;"><i class="fa-brands fa-twitter"></i> Twitter</a>
                         <a href="https://www.facebook.com/sharer/sharer.php?u={{ share_target | urlencode }}"
-                           target="_blank" class="btn btn-primary px-3">📘 Facebook</a>
+                           target="_blank" class="btn btn-primary px-3"><i class="fa-brands fa-facebook"></i> Facebook</a>
                         {% if share_url %}
-                        <a href="{{ share_url }}" target="_blank" class="btn btn-outline-warning px-3">🌍 Open share page</a>
+                        <a href="{{ share_url }}" target="_blank" class="btn btn-outline-warning px-3"><i class="fa-solid fa-earth-africa"></i> Open share page</a>
                         {% endif %}
                     </div>
                 </div>
             </div>
             {% else %}
             <div class="card p-4 mb-4 text-center">
-                <h5 style="color: #E74C3C;">❌ Image generation failed!</h5>
+                <h5 style="color: #E74C3C;"><i class="fa-solid fa-xmark"></i> Image generation failed!</h5>
                 <p style="color: #C9D1D9;">Please try again!</p>
             </div>
             {% endif %}
 
             <!-- Prompts -->
             <div class="card p-4 mb-4">
-                <h5 style="color: #F5A623;">✨ AI Refined Prompt:</h5>
+                <h5 style="color: #F5A623;"><i class="fa-solid fa-wand-magic-sparkles"></i> AI Refined Prompt:</h5>
                 <p style="color: #C9D1D9;">{{ refined }}</p>
             </div>
 
@@ -62,11 +62,11 @@
             <div class="text-center">
                 <a href="{{ url_for('main.dashboard') }}"
                    class="btn btn-afrigen px-4 me-2">
-                    🔄 Generate Another
+                    <i class="fa-solid fa-arrows-rotate"></i> Generate Another
                 </a>
                 <a href="{{ url_for('main.history') }}"
                    class="btn btn-outline-warning px-4">
-                    📜 View History
+                    <i class="fa-solid fa-scroll"></i> View History
                 </a>
             </div>
 

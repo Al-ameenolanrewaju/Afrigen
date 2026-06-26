@@ -11,7 +11,7 @@
             <div class="card p-4">
                 <div class="row align-items-center">
                     <div class="col-md-8">
-                        <h2 style="color: #F5A623;">🎬 My Generations</h2>
+                        <h1 style="color: #F5A623; font-size: 1.6rem;"><i class="fa-solid fa-clapperboard"></i> My Generations</h1>
                         <p style="color: #C9D1D9;">All your AI generated content in one place!</p>
                     </div>
                     <div class="col-md-4 text-end">
@@ -25,7 +25,7 @@
     {% set processing = generations | selectattr('status', 'equalto', 'processing') | list %}
     {% if processing %}
     <div class="alert mb-4" style="background: rgba(245,166,35,0.1); border: 1px solid #F5A623; border-radius: 12px; color: #F5A623;">
-        <strong>🎬 Video generating!</strong>
+        <strong><i class="fa-solid fa-clapperboard"></i> Video generating!</strong>
         We'll send you an email at <strong>{{ current_user.email }}</strong> when it's ready.
 
     </div>
@@ -48,7 +48,7 @@
                     {% else %}
                     <div style="background: #21262D; border-radius: 8px; height: 150px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
                         {% if gen.status == 'failed' %}
-                        <p style="color: #E74C3C; font-size: 24px; margin: 0;">❌</p>
+                        <p style="color: #E74C3C; font-size: 24px; margin: 0;"><i class="fa-solid fa-xmark"></i></p>
                         <p style="color: #888; font-size: 13px; margin-top: 8px;">Generation Failed</p>
                         {% else %}
                         <p style="color: #888;">No preview</p>
@@ -63,15 +63,15 @@
                     <!-- Type + Status badges -->
                     <div class="d-flex gap-2 mb-2 flex-wrap">
                         <span class="badge" style="background: #21262D; color: #F5A623;">
-                            {% if gen.generation_type == 'image' %}🖼️ Image
-                            {% elif gen.generation_type == 'text' %}🎬 Text to Video
-                            {% else %}🎬 Video{% endif %}
+                            {% if gen.generation_type == 'image' %}<i class="fa-solid fa-image"></i> Image
+                            {% elif gen.generation_type == 'text' %}<i class="fa-solid fa-clapperboard"></i> Text to Video
+                            {% else %}<i class="fa-solid fa-clapperboard"></i> Video{% endif %}
                         </span>
                         <span class="badge" style="background: {% if gen.status == 'completed' %}#27AE60{% elif gen.status == 'failed' %}#E74C3C{% else %}#F5A623{% endif %}; color: white;">
                             {{ gen.status.upper() }}
                         </span>
                         <small style="color: #888; align-self: center;">
-                            📅 {{ gen.created_at.strftime('%b %d, %Y') }}
+                            <i class="fa-solid fa-calendar-days"></i> {{ gen.created_at.strftime('%b %d, %Y') }}
                         </small>
                     </div>
 
@@ -94,7 +94,7 @@
 
                     {% if gen.audio_url %}
                     <div class="mb-3">
-                        <small style="color: #F5A623;">🎙️ AI Voiceover:</small>
+                        <small style="color: #F5A623;"><i class="fa-solid fa-microphone"></i> AI Voiceover:</small>
                         <audio controls class="w-100 mt-1" style="height: 36px;"
                                src="{{ gen.audio_url }}">
                             Your browser does not support audio.
@@ -105,23 +105,23 @@
                     <!-- Action Buttons -->
 <div class="d-flex gap-2 flex-wrap">
     {% if gen.video_url %}
-    <a href="{{ gen.video_url }}" class="btn btn-afrigen btn-sm" target="_blank">🎬 Watch</a>
-    <a href="{{ url_for('main.download_video_file', generation_id=gen.id) }}" class="btn btn-outline-warning btn-sm">⬇️ Download</a>
+    <a href="{{ gen.video_url }}" class="btn btn-afrigen btn-sm" target="_blank"><i class="fa-solid fa-clapperboard"></i> Watch</a>
+    <a href="{{ url_for('main.download_video_file', generation_id=gen.id) }}" class="btn btn-outline-warning btn-sm"><i class="fa-solid fa-download"></i> Download</a>
     {% endif %}
 
     {% if gen.image_url and gen.generation_type == 'image' and not gen.video_url %}
-    <a href="{{ url_for('main.download_image_file', generation_id=gen.id) }}" class="btn btn-afrigen btn-sm" target="_blank">🖼️ View</a>
-    <a href="{{ url_for('main.download_image_file', generation_id=gen.id) }}" class="btn btn-outline-warning btn-sm">⬇️ Download</a>
+    <a href="{{ url_for('main.download_image_file', generation_id=gen.id) }}" class="btn btn-afrigen btn-sm" target="_blank"><i class="fa-solid fa-image"></i> View</a>
+    <a href="{{ url_for('main.download_image_file', generation_id=gen.id) }}" class="btn btn-outline-warning btn-sm"><i class="fa-solid fa-download"></i> Download</a>
     {% endif %}
 
     {% if gen.status == 'completed' and (gen.video_url or gen.image_url) %}
     <a href="{{ share_url_for(gen.id) }}" target="_blank" class="btn btn-outline-warning btn-sm"
-       title="Public share page with a sign-up invite — every view can become a new user">🔗 Share</a>
+       title="Public share page with a sign-up invite — every view can become a new user"><i class="fa-solid fa-link"></i> Share</a>
     {% endif %}
 
     {% if gen.status == 'failed' %}
     <a href="{{ url_for('main.dashboard') }}" class="btn btn-sm" style="background: #21262D; color: #F5A623; border: 1px solid #F5A623;">
-        🔄 Try Again
+        <i class="fa-solid fa-arrows-rotate"></i> Try Again
     </a>
     {% endif %}
 </div>
@@ -133,10 +133,10 @@
 
     {% else %}
     <div class="card p-5 text-center">
-        <h3>🎬</h3>
+        <h3><i class="fa-solid fa-clapperboard"></i></h3>
         <h4 style="color: #F5A623;">No generations yet!</h4>
         <p style="color: #C9D1D9;">Generate your first AI video or image now!</p>
-        <a href="{{ url_for('main.dashboard') }}" class="btn btn-afrigen px-5">Generate Now 🚀</a>
+        <a href="{{ url_for('main.dashboard') }}" class="btn btn-afrigen px-5">Generate Now <i class="fa-solid fa-rocket"></i></a>
     </div>
     {% endif %}
 

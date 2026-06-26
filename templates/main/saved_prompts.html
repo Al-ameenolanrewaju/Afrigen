@@ -7,7 +7,7 @@
     <div class="card p-4 mb-4">
         <div class="row align-items-center">
             <div class="col-md-8">
-                <h2 style="color: #F5A623;">💾 Saved Prompts</h2>
+                <h1 style="color: #F5A623; font-size: 1.6rem;"><i class="fa-solid fa-floppy-disk"></i> Saved Prompts</h1>
                 <p style="color: #C9D1D9;">Your favorite AI prompts!</p>
             </div>
             <div class="col-md-4 text-end">
@@ -45,11 +45,11 @@
                         data-refined="{{ (prompt.refined_prompt or prompt.original_prompt) | e }}"
                         data-type="{{ prompt.prompt_type | e }}"
                         data-style="{{ prompt.style | e }}">
-                    🚀 Generate from this
+                    <i class="fa-solid fa-rocket"></i> Generate from this
                 </button>
                 <button type="button" class="btn btn-outline-warning btn-sm px-3 copy-prompt-btn"
                         data-refined="{{ (prompt.refined_prompt or prompt.original_prompt) | e }}">
-                    📋 Copy
+                    <i class="fa-solid fa-clipboard"></i> Copy
                 </button>
             </div>
         </div>
@@ -57,11 +57,11 @@
 
     {% else %}
     <div class="card p-5 text-center">
-        <h3>💾</h3>
+        <h3><i class="fa-solid fa-floppy-disk"></i></h3>
         <h4 style="color: #F5A623;">No saved prompts yet!</h4>
         <p style="color: #C9D1D9;">Generate a prompt and save it!</p>
         <a href="{{ url_for('main.dashboard') }}" class="btn btn-afrigen px-5">
-            Generate Now 🚀
+            Generate Now <i class="fa-solid fa-rocket"></i>
         </a>
     </div>
     {% endif %}
@@ -87,7 +87,7 @@ document.querySelectorAll('.copy-prompt-btn').forEach(function (btn) {
     btn.addEventListener('click', function () {
         navigator.clipboard.writeText(btn.dataset.refined || '').then(function () {
             const original = btn.textContent;
-            btn.textContent = '✅ Copied';
+            btn.textContent = 'Copied';
             setTimeout(function () { btn.textContent = original; }, 1500);
         });
     });

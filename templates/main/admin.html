@@ -8,12 +8,15 @@
     <!-- Header -->
     <div class="card p-4 mb-4 d-flex flex-row flex-wrap justify-content-between align-items-center gap-2">
         <div>
-            <h2 style="color: #F5A623;">⚙️ Afrigen Admin Panel</h2>
+            <h1 style="color: #F5A623; font-size: 1.75rem;"><i class="fa-solid fa-gear"></i> Afrigen Admin Panel</h1>
             <p style="color: #C9D1D9; margin: 0;">Monitor platform performance and manage users</p>
         </div>
         <div class="d-flex flex-wrap gap-2">
-            <a href="{{ url_for('main.admin_blog') }}" class="btn btn-afrigen">📝 Blog Drafts</a>
-            <a href="{{ url_for('main.admin_newsletter') }}" class="btn btn-afrigen">📰 Weekly Newsletter</a>
+            <a href="{{ url_for('main.admin_blog') }}" class="btn btn-afrigen"><i class="fa-solid fa-newspaper"></i> Blog Drafts</a>
+
+
+            <a href="{{ url_for('main.admin_distribution') }}" class="btn btn-afrigen"><i class="fa-solid fa-satellite-dish"></i> Distribution</a>
+            <a href="{{ url_for('main.admin_newsletter') }}" class="btn btn-afrigen"><i class="fa-solid fa-newspaper"></i> Weekly Newsletter</a>
         </div>
     </div>
 
@@ -21,25 +24,25 @@
     <div class="row mb-4">
         <div class="col-6 col-md-3 mb-3">
             <div class="card p-4 text-center">
-                <h1 style="color: #F5A623;">{{ total_users }}</h1>
+                <h2 style="color: #F5A623;">{{ total_users }}</h2>
                 <p style="color: #888; font-size: 13px;">Total Users</p>
             </div>
         </div>
         <div class="col-6 col-md-3 mb-3">
             <div class="card p-4 text-center">
-                <h1 style="color: #F5A623;">{{ total_generations }}</h1>
+                <h2 style="color: #F5A623;">{{ total_generations }}</h2>
                 <p style="color: #888; font-size: 13px;">Total Generations</p>
             </div>
         </div>
         <div class="col-6 col-md-3 mb-3">
             <div class="card p-4 text-center">
-                <h1 style="color: #F5A623;">{{ pro_users }}</h1>
+                <h2 style="color: #F5A623;">{{ pro_users }}</h2>
                 <p style="color: #888; font-size: 13px;">Pro Users</p>
             </div>
         </div>
         <div class="col-6 col-md-3 mb-3">
             <div class="card p-4 text-center">
-                <h1 style="color: #27AE60;">{{ success_rate }}%</h1>
+                <h2 style="color: #27AE60;">{{ success_rate }}%</h2>
                 <p style="color: #888; font-size: 13px;">Success Rate</p>
             </div>
         </div>
@@ -62,13 +65,13 @@
         <div class="col-6 col-md-3 mb-3">
             <div class="card p-4 text-center">
                 <h2 style="color: #F5A623;">{{ video_generations }}</h2>
-                <p style="color: #888; font-size: 13px;">🎬 Videos Generated</p>
+                <p style="color: #888; font-size: 13px;"><i class="fa-solid fa-clapperboard"></i> Videos Generated</p>
             </div>
         </div>
         <div class="col-6 col-md-3 mb-3">
             <div class="card p-4 text-center">
                 <h2 style="color: #F5A623;">{{ image_generations }}</h2>
-                <p style="color: #888; font-size: 13px;">🖼️ Images Generated</p>
+                <p style="color: #888; font-size: 13px;"><i class="fa-solid fa-image"></i> Images Generated</p>
             </div>
         </div>
     </div>
@@ -77,7 +80,7 @@
     <div class="row mb-4">
         <div class="col-md-6 mb-3">
             <div class="card p-4">
-                <h5 style="color: #F5A623;" class="mb-3">👥 New Signups (Last 7 Days)</h5>
+                <h5 style="color: #F5A623;" class="mb-3"><i class="fa-solid fa-users"></i> New Signups (Last 7 Days)</h5>
                 <div style="display: flex; align-items: flex-end; gap: 8px; height: 100px;">
                     {% set max_signups = signups_7days | map(attribute='count') | max %}
                     {% for day in signups_7days %}
@@ -94,7 +97,7 @@
         </div>
         <div class="col-md-6 mb-3">
             <div class="card p-4">
-                <h5 style="color: #F5A623;" class="mb-3">🎬 Generations (Last 7 Days)</h5>
+                <h5 style="color: #F5A623;" class="mb-3"><i class="fa-solid fa-clapperboard"></i> Generations (Last 7 Days)</h5>
                 <div style="display: flex; align-items: flex-end; gap: 8px; height: 100px;">
                     {% set max_gens = generations_7days | map(attribute='count') | max %}
                     {% for day in generations_7days %}
@@ -115,7 +118,7 @@
     <div class="row mb-4">
         <div class="col-md-6 mb-3">
             <div class="card p-4">
-                <h5 style="color: #F5A623;" class="mb-3">🌍 Top Countries</h5>
+                <h5 style="color: #F5A623;" class="mb-3"><i class="fa-solid fa-earth-africa"></i> Top Countries</h5>
                 {% if top_countries %}
                     {% set max_country = top_countries[0][1] %}
                     {% for country, count in top_countries %}
@@ -136,14 +139,14 @@
         </div>
         <div class="col-md-6 mb-3">
             <div class="card p-4">
-                <h5 style="color: #F5A623;" class="mb-3">📊 Signup Sources</h5>
+                <h5 style="color: #F5A623;" class="mb-3"><i class="fa-solid fa-chart-column"></i> Signup Sources</h5>
                 {% if source_breakdown %}
-                    {% set source_icons = {'direct': '🔗', 'google': '🔍', 'facebook': '📘', 'twitter': '🐦', 'instagram': '📸', 'linkedin': '💼', 'telegram': '📱'} %}
+                    {% set source_icons = {'direct': '<i class="fa-solid fa-link"></i>', 'google': '<i class="fa-solid fa-magnifying-glass"></i>', 'facebook': '<i class="fa-brands fa-facebook"></i>', 'twitter': '<i class="fa-brands fa-twitter"></i>', 'instagram': '<i class="fa-solid fa-camera"></i>', 'linkedin': '<i class="fa-solid fa-briefcase"></i>', 'telegram': '<i class="fa-brands fa-telegram"></i>'} %}
                     {% set max_source = source_breakdown.values() | max %}
                     {% for source, count in source_breakdown.items() %}
                     <div class="mb-3">
                         <div class="d-flex justify-content-between mb-1">
-                            <span style="color: #C9D1D9;">{{ source_icons.get(source, '🔗') }} {{ source | capitalize }}</span>
+                            <span style="color: #C9D1D9;">{{ source_icons.get(source, '<i class="fa-solid fa-link"></i>') | safe }} {{ source | capitalize }}</span>
                             <span style="color: #F5A623;">{{ count }}</span>
                         </div>
                         <div style="background: #30363D; border-radius: 99px; height: 8px;">
@@ -160,7 +163,7 @@
 
     <!-- Generation Health -->
     <div class="card p-4 mb-4">
-        <h5 style="color: #F5A623;" class="mb-3">⚡ Generation Health</h5>
+        <h5 style="color: #F5A623;" class="mb-3"><i class="fa-solid fa-bolt"></i> Generation Health</h5>
         <div class="row text-center">
             <div class="col-4">
                 <h3 style="color: #27AE60;">{{ completed_generations }}</h3>
@@ -188,7 +191,7 @@
 
     <!-- Top 5 Most Active Users -->
     <div class="card p-4 mb-4">
-        <h5 style="color: #F5A623;" class="mb-3">🏆 Top 5 Most Active Users</h5>
+        <h5 style="color: #F5A623;" class="mb-3"><i class="fa-solid fa-trophy"></i> Top 5 Most Active Users</h5>
         <div class="table-responsive">
             <table class="table" style="color: #F0F6FC;">
                 <thead style="color: #F5A623;">
@@ -219,7 +222,7 @@
 
     <!-- Telegram Users Table -->
     <div class="card p-4 mb-4">
-        <h4 style="color: #2AABEE;" class="mb-3">🤖 Telegram Users</h4>
+        <h4 style="color: #2AABEE;" class="mb-3"><i class="fa-solid fa-robot"></i> Telegram Users</h4>
         <div class="table-responsive">
             <table class="table" style="color: #F0F6FC;">
                 <thead style="color: #2AABEE;">
@@ -246,7 +249,7 @@
 
     <!-- All Users Table -->
     <div class="card p-4 mb-4">
-        <h4 style="color: #F5A623;" class="mb-3">👥 All Users</h4>
+        <h4 style="color: #F5A623;" class="mb-3"><i class="fa-solid fa-users"></i> All Users</h4>
         <div class="table-responsive">
             <table class="table" style="color: #F0F6FC;">
                 <thead style="color: #F5A623;">
@@ -278,18 +281,18 @@
                         <td>
                             {% if user.email != 'oadedamola07@gmail.com' %}
                                 {% if user.plan == 'free' %}
-                                <a href="{{ url_for('main.upgrade_user', user_id=user.id) }}" class="btn btn-afrigen btn-sm me-1">⭐ Upgrade</a>
+                                <a href="{{ url_for('main.upgrade_user', user_id=user.id) }}" class="btn btn-afrigen btn-sm me-1"><i class="fa-solid fa-star"></i> Upgrade</a>
                                 {% elif user.plan == 'pro' %}
                                 <a href="{{ url_for('main.downgrade_user', user_id=user.id) }}" class="btn btn-outline-warning btn-sm me-1">Downgrade</a>
                                 {% endif %}
                                 {% if user.plan != 'banned' %}
-                                <a href="{{ url_for('main.ban_user', user_id=user.id) }}" class="btn btn-warning btn-sm me-1" onclick="return confirm('Ban {{ user.username }}?')">🚫 Ban</a>
+                                <a href="{{ url_for('main.ban_user', user_id=user.id) }}" class="btn btn-warning btn-sm me-1" onclick="return confirm('Ban {{ user.username }}?')"><i class="fa-solid fa-ban"></i> Ban</a>
                                 {% else %}
-                                <a href="{{ url_for('main.upgrade_user', user_id=user.id) }}" class="btn btn-success btn-sm me-1">✅ Unban</a>
+                                <a href="{{ url_for('main.upgrade_user', user_id=user.id) }}" class="btn btn-success btn-sm me-1"><i class="fa-solid fa-circle-check"></i> Unban</a>
                                 {% endif %}
-                                <a href="{{ url_for('main.delete_user', user_id=user.id) }}" class="btn btn-danger btn-sm" onclick="return confirm('DELETE {{ user.username }}?')">🗑️ Delete</a>
+                                <a href="{{ url_for('main.delete_user', user_id=user.id) }}" class="btn btn-danger btn-sm" onclick="return confirm('DELETE {{ user.username }}?')"><i class="fa-solid fa-trash"></i> Delete</a>
                             {% else %}
-                                <span style="color: #F5A623;">👑 Admin</span>
+                                <span style="color: #F5A623;"><i class="fa-solid fa-crown"></i> Admin</span>
                             {% endif %}
                         </td>
                     </tr>
@@ -301,7 +304,7 @@
 
     <!-- Recent Generations -->
     <div class="card p-4 mb-4">
-        <h4 style="color: #F5A623;" class="mb-3">🎬 Recent Generations</h4>
+        <h4 style="color: #F5A623;" class="mb-3"><i class="fa-solid fa-clapperboard"></i> Recent Generations</h4>
         <div class="table-responsive">
             <table class="table" style="color: #F0F6FC;">
                 <thead style="color: #F5A623;">

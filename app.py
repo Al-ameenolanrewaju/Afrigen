@@ -168,6 +168,20 @@ app.register_blueprint(main)
 app.register_blueprint(auth, url_prefix='/auth')
 app.register_blueprint(api, url_prefix='/api/v1')
 
+from constants import (
+    FACEBOOK_URL, TWITTER_URL, INSTAGRAM_URL, LINKEDIN_URL, TELEGRAM_URL
+)
+
+@app.context_processor
+def inject_socials():
+    return dict(
+        FACEBOOK_URL=FACEBOOK_URL,
+        TWITTER_URL=TWITTER_URL,
+        INSTAGRAM_URL=INSTAGRAM_URL,
+        LINKEDIN_URL=LINKEDIN_URL,
+        TELEGRAM_URL=TELEGRAM_URL
+    )
+
 @app.errorhandler(404)
 def page_not_found(e):
     return render_template("errors/404.html"), 404
@@ -339,15 +353,19 @@ def sitemap():
     from services.blog import get_all_posts
 
     base = "https://afrigen.com.ng"
+    # Only public, crawlable pages — NOT /dashboard (login-gated, redirects
+    # crawlers to /login and wastes crawl budget).
     static_pages = [
         ("/", "1.00"),
+        ("/blog", "0.80"),
         ("/login", "0.80"),
         ("/register", "0.80"),
-        ("/dashboard", "0.70"),
         ("/founder", "0.70"),
-        ("/contact", "0.60"),
         ("/upgrade", "0.60"),
-        ("/blog", "0.80"),
+        ("/contact", "0.60"),
+        ("/docs", "0.60"),
+        ("/privacy", "0.40"),
+        ("/terms", "0.40"),
     ]
 
     urls = [f"    <url>\n        <loc>{base}{path}</loc>\n        <priority>{pri}</priority>\n    </url>"

@@ -1,0 +1,38 @@
+{
+  "blog_url": "https://afrigen.com.ng/blog/one-ai-video-into-a-week-of-content",
+  "started_at": "2026-06-26T09:02:49.351527+00:00",
+  "platforms": {
+    "telegram": {
+      "ok": true,
+      "message_id": 9,
+      "channel_link": "https://t.me/c/4433657469/9",
+      "error": null
+    },
+    "linkedin": {
+      "ok": true,
+      "post_id": "urn:li:share:7476198285498617856",
+      "post_url": "https://www.linkedin.com/feed/update/urn:li:share:7476198285498617856",
+      "error": null
+    },
+    "devto": {
+      "ok": true,
+      "post_id": null,
+      "post_url": "already published",
+      "error": null
+    },
+    "pinterest": {
+      "ok": false,
+      "error": "Missing PINTEREST_BOARD_ID and no board could be resolved",
+      "post_id": null,
+      "post_url": null
+    },
+    "google_indexing": {
+      "ok": true,
+      "notified": true,
+      "error": null
+    }
+  },
+  "post_title": "Turn One AI Video Into a Week of Content for Your Brand — Africa Creates, AI Generates",
+  "post_slug": "one-ai-video-into-a-week-of-content",
+  "admin_notified": true
+}

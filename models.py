@@ -255,3 +255,58 @@ class Referral(db.Model):
     is_used = db.Column(db.Boolean, default=False)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<Referral {self.referral_code}>"
+
+
+class DistributionRun(db.Model):
+    """One distribution attempt for a blog post — triggered from the admin panel.
+    Tracks overall status and per-platform results so the admin can see what
+    succeeded, what failed, and retry individual platforms."""
+    __tablename__ = "distribution_runs"
+
+    id = db.Column(db.Integer, primary_key=True)
+    blog_post_id = db.Column(
+        db.Integer, db.ForeignKey("blog_posts.id"), nullable=False
+    )
+    blog_post = db.relationship("BlogPost", backref="distribution_runs")
+
+    status = db.Column(db.String(20), default="running")  # running | completed | failed
+    started_at = db.Column(db.DateTime, default=datetime.utcnow)
+    finished_at = db.Column(db.DateTime, nullable=True)
+
+    # Summary counts (denormalized for fast display)
+    total_platforms = db.Column(db.Integer, default=0)
+    success_count = db.Column(db.Integer, default=0)
+    fail_count = db.Column(db.Integer, default=0)
+
+    results = db.relationship(
+        "DistributionResult", back_populates="run",
+        cascade="all, delete-orphan", order_by="DistributionResult.platform"
+    )
+
+    def __repr__(self):
+        return f"<DistributionRun {self.id} post={self.blog_post_id} {self.status}>"
+
+
+class DistributionResult(db.Model):
+    """Per-platform result within a distribution run."""
+    __tablename__ = "distribution_results"
+
+    id = db.Column(db.Integer, primary_key=True)
+    run_id = db.Column(
+        db.Integer, db.ForeignKey("distribution_runs.id"), nullable=False
+    )
+    run = db.relationship("DistributionRun", back_populates="results")
+
+    platform = db.Column(db.String(30), nullable=False)  # twitter, linkedin, etc.
+    ok = db.Column(db.Boolean, default=False)
+    error = db.Column(db.Text, nullable=True)
+    post_url = db.Column(db.String(500), nullable=True)   # live link to the posted content
+    extra = db.Column(db.Text, nullable=True)              # JSON blob for platform-specific data
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<DistributionResult {self.platform} ok={self.ok}>"

@@ -9,7 +9,7 @@
 
             <!-- Success Header -->
             <div class="card p-4 mb-4 text-center">
-                <h2 style="color: #F5A623;">🤖 Prompt Refined!</h2>
+                <h1 style="color: #F5A623; font-size: 1.6rem;"><i class="fa-solid fa-robot"></i> Prompt Refined!</h1>
                 <p style="color: #C9D1D9;">
                     Our AI has transformed your idea into a cinematic prompt!
                 </p>
@@ -28,11 +28,11 @@
                 <p style="color: #888; margin: 0;">
                     Video Style:
                     <strong id="styleLabel" style="color: #F5A623;">
-                        {% if style == 'cinematic' %}🎬 Cinematic
-                        {% elif style == 'anime' %}🎌 Anime
-                        {% elif style == 'realistic' %}🌍 Realistic
-                        {% elif style == 'african' %}👑 African
-                        {% elif style == 'social' %}📱 Social Media
+                        {% if style == 'cinematic' %}<i class="fa-solid fa-clapperboard"></i> Cinematic
+                        {% elif style == 'anime' %}<i class="fa-solid fa-torii-gate"></i> Anime
+                        {% elif style == 'realistic' %}<i class="fa-solid fa-earth-africa"></i> Realistic
+                        {% elif style == 'african' %}<i class="fa-solid fa-crown"></i> African
+                        {% elif style == 'social' %}<i class="fa-solid fa-mobile-screen-button"></i> Social Media
                         {% endif %}
                     </strong>
                 </p>
@@ -40,14 +40,14 @@
 
             <!-- Refined Prompt -->
             <div class="card p-4 mb-4" style="border-color: #F5A623;">
-                <h5 style="color: #F5A623;">✨ AI Refined Prompt:</h5>
+                <h5 style="color: #F5A623;"><i class="fa-solid fa-wand-magic-sparkles"></i> AI Refined Prompt:</h5>
                 <p id="refined" style="color: #F0F6FC;">{{ refined }}</p>
             </div>
 
             <!-- Video Result -->
             <div id="videoSection" style="display:none;">
                 <div class="card p-4 mb-4 text-center" style="border-color: #27AE60;">
-                    <h5 style="color: #27AE60;">🎬 Your Video Is Ready!</h5>
+                    <h5 style="color: #27AE60;"><i class="fa-solid fa-clapperboard"></i> Your Video Is Ready!</h5>
                     <video id="videoPlayer" width="100%" controls autoplay style="border-radius: 8px; margin-top: 15px;">
                         <source id="videoSrcMp4" src="" type="video/mp4">
                         <source id="videoSrcWebm" src="" type="video/webm">
@@ -55,17 +55,17 @@
                     </video>
                     <br><br>
                     <a id="videoOpenBtn" href="#" class="btn btn-afrigen mt-3 px-4 me-3" target="_blank">
-                        🎬 Open Video
+                        <i class="fa-solid fa-clapperboard"></i> Open Video
                     </a>
                     <a id="videoDownloadBtn" href="#" class="btn btn-outline-warning mt-3 px-4" download>
-                        ⬇️ Download Video
+                        <i class="fa-solid fa-download"></i> Download Video
                     </a>
                 </div>
 
                 <!-- Share Buttons -->
                 <div class="card p-4 mb-4 text-center">
-                    <h5 style="color: #F5A623;">📤 Share it — and let them ask "how?"</h5>
-                    <p style="color: #888; margin-bottom: 0;">Shares open a page with your clip + a "make your own free" invite. That's how Afrigen grows. 🌍</p>
+                    <h5 style="color: #F5A623;"><i class="fa-solid fa-share-nodes"></i> Share it — and let them ask "how?"</h5>
+                    <p style="color: #888; margin-bottom: 0;">Shares open a page with your clip + a "make your own free" invite. That's how Afrigen grows. <i class="fa-solid fa-earth-africa"></i></p>
                     <div class="d-flex justify-content-center gap-2 mt-3 flex-wrap">
                         <a id="shareWhatsapp" href="#" target="_blank" class="btn btn-success px-3">📱 WhatsApp</a>
                         <a id="shareTwitter" href="#" target="_blank" class="btn btn-info px-3" style="color:white;">🐦 Twitter</a>

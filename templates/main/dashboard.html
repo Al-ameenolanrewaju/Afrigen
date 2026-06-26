@@ -11,9 +11,9 @@
             <div class="card p-4">
                 <div class="row align-items-center">
                     <div class="col-md-8">
-                        <h2 style="color: #F5A623;">
-                            Welcome back, {{ current_user.username }}! 🎬
-                        </h2>
+                        <h1 style="color: #F5A623; font-size: 1.75rem;">
+                            Welcome back, {{ current_user.username }}! <i class="fa-solid fa-clapperboard"></i>
+                        </h1>
                         <p style="color: #C9D1D9;">
                             Ready to create amazing African content?
                         </p>
@@ -32,13 +32,13 @@
     <div class="row mb-4">
         <div class="col-md-4 mb-3">
             <div class="card p-4 text-center">
-                <h1 style="color: #F5A623;">{{ current_user.credits }}</h1>
+                <h2 style="color: #F5A623;">{{ current_user.credits }}</h2>
                 <p style="color: #C9D1D9;">Credits Remaining</p>
             </div>
         </div>
         <div class="col-md-4 mb-3">
     <div class="card p-4 text-center">
-        <h1 style="color: #F5A623;">{{ total_generations }}</h1>
+        <h2 style="color: #F5A623;">{{ total_generations }}</h2>
         <p style="color: #C9D1D9;">Videos Generated</p>
         {% if current_user.plan == 'free' %}
         <small style="color: #888;">{{ current_user.monthly_videos_used }}/3 free videos used this month</small>
@@ -47,7 +47,7 @@
 </div>
         <div class="col-md-4 mb-3">
             <div class="card p-4 text-center">
-                <h1 style="color: #F5A623;">🌍</h1>
+                <h2 style="color: #F5A623;"><i class="fa-solid fa-earth-africa"></i></h2>
                 <p style="color: #C9D1D9;">African Creator</p>
             </div>
         </div>
@@ -55,10 +55,10 @@
 
     <!-- Connect Telegram -->
     <div class="card p-4 mb-4">
-        <h3 style="color: #F5A623;" class="mb-2">🤖 Generate on Telegram</h3>
+        <h3 style="color: #F5A623;" class="mb-2"><i class="fa-solid fa-robot"></i> Generate on Telegram</h3>
         {% if telegram_linked %}
         <p style="color: #7ee787; margin-bottom: 0;">
-            ✅ Your Telegram is connected. Message the bot and send your idea to
+            <i class="fa-solid fa-circle-check"></i> Your Telegram is connected. Message the bot and send your idea to
             generate videos & photos — it uses these same credits.
         </p>
         {% else %}
@@ -68,7 +68,7 @@
         </p>
         <button id="tgConnectBtn" class="btn btn-afrigen px-4" type="button"
                 onclick="generateTelegramCode()">
-            Get Connect Code 🔗
+            Get Connect Code <i class="fa-solid fa-link"></i>
         </button>
         <div id="tgCodeBox" style="display:none; margin-top:16px; padding:16px;
              background:#0D1117; border:1px solid #30363D; border-radius:12px;">
@@ -80,13 +80,13 @@
             </p>
             <small style="color:#888;">The code works once and expires after you link.</small>
             <p id="tgWaiting" style="display:none; color:#F5A623; margin:12px 0 0;">
-                ⏳ Waiting for you to send the code to the bot…
+                <i class="fa-solid fa-hourglass-half"></i> Waiting for you to send the code to the bot…
             </p>
         </div>
 
         <!-- Live success message once the bot binds -->
         <div id="tgLinkedBox" class="alert alert-success" style="display:none; margin-top:16px;">
-            ✅ <strong>Telegram connected successfully!</strong>
+            <i class="fa-solid fa-circle-check"></i> <strong>Telegram connected successfully!</strong>
             <span id="tgLinkedWho"></span> You can now generate videos &amp; photos
             right inside Telegram using these same credits.
         </div>
@@ -96,7 +96,7 @@
     <!-- Generate Video Form -->
     <div class="card p-4">
         <h3 style="color: #F5A623;" class="mb-4">
-            🎬 Generate A Video
+            <i class="fa-solid fa-clapperboard"></i> Generate A Video
         </h3>
 
         {% if current_user.credits > 0 %}
@@ -112,7 +112,7 @@
                            onchange="toggleGenType()">
                     <label for="gen_text" class="btn w-100"
                            style="border: 2px solid #30363D; color: #F0F6FC;">
-                        ✍️ Text to Video
+                        <i class="fa-solid fa-pen"></i> Text to Video
                     </label>
                 </div>
                 <div class="col-4">
