@@ -90,94 +90,195 @@ Return ONLY the Facebook post text."""
 
 
 def _generate_brand_awareness_post():
-    """Generates an image prompt, an image via FAL, and a caption, then posts to Facebook."""
-    # Topics to rotate
+    """Generates a premium Afrigen brand awareness post with AI image and publishes to Facebook."""
+
     topics = [
-        "Afrigen helps Nigerian creators turn text into stunning AI videos.",
-        "Afrigen saves small businesses money by generating high-quality product promo videos without a camera crew.",
-        "AI creativity is evolving. Afrigen empowers African artists with cutting-edge tools.",
-        "Stop struggling with content creation. Use Afrigen to bring your ideas to life.",
-        "Premium AI image generation for African startups and creators.",
-        "Turn your imagination into reality with Afrigen's AI tools.",
-        "The future of African storytelling is powered by AI and Afrigen."
+        "Afrigen is building AI tools that help African creators turn ideas into professional visual content.",
+        "African storytelling is entering a new era where creators can produce more with fewer resources.",
+        "Small businesses need better ways to create marketing content. AI is changing how brands tell their stories.",
+        "Every great video starts with an idea. Afrigen helps creators transform those ideas into visuals.",
+        "The future of content creation will combine human creativity with artificial intelligence.",
+        "We are exploring how AI can help African creators, startups, and businesses compete globally.",
+        "Creators should spend more time creating and less time fighting complicated production workflows.",
+        "AI is not replacing creativity. It is giving more people the tools to express their creativity."
     ]
-    
-    # Pick a random topic, but try to find one not recently posted
-    recent_posts = FacebookPostHistory.query.filter_by(content_type='brand_awareness')\
-                                      .order_by(FacebookPostHistory.timestamp.desc()).limit(10).all()
+
+    # Avoid repeating recent topics
+    recent_posts = (
+        FacebookPostHistory.query
+        .filter_by(content_type='brand_awareness')
+        .order_by(FacebookPostHistory.timestamp.desc())
+        .limit(10)
+        .all()
+    )
+
     recent_texts = [p.post_text for p in recent_posts]
-    
+
     topic = random.choice(topics)
-    # Simple deduplication attempt: try to find a topic not in recent texts
+
     for t in topics:
-        if not any(t[:30] in text for text in recent_texts):
+        if not any(t[:40] in text for text in recent_texts):
             topic = t
             break
 
-    print(f"[facebook_engine] Generating brand awareness assets for topic: '{topic[:50]}...'")
-
-    # 1. Generate Image Prompt
-    img_system = (
-        "You are an expert AI image prompt engineer for Afrigen, an African AI platform. "
-        "You create premium, highly detailed prompts for image generation models."
+    print(
+        f"[facebook_engine] Generating Afrigen brand post for topic: '{topic[:60]}...'"
     )
-    img_user = f"""Create a premium image generation prompt for Afrigen based on this topic:
+
+
+    # =========================
+    # IMAGE PROMPT GENERATION
+    # =========================
+
+    img_system = """
+You are an expert AI image prompt engineer creating visuals for Afrigen,
+an African AI creativity startup.
+
+Your job is to create premium startup-quality image prompts.
+"""
+
+    img_user = f"""
+Create a cinematic image generation prompt based on:
+
 "{topic}"
 
 Requirements:
-- Futuristic AI creativity theme
-- African creative identity (e.g. diverse creators, modern African cities/studios)
-- Professional startup/company style
-- High quality, cinematic, realistic lighting
-- NO text inside the image.
+- Premium technology startup aesthetic
+- African creators using advanced AI technology
+- Modern African workspace, studio, or city environment
+- Diverse realistic African people
+- Futuristic but believable
+- Professional brand photography style
+- High quality cinematic lighting
+- Suitable for a company social media page
+- No text inside image
+- No logos
+- No watermark
 
-Return ONLY the image prompt (1-3 sentences)."""
-    
-    image_prompt = _call(img_system, img_user, max_tokens=300).strip()
-    # Strip any potential quotes
-    image_prompt = image_prompt.strip('"\'')
+Return ONLY the image prompt.
+"""
 
-    # 2. Generate Caption
-    cap_system = (
-        "You are a social media manager for Afrigen. You write professional, inspiring, "
-        "and engaging brand awareness posts for Facebook."
-    )
-    cap_user = f"""Write a Facebook post based on this topic:
+    image_prompt = _call(
+        img_system,
+        img_user,
+        max_tokens=300
+    ).strip()
+
+    image_prompt = image_prompt.strip("\"'")
+
+
+    # =========================
+    # CAPTION GENERATION
+    # =========================
+
+    cap_system = """
+You are the official social media voice of Afrigen,
+an African AI creativity company.
+
+Write posts like a professional technology startup.
+
+Tone:
+- Visionary
+- Human
+- Professional
+- Confident
+- Community focused
+
+Avoid:
+- "Exciting news!"
+- Generic marketing language
+- Hard selling
+- Sounding like AI generated text
+- Too many emojis
+
+The post should feel like it was written by the Afrigen team or founder.
+"""
+
+    cap_user = f"""
+Create a Facebook post about:
+
 "{topic}"
 
-Rules:
-- Feel like an update from a real technology company.
-- Professional but friendly, use emojis naturally.
-- Drive engagement (ask a question).
-- End with our website: {WEBSITE_URL} and Facebook Page: {FACEBOOK_URL}
+Requirements:
+- Start with a strong opening idea.
+- Explain why this matters.
+- Mention Afrigen naturally.
+- Encourage discussion with a question.
+- Build trust with the audience.
+- Keep it between 100-200 words.
+- Use maximum 3 emojis.
+- End with:
 
-Return ONLY the Facebook post text."""
-    
-    caption = _call(cap_system, cap_user, max_tokens=600).strip()
+{WEBSITE_URL}
+
+Return ONLY the Facebook post text.
+"""
+
+    caption = _call(
+        cap_system,
+        cap_user,
+        max_tokens=600
+    ).strip()
+
 
     print("\n--------------------------------------------------")
-    print(f"Post Type: Brand Awareness")
+    print("Post Type: Brand Awareness")
     print(f"Image Prompt:\n{image_prompt}")
     print(f"Caption:\n{caption}")
-    print(f"Target Facebook Page ID: {os.environ.get('FACEBOOK_PAGE_ID')}")
+    print(
+        f"Target Facebook Page ID: {os.environ.get('FACEBOOK_PAGE_ID')}"
+    )
     print("--------------------------------------------------\n")
 
-    # 3. Generate Image
-    print("[facebook_engine] Generating image via FAL...")
-    image_result = generate_image(image_prompt, style="african")
-    
-    if not image_result.get("success"):
-        print(f"[facebook_engine] ❌ Image generation failed: {image_result.get('error')}")
-        return {"ok": False, "error": image_result.get("error")}
-    
-    image_url = image_result["image_url"]
-    print(f"[facebook_engine] ✅ Image generated: {image_url}")
 
-    # 4. Post to Facebook
+    # =========================
+    # IMAGE GENERATION
+    # =========================
+
+    print("[facebook_engine] Generating image via FAL...")
+
+    image_result = generate_image(
+        image_prompt,
+        style="african"
+    )
+
+    if not image_result.get("success"):
+        print(
+            f"[facebook_engine] ❌ Image generation failed: {image_result.get('error')}"
+        )
+
+        return {
+            "ok": False,
+            "error": image_result.get("error")
+        }
+
+
+    image_url = image_result["image_url"]
+
+    print(
+        f"[facebook_engine] ✅ Image generated: {image_url}"
+    )
+
+
+    # =========================
+    # FACEBOOK POST
+    # =========================
+
     print("[facebook_engine] Publishing photo to Facebook...")
-    result = post_photo_to_page(image_url, caption)
-    
-    _log_result(result, content_type='brand_awareness', post_text=caption, image_used=image_url)
+
+    result = post_photo_to_page(
+        image_url,
+        caption
+    )
+
+
+    _log_result(
+        result,
+        content_type="brand_awareness",
+        post_text=caption,
+        image_used=image_url
+    )
+
     return result
 
 
