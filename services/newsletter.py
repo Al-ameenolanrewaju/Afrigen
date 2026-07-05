@@ -37,76 +37,38 @@ AFRIGEN_FEATURES = [
 # ---------- AI generation (Groq, grounded in our own product + blog) ----------
 
 def generate_weekly_digest(stats=None):
-    """Write this week's Afrigen newsletter with Groq.
+    """Write this week's Afrigen newsletter using Content Engine.
 
     Grounded in our REAL features and REAL published blog posts (with their exact
     URLs) so nothing is invented. Returns (subject, body_html). Raises on
     API/config errors so callers can surface the problem instead of silently
     sending an empty email.
     """
-    from services.claude import client as groq_client  # reuse the initialised Groq client
     from services.blog import get_all_posts
+    import sys
+    import os
+    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if root_dir not in sys.path:
+        sys.path.insert(0, root_dir)
+        
+    from content_engine import ContentPlanner, generate_content_brief, write_newsletter
+
+    # 1. Use Planner to pick a newsletter topic/category
+    planner = ContentPlanner()
+    category = planner.select_category()
 
     stats = stats or {}
-    today = date.today().strftime("%B %d, %Y")
-    users = stats.get("total_users", 0)
-    generations = stats.get("total_generations", 0)
-
-    # Feature the newest published guides, with absolute URLs the model must reuse
-    # verbatim (so it can never link to a slug that doesn't exist).
     posts = get_all_posts()[:5]
-    if posts:
-        posts_block = "\n".join(
-            f"- {p.title} | {(p.description or '').strip()} | {BASE_URL}/blog/{p.slug}"
-            for p in posts
-        )
-    else:
-        posts_block = "(no blog posts published yet — skip the 'From the blog' section)"
+    
+    # 2. Generate Master Brief
+    # We can use the latest blog post as context, or a general theme
+    source_context = f"Newsletter Edition. Focus on Afrigen updates, AI tools, and African creativity. Latest post: {posts[0].title if posts else 'General AI Update'}"
+    brief = generate_content_brief(category, source_context)
 
-    features_block = "\n".join(f"- {f}" for f in AFRIGEN_FEATURES)
-
-    system_message = (
-        "You are the editor of Afrigen's weekly email newsletter. Afrigen is an African "
-        "AI platform for generating videos and images from text prompts (tagline "
-        "'Africa Creates, AI Generates'). You write warm, concise, skimmable newsletters "
-        "for Nigerian and African content creators and small businesses. The newsletter "
-        "is about Afrigen itself — our features, our guides, and practical tips — NOT a "
-        "summary of outside tech news."
-    )
-    user_message = f"""Today is {today}. Write this week's Afrigen newsletter.
-
-WHAT AFRIGEN CAN DO (only ever mention features from this list — never invent any):
-{features_block}
-
-OUR PUBLISHED BLOG GUIDES (format: Title | description | URL — use the URLs EXACTLY as written, never change or invent a slug):
-{posts_block}
-
-OUR COMMUNITY RIGHT NOW: {users} creators, {generations} generations.
-
-Write the newsletter with these sections, in this order:
-1. A short, warm one-line opener.
-2. "Feature spotlight" — pick ONE feature from the list and explain in 2-3 sentences how a creator would actually use it to get more views or sales. Make it concrete.
-3. "From the blog" — pick 2 or 3 of the guides above and write one short line for each, linking the title with an <a> tag to its exact URL. (Skip this section entirely if no guides are listed.)
-4. "Quick tip" — one genuinely useful, specific tip for an African creator (about prompting, formatting for a platform, or posting). One short paragraph.
-5. "Afrigen this week" — mention our {users} creators and {generations} generations, and invite readers to create something now with a link to {BASE_URL}/dashboard.
-
-HARD RULES:
-- Do NOT mention any feature that is not in the list above.
-- Do NOT invent blog links, slugs, statistics, partnerships, or outside news.
-- Keep it warm, concrete, and skimmable — no vague filler ("in today's fast-paced world", "unlock the power of", "game-changer").
-- The FIRST line must be exactly:  SUBJECT: <a punchy subject line under 70 chars>
-- After that line, output the email BODY as simple inline HTML using only <h3>, <p>, <strong>, <a> tags (no <html>, <head>, <body>, or <style> tags)."""
-
-    response = groq_client.chat.completions.create(
-        model=NEWSLETTER_MODEL,
-        messages=[
-            {"role": "system", "content": system_message},
-            {"role": "user", "content": user_message},
-        ],
-        max_tokens=1600,
-    )
-    text = _clean_html(_strip_code_fences((response.choices[0].message.content or "").strip()))
-    return _split_subject(text, fallback_subject=f"Afrigen Weekly — {today}")
+    # 3. Generate newsletter via Content Engine
+    generated = write_newsletter(brief=brief, stats=stats, posts=posts)
+    
+    return generated.extra_fields.get("subject", "Afrigen Weekly"), generated.content
 
 
 def _strip_code_fences(text):

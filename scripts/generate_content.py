@@ -546,17 +546,13 @@ Return ONLY valid JSON, no markdown fences, no commentary."""
 
 
 # ---------------------------------------------------------------------------
-# Bulk generation
+# Bulk generation using Content Engine
 # ---------------------------------------------------------------------------
 
-# The ONLY platforms the pipeline currently publishes to. Disabled integrations
-# (twitter, facebook, instagram, medium, hashnode) keep their generators above for
-# easy re-enable, but are intentionally excluded here so they never run or block a run.
-#
-# hashnode is disabled because Hashnode retired its free GraphQL API — gql.hashnode.com
-# now serves an HTML "moving to a paid offering" page instead of accepting publishPost,
-# so every run failed. Re-add it here only after subscribing to Hashnode's paid API tier.
 ACTIVE_PLATFORMS = ["telegram", "linkedin", "devto", "pinterest"]
+
+# We keep pinterest_pin as it is since it doesn't have a new writer yet (per instructions, we focused on Facebook, LinkedIn, Telegram, Newsletter, Dev.to).
+# I'll keep the old generators accessible.
 
 _GENERATORS = {
     "telegram": telegram_prompt,
@@ -571,21 +567,76 @@ _GENERATORS = {
     "medium": medium_article,
 }
 
-
 def generate_all(post: dict) -> list[dict]:
     """Generate content for every ACTIVE platform. Returns list of result dicts.
-    Each failure is caught and returned as {platform, error} so one broken
-    generation doesn't block the rest."""
+    Uses the new Content Engine for supported platforms."""
+    import sys
+    import os
+    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if root_dir not in sys.path:
+        sys.path.insert(0, root_dir)
+        
+    from content_engine import (
+        ContentPlanner, generate_content_brief, ContentCategory,
+        write_linkedin_post, write_telegram_post, write_devto_article
+    )
+    
+    # 1. Generate Master Brief
+    # Since it's from a blog post, the category is BLOG_POST
+    try:
+        source_context = f"Title: {post['title']}\nDescription: {post.get('description', '')}\nBody:\n{post.get('body', '')[:3000]}"
+        brief = generate_content_brief(ContentCategory.BLOG_POST, source_context, source_blog=post)
+    except Exception as e:
+        print(f"[generate] ⚠️ Master Brief generation failed: {e}. Falling back to legacy generators.")
+        brief = None
+    
     results = []
     for name in ACTIVE_PLATFORMS:
+        if name == "linkedin" and brief:
+            try:
+                gen = write_linkedin_post(brief)
+                results.append({"platform": name, "content": gen.content})
+                print(f"[generate] ✅ {name} content ready (Content Engine)")
+                continue
+            except Exception as e:
+                print(f"[generate] ❌ {name} (Content Engine) FAILED: {e}")
+                results.append({"platform": name, "error": str(e)})
+                continue
+                
+        if name == "telegram" and brief:
+            try:
+                gen = write_telegram_post(brief)
+                results.append({"platform": name, "content": gen.content})
+                print(f"[generate] ✅ {name} content ready (Content Engine)")
+                continue
+            except Exception as e:
+                print(f"[generate] ❌ {name} (Content Engine) FAILED: {e}")
+                results.append({"platform": name, "error": str(e)})
+                continue
+                
+        if name == "devto" and brief:
+            try:
+                gen = write_devto_article(brief)
+                res = {"platform": name, "content": gen.content}
+                res.update(gen.extra_fields)
+                results.append(res)
+                print(f"[generate] ✅ {name} content ready (Content Engine)")
+                continue
+            except Exception as e:
+                print(f"[generate] ❌ {name} (Content Engine) FAILED: {e}")
+                results.append({"platform": name, "error": str(e)})
+                continue
+
+        # Fallback to legacy generators
         fn = _GENERATORS.get(name)
         if not fn:
             print(f"[generate] ⚠️ {name} has no generator — skipping")
             continue
         try:
             results.append(fn(post))
-            print(f"[generate] ✅ {name} content ready")
+            print(f"[generate] ✅ {name} content ready (Legacy)")
         except Exception as e:
-            print(f"[generate] ❌ {name} FAILED: {e}")
+            print(f"[generate] ❌ {name} (Legacy) FAILED: {e}")
             results.append({"platform": name, "error": str(e)})
+            
     return results

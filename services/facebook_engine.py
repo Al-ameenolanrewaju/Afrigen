@@ -1,4 +1,6 @@
 """
+DEPRECATED: This module is deprecated. Use `content_engine.cli` instead.
+
 Daily Facebook Automation Engine.
 Checks for new blog posts and creates an announcement.
 If no new post, generates a brand awareness post with AI images.
@@ -52,120 +54,46 @@ def run_daily_facebook_engine():
 
 
 def _generate_blog_update_post(blog: BlogPost, blog_url: str):
-    """Generates and posts a short announcement for a new blog article."""
-    system = """You are NOT a copywriter.
-You are the founder of Afrigen.
-
-Every Facebook post should sound like a real thought shared with the community.
-Your mission is to make people stop scrolling because they relate to what you're saying—not because you're advertising something.
-
-About Afrigen
-Afrigen is building AI tools that help African creators and businesses create professional images and videos.
-You genuinely believe AI will help African creators compete globally.
-That belief should naturally appear in your writing.
-
-Never "sell."
-Share ideas."""
-
-    user = f"""YOUR JOB
-
-Do NOT summarize the article.
-Instead, identify ONE interesting insight, challenge, misconception, or opportunity from the article and build the entire post around that.
-
-The writing process
-Before writing, silently ask yourself:
-"What would make someone stop scrolling?"
-"What opinion would start a discussion?"
-"What real frustration does this solve?"
-"What would a founder actually say?"
-Only then begin writing.
-
-Input:
-Blog title: {blog.title}
-Blog URL: {blog_url}
-
-Structure
-Start with a real observation.
-Examples:
-"I've noticed something..."
-"One thing many businesses underestimate..."
-"Most creators don't have a creativity problem."
-"We've spoken to many founders recently..."
-Avoid sounding scripted.
-
-Then explain the idea naturally.
-Write like you're talking to another entrepreneur.
-
-Build curiosity.
-Do NOT explain everything.
-Leave readers wanting more.
-
-Invite them to read the article.
-Use exactly one link:
-👉 {blog_url}
-
-Finish with one question that people genuinely want to answer.
-Examples:
-What's your experience?
-Have you noticed this too?
-Would this save you time?
-What's holding you back?
-
-Writing style
-Short paragraphs.
-Natural rhythm.
-No long walls of text.
-One sentence paragraphs are encouraged.
-Use everyday English.
-No jargon. No buzzwords. No corporate language.
-
-Words to avoid completely
-Never write:
-Exciting news
-Latest blog
-We're excited
-Check it out
-Game changer
-Revolutionary
-Cutting-edge
-Transform your business
-Unlock the power of
-Next level
-Don't miss this
-
-Emojis
-Maximum 3. Only where they naturally fit.
-
-Hashtags
-Maximum 2. Only #AfrigenAI and one other relevant hashtag.
-
-Important
-The post should never feel like marketing.
-It should feel like someone sharing an interesting thought.
-Someone should finish reading it before they even realize it's promoting a blog.
-If it sounds like an advertisement, rewrite it automatically.
-
-Return ONLY the Facebook post."""
-
-    print("[facebook_engine] Generating blog announcement caption...")
-    caption = _call(system, user, max_tokens=600).strip()
+    """Generates and posts a short announcement for a new blog article using Content Engine."""
+    from content_engine import generate_content_brief, ContentCategory, write_facebook_post, publish_facebook_post
     
-    print("\n--------------------------------------------------")
-    print(f"Post Type: Blog Update")
-    print(f"Caption:\n{caption}")
-    print(f"Target Facebook Page ID: {os.environ.get('FACEBOOK_PAGE_ID')}")
-    print("--------------------------------------------------\n")
-
-    print("[facebook_engine] Publishing to Facebook...")
-    result = post_to_page(caption)
+    print("[facebook_engine] Generating blog announcement via Content Engine...")
     
-    _log_result(result, content_type='blog_update', post_text=caption, blog_url=blog_url)
-    return result
+    source_context = f"Title: {blog.title}\nDescription: {blog.description}\nBody:\n{blog.body[:3000]}"
+    
+    try:
+        # Create brief
+        post_dict = {"slug": blog.slug, "title": blog.title, "description": blog.description, "body": blog.body}
+        brief = generate_content_brief(ContentCategory.BLOG_POST, source_context, source_blog=post_dict)
+        
+        # Generate post
+        generated_post = write_facebook_post(brief)
+        caption = generated_post.content
+        
+        print("\n--------------------------------------------------")
+        print(f"Post Type: Blog Update")
+        print(f"Caption:\n{caption}")
+        print(f"Target Facebook Page ID: {os.environ.get('FACEBOOK_PAGE_ID')}")
+        print("--------------------------------------------------\n")
+
+        print("[facebook_engine] Publishing to Facebook...")
+        result = publish_facebook_post(generated_post)
+        
+        _log_result(result, content_type='blog_update', post_text=caption, blog_url=blog_url)
+        return result
+    except Exception as e:
+        print(f"[facebook_engine] ❌ Failed in Content Engine: {e}")
+        return {"ok": False, "error": str(e)}
 
 
 def _generate_brand_awareness_post():
-    """Generates a premium Afrigen brand awareness post with AI image and publishes to Facebook."""
+    """Generates a premium Afrigen brand awareness post with AI image and publishes to Facebook using Content Engine."""
+    from content_engine import ContentPlanner, generate_content_brief, write_facebook_post, publish_facebook_post
 
+    planner = ContentPlanner()
+    category = planner.select_category()
+
+    # The topics here can just act as a seed/source material
     topics = [
         "Afrigen is building AI tools that help African creators turn ideas into professional visual content.",
         "African storytelling is entering a new era where creators can produce more with fewer resources.",
@@ -177,183 +105,60 @@ def _generate_brand_awareness_post():
         "AI is not replacing creativity. It is giving more people the tools to express their creativity."
     ]
 
-    # Avoid repeating recent topics
-    recent_posts = (
-        FacebookPostHistory.query
-        .filter_by(content_type='brand_awareness')
-        .order_by(FacebookPostHistory.timestamp.desc())
-        .limit(10)
-        .all()
-    )
-
-    recent_texts = [p.post_text for p in recent_posts]
-
+    # Select a topic avoiding recent ones using Planner history
     topic = random.choice(topics)
-
     for t in topics:
-        if not any(t[:40] in text for text in recent_texts):
+        if not planner.is_topic_recent(t):
             topic = t
             break
+            
+    planner.record_topic(topic)
 
-    print(
-        f"[facebook_engine] Generating Afrigen brand post for topic: '{topic[:60]}...'"
-    )
+    print(f"[facebook_engine] Generating Afrigen brand post for category: {category.value}, topic: '{topic[:60]}...'")
 
+    try:
+        # Create Master Brief
+        brief = generate_content_brief(category, source_context=topic)
+        
+        # 1. Generate Image Prompt directly here (could also be part of Content Engine, but keeping it simple)
+        img_system = "You are an expert AI image prompt engineer creating visuals for Afrigen, an African AI creativity startup. Your job is to create premium startup-quality image prompts."
+        img_user = f"Create a cinematic image generation prompt based on:\n\n\"{brief.topic}\"\n\nRequirements:\n- Premium technology startup aesthetic\n- African creators using advanced AI technology\n- Modern African workspace, studio, or city environment\n- Diverse realistic African people\n- Futuristic but believable\n- Professional brand photography style\n- High quality cinematic lighting\n- Suitable for a company social media page\n- No text inside image\n- No logos\n- No watermark\n\nReturn ONLY the image prompt."
+        
+        from scripts.generate_content import _call
+        image_prompt = _call(img_system, img_user, max_tokens=300).strip().strip("\"'")
 
-    # =========================
-    # IMAGE PROMPT GENERATION
-    # =========================
+        # 2. Generate Caption using Content Engine Facebook Writer
+        generated_post = write_facebook_post(brief)
+        caption = generated_post.content
 
-    img_system = """
-You are an expert AI image prompt engineer creating visuals for Afrigen,
-an African AI creativity startup.
+        print("\n--------------------------------------------------")
+        print("Post Type: Brand Awareness")
+        print(f"Image Prompt:\n{image_prompt}")
+        print(f"Caption:\n{caption}")
+        print(f"Target Facebook Page ID: {os.environ.get('FACEBOOK_PAGE_ID')}")
+        print("--------------------------------------------------\n")
 
-Your job is to create premium startup-quality image prompts.
-"""
+        # 3. Generate Image
+        print("[facebook_engine] Generating image via FAL...")
+        image_result = generate_image(image_prompt, style="african")
 
-    img_user = f"""
-Create a cinematic image generation prompt based on:
+        if not image_result.get("success"):
+            print(f"[facebook_engine] ❌ Image generation failed: {image_result.get('error')}")
+            return {"ok": False, "error": image_result.get("error")}
 
-"{topic}"
+        image_url = image_result["image_url"]
+        generated_post.extra_fields["image_url"] = image_url
+        print(f"[facebook_engine] ✅ Image generated: {image_url}")
 
-Requirements:
-- Premium technology startup aesthetic
-- African creators using advanced AI technology
-- Modern African workspace, studio, or city environment
-- Diverse realistic African people
-- Futuristic but believable
-- Professional brand photography style
-- High quality cinematic lighting
-- Suitable for a company social media page
-- No text inside image
-- No logos
-- No watermark
+        # 4. Publish via Content Engine Publisher
+        print("[facebook_engine] Publishing photo to Facebook...")
+        result = publish_facebook_post(generated_post)
 
-Return ONLY the image prompt.
-"""
-
-    image_prompt = _call(
-        img_system,
-        img_user,
-        max_tokens=300
-    ).strip()
-
-    image_prompt = image_prompt.strip("\"'")
-
-
-    # =========================
-    # CAPTION GENERATION
-    # =========================
-
-    cap_system = """
-You are the official social media voice of Afrigen,
-an African AI creativity company.
-
-Write posts like a professional technology startup.
-
-Tone:
-- Visionary
-- Human
-- Professional
-- Confident
-- Community focused
-
-Avoid:
-- "Exciting news!"
-- Generic marketing language
-- Hard selling
-- Sounding like AI generated text
-- Too many emojis
-
-The post should feel like it was written by the Afrigen team or founder.
-"""
-
-    cap_user = f"""
-Create a Facebook post about:
-
-"{topic}"
-
-Requirements:
-- Start with a strong opening idea.
-- Explain why this matters.
-- Mention Afrigen naturally.
-- Encourage discussion with a question.
-- Build trust with the audience.
-- Keep it between 100-200 words.
-- Use maximum 3 emojis.
-- End with:
-
-{WEBSITE_URL}
-
-Return ONLY the Facebook post text.
-"""
-
-    caption = _call(
-        cap_system,
-        cap_user,
-        max_tokens=600
-    ).strip()
-
-
-    print("\n--------------------------------------------------")
-    print("Post Type: Brand Awareness")
-    print(f"Image Prompt:\n{image_prompt}")
-    print(f"Caption:\n{caption}")
-    print(
-        f"Target Facebook Page ID: {os.environ.get('FACEBOOK_PAGE_ID')}"
-    )
-    print("--------------------------------------------------\n")
-
-
-    # =========================
-    # IMAGE GENERATION
-    # =========================
-
-    print("[facebook_engine] Generating image via FAL...")
-
-    image_result = generate_image(
-        image_prompt,
-        style="african"
-    )
-
-    if not image_result.get("success"):
-        print(
-            f"[facebook_engine] ❌ Image generation failed: {image_result.get('error')}"
-        )
-
-        return {
-            "ok": False,
-            "error": image_result.get("error")
-        }
-
-
-    image_url = image_result["image_url"]
-
-    print(
-        f"[facebook_engine] ✅ Image generated: {image_url}"
-    )
-
-
-    # =========================
-    # FACEBOOK POST
-    # =========================
-
-    print("[facebook_engine] Publishing photo to Facebook...")
-
-    result = post_photo_to_page(
-        image_url,
-        caption
-    )
-
-
-    _log_result(
-        result,
-        content_type="brand_awareness",
-        post_text=caption,
-        image_used=image_url
-    )
-
-    return result
+        _log_result(result, content_type="brand_awareness", post_text=caption, image_used=image_url)
+        return result
+    except Exception as e:
+        print(f"[facebook_engine] ❌ Failed in Content Engine: {e}")
+        return {"ok": False, "error": str(e)}
 
 
 def _log_result(result, content_type, post_text, blog_url=None, image_used=None):

@@ -140,15 +140,16 @@ def generate_daily_blog_draft():
         except Exception as e:
             print(f"Daily blog draft generation failed: {e}")
 
-@scheduler.task('cron', id='generate_daily_facebook_post', hour=10)
-def generate_daily_facebook_post():
-    """10am daily: run the Facebook page automation engine."""
+@scheduler.task('cron', id='generate_daily_content', hour=10)
+def generate_daily_content():
+    """10am daily: run the Content Engine automation."""
     with app.app_context():
         try:
-            from services.facebook_engine import run_daily_facebook_engine
-            run_daily_facebook_engine()
+            from content_engine.pipeline import ContentPipeline
+            pipeline = ContentPipeline()
+            pipeline.run_automatic()
         except Exception as e:
-            print(f"Daily Facebook generation failed: {e}")
+            print(f"Daily Content Engine generation failed: {e}")
 
 
 import logging

@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """
+DEPRECATED: This module is deprecated. Use `content_engine.cli manual dry_run` or `publish_blog` instead.
+
 Content distribution orchestrator for Afrigen blog posts.
 
 Triggered by:
@@ -197,6 +199,12 @@ def distribute(blog_url: str) -> dict:
         "started_at": datetime.now(timezone.utc).isoformat(),
         "platforms": {},
     }
+
+    if os.environ.get("DRY_RUN") == "true":
+        print(f"\n{'='*60}")
+        print(f"[distribute] 🚧 DRY RUN MODE ACTIVATED 🚧")
+        print(f"{'='*60}")
+        results["dry_run"] = True
 
     # 1. Resolve blog content
     print(f"\n{'='*60}")

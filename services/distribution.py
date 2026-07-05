@@ -280,52 +280,69 @@ def _execute_run(run_id: int):
 def _post_to_platform(platform: str, content: dict, post: dict) -> dict:
     """Post generated content to a single platform. Returns result dict.
 
-    Only the ACTIVE platforms (telegram, linkedin, devto, hashnode) are handled.
-    Disabled platforms (twitter/facebook/instagram/medium) are no longer generated,
-    so they should never reach here; if one does, it's reported, not crashed."""
-    from generate_content import SITE_URL
-    canonical = content.get("canonicalUrl", f"{SITE_URL}/blog/{post['slug']}")
+    Uses Content Engine publishers where available, falling back to legacy integration."""
+    import sys
+    import os
+    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if root_dir not in sys.path:
+        sys.path.insert(0, root_dir)
+        
+    from content_engine.models import GeneratedContent
+
+    canonical = content.get("canonicalUrl", f"{os.environ.get('SITE_URL', 'afrigen.com.ng')}/blog/{post['slug']}")
+
+    # Create a unified GeneratedContent wrapper to pass to new publishers
+    generated = GeneratedContent(
+        platform=platform,
+        content=content.get("content", ""),
+        extra_fields={
+            "title": content.get("title", post["title"]),
+            "tags": content.get("tags", []),
+            "canonicalUrl": canonical,
+            "description": content.get("description", ""),
+            "subtitle": content.get("subtitle", "")
+        }
+    )
 
     if platform == "telegram":
-        from platforms.telegram import post_to_channel
-        return post_to_channel(content.get("content", ""))
+        from content_engine import publish_telegram_post
+        return publish_telegram_post(generated)
 
     elif platform == "linkedin":
-        from platforms.linkedin import post_article
-        return post_article(content.get("content", ""))
+        from content_engine import publish_linkedin_post
+        return publish_linkedin_post(generated)
 
     elif platform == "devto":
-        from platforms.devto import publish_article
-        return publish_article(
-            title=content.get("title", post["title"]),
-            content=content.get("content", ""),
-            tags=content.get("tags", []),
-            canonical_url=canonical,
-            description=content.get("description", ""),
-        )
+        from content_engine import publish_devto_article
+        return publish_devto_article(generated)
 
+    elif platform == "facebook":
+        from content_engine import publish_facebook_post
+        return publish_facebook_post(generated)
+        
+    # Legacy fallbacks for platforms not fully migrated to the Engine yet
     elif platform == "hashnode":
         from platforms.hashnode import publish_article
         return publish_article(
-            title=content.get("title", post["title"]),
-            content=content.get("content", ""),
-            tags=content.get("tags", []),
+            title=generated.extra_fields["title"],
+            content=generated.content,
+            tags=generated.extra_fields["tags"],
             canonical_url=canonical,
-            subtitle=content.get("subtitle", ""),
+            subtitle=generated.extra_fields["subtitle"],
         )
 
     elif platform == "pinterest":
         from platforms.pinterest import create_pin
         return create_pin(
-            title=content.get("title", post["title"]),
-            description=content.get("description", ""),
+            title=generated.extra_fields["title"],
+            description=generated.extra_fields["description"],
             link=content.get("link", canonical),
             image_url=content.get("image_url", ""),
             image_title=content.get("image_title", post.get("title", "")),
         )
 
     else:
-        return {"ok": False, "error": f"Platform '{platform}' is not active"}
+        return {"ok": False, "error": f"Platform '{platform}' is not active or supported"}
 
 
 def _ping_google(slug: str, run: DistributionRun):
