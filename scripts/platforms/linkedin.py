@@ -141,6 +141,7 @@ def _post_ugc(text: str, access_token: str, person_id: str, headers: dict) -> di
             "com.linkedin.ugc.ShareContent": {
                 "shareCommentary": {"text": text},
                 "shareMediaCategory": "NONE",
+                "tone": tone,
             }
         },
         "visibility": {"com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"},

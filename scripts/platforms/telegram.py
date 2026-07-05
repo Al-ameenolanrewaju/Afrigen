@@ -28,11 +28,12 @@ import requests
 TELEGRAM_API = "https://api.telegram.org"
 
 
-def post_to_channel(text: str) -> dict:
+def post_to_channel(text: str, concise: bool = True) -> dict:
     """Post a message to the Telegram broadcast channel.
 
     Args:
         text: The formatted message to post.
+        concise: Whether the post should be concise.
 
     Returns:
         {ok: bool, message_id: int|None, error: str|None}
@@ -48,6 +49,8 @@ def post_to_channel(text: str) -> dict:
         }
 
     try:
+        if concise:
+            text = text[:200]  # truncate to 200 characters
         resp = requests.post(
             f"{TELEGRAM_API}/bot{bot_token}/sendMessage",
             json={

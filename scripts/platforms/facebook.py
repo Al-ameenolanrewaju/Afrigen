@@ -20,11 +20,12 @@ import requests
 GRAPH_API = "https://graph.facebook.com/v19.0"
 
 
-def post_to_page(text: str) -> dict:
+def post_to_page(text: str, link: str = None) -> dict:
     """Post a text update to a Facebook Page feed.
 
     Args:
         text: The post body.
+        link: The link to include in the post.
 
     Returns:
         {ok: bool, post_id: str|None, post_url: str|None, error: str|None}
@@ -41,12 +42,16 @@ def post_to_page(text: str) -> dict:
         }
 
     try:
+        data = {
+            "message": text,
+            "link": link,
+            "access_token": access_token,
+        }
+        if link:
+            data["link"] = link
         resp = requests.post(
             f"{GRAPH_API}/{page_id}/feed",
-            data={
-                "message": text,
-                "access_token": access_token,
-            },
+            data=data,
             timeout=15,
         )
         data = resp.json()
