@@ -85,7 +85,7 @@ def _strip_code_fences(text):
 # Tags that take no attributes in our newsletter HTML. The model occasionally
 # fumbles their opening tag — e.g. it writes `<p"Hello` or `<p">Hello` instead of
 # `<p>Hello` — which then renders as broken text in the email. Normalise those.
-_ATTRLESS_TAGS = ("p", "h3", "strong", "ul", "li", "em", "br")
+_ATTRLESS_TAGS = ("p", "h1", "h2", "h3", "h4", "strong", "ul", "li", "em", "br", "div", "span")
 
 
 def _clean_html(text):

@@ -44,10 +44,14 @@ def validate_telegram(content: str) -> Tuple[bool, str]:
     return True, ""
 
 def validate_newsletter(content: str) -> Tuple[bool, str]:
-    # Expecting HTML structure and 'SUBJECT:' which is already stripped by the writer
-    # Actually, the writer splits the subject. So we validate the final body.
-    if "<p>" not in content and not re.search(r'<h[1-6]>', content) and "<ul>" not in content:
+    # We are generating a full layout inside a div.
+    # Check if there's basic HTML structure in the response (e.g. <div, <p, <h)
+    if not any(tag in content.lower() for tag in ["<div", "<p", "<h1", "<h2", "<h3", "<h4", "<span"]):
         return False, "Missing expected HTML structure tags."
+    
+    if "href=" not in content.lower():
+        return False, "Missing links in the newsletter (e.g., CTA or blog links)."
+        
     return True, ""
 
 def validate_devto(content: str) -> Tuple[bool, str]:

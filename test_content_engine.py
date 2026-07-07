@@ -76,13 +76,13 @@ def test_telegram_validator():
     assert validate_telegram(long_text)[0] is False
 
 def test_newsletter_validator():
-    valid = "<h3>Welcome</h3><p>Text</p><ul><li>Point</li></ul>"
+    valid = '<div><h3>Welcome</h3><p>Text</p><a href="http://link.com">Link</a></div>'
     invalid = "Just plain text"
     assert validate_newsletter(valid)[0] is True
     assert validate_newsletter(invalid)[0] is False
 
 def test_devto_validator():
-    valid = "Some article content"
+    valid = '{"title": "Test Title", "body": "Some article content"}'
     invalid = "   "
     assert validate_devto(valid)[0] is True
     assert validate_devto(invalid)[0] is False

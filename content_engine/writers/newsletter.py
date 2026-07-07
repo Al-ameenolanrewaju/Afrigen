@@ -58,7 +58,7 @@ def write_newsletter(brief: ContentBrief, stats: dict = None, posts: list = None
         user=user_prompt,
         validator_fn=_newsletter_validator,
         validator_args=(),
-        max_tokens=1600,
+        max_tokens=3000,
         max_attempts=2
     )
     
@@ -75,12 +75,14 @@ def write_newsletter(brief: ContentBrief, stats: dict = None, posts: list = None
         extra_fields={"subject": subject}
     )
 
-_ATTRLESS_TAGS = ("p", "h3", "strong", "ul", "li", "em", "br")
+_ATTRLESS_TAGS = ("p", "h1", "h2", "h3", "h4", "strong", "ul", "li", "em", "br", "div", "span")
 
 def _clean_html(text: str) -> str:
+    # Only repair malformed opening tags (e.g. `<p"`, `<div '>`, etc.)
+    # and leave perfectly valid tags with style/class/href attributes alone.
     for tag in _ATTRLESS_TAGS:
-        text = re.sub(rf'<{tag}\b[^>]*>', f'<{tag}>', text, flags=re.IGNORECASE)
-        text = re.sub(rf'</{tag}\b[^>]*>', f'</{tag}>', text, flags=re.IGNORECASE)
+        text = re.sub(rf'<{tag}\s*["\']\s*>?', f'<{tag}>', text, flags=re.IGNORECASE)
+        text = re.sub(rf'</{tag}\s*["\']\s*>?', f'</{tag}>', text, flags=re.IGNORECASE)
     return text
 
 def _split_subject(text: str, fallback_subject: str):
