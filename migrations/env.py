@@ -2,7 +2,7 @@ import logging
 from logging.config import fileConfig
 
 from flask import current_app
-from models import db, User, Generation, TelegramUser, SavedPrompt, Referral, ProviderHealth, ProviderLog, Campaign, Workflow, WorkflowTask, CampaignAsset, CampaignAnalytics
+from models import db, User, Generation, TelegramUser, SavedPrompt, Referral
 
 from alembic import context
 
@@ -17,14 +17,12 @@ logger = logging.getLogger('alembic.env')
 
 
 def get_engine():
-    db = current_app.extensions['migrate'].db
-    if hasattr(db, 'engine'):
-        return db.engine
-    if hasattr(db, 'engines'):
-        if 'default' in db.engines:
-            return db.engines['default']
-        return next(iter(db.engines.values()))
-    return db.get_engine()
+    try:
+        # this works with Flask-SQLAlchemy<3 and Alchemical
+        return current_app.extensions['migrate'].db.get_engine()
+    except (TypeError, AttributeError):
+        # this works with Flask-SQLAlchemy>=3
+        return current_app.extensions['migrate'].db.engine
 
 
 def get_engine_url():
