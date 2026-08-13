@@ -11,6 +11,26 @@ from routes.main import get_country_from_ip, get_real_ip
 auth = Blueprint('auth', __name__)
 logger = logging.getLogger(__name__)
 
+
+def verify_user_password(stored_password, provided_password):
+    """Accept both modern werkzeug hashes and legacy plaintext passwords.
+
+    Old records created before the password hashing change can still contain a
+    raw string, which would otherwise cause check_password_hash() to raise a
+    ValueError and 500 the login route.
+    """
+    if not stored_password:
+        return False
+
+    if stored_password == provided_password:
+        return True
+
+    try:
+        return check_password_hash(stored_password, provided_password)
+    except (TypeError, ValueError):
+        return False
+
+
 @auth.route('/register', methods=['GET', 'POST'])
 def register():
     # Capture UTM source from GET params and store in session
@@ -118,11 +138,15 @@ def login():
 
         user = User.query.filter_by(email=email).first()
 
-        if user and check_password_hash(user.password, password):
+        if user and verify_user_password(user.password, password):
             if user.plan == 'banned':
                 logger.warning(f"Banned user login attempt: {email}")
                 flash('Your account has been banned!', 'danger')
                 return redirect(url_for('auth.login'))
+
+            if user.password == password:
+                user.password = generate_password_hash(password)
+                db.session.commit()
 
             login_user(user)
             logger.info(f"User logged in: {email}")
@@ -152,8 +176,12 @@ def google_login():
 @auth.route('/google/callback')
 def google_callback():
     from app import google
-    token = google.authorize_access_token()
-    user_info = token.get('userinfo')
+    try:
+        token = google.authorize_access_token()
+        user_info = token.get('userinfo')
+    except Exception as e:
+        flash('Google login failed or was cancelled.', 'danger')
+        return redirect(url_for('auth.login'))
 
     if user_info:
         email = user_info['email']
