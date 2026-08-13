@@ -84,17 +84,27 @@ KLING_VIDEO_COST = 10
 CHEAP_VIDEO_COST = 5
 
 
-def text_to_video_cost(style, extended):
-    """Credits to charge for a text-to-video generation.
+def text_to_video_cost(style, extended=False, duration="5"):
+    """Credits for a text-to-video generation.
 
-    Mirrors generate_video_async's model choice: the AnimateDiff styles
-    (anime/social) use the cheap model; everything else routes to premium Kling
-    for Pro users (extended=True). Free users (extended=False) aren't charged
-    credits, so their cost is irrelevant.
+    Duration-based premium pricing lets Pro users extend the clip beyond the
+    default 5s base. The legacy `extended` boolean remains supported for older
+    call sites; newer ones can pass `duration` directly.
     """
+    duration = str(duration or "5")
+    if duration not in {"5", "10", "15", "20"}:
+        duration = "5"
+
     if style in ANIMATEDIFF_STYLES:
+        if duration in {"10", "15", "20"}:
+            return int(duration)
         return CHEAP_VIDEO_COST
-    return KLING_VIDEO_COST if extended else CHEAP_VIDEO_COST
+
+    if duration in {"10", "15", "20"}:
+        return int(duration)
+    if extended:
+        return KLING_VIDEO_COST
+    return CHEAP_VIDEO_COST
 
 # AnimateDiff takes a video_size enum instead of an aspect_ratio string.
 ANIMATEDIFF_VIDEO_SIZE = {
@@ -104,19 +114,23 @@ ANIMATEDIFF_VIDEO_SIZE = {
 }
 
 
-def _build_t2v_request(prompt, style, aspect_ratio, extended):
+def _build_t2v_request(prompt, style, aspect_ratio, extended, duration="5"):
     """Pick the text-to-video model + arguments for a given style/quality.
 
     The single source of truth shared by the website's async path
     (generate_video_async) and the bot's synchronous path (generate_video), so
     both produce identical videos:
       - anime/social  -> AnimateDiff (longer 32-frame clip when extended)
-      - extended       -> premium Kling 10s clip (cinematic/realistic/african)
+      - extended       -> premium Kling clip (cinematic/realistic/african)
       - otherwise      -> short LTX clip
     """
+    duration = str(duration or "5")
+    if duration not in {"5", "10", "15", "20"}:
+        duration = "5"
+
     if style in ANIMATEDIFF_STYLES:
         model = ANIMATEDIFF_MODEL
-    elif extended:
+    elif extended or duration in {"10", "15", "20"}:
         model = KLING_T2V_MODEL
     else:
         model = LTX_MODEL
@@ -124,23 +138,21 @@ def _build_t2v_request(prompt, style, aspect_ratio, extended):
     arguments = {"prompt": prompt}
 
     if model == ANIMATEDIFF_MODEL:
-        # AnimateDiff ignores aspect_ratio; translate it to a video_size enum.
         arguments["video_size"] = ANIMATEDIFF_VIDEO_SIZE.get(aspect_ratio, "landscape_16_9")
-        # Pro users get the longer clip AnimateDiff supports: 32 frames @ 8fps (~4s).
-        if extended:
+        if extended or duration in {"10", "15", "20"}:
             arguments["num_frames"] = 32
             arguments["fps"] = 8
     elif model == KLING_T2V_MODEL:
         arguments["aspect_ratio"] = aspect_ratio if aspect_ratio in ("16:9", "9:16", "1:1") else "16:9"
-        arguments["duration"] = "10"
-    else:  # LTX supports only 16:9 / 9:16
+        arguments["duration"] = "10" if duration in {"10", "15", "20"} else "5"
+    else:
         arguments["aspect_ratio"] = aspect_ratio if aspect_ratio in ("16:9", "9:16") else "16:9"
 
     return model, arguments
 
 
-def generate_video_async(prompt, style="cinematic", aspect_ratio="16:9", webhook_url=None, extended=False):
-    model, arguments = _build_t2v_request(prompt, style, aspect_ratio, extended)
+def generate_video_async(prompt, style="cinematic", aspect_ratio="16:9", webhook_url=None, extended=False, duration="5"):
+    model, arguments = _build_t2v_request(prompt, style, aspect_ratio, extended, duration=duration)
 
     try:
         handler = fal_client.submit(
@@ -196,19 +208,20 @@ def generate_video_from_image(image_url, prompt, duration="5", aspect_ratio="16:
                 last_error = error_str
                 print(f"{model} attempt {attempt} failed: {error_str}")
 
-                if "Exhausted balance" in error_str:
-                    raise Exception("Video generation service balance exhausted.")
-
-                elif "403" in error_str:
-                    raise Exception("Access denied by video provider.")
+                if "Exhausted balance" in error_str or "403" in error_str or "401" in error_str:
+                    print(f"Model unavailable for this request ({model}). Trying next fallback model.")
+                    break
 
                 elif "404" in error_str:
                     print(f"Skipping invalid model: {model}")
-                    break  # skip to next model
+                    break
 
                 if attempt < MAX_RETRIES:
                     print(f"Retrying in {RETRY_DELAY} seconds...")
                     time.sleep(RETRY_DELAY)
+
+    if last_error:
+        raise Exception(f"Image-to-video generation failed for all models. Last error: {last_error}")
 
     return None
 
@@ -277,7 +290,12 @@ def add_text_overlay(video_url, text):
         ]
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
         if result.returncode != 0:
-            print("DRAWTEXT FFMPEG ERROR:", result.stderr[-800:])
+            stderr_tail = (result.stderr or "")[-800:]
+            lowered = stderr_tail.lower()
+            if "drawtext" in lowered or "filter not found" in lowered or "no such filter" in lowered:
+                print("DRAWTEXT FILTER UNAVAILABLE; skipping text overlay gracefully:", stderr_tail)
+                return video_url
+            print("DRAWTEXT FFMPEG ERROR:", stderr_tail)
             return video_url
 
         new_url = fal_client.upload_file(out_path)

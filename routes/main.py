@@ -59,7 +59,12 @@ def _normalize_admin_list(raw_value):
     }
 
 
-ADMIN_EMAILS = _normalize_admin_list(os.environ.get("ADMIN_EMAILS", "oadedamola07@gmail.com"))
+ADMIN_EMAILS = _normalize_admin_list(
+    os.environ.get(
+        "ADMIN_EMAILS",
+        "oadedamola07@gmail.com,adedamola07@gmail.com",
+    )
+)
 ADMIN_USERNAMES = _normalize_admin_list(os.environ.get("ADMIN_USERNAMES", ""))
 ADMIN_IDS = {
     int(value.strip())
