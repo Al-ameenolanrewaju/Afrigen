@@ -25,6 +25,7 @@ import os
 import secrets
 from datetime import date
 from functools import wraps
+from werkzeug.utils import secure_filename
 
 
 
@@ -48,20 +49,45 @@ def generate_referral_code():
 main = Blueprint("main", __name__)
 
 # ---------- Admin authorization ----------
-ADMIN_EMAILS = [
-    email.strip().lower()
-    for email in os.environ.get(
-        "ADMIN_EMAILS",
-        "oadedamola07@gmail.com"
-    ).split(",")
-]
+def _normalize_admin_list(raw_value):
+    if not raw_value:
+        return set()
+    return {
+        value.strip().lower()
+        for value in str(raw_value).split(',')
+        if value and value.strip()
+    }
+
+
+ADMIN_EMAILS = _normalize_admin_list(os.environ.get("ADMIN_EMAILS", "oadedamola07@gmail.com"))
+ADMIN_USERNAMES = _normalize_admin_list(os.environ.get("ADMIN_USERNAMES", ""))
+ADMIN_IDS = {
+    int(value.strip())
+    for value in str(os.environ.get("ADMIN_IDS", "")).split(',')
+    if value and value.strip()
+}
+
+
+def is_admin_user(user):
+    if user is None or not getattr(user, "is_authenticated", False):
+        return False
+
+    email = (getattr(user, "email", "") or "").strip().lower()
+    username = (getattr(user, "username", "") or "").strip().lower()
+    user_id = getattr(user, "id", None)
+
+    return (
+        email in ADMIN_EMAILS
+        or username in ADMIN_USERNAMES
+        or (user_id is not None and user_id in ADMIN_IDS)
+    )
+
 
 def admin_required(func):
     @wraps(func)
     @login_required
     def decorated_view(*args, **kwargs):
-        # Case‑insensitive admin check
-        if current_user.email.lower() not in ADMIN_EMAILS:
+        if not is_admin_user(current_user):
             flash('Access denied!', 'danger')
             return redirect(url_for('main.dashboard'))
         return func(*args, **kwargs)
@@ -138,6 +164,266 @@ def telegram_link_status():
 @login_required
 def generate():
     prompt = request.form.get('prompt')
+    style = request.form.get('style', 'cinematic')
+    action = request.form.get('action', 'generate')
+    add_voiceover = request.form.get('add_voiceover')
+    aspect_ratio = request.form.get('aspect_ratio', '16:9')
+    duration = request.form.get('duration', '5')
+
+    if duration not in ('5', '10', '15', '20'):
+        duration = '5'
+
+    extended = (duration in ('10', '15', '20'))
+
+    if not prompt:
+        flash('Please enter a video idea!', 'danger')
+        return redirect(url_for('main.dashboard'))
+
+    try:
+        refined = refine_prompt(prompt, style)
+    except Exception as e:
+        print("REFINE ERROR:", str(e))
+        return jsonify({"success": False, "error": "Could not refine your prompt right now. Please try again."})
+
+    if action == 'refine_only':
+        return jsonify({"success": True, "type": "refine_only", "refined": refined, "original": prompt})
+
+    ok, error, _ = video_gate(current_user, style, extended=extended, duration=duration)
+    if not ok:
+        return jsonify({"success": False, "error": error})
+
+    try:
+        if current_user.plan == 'free':
+            style = 'cinematic'
+
+        webhook_url = url_for('main.fal_webhook', _external=True)
+        video_cost = text_to_video_cost(style, extended=extended, duration=duration)
+        result = generate_video_async(refined, style, aspect_ratio, webhook_url=webhook_url, extended=extended, duration=duration)
+
+        if not result["success"]:
+            raise Exception(result["error"])
+
+        wants_voiceover = (add_voiceover == '1' and current_user.plan == 'pro')
+        generation = Generation(
+            user_id=current_user.id,
+            original_prompt=prompt,
+            refined_prompt=refined,
+            video_url=None,
+            wants_voiceover=wants_voiceover,
+            status="processing",
+            credit_cost=video_cost,
+            fal_request_id=result["request_id"]
+        )
+        db.session.add(generation)
+
+        if current_user.plan == 'free':
+            current_user.monthly_videos_used += 1
+
+        db.session.commit()
+
+        return jsonify({
+            "success": True,
+            "type": "processing",
+            "message": "Your video is being generated! You'll receive an email when it's ready.",
+            "generation_id": generation.id
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        print("VIDEO GENERATION ERROR:", str(e))
+        generation = Generation(
+            user_id=current_user.id,
+            original_prompt=prompt,
+            refined_prompt=refined,
+            video_url=None,
+            status="failed"
+        )
+        db.session.add(generation)
+        db.session.commit()
+        return jsonify({"success": False, "error": "Video generation failed. Please try again."})
+
+@main.route('/connected-accounts')
+@login_required
+def connected_accounts():
+    from models import ConnectedAccount
+    accounts = ConnectedAccount.query.filter_by(user_id=current_user.id).all()
+    connected_map = {acc.provider: acc for acc in accounts if acc.status == 'connected'}
+    
+    # Official providers
+    supported_providers = [
+        {"id": "facebook", "name": "Facebook Pages", "icon": "bi-facebook"},
+        {"id": "instagram", "name": "Instagram Business", "icon": "bi-instagram"},
+        {"id": "linkedin", "name": "LinkedIn", "icon": "bi-linkedin"},
+        {"id": "x", "name": "X (Twitter)", "icon": "bi-twitter-x"},
+        {"id": "telegram", "name": "Telegram", "icon": "bi-telegram"},
+        {"id": "whatsapp", "name": "WhatsApp Business", "icon": "bi-whatsapp"},
+        {"id": "tiktok", "name": "TikTok", "icon": "bi-tiktok"},
+        {"id": "pinterest", "name": "Pinterest", "icon": "bi-pinterest"},
+        {"id": "youtube", "name": "YouTube", "icon": "bi-youtube"},
+        {"id": "wordpress", "name": "WordPress", "icon": "bi-wordpress"},
+        {"id": "ghost", "name": "Ghost", "icon": "bi-ghost"},
+        {"id": "medium", "name": "Medium", "icon": "bi-medium"},
+        {"id": "devto", "name": "Dev.to", "icon": "bi-code-square"},
+        {"id": "hashnode", "name": "Hashnode", "icon": "bi-hash"},
+    ]
+    
+    coming_soon = []
+    
+    return render_template("main/connected_accounts.html", 
+                           supported_providers=supported_providers, 
+                           coming_soon=coming_soon, 
+                           connected_map=connected_map)
+
+@main.route('/connected-accounts/<provider>/connect', methods=['GET', 'POST'])
+@login_required
+def connect_provider(provider):
+    from services.connected_accounts.provider_registry import get_adapter
+    
+    try:
+        adapter = get_adapter(provider)
+        auth_methods = adapter.get_auth_methods()
+        
+        # Any non-OAuth provider can be handled through a form-based credential collection flow.
+        if auth_methods and "oauth" not in auth_methods:
+            return jsonify({"ok": True, "type": "form", "methods": auth_methods})
+            
+        # OAuth Flow
+        if "oauth" in auth_methods:
+            result = adapter.connect(current_user.id)
+            if result.get("ok") and result.get("type") == "redirect":
+                return jsonify({"ok": True, "type": "redirect", "url": result.get("url")})
+            else:
+                return jsonify({"ok": False, "error": result.get("error")})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
+        
+    return jsonify({"ok": False, "error": "Unknown authentication method"})
+
+@main.route('/connected-accounts/<provider>/callback', methods=['GET'])
+@login_required
+def provider_callback(provider):
+    from services.connected_accounts.provider_registry import get_adapter
+    from models import ConnectedAccount
+    from utils.encryption import encrypt_token
+    from datetime import datetime, timezone
+    
+    try:
+        adapter = get_adapter(provider)
+        result = adapter.handle_callback(request.args, current_user.id)
+        
+        if result.get("ok"):
+            account = ConnectedAccount.query.filter_by(user_id=current_user.id, provider=provider).first()
+            if not account:
+                account = ConnectedAccount(user_id=current_user.id, provider=provider)
+                db.session.add(account)
+                
+            account.status = "connected"
+            account.account_name = result.get("account_name", f"{provider.capitalize()} User")
+            if result.get("account_identifier"):
+                account.account_identifier = result.get("account_identifier")
+            if result.get("identifier"):
+                account.account_identifier = result.get("identifier")
+            
+            # Store tokens encrypted
+            if result.get("access_token"):
+                account.encrypted_access_token = encrypt_token(result.get("access_token"))
+            if result.get("refresh_token"):
+                account.encrypted_refresh_token = encrypt_token(result.get("refresh_token"))
+                
+            account.connected_at = datetime.now(timezone.utc)
+            db.session.commit()
+            
+            # Run test connection
+            test_res = adapter.test_connection(current_user.id)
+            if not test_res.get("ok"):
+                flash(f"Connected, but test failed: {test_res.get('error')}", "warning")
+            else:
+                flash(f"Successfully connected {provider.capitalize()}!", "success")
+        else:
+            flash(f"Failed to connect {provider.capitalize()}: {result.get('error')}", "danger")
+    except Exception as e:
+        flash(f"Error handling callback for {provider.capitalize()}: {str(e)}", "danger")
+        
+    return redirect(url_for('main.connected_accounts'))
+
+@main.route('/connected-accounts/<provider>/connect/token', methods=['POST'])
+@login_required
+def connect_provider_token(provider):
+    from services.connected_accounts.provider_registry import get_adapter
+    from models import ConnectedAccount
+    from utils.encryption import encrypt_token
+    from datetime import datetime, timezone
+    
+    try:
+        adapter = get_adapter(provider)
+        
+        # Build kwargs from form
+        kwargs = request.form.to_dict()
+        result = adapter.connect(current_user.id, **kwargs)
+        
+        if result.get("ok"):
+            account = ConnectedAccount.query.filter_by(user_id=current_user.id, provider=provider).first()
+            if not account:
+                account = ConnectedAccount(user_id=current_user.id, provider=provider)
+                db.session.add(account)
+                
+            account.status = "connected"
+            account.account_name = result.get("account_name", f"{provider.capitalize()} User")
+            if result.get("account_identifier"):
+                account.account_identifier = result.get("account_identifier")
+            if result.get("identifier"):
+                account.account_identifier = result.get("identifier")
+            
+            import json
+
+            primary_token = result.get("token") or result.get("access_token") or result.get("refresh_token")
+            if primary_token:
+                account.encrypted_access_token = encrypt_token(primary_token)
+
+            if result.get("refresh_token"):
+                account.encrypted_refresh_token = encrypt_token(result.get("refresh_token"))
+
+            if result.get("metadata"):
+                account.metadata_json = encrypt_token(json.dumps(result.get("metadata")))
+                
+            account.connected_at = datetime.now(timezone.utc)
+            db.session.commit()
+            
+            # Run test connection
+            test_res = adapter.test_connection(current_user.id)
+            if not test_res.get("ok"):
+                flash(f"Connected, but test failed: {test_res.get('error')}", "warning")
+            else:
+                flash(f"Successfully connected {provider.capitalize()}!", "success")
+        else:
+            flash(f"Failed to connect {provider.capitalize()}: {result.get('error')}", "danger")
+    except Exception as e:
+        flash(f"Error connecting {provider.capitalize()}: {str(e)}", "danger")
+        
+    return redirect(url_for('main.connected_accounts'))
+
+@main.route('/connected-accounts/<provider>/disconnect', methods=['POST'])
+@login_required
+def disconnect_provider(provider):
+    from services.connected_accounts.provider_registry import get_adapter
+    from models import ConnectedAccount
+    
+    try:
+        adapter = get_adapter(provider)
+        adapter.disconnect(current_user.id)
+        
+        account = ConnectedAccount.query.filter_by(user_id=current_user.id, provider=provider).first()
+        if account:
+            account.status = "disconnected"
+            account.encrypted_access_token = None
+            account.encrypted_refresh_token = None
+            account.metadata_json = None
+            db.session.commit()
+            flash(f"Successfully disconnected {provider.capitalize()}.", "success")
+    except Exception as e:
+        flash(f"Error disconnecting {provider.capitalize()}: {str(e)}", "danger")
+        
+    return redirect(url_for('main.connected_accounts'))
     style = request.form.get('style', 'cinematic')
     action = request.form.get('action', 'generate')
     print("ACTION RECEIVED:", action)
@@ -503,6 +789,33 @@ def admin():
     )
     source_breakdown = dict(source_counts)
 
+    # Automation metrics and reporting
+    from services.automation import get_workflows, get_logs
+    from models import Campaign, CampaignAsset
+
+    workflows = get_workflows()
+    workflow_logs = get_logs()
+    total_automation_workflows = len(workflows)
+    total_automation_runs = len(workflow_logs)
+    automation_success_count = sum(1 for log in workflow_logs if log.get('status') == 'completed')
+    automation_failed_count = sum(1 for log in workflow_logs if log.get('status') == 'failed')
+    automation_success_rate = round((automation_success_count / total_automation_runs * 100) if total_automation_runs else 0)
+    total_campaign_assets = CampaignAsset.query.count()
+    campaigns_with_assets = db.session.query(CampaignAsset.campaign_id).distinct().count()
+
+    automation_user_counts = Counter(
+        w.get('user_id') for w in workflows if w.get('user_id')
+    )
+    top_automation_users = []
+    for user_id, count in automation_user_counts.most_common(5):
+        user = db.session.get(User, user_id)
+        if user:
+            top_automation_users.append((user, count))
+
+    top_automated_campaigns = db.session.query(
+        Campaign, func.count(CampaignAsset.id).label('asset_count')
+    ).join(CampaignAsset).group_by(Campaign.id).order_by(func.count(CampaignAsset.id).desc()).limit(5).all()
+
     return render_template(
         'main/admin.html',
         users=users,
@@ -523,7 +836,15 @@ def admin():
         generations_7days=generations_7days,
         top_users=top_users,
         top_countries=top_countries,
-        source_breakdown=source_breakdown
+        source_breakdown=source_breakdown,
+        total_automation_workflows=total_automation_workflows,
+        total_automation_runs=total_automation_runs,
+        automation_success_rate=automation_success_rate,
+        total_campaign_assets=total_campaign_assets,
+        campaigns_with_assets=campaigns_with_assets,
+        top_automation_users=top_automation_users,
+        workflow_logs=workflow_logs,
+        top_automated_campaigns=top_automated_campaigns
     )
 
 
@@ -573,6 +894,8 @@ def ban_user(user_id):
 def delete_user(user_id):
     user = db.session.get(User, user_id)
     if user:
+        from models import Referral
+        Referral.query.filter((Referral.referrer_id == user_id) | (Referral.referred_id == user_id)).delete()
         Generation.query.filter_by(user_id=user_id).delete()
         db.session.delete(user)
         db.session.commit()
@@ -684,7 +1007,7 @@ def payment_callback():
     # Tier is derived from the verified amount, not the (spoofable) metadata.
     is_annual = amount == 5000000
     current_user.plan = 'pro'
-    current_user.credits = 1200 if is_annual else 100
+    current_user.credits = (current_user.credits or 0) + (1200 if is_annual else 100)
     db.session.add(Payment(
         user_id=current_user.id,
         reference=reference,
@@ -973,23 +1296,6 @@ def admin_blog_discard(post_id):
 
 
 # ---------- Content Distribution (admin only) ----------
-
-@main.route('/admin/facebook/trigger', methods=['POST'])
-@admin_required
-def admin_facebook_trigger():
-    """Manually trigger the daily Facebook automation engine."""
-    from services.facebook_engine import run_daily_facebook_engine
-    try:
-        result = run_daily_facebook_engine()
-        if result.get('ok'):
-            flash('Facebook daily post triggered successfully!', 'success')
-        else:
-            flash(f"Facebook trigger failed: {result.get('error')}", 'danger')
-    except Exception as e:
-        current_app.logger.exception("Facebook engine trigger failed")
-        flash(f"Facebook engine error: {str(e)}", 'danger')
-    return redirect(url_for('main.admin'))
-
 
 @main.route('/admin/distribution')
 @admin_required
@@ -1510,7 +1816,7 @@ def payment_webhook():
         ):
             is_annual = amount == 5000000
             user.plan = 'pro'
-            user.credits = 1200 if is_annual else 100
+            user.credits = (user.credits or 0) + (1200 if is_annual else 100)
             db.session.add(Payment(
                 user_id=user.id,
                 reference=reference,
@@ -1666,3 +1972,428 @@ def download_image_file(generation_id):
         content_type='image/jpeg',
         headers={'Content-Disposition': f'attachment; filename="afrigen-image-{generation_id}.jpg"'}
     )
+
+# --- RECREATED MISSING ROUTES ---
+
+@main.route('/create')
+@login_required
+def create():
+    return render_template('main/create.html')
+
+@main.route('/brands')
+@login_required
+def brands():
+    return render_template('main/brands.html')
+
+@main.route('/campaigns')
+@login_required
+def campaigns():
+    return render_template('main/campaigns.html')
+
+@main.route('/automations')
+@login_required
+def automations():
+    return render_template('main/automations.html')
+
+@main.route('/automations/<log_id>')
+@login_required
+def automation_run_details(log_id):
+    from services.automation import get_logs, _load_assets_from_file
+    
+    logs = get_logs()
+    run = next((l for l in logs if l.get('id') == log_id), None)
+    if not run:
+        flash('Run details not found.', 'danger')
+        return redirect(url_for('main.automations'))
+        
+    all_assets = _load_assets_from_file()
+    # Also fetch from DB if there are campaign assets tied to this run
+    from models import CampaignAsset, db
+    
+    # We find database assets by checking if the meta_data contains the run_id
+    db_assets = db.session.query(CampaignAsset).filter(CampaignAsset.meta_data.contains(f'"run_id": "{log_id}"')).all()
+    
+    assets = [a for a in all_assets if a.get('run_id') == log_id]
+    
+    for a in db_assets:
+        assets.append({
+            "id": a.id,
+            "asset_type": a.asset_type,
+            "title": a.title,
+            "content": a.content,
+            "file_url": a.file_url,
+            "thumbnail_url": a.thumbnail_url,
+            "provider_used": a.provider_used
+        })
+    
+    return render_template('main/automation_run_details.html', run=run, assets=assets)
+
+@main.route('/assistant')
+@login_required
+def assistant():
+    return render_template('main/assistant.html')
+
+@main.route('/settings', methods=['GET', 'POST'])
+@login_required
+def settings():
+    from models import ServiceCredential, ConnectedAccount, db
+    from utils.encryption import encrypt_token, decrypt_token
+    import json
+
+    if request.method == 'POST':
+        section = request.form.get('section')
+
+        if section == 'whatsapp_auto_reply':
+            phone_number = (request.form.get('phone_number') or '').strip()
+            twilio_token = (request.form.get('twilio_token') or '').strip()
+            away_message = (request.form.get('away_message') or 'Thanks for messaging us. We are away right now, but we will reply as soon as we can.').strip()
+            auto_reply = request.form.get('auto_reply') in ('on', 'true', '1', 'yes', 'enabled')
+            business_hours_enabled = request.form.get('business_hours_enabled') in ('on', 'true', '1', 'yes', 'enabled')
+            business_hours_start = (request.form.get('business_hours_start') or '09:00').strip()
+            business_hours_end = (request.form.get('business_hours_end') or '17:00').strip()
+            timezone_name = (request.form.get('timezone') or 'UTC').strip()
+
+            if not phone_number:
+                flash('WhatsApp business number is required.', 'danger')
+                return redirect(url_for('main.settings'))
+
+            account = ConnectedAccount.query.filter_by(user_id=current_user.id, provider='whatsapp').first()
+            if not account:
+                account = ConnectedAccount(user_id=current_user.id, provider='whatsapp')
+                db.session.add(account)
+
+            account.status = 'connected'
+            account.account_name = 'WhatsApp Business'
+            account.account_identifier = phone_number
+            if twilio_token:
+                account.encrypted_access_token = encrypt_token(twilio_token)
+
+            metadata = {
+                'phone_number': phone_number,
+                'auto_reply': auto_reply,
+                'away_message': away_message,
+                'business_hours_enabled': business_hours_enabled,
+                'business_hours_start': business_hours_start,
+                'business_hours_end': business_hours_end,
+                'timezone': timezone_name,
+            }
+            account.metadata_json = encrypt_token(json.dumps(metadata))
+            db.session.commit()
+            flash('WhatsApp auto-reply settings saved successfully.', 'success')
+            return redirect(url_for('main.settings'))
+
+        # Legacy save logic for account/notifications if you have one
+        pass
+
+    # Load service credentials for UI
+    creds = ServiceCredential.query.filter_by(user_id=current_user.id).all()
+    service_creds = {}
+    for c in creds:
+        c.metadata_dict = json.loads(c.metadata_json) if c.metadata_json else {}
+        service_creds[c.provider] = c
+
+    whatsapp_account = ConnectedAccount.query.filter_by(user_id=current_user.id, provider='whatsapp', status='connected').first()
+    whatsapp_settings = {
+        'enabled': False,
+        'phone_number': '',
+        'away_message': 'Thanks for messaging us. We are away right now, but we will reply as soon as we can.',
+        'business_hours_enabled': False,
+        'business_hours_start': '09:00',
+        'business_hours_end': '17:00',
+        'timezone': 'UTC',
+    }
+    if whatsapp_account:
+        whatsapp_settings['phone_number'] = whatsapp_account.account_identifier or ''
+        if whatsapp_account.metadata_json:
+            try:
+                metadata = json.loads(decrypt_token(whatsapp_account.metadata_json) or '{}')
+                if isinstance(metadata, dict):
+                    whatsapp_settings.update(metadata)
+            except Exception:
+                pass
+
+    return render_template('main/settings.html', service_creds=service_creds, whatsapp_settings=whatsapp_settings)
+
+@main.route('/settings/credentials/save', methods=['POST'])
+@login_required
+def save_service_credential():
+    from models import ServiceCredential, db
+    from utils.encryption import encrypt_token
+    import json
+    
+    service_type = request.form.get("service_type")
+    provider_target = request.form.get("provider_target")
+    
+    if not provider_target:
+        flash("No provider specified", "danger")
+        return redirect(url_for('main.settings'))
+        
+    cred = ServiceCredential.query.filter_by(user_id=current_user.id, provider=provider_target).first()
+    if not cred:
+        cred = ServiceCredential(user_id=current_user.id, provider=provider_target, service_type=service_type)
+        db.session.add(cred)
+        
+    # Handle SMTP specifically
+    if provider_target == 'smtp':
+        smtp_host = request.form.get("smtp_host")
+        smtp_port = request.form.get("smtp_port")
+        smtp_user = request.form.get("smtp_username")
+        smtp_pass = request.form.get("smtp_password")
+        
+        if smtp_pass and smtp_pass != "********":
+            cred.encrypted_key = encrypt_token(smtp_pass)
+            
+        cred.metadata_json = json.dumps({
+            "host": smtp_host,
+            "port": smtp_port,
+            "username": smtp_user
+        })
+    else:
+        # Standard API Key (e.g. openai, anthropic, resend)
+        key = request.form.get(f"{provider_target}_key")
+        if key and key != "********":
+            cred.encrypted_key = encrypt_token(key)
+            
+    db.session.commit()
+    flash(f"{provider_target.capitalize()} credentials saved successfully.", "success")
+    
+    return redirect(url_for('main.settings'))
+
+@main.route('/profile', methods=['GET', 'POST'])
+@login_required
+def profile():
+    if request.method == 'POST':
+        new_username = (request.form.get('username') or current_user.username).strip()
+        new_email = (request.form.get('email') or current_user.email).strip()
+
+        if not new_username:
+            flash('Username cannot be empty.', 'danger')
+            return redirect(url_for('main.profile'))
+
+        existing_username = User.query.filter(User.username == new_username, User.id != current_user.id).first()
+        if existing_username:
+            flash('This username is already taken. Please choose another one.', 'danger')
+            return redirect(url_for('main.profile'))
+
+        existing_email = User.query.filter(User.email == new_email, User.id != current_user.id).first()
+        if existing_email:
+            flash('This email is already registered to another account.', 'danger')
+            return redirect(url_for('main.profile'))
+
+        current_user.username = new_username
+        current_user.email = new_email
+
+        profile_picture_file = request.files.get('profile_picture')
+        if profile_picture_file and profile_picture_file.filename:
+            if not allowed_file(profile_picture_file.filename):
+                flash('Invalid image format. Allowed: png, jpg, jpeg, webp.', 'danger')
+                return redirect(url_for('main.profile'))
+
+            upload_folder = os.path.join('static', 'profile_pictures')
+            os.makedirs(upload_folder, exist_ok=True)
+            filename = secure_filename(profile_picture_file.filename)
+            filepath = os.path.join(upload_folder, filename)
+            profile_picture_file.save(filepath)
+            current_user.profile_picture = url_for('static', filename=f'profile_pictures/{filename}', _external=False)
+
+        try:
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            flash('Something went wrong while saving your profile. Please try again.', 'danger')
+            return redirect(url_for('main.profile'))
+
+        flash('Profile updated successfully.', 'success')
+        return redirect(url_for('main.profile'))
+
+    return render_template('main/profile.html')
+
+@main.route('/automation/build')
+@login_required
+def build_automation():
+    return render_template('main/automation_builder.html')
+
+@main.route('/campaign/build')
+@login_required
+def build_campaign():
+    return render_template('main/campaign_builder.html')
+
+@main.route('/campaign/<campaign_id>')
+@login_required
+def campaign_detail(campaign_id):
+    from models import Campaign
+
+    campaign = None
+    if str(campaign_id).isdigit():
+        campaign = Campaign.query.filter_by(id=int(campaign_id), user_id=current_user.id).first()
+    else:
+        campaign = Campaign.query.filter_by(title=campaign_id, user_id=current_user.id).first()
+
+    if not campaign:
+        flash('Campaign not found.', 'danger')
+        return redirect(url_for('main.campaigns'))
+
+    return render_template('main/campaign_dashboard.html', campaign_id=campaign.id)
+
+# AI assistant endpoint
+@main.route('/api/copilot', methods=['GET', 'POST'])
+@login_required
+def copilot_chat():
+    data = request.get_json(silent=True) or {}
+    message = (data.get('message') or '').strip()
+    history = data.get('history') or []
+
+    if not message:
+        return jsonify({"message": "Please send a prompt to begin.", "actions": []}), 400
+
+    try:
+        from services.copilot import process_copilot_request
+        response = process_copilot_request(message, conversation_history=history)
+        if not isinstance(response, dict):
+            raise ValueError("Copilot response was not valid JSON.")
+        return jsonify({
+            "message": response.get("message") or "I can help with that.",
+            "actions": response.get("actions") or []
+        })
+    except Exception as exc:
+        print(f"COPILOT_ROUTE_ERROR: {exc}")
+        return jsonify({
+            "message": "I’m sorry, I’m having trouble responding right now. Please try again in a moment.",
+            "actions": []
+        }), 500
+
+@main.route('/api/automations', methods=['GET'])
+@login_required
+def api_automations_list():
+    from services.automation import get_workflows, get_logs
+    workflows = get_workflows()
+    logs = get_logs()
+    return jsonify({"workflows": workflows, "logs": logs})
+
+@main.route('/api/automations/run/<workflow_id>', methods=['POST'])
+@login_required
+def api_automations_run(workflow_id):
+    from services.automation import trigger_workflow_async, get_workflows
+
+    workflows = get_workflows()
+    if not any(workflow.get('id') == workflow_id for workflow in workflows):
+        return jsonify({"ok": False, "error": "Workflow not found"}), 404
+
+
+    trigger_workflow_async(workflow_id, user_id=current_user.id)
+    return jsonify({"ok": True, "workflow_id": workflow_id, "status": "started"})
+
+@main.route('/api/automations/<workflow_id>', methods=['DELETE'])
+@login_required
+def api_automations_delete(workflow_id):
+    from services.automation import delete_workflow
+    delete_workflow(workflow_id)
+    return jsonify({"ok": True})
+
+@main.route('/api/automations/save', methods=['POST'])
+@login_required
+def api_automations_save():
+    from services.automation import save_workflow
+    data = request.get_json(silent=True) or {}
+
+    if not data.get('name'):
+        return jsonify({"ok": False, "error": "Workflow name is required"}), 400
+
+    # Attach campaign and brand context when provided
+    from models import Brand
+    brand = Brand.query.filter_by(user_id=current_user.id).first()
+
+    workflow_data = {
+        "id": data.get("id") or None,
+        "name": data.get("name"),
+        "trigger": data.get("trigger", "manual"),
+        "nodes": data.get("nodes", []),
+        "created_at": data.get("created_at"),
+        "user_id": current_user.id,
+        "campaign_id": data.get("campaign_id"),
+        "brand": {
+            "name": brand.name if brand else None,
+            "primary_color": brand.primary_color if brand else None,
+            "secondary_color": brand.secondary_color if brand else None,
+            "accent_color": brand.accent_color if brand else None,
+            "typography": brand.typography if brand else None,
+        } if brand else None,
+    }
+
+    saved = save_workflow(workflow_data)
+    return jsonify({"ok": True, "workflow": saved})
+
+@main.route('/api/campaigns/plan', methods=['POST'])
+@login_required
+def api_campaign_plan():
+    from flask import jsonify
+    from models import Campaign, db
+    from services.workflow_planner import workflow_planner
+
+    data = request.get_json(silent=True) or {}
+    name = (data.get('name') or data.get('title') or 'New Campaign').strip()
+    business_goal = (data.get('goal') or data.get('business_goal') or '').strip()
+    if not business_goal:
+        return jsonify({"ok": False, "error": "Goal is required"}), 400
+
+
+    campaign = Campaign(
+        user_id=current_user.id,
+        title=name,
+        goal=business_goal,
+        business_goal=business_goal,
+        target_audience=data.get('target_audience'),
+        industry=data.get('industry'),
+        tone=data.get('tone')
+    )
+    db.session.add(campaign)
+    db.session.commit()
+
+    workflow_planner.create_plan(campaign)
+
+    deliverables_requested = data.get('deliverables_requested') or []
+    deliverables = []
+    for index, deliverable in enumerate(deliverables_requested):
+        if deliverable == 'image':
+            deliverables.append({
+                'id': f'{campaign.id}-image-{index}',
+                'name': 'Promotional Image',
+                'type': 'image',
+                'prompt': f'Create a compelling image for {campaign.title or business_goal}.',
+                'status': 'pending'
+            })
+        elif deliverable == 'video':
+            deliverables.append({
+                'id': f'{campaign.id}-video-{index}',
+                'name': 'Promotional Video',
+                'type': 'video',
+                'prompt': f'Create a short promotional video for {campaign.title or business_goal}.',
+                'status': 'pending'
+            })
+        else:
+            deliverables.append({
+                'id': f'{campaign.id}-content-{index}',
+                'name': 'Social Copy',
+                'type': 'content',
+                'prompt': f'Create content for {campaign.title or business_goal}.',
+                'status': 'pending'
+            })
+
+    strategy = {
+        'theme': f'Position {campaign.title or business_goal} around a clear value proposition.',
+        'key_messages': [
+            f'{business_goal} with a strong narrative.',
+            'Highlight audience benefits and social proof.',
+            'Use a clear call to action.'
+        ],
+        'call_to_action': 'Learn more or get started today.',
+        'suggested_hashtags': ['#marketing', '#growth', '#ai']
+    }
+
+    return jsonify({
+        'ok': True,
+        'campaign_id': campaign.id,
+        'status': campaign.status,
+        'strategy': strategy,
+        'deliverables': deliverables
+    })

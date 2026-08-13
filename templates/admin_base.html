@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Afrigen Admin{% endblock %} | Afrigen</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    
+    <style>
+        :root {
+            --admin-bg: #0B0F19; /* Very dark background */
+            --admin-sidebar-bg: #111827; /* Sidebar background */
+            --admin-card-bg: #151C2C;
+            --admin-border: #1F2937;
+            --admin-text: #9CA3AF;
+            --admin-text-light: #F3F4F6;
+            --admin-accent: #F5A623;
+            --admin-accent-hover: #e09515;
+        }
+        
+        body {
+            background-color: var(--admin-bg);
+            color: var(--admin-text-light);
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+
+        /* Sidebar Styling */
+        .admin-sidebar {
+            width: 250px;
+            background-color: var(--admin-sidebar-bg);
+            border-right: 1px solid var(--admin-border);
+            min-height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            display: flex;
+            flex-direction: column;
+            z-index: 1000;
+        }
+
+        .admin-sidebar-header {
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid var(--admin-border);
+        }
+
+        .admin-sidebar-header img {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+        }
+        
+        .admin-sidebar-header h5 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 700;
+            color: white;
+            letter-spacing: 0.5px;
+        }
+
+        .admin-nav-section {
+            padding: 20px 15px 5px 15px;
+            font-size: 11px;
+            text-transform: uppercase;
+            font-weight: 600;
+            color: #6B7280;
+            letter-spacing: 1px;
+        }
+
+        .admin-nav-list {
+            list-style: none;
+            padding: 0 10px;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .admin-nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 15px;
+            border-radius: 8px;
+            color: var(--admin-text);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .admin-nav-item i {
+            font-size: 16px;
+            width: 20px;
+            text-align: center;
+        }
+
+        .admin-nav-item:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+            color: white;
+        }
+
+        .admin-nav-item.active {
+            background-color: rgba(59, 130, 246, 0.15); /* Light blue bg */
+            color: var(--admin-accent);
+        }
+
+        /* Main Content Area */
+        .admin-main-content {
+            margin-left: 250px;
+            padding: 30px;
+            min-height: 100vh;
+            width: calc(100% - 250px);
+        }
+
+        /* Top Cards */
+        .admin-stat-card {
+            background: var(--admin-card-bg);
+            border: 1px solid var(--admin-border);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .admin-stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+            color: var(--admin-text);
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .admin-stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: white;
+            margin: 0;
+            line-height: 1.2;
+        }
+
+        .admin-stat-sub {
+            font-size: 12px;
+            color: var(--admin-text);
+            margin-top: 8px;
+        }
+
+        /* Chart container */
+        .admin-chart-container {
+            background: var(--admin-card-bg);
+            border: 1px solid var(--admin-border);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        
+        .admin-chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .admin-chart-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: white;
+            margin: 0;
+        }
+
+        /* Button styling */
+        .btn-admin {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .btn-admin:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+        }
+        
+        /* Tables */
+        .admin-table {
+            width: 100%;
+            color: var(--admin-text-light);
+            font-size: 14px;
+        }
+        .admin-table th {
+            color: var(--admin-text);
+            font-weight: 500;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--admin-border);
+            text-align: left;
+        }
+        .admin-table td {
+            padding: 16px;
+            border-bottom: 1px solid var(--admin-border);
+            vertical-align: middle;
+        }
+        
+        /* Badges */
+        .admin-badge {
+            padding: 4px 10px;
+            border-radius: 99px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .admin-badge-blue { background: rgba(59, 130, 246, 0.2); color: #60A5FA; }
+        .admin-badge-green { background: rgba(16, 185, 129, 0.2); color: #34D399; }
+        .admin-badge-red { background: rgba(239, 68, 68, 0.2); color: #F87171; }
+        .admin-badge-gray { background: rgba(156, 163, 175, 0.2); color: #9CA3AF; }
+        .admin-badge-orange { background: rgba(245, 166, 35, 0.2); color: #F5A623; }
+
+        @media (max-width: 992px) {
+            .admin-sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+            .admin-sidebar.show {
+                transform: translateX(0);
+            }
+            .admin-main-content {
+                margin-left: 0;
+                width: 100%;
+            }
+        }
+    </style>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <div class="admin-sidebar" id="adminSidebar">
+        <div class="admin-sidebar-header">
+            <!-- Icon placeholder -->
+            <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #F5A623, #E67E22); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 18px;"><i class="fa-solid fa-clapperboard" style="font-size: 16px;"></i></div>
+            <h5>Afrigen Admin</h5>
+        </div>
+
+        <div class="admin-nav-section">MAIN</div>
+        <ul class="admin-nav-list">
+            <li>
+                <a href="{{ url_for('main.admin') }}" class="admin-nav-item {% if request.endpoint == 'main.admin' %}active{% endif %}">
+                    <i class="fa-solid fa-border-all"></i> Overview
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('main.admin_blog') }}" class="admin-nav-item {% if 'blog' in request.endpoint %}active{% endif %}">
+                    <i class="fa-solid fa-newspaper"></i> Blog CMS
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('main.admin_distribution') }}" class="admin-nav-item {% if 'distribution' in request.endpoint %}active{% endif %}">
+                    <i class="fa-solid fa-satellite-dish"></i> Distribution
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('main.admin_newsletter') }}" class="admin-nav-item {% if 'newsletter' in request.endpoint %}active{% endif %}">
+                    <i class="fa-solid fa-envelope"></i> Newsletter
+                </a>
+            </li>
+        </ul>
+
+        <div class="admin-nav-section mt-3">NAVIGATION</div>
+        <ul class="admin-nav-list">
+            <li>
+                <a href="{{ url_for('main.dashboard') }}" class="admin-nav-item">
+                    <i class="fa-solid fa-house"></i> Back to App
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('auth.logout') }}" class="admin-nav-item" style="color: #F87171;">
+                    <i class="fa-solid fa-right-from-bracket" style="color: #F87171;"></i> Log Out
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <!-- Main Content -->
+    <div class="admin-main-content">
+        <!-- Mobile Header Toggle -->
+        <div class="d-lg-none d-flex align-items-center justify-content-between mb-4 pb-3 border-bottom" style="border-color: var(--admin-border) !important;">
+            <div class="d-flex align-items-center gap-2">
+                <div style="width: 28px; height: 28px; background: linear-gradient(135deg, #F5A623, #E67E22); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px;"><i class="fa-solid fa-clapperboard" style="font-size: 14px;"></i></div>
+                <h5 class="m-0" style="color: white;">Afrigen Admin</h5>
+            </div>
+            <button class="btn btn-outline-secondary border-0" onclick="document.getElementById('adminSidebar').classList.toggle('show')">
+                <i class="fa-solid fa-bars text-white"></i>
+            </button>
+        </div>
+        
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show text-white" role="alert" style="background-color: rgba(255,255,255,0.05); border: 1px solid var(--admin-border);">
+                        {{ message }}
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
