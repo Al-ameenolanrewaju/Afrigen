@@ -65,8 +65,6 @@
             <div class="text-center">
                 <p style="color: #888; margin-bottom: 10px;"><i class="fa-solid fa-share-nodes"></i> Share it:</p>
                 <div class="d-flex justify-content-center gap-2 flex-wrap">
-                    <a href="https://wa.me/?text={{ ('Check out this AI ' ~ kind ~ ' made on Afrigen — make your own free ' ~ request.url) | urlencode }}"
-                       target="_blank" class="btn btn-sm btn-success">WhatsApp</a>
                     <a href="https://twitter.com/intent/tweet?text={{ ('This AI ' ~ kind ~ ' was made on @AfrigenAI from one line of text. Make yours free') | urlencode }}&url={{ request.url | urlencode }}"
                        target="_blank" class="btn btn-sm btn-info" style="color:white;">Twitter</a>
                     <a href="https://www.facebook.com/sharer/sharer.php?u={{ request.url | urlencode }}"

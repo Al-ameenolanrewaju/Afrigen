@@ -1,0 +1,88 @@
+<!-- Desktop Sidebar -->
+<div class="d-none d-lg-flex flex-column flex-shrink-0 p-3" style="width: 260px; background: #161B22; border-right: 1px solid #30363D; min-height: 100vh;">
+    <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-decoration-none">
+        <span class="fs-4 text-gradient"><i class="fa-solid fa-clapperboard"></i> Afrigen</span>
+    </a>
+    
+    <!-- Brand Switcher -->
+    <div class="mt-4 mb-2 px-2">
+        <small style="color: #8B949E; font-size: 11px; text-transform: uppercase; font-weight: 600;">Active Brand</small>
+        <select id="desktopBrandSwitcher" class="form-select form-select-sm mt-1" style="background: #0D1117; border: 1px solid #30363D; color: #F0F6FC; cursor: pointer;">
+            <option value="">Personal Workspace</option>
+        </select>
+    </div>
+
+    <hr style="border-color: #30363D;">
+    <ul class="nav flex-column mb-auto gap-2">
+        <li><a class="nav-link" href="{{ url_for('main.dashboard') }}" style="color: #F0F6FC;"><i class="fa-solid fa-house"></i> Home</a></li>
+        <li><a class="nav-link" href="{{ url_for('main.create') }}" style="color: #F0F6FC;"><i class="fa-solid fa-plus"></i> Create</a></li>
+        <li><a class="nav-link" href="{{ url_for('main.brands') }}" style="color: #F0F6FC;"><i class="fa-solid fa-crown text-warning"></i> Brands</a></li>
+        <li><a class="nav-link" href="{{ url_for('main.history') }}" style="color: #F0F6FC;"><i class="fa-solid fa-clock-rotate-left"></i> History</a></li>
+        <li>
+            <a class="nav-link" href="{{ url_for('main.campaigns') }}" style="color: #F0F6FC;"><i class="fa-solid fa-bullhorn"></i> Campaigns</a>
+        </li>
+        <li>
+            <a class="nav-link" href="{{ url_for('main.automations') }}" style="color: #F0F6FC;"><i class="fa-solid fa-bolt text-warning"></i> Automations</a>
+        </li>
+        <li>
+        </li>
+        <li><a class="nav-link" href="{{ url_for('main.assistant') }}" style="color: #F0F6FC;"><i class="fa-solid fa-robot"></i> AI Assistant</a></li>
+        <li><hr style="border-color: #30363D;"></li>
+        <li><a class="nav-link" href="{{ url_for('main.upgrade') }}" style="color: #F0F6FC;"><i class="fa-solid fa-credit-card"></i> Billing</a></li>
+        <li><a class="nav-link" href="{{ url_for('main.connected_accounts') }}" style="color: #F0F6FC;"><i class="fa-solid fa-plug"></i> Connected Accounts</a></li>
+        <li><a class="nav-link" href="{{ url_for('main.settings') }}" style="color: #F0F6FC;"><i class="fa-solid fa-gear"></i> Settings</a></li>
+        <li><a class="nav-link" href="{{ url_for('main.profile') }}" style="color: #F0F6FC;"><i class="fa-solid fa-user"></i> Profile</a></li>
+        {% if current_user.email == 'oadedamola07@gmail.com' %}
+        <li><a class="nav-link" href="{{ url_for('main.admin') }}" style="color: #F5A623;"><i class="fa-solid fa-shield"></i> Admin</a></li>
+        {% endif %}
+        <li><a class="nav-link" href="{{ url_for('auth.logout') }}" style="color: #E74C3C;"><i class="fa-solid fa-right-from-bracket"></i> Logout</a></li>
+    </ul>
+</div>
+
+<!-- Mobile navbar (shown only on small screens) -->
+<nav class="navbar navbar-dark d-lg-none p-3 border-bottom" style="border-color: #30363D !important; background: #0D1117;">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/"><i class="fa-solid fa-clapperboard"></i> <span class="text-gradient">Afrigen</span></a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasAuthNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+    </div>
+</nav>
+
+<!-- Offcanvas Sidebar (mobile auth) -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasAuthNav"
+     style="background: #161B22; border-left: 1px solid #30363D; width: 260px;">
+    <div class="offcanvas-header" style="border-bottom: 1px solid #30363D;">
+        <h5 style="color: #F5A623;"><i class="fa-solid fa-clapperboard"></i> Afrigen</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body">
+        
+        <!-- Mobile Brand Switcher -->
+        <div class="mb-4">
+            <small style="color: #8B949E; font-size: 11px; text-transform: uppercase; font-weight: 600;">Active Brand</small>
+            <select id="mobileBrandSwitcher" class="form-select form-select-sm mt-1" style="background: #0D1117; border: 1px solid #30363D; color: #F0F6FC; cursor: pointer;">
+                <option value="">Personal Workspace</option>
+            </select>
+        </div>
+
+        <ul class="nav flex-column gap-2">
+            <li><a class="nav-link" href="{{ url_for('main.dashboard') }}" style="color: #F0F6FC;"><i class="fa-solid fa-house"></i> Home</a></li>
+            <li><a class="nav-link" href="{{ url_for('main.create') }}" style="color: #F0F6FC;"><i class="fa-solid fa-plus"></i> Create</a></li>
+            <li><a class="nav-link" href="{{ url_for('main.brands') }}" style="color: #F0F6FC;"><i class="fa-solid fa-crown text-warning"></i> Brands</a></li>
+            <li><a class="nav-link" href="{{ url_for('main.history') }}" style="color: #F0F6FC;"><i class="fa-solid fa-clock-rotate-left"></i> History</a></li>
+            <li><a class="nav-link" href="{{ url_for('main.campaigns') }}" style="color: #F0F6FC;"><i class="fa-solid fa-bullhorn"></i> Campaigns</a></li>
+            <li><a class="nav-link" href="{{ url_for('main.automations') }}" style="color: #F0F6FC;"><i class="fa-solid fa-bolt text-warning"></i> Automations</a></li>
+            <li><a class="nav-link" href="{{ url_for('main.assistant') }}" style="color: #F0F6FC;"><i class="fa-solid fa-robot"></i> AI Assistant</a></li>
+            <li><hr style="border-color: #30363D;"></li>
+            <li><a class="nav-link" href="{{ url_for('main.upgrade') }}" style="color: #F0F6FC;"><i class="fa-solid fa-credit-card"></i> Billing</a></li>
+            <li><a class="nav-link" href="{{ url_for('main.connected_accounts') }}" style="color: #F0F6FC;"><i class="fa-solid fa-plug"></i> Connected Accounts</a></li>
+            <li><a class="nav-link" href="{{ url_for('main.settings') }}" style="color: #F0F6FC;"><i class="fa-solid fa-gear"></i> Settings</a></li>
+            <li><a class="nav-link" href="{{ url_for('main.profile') }}" style="color: #F0F6FC;"><i class="fa-solid fa-user"></i> Profile</a></li>
+            {% if current_user.email == 'oadedamola07@gmail.com' %}
+            <li><a class="nav-link" href="{{ url_for('main.admin') }}" style="color: #F5A623;"><i class="fa-solid fa-shield"></i> Admin</a></li>
+            {% endif %}
+            <li><a class="nav-link" href="{{ url_for('auth.logout') }}" style="color: #E74C3C;"><i class="fa-solid fa-right-from-bracket"></i> Logout</a></li>
+        </ul>
+    </div>
+</div>

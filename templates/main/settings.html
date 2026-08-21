@@ -1,0 +1,288 @@
+{% extends 'base.html' %}
+
+{% block title %}Settings — Afrigen{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0 text-white">Settings</h1>
+</div>
+
+<div class="row">
+    <!-- Navigation Tabs -->
+    <div class="col-md-3 mb-4">
+        <div class="list-group bg-dark border-secondary shadow-sm rounded">
+            <a href="#account" class="list-group-item list-group-item-action bg-dark text-white border-secondary active" data-bs-toggle="list">
+                <i class="fa-solid fa-user me-2"></i> Account
+            </a>
+            <a href="#notifications" class="list-group-item list-group-item-action bg-dark text-white border-secondary" data-bs-toggle="list">
+                <i class="fa-solid fa-bell me-2"></i> Notifications
+            </a>
+            <a href="#ai-preferences" class="list-group-item list-group-item-action bg-dark text-white border-secondary" data-bs-toggle="list">
+                <i class="fa-solid fa-robot me-2"></i> AI Preferences
+            </a>
+            <a href="#billing" class="list-group-item list-group-item-action bg-dark text-white border-secondary" data-bs-toggle="list">
+                <i class="fa-solid fa-credit-card me-2"></i> Billing
+            </a>
+
+            <a href="#ai-providers" class="list-group-item list-group-item-action bg-dark text-white border-secondary" data-bs-toggle="list">
+                <i class="fa-solid fa-brain me-2"></i> AI Providers
+            </a>
+            <a href="#email-providers" class="list-group-item list-group-item-action bg-dark text-white border-secondary" data-bs-toggle="list">
+                <i class="fa-solid fa-envelope me-2"></i> Email Providers
+            </a>
+            <a href="#support" class="list-group-item list-group-item-action bg-dark text-white border-secondary" data-bs-toggle="list">
+                <i class="fa-solid fa-circle-question me-2"></i> Support
+            </a>
+        </div>
+    </div>
+
+    <!-- Tab Content -->
+    <div class="col-md-9">
+        <div class="tab-content">
+            
+            <!-- Account Settings -->
+            <div class="tab-pane fade show active" id="account">
+                <div class="card bg-dark border-secondary shadow-sm mb-4">
+                    <div class="card-header border-secondary bg-transparent pt-4 pb-2">
+                        <h5 class="text-white mb-0">Change Password</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ url_for('main.settings') }}">
+                            <input type="hidden" name="section" value="account">
+                            
+                            <div class="mb-4">
+                                <label for="new_password" class="form-label text-muted small text-uppercase fw-bold">New Password</label>
+                                <input type="password" class="form-control bg-dark border-secondary text-white" id="new_password" name="new_password" required>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label for="confirm_password" class="form-label text-muted small text-uppercase fw-bold">Confirm Password</label>
+                                <input type="password" class="form-control bg-dark border-secondary text-white" id="confirm_password" name="confirm_password" required>
+                            </div>
+                            
+                            <div class="d-flex justify-content-end">
+                                <button type="submit" class="btn btn-primary rounded-pill px-4">Update Password</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Notifications -->
+            <div class="tab-pane fade" id="notifications">
+                <div class="card bg-dark border-secondary shadow-sm mb-4">
+                    <div class="card-header border-secondary bg-transparent pt-4 pb-2">
+                        <h5 class="text-white mb-0">Notification Preferences</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ url_for('main.settings') }}">
+                            <input type="hidden" name="section" value="notifications">
+                            
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="email_notifications" name="email_notifications" {% if current_user.email_notifications %}checked{% endif %}>
+                                <label class="form-check-label text-white" for="email_notifications">
+                                    Email Notifications
+                                    <span class="d-block text-muted small mt-1">Receive transactional emails and alerts.</span>
+                                </label>
+                            </div>
+                            
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="marketing_emails" name="marketing_emails" {% if current_user.marketing_emails %}checked{% endif %}>
+                                <label class="form-check-label text-white" for="marketing_emails">
+                                    Marketing Emails
+                                    <span class="d-block text-muted small mt-1">Receive promotional offers and newsletters.</span>
+                                </label>
+                            </div>
+                            
+                            <div class="form-check form-switch mb-4">
+                                <input class="form-check-input" type="checkbox" id="product_updates" name="product_updates" {% if current_user.product_updates %}checked{% endif %}>
+                                <label class="form-check-label text-white" for="product_updates">
+                                    Product Updates
+                                    <span class="d-block text-muted small mt-1">Receive emails about new features and updates to Afrigen.</span>
+                                </label>
+                            </div>
+                            
+                            <div class="d-flex justify-content-end">
+                                <button type="submit" class="btn btn-primary rounded-pill px-4">Save Preferences</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- AI Preferences -->
+            <div class="tab-pane fade" id="ai-preferences">
+                <div class="card bg-dark border-secondary shadow-sm mb-4">
+                    <div class="card-header border-secondary bg-transparent pt-4 pb-2">
+                        <h5 class="text-white mb-0">AI Provider Preferences</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ url_for('main.settings') }}">
+                            <input type="hidden" name="section" value="ai_preferences">
+                            
+                            <div class="mb-4">
+                                <label for="default_ai_provider" class="form-label text-muted small text-uppercase fw-bold">Default AI Engine</label>
+                                <select class="form-select bg-dark border-secondary text-white" id="default_ai_provider" name="default_ai_provider">
+                                    <option value="gemini" {% if current_user.default_ai_provider == 'gemini' %}selected{% endif %}>Google Gemini (Recommended)</option>
+                                    <option value="openai" {% if current_user.default_ai_provider == 'openai' %}selected{% endif %}>OpenAI GPT-4</option>
+                                    <option value="anthropic" {% if current_user.default_ai_provider == 'anthropic' %}selected{% endif %}>Anthropic Claude</option>
+                                    <option value="groq" {% if current_user.default_ai_provider == 'groq' %}selected{% endif %}>Groq (Fastest)</option>
+                                </select>
+                                <div class="form-text text-muted mt-2">Select the default AI provider used for generation across the platform.</div>
+                            </div>
+                            
+                            <div class="d-flex justify-content-end">
+                                <button type="submit" class="btn btn-primary rounded-pill px-4">Save Settings</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+
+            
+            <!-- AI Providers -->
+            <div class="tab-pane fade" id="ai-providers">
+                <div class="card bg-dark border-secondary shadow-sm mb-4">
+                    <div class="card-header border-secondary bg-transparent pt-4 pb-2">
+                        <h5 class="text-white mb-0">AI Provider Credentials</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small mb-4">Securely store API keys for AI models used in generation workflows.</p>
+                        
+                        <form method="POST" action="{{ url_for('main.save_service_credential') }}">
+                            <input type="hidden" name="service_type" value="ai">
+                            
+                            <div class="row g-3">
+                                {% for provider in ['openai', 'anthropic', 'gemini', 'groq', 'fal_ai', 'replicate', 'elevenlabs', 'stability_ai', 'deepseek', 'openrouter'] %}
+                                <div class="col-md-6">
+                                    <label class="form-label text-muted small text-uppercase fw-bold">{{ provider.replace('_', ' ').title() }}</label>
+                                    <div class="input-group">
+                                        <input type="password" class="form-control bg-dark border-secondary text-white" name="{{ provider }}_key" placeholder="sk-..." {% if service_creds.get(provider) %}value="********"{% endif %}>
+                                        <button class="btn btn-outline-secondary" type="submit" name="provider_target" value="{{ provider }}">Save</button>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Email Providers -->
+            <div class="tab-pane fade" id="email-providers">
+                <div class="card bg-dark border-secondary shadow-sm mb-4">
+                    <div class="card-header border-secondary bg-transparent pt-4 pb-2">
+                        <h5 class="text-white mb-0">Email Provider Credentials</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small mb-4">Configure email providers for sending newsletters and transactional emails.</p>
+                        
+                        <form method="POST" action="{{ url_for('main.save_service_credential') }}">
+                            <input type="hidden" name="service_type" value="email">
+                            
+                            <div class="row g-4">
+                                <div class="col-12">
+                                    <h6 class="text-white mb-3 border-bottom border-secondary pb-2">SMTP Configuration</h6>
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <input type="text" class="form-control bg-dark border-secondary text-white" name="smtp_host" placeholder="SMTP Host (e.g., smtp.gmail.com)" {% if service_creds.get('smtp') and service_creds['smtp'].metadata_dict.get('host') %}value="{{ service_creds['smtp'].metadata_dict.get('host') }}"{% endif %}>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <input type="text" class="form-control bg-dark border-secondary text-white" name="smtp_port" placeholder="Port (e.g., 587)" {% if service_creds.get('smtp') and service_creds['smtp'].metadata_dict.get('port') %}value="{{ service_creds['smtp'].metadata_dict.get('port') }}"{% endif %}>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <input type="text" class="form-control bg-dark border-secondary text-white" name="smtp_username" placeholder="Username" {% if service_creds.get('smtp') and service_creds['smtp'].metadata_dict.get('username') %}value="{{ service_creds['smtp'].metadata_dict.get('username') }}"{% endif %}>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="input-group">
+                                                <input type="password" class="form-control bg-dark border-secondary text-white" name="smtp_password" placeholder="Password" {% if service_creds.get('smtp') %}value="********"{% endif %}>
+                                                <button class="btn btn-outline-secondary" type="submit" name="provider_target" value="smtp">Save SMTP</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-12 mt-4">
+                                    <h6 class="text-white mb-3 border-bottom border-secondary pb-2">API Providers</h6>
+                                    <div class="row g-3">
+                                        {% for provider in ['resend', 'mailgun', 'sendgrid'] %}
+                                        <div class="col-md-6">
+                                            <label class="form-label text-muted small text-uppercase fw-bold">{{ provider.title() }} API Key</label>
+                                            <div class="input-group">
+                                                <input type="password" class="form-control bg-dark border-secondary text-white" name="{{ provider }}_key" placeholder="API Key" {% if service_creds.get(provider) %}value="********"{% endif %}>
+                                                <button class="btn btn-outline-secondary" type="submit" name="provider_target" value="{{ provider }}">Save</button>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="billing">
+                <div class="card bg-dark border-secondary shadow-sm mb-4">
+                    <div class="card-header border-secondary bg-transparent pt-4 pb-2">
+                        <h5 class="text-white mb-0">Billing & Subscription</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom border-secondary">
+                            <div>
+                                <h6 class="text-white mb-1">Current Plan</h6>
+                                <span class="badge bg-primary text-capitalize rounded-pill px-3 py-2">{{ current_user.plan }}</span>
+                            </div>
+                            <div>
+                                <a href="{{ url_for('main.upgrade') }}" class="btn btn-outline-light rounded-pill px-4">Upgrade Plan</a>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-2">
+                            <h6 class="text-white mb-1">Available Credits</h6>
+                            <p class="text-muted mb-0">You have <strong>{{ current_user.credits - current_user.daily_credits_used }}</strong> out of {{ current_user.credits }} credits remaining today.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Support -->
+            <div class="tab-pane fade" id="support">
+                <div class="card bg-dark border-secondary shadow-sm mb-4">
+                    <div class="card-header border-secondary bg-transparent pt-4 pb-2">
+                        <h5 class="text-white mb-0">Help & Support</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-4">Need help with your account or have a question about Afrigen? Reach out to our support team.</p>
+                        
+                        <div class="mb-3">
+                            <h6 class="text-white mb-1"><i class="fa-solid fa-envelope me-2 text-primary"></i> General Support</h6>
+                            <a href="mailto:support@afrigen.com.ng" class="text-decoration-none">support@afrigen.com.ng</a>
+                        </div>
+                        
+                        <div>
+                            <h6 class="text-white mb-1"><i class="fa-solid fa-building me-2 text-primary"></i> Business & Contact</h6>
+                            <a href="mailto:contact@afrigen.com.ng" class="text-decoration-none">contact@afrigen.com.ng</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap 5 Tabs Init (Make sure JS is available) -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var triggerTabList = [].slice.call(document.querySelectorAll('.list-group-item[data-bs-toggle="list"]'))
+    triggerTabList.forEach(function (triggerEl) {
+        var tabTrigger = new bootstrap.Tab(triggerEl)
+        triggerEl.addEventListener('click', function (event) {
+            event.preventDefault()
+            tabTrigger.show()
+        })
+    })
+})
+</script>
+{% endblock %}

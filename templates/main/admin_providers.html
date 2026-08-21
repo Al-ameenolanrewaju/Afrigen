@@ -1,0 +1,106 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Admin - AI Providers{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>AI Provider Manager</h2>
+    <p class="text-muted">Manage fallback behavior and monitor health of Free AI providers.</p>
+
+    <div class="row mt-4">
+        {% for provider in providers %}
+        <div class="col-md-4">
+            <div class="card mb-4 shadow-sm border-0 {% if provider.status == 'offline' %}bg-light opacity-50{% endif %}">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="card-title mb-0">{{ provider.provider_name }}</h5>
+                        {% if provider.status == 'healthy' %}
+                            <span class="badge bg-success">Healthy</span>
+                        {% elif provider.status == 'degraded' %}
+                            <span class="badge bg-warning">Degraded</span>
+                        {% else %}
+                            <span class="badge bg-danger">Offline</span>
+                        {% endif %}
+                    </div>
+                    
+                    <ul class="list-group list-group-flush small mb-3">
+                        <li class="list-group-item d-flex justify-content-between px-0">
+                            <span>Requests:</span>
+                            <strong>{{ provider.total_requests }}</strong>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between px-0">
+                            <span>Success Rate:</span>
+                            <strong>
+                                {% if provider.total_requests > 0 %}
+                                    {{ ((provider.success_count / provider.total_requests) * 100)|round }}%
+                                {% else %}
+                                    0%
+                                {% endif %}
+                            </strong>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between px-0">
+                            <span>Avg Latency:</span>
+                            <strong>{{ provider.avg_latency|round(2) }}s</strong>
+                        </li>
+                        {% if provider.last_error %}
+                        <li class="list-group-item px-0 text-danger text-truncate" title="{{ provider.last_error }}">
+                            <small>Error: {{ provider.last_error }}</small>
+                        </li>
+                        {% endif %}
+                    </ul>
+
+                    <button class="btn btn-outline-primary btn-sm w-100 test-btn" data-provider="{{ provider.provider_name }}">
+                        Test Connection
+                    </button>
+                    <div class="test-result mt-2 small text-center" style="display: none;"></div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-12">
+            <div class="alert alert-info">No providers have been registered yet. They will appear here once the first request is routed to them.</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.test-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const provider = e.target.getAttribute('data-provider');
+            const resultDiv = e.target.nextElementSibling;
+            
+            e.target.disabled = true;
+            e.target.innerText = "Testing...";
+            resultDiv.style.display = 'block';
+            resultDiv.className = "test-result mt-2 small text-center text-muted";
+            resultDiv.innerText = "Pinging API...";
+            
+            try {
+                const res = await fetch('/admin/providers/test', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({provider: provider})
+                });
+                const data = await res.json();
+                
+                if(data.success) {
+                    resultDiv.className = "test-result mt-2 small text-center text-success";
+                    resultDiv.innerText = `Success (${data.latency}s): "${data.response}"`;
+                } else {
+                    resultDiv.className = "test-result mt-2 small text-center text-danger";
+                    resultDiv.innerText = `Failed: ${data.error}`;
+                }
+            } catch (err) {
+                resultDiv.className = "test-result mt-2 small text-center text-danger";
+                resultDiv.innerText = `Network Error`;
+            } finally {
+                e.target.disabled = false;
+                e.target.innerText = "Test Connection";
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

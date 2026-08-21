@@ -31,14 +31,19 @@ def _new_month(last_reset):
     return last_reset is None or (last_reset.year, last_reset.month) != (today.year, today.month)
 
 
-def video_gate(user, style, extended=False):
+def video_gate(user, style, extended=False, duration="5"):
     """Check whether `user` may generate a video.
 
     Returns (ok, error_message, cost). On a free user this may reset the monthly
     counter as a side effect (committed by the caller). `cost` is the credits a
     Pro user will be charged on success; it is irrelevant for free users.
     """
-    cost = text_to_video_cost(style, extended=extended)
+    duration = str(duration or "5")
+    if duration not in {"5", "10", "15", "20"}:
+        duration = "5"
+    if not extended and duration in {"10", "15", "20"}:
+        extended = True
+    cost = text_to_video_cost(style, extended=extended, duration=duration)
 
     if user.plan == 'free':
         if _new_month(user.last_video_reset):

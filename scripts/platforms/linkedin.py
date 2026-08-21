@@ -46,7 +46,7 @@ def _safe_json(resp) -> dict:
         return {}
 
 
-def post_article(text: str) -> dict:
+def post_article(text: str, access_token: str = None, person_id: str = None) -> dict:
     """Post a text article/share to LinkedIn.
 
     Uses the /posts endpoint (new LinkedIn Posts API) which supports text-only
@@ -54,12 +54,14 @@ def post_article(text: str) -> dict:
 
     Args:
         text: The post body (max ~3000 chars for LinkedIn).
+        access_token: Optional API token. Falls back to LINKEDIN_ACCESS_TOKEN.
+        person_id: Optional person URN. Falls back to LINKEDIN_PERSON_ID.
 
     Returns:
         {ok: bool, post_id: str|None, post_url: str|None, error: str|None}
     """
-    access_token = os.environ.get("LINKEDIN_ACCESS_TOKEN", "")
-    person_id = os.environ.get("LINKEDIN_PERSON_ID", "")
+    access_token = access_token or os.environ.get("LINKEDIN_ACCESS_TOKEN", "")
+    person_id = person_id or os.environ.get("LINKEDIN_PERSON_ID", "")
 
     if not access_token or not person_id:
         return {

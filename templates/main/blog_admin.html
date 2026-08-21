@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "admin_base.html" %}
 
 {% block title %}Blog Drafts — Afrigen{% endblock %}
 {% block meta_description %}Afrigen admin — review and approve auto-generated blog drafts.{% endblock %}
@@ -86,7 +86,7 @@
         </form>
         <a href="{{ url_for('main.admin_blog_edit', post_id=post.id) }}" class="btn btn-outline-warning">✏️ Edit</a>
         <form method="POST" action="{{ url_for('main.admin_blog_discard', post_id=post.id) }}"
-              onsubmit="return confirm('Discard this draft permanently?');">
+              onsubmit="sweetConfirmSubmit(event, 'Discard this draft permanently?');">
             <button type="submit" class="btn btn-outline-warning">🗑 Discard</button>
         </form>
         <a href="{{ url_for('main.blog_post', slug=post.slug) }}" target="_blank"

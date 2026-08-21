@@ -1,6 +1,6 @@
 from ..models import GeneratedContent
 
-def publish_telegram_post(generated: GeneratedContent) -> dict:
+def publish_telegram_post(generated: GeneratedContent, bot_token: str = None, channel_id: str = None) -> dict:
     import os
     if os.environ.get("DRY_RUN") == "true":
         return {"ok": True, "mock": True, "detail": "Dry run telegram post"}
@@ -11,4 +11,4 @@ def publish_telegram_post(generated: GeneratedContent) -> dict:
         sys.path.insert(0, scripts_dir)
         
     from platforms.telegram import post_to_channel
-    return post_to_channel(generated.content)
+    return post_to_channel(generated.content, bot_token=bot_token, channel_id=channel_id)

@@ -245,7 +245,7 @@ def send_contact_email(name, email, message):
     try:
         resend.Emails.send({
             "from": FROM_EMAIL,
-            "to": "afrigenng@gmail.com",
+            "to": "contact@afrigen.com.ng",
             "subject": f"New Contact from {name} - Afrigen",
             "html": f"""
             <div style="font-family: Arial; background: #0D1117;
@@ -374,7 +374,7 @@ def send_feedback_email(user_email, rating, feedback_text, feature):
             stars = str(rating or 'N/A')
         resend.Emails.send({
             "from": FROM_EMAIL,
-            "to": "afrigenng@gmail.com",
+            "to": "contact@afrigen.com.ng",
             "subject": f"New Feedback - {rating}/5 Stars - Afrigen",
             "html": f"""
             <div style="font-family: Arial; background: #0D1117;

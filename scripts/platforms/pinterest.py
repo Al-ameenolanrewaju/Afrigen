@@ -68,8 +68,15 @@ def _resolve_board_id(access_token: str) -> str:
     return ""
 
 
-def create_pin(title: str, description: str, link: str,
-               image_url: str = "", image_title: str = "") -> dict:
+def create_pin(
+    title: str, 
+    description: str, 
+    link: str,
+    image_url: str = "", 
+    image_title: str = "",
+    access_token: str = None,
+    board_id: str = None
+) -> dict:
     """Create a Pin linking back to an Afrigen blog post.
 
     Args:
@@ -78,11 +85,13 @@ def create_pin(title: str, description: str, link: str,
         link: Destination URL (the Afrigen blog post).
         image_url: Optional hosted image URL to pin.
         image_title: Title used to render a branded card when image_url is absent.
+        access_token: User access token
+        board_id: Optional board ID
 
     Returns:
         {ok, post_id, post_url, error} — skips gracefully, never raises.
     """
-    access_token = os.environ.get("PINTEREST_ACCESS_TOKEN", "")
+    access_token = access_token or os.environ.get("PINTEREST_ACCESS_TOKEN", "")
     if not access_token:
         return {
             "ok": False,
@@ -91,7 +100,7 @@ def create_pin(title: str, description: str, link: str,
             "post_url": None,
         }
 
-    board_id = os.environ.get("PINTEREST_BOARD_ID", "") or _resolve_board_id(access_token)
+    board_id = board_id or os.environ.get("PINTEREST_BOARD_ID", "") or _resolve_board_id(access_token)
     if not board_id:
         return {
             "ok": False,

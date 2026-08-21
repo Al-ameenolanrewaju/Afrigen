@@ -13,6 +13,7 @@ from services.video import (
     merge_audio_into_video,
     add_text_overlay,
     text_to_video_cost,
+    _build_t2v_request,
     generate_image as generate_ai_image   # aliased to avoid conflict with route name
 )
 # Premium Kling image-to-video is charged at the higher rate.
@@ -184,8 +185,11 @@ def generate():
         flash('Please enter a video idea!', 'danger')
         return redirect(url_for('main.dashboard'))
 
+    effective_style = 'cinematic' if current_user.plan == 'free' else style
+    model_name, _ = _build_t2v_request(prompt, effective_style, aspect_ratio, extended, duration=duration)
+
     try:
-        refined = refine_prompt(prompt, style)
+        refined = refine_prompt(prompt, effective_style, model_name=model_name, duration=duration)
     except Exception as e:
         print("REFINE ERROR:", str(e))
         return jsonify({"success": False, "error": "Could not refine your prompt right now. Please try again."})
@@ -193,13 +197,12 @@ def generate():
     if action == 'refine_only':
         return jsonify({"success": True, "type": "refine_only", "refined": refined, "original": prompt})
 
-    ok, error, _ = video_gate(current_user, style, extended=extended, duration=duration)
+    ok, error, _ = video_gate(current_user, effective_style, extended=extended, duration=duration)
     if not ok:
         return jsonify({"success": False, "error": error})
 
     try:
-        if current_user.plan == 'free':
-            style = 'cinematic'
+        style = effective_style
 
         webhook_url = url_for('main.fal_webhook', _external=True)
         video_cost = text_to_video_cost(style, extended=extended, duration=duration)
@@ -261,7 +264,6 @@ def connected_accounts():
         {"id": "linkedin", "name": "LinkedIn", "icon": "bi-linkedin"},
         {"id": "x", "name": "X (Twitter)", "icon": "bi-twitter-x"},
         {"id": "telegram", "name": "Telegram", "icon": "bi-telegram"},
-        {"id": "whatsapp", "name": "WhatsApp Business", "icon": "bi-whatsapp"},
         {"id": "tiktok", "name": "TikTok", "icon": "bi-tiktok"},
         {"id": "pinterest", "name": "Pinterest", "icon": "bi-pinterest"},
         {"id": "youtube", "name": "YouTube", "icon": "bi-youtube"},
@@ -429,89 +431,6 @@ def disconnect_provider(provider):
         flash(f"Error disconnecting {provider.capitalize()}: {str(e)}", "danger")
         
     return redirect(url_for('main.connected_accounts'))
-    style = request.form.get('style', 'cinematic')
-    action = request.form.get('action', 'generate')
-    print("ACTION RECEIVED:", action)
-    add_voiceover = request.form.get('add_voiceover')
-    aspect_ratio = request.form.get('aspect_ratio', '16:9')
-
-    if not prompt:
-        flash('Please enter a video idea!', 'danger')
-        return redirect(url_for('main.dashboard'))
-
-    try:
-        refined = refine_prompt(prompt, style)
-    except Exception as e:
-        print("REFINE ERROR:", str(e))
-        return jsonify({"success": False, "error": "Could not refine your prompt right now. Please try again."})
-
-    if action == 'refine_only':
-        return jsonify({"success": True, "type": "refine_only", "refined": refined, "original": prompt})
-
-    # Plan / credit gate (shared with the Telegram bot via services.credits).
-    # Pro users get the premium 10s Kling model on supported styles, so we gate
-    # against the extended cost.
-    ok, error, _ = video_gate(current_user, style, extended=(current_user.plan == 'pro'))
-    if not ok:
-        return jsonify({"success": False, "error": error})
-
-    try:
-        if current_user.plan == 'free':
-            style = 'cinematic'
-
-        webhook_url = url_for('main.fal_webhook', _external=True)
-        print("WEBHOOK URL:", webhook_url)
-        # Pro users get the longer clip on styles that support it (anime/social),
-        # and the premium 10s Kling model on cinematic/realistic/african.
-        extended = (current_user.plan == 'pro')
-        video_cost = text_to_video_cost(style, extended=extended)
-        result = generate_video_async(refined, style, aspect_ratio, webhook_url=webhook_url, extended=extended)
-
-        if not result["success"]:
-            raise Exception(result["error"])
-
-        # Voiceover is a Pro feature. We only remember the choice here; the
-        # audio is generated later in the fal webhook, but only if the video
-        # actually succeeds, so we never pay for a voiceover on a failed video.
-        wants_voiceover = (add_voiceover == '1' and current_user.plan == 'pro')
-
-        generation = Generation(
-            user_id=current_user.id,
-            original_prompt=prompt,
-            refined_prompt=refined,
-            video_url=None,
-            wants_voiceover=wants_voiceover,
-            status="processing",
-            credit_cost=video_cost,
-            fal_request_id=result["request_id"]
-        )
-        db.session.add(generation)
-
-        if current_user.plan == 'free':
-            current_user.monthly_videos_used += 1
-
-        db.session.commit()
-
-        return jsonify({
-            "success": True,
-            "type": "processing",
-            "message": "Your video is being generated! You'll receive an email when it's ready.",
-            "generation_id": generation.id
-        })
-
-    except Exception as e:
-        db.session.rollback()
-        print("VIDEO GENERATION ERROR:", str(e))
-        generation = Generation(
-            user_id=current_user.id,
-            original_prompt=prompt,
-            refined_prompt=refined,
-            video_url=None,
-            status="failed"
-        )
-        db.session.add(generation)
-        db.session.commit()
-        return jsonify({"success": False, "error": "Video generation failed. Please try again."})
 
 @main.route('/refine-prompt', methods=['POST'])
 def refine_prompt_free():
@@ -2048,45 +1967,6 @@ def settings():
     if request.method == 'POST':
         section = request.form.get('section')
 
-        if section == 'whatsapp_auto_reply':
-            phone_number = (request.form.get('phone_number') or '').strip()
-            twilio_token = (request.form.get('twilio_token') or '').strip()
-            away_message = (request.form.get('away_message') or 'Thanks for messaging us. We are away right now, but we will reply as soon as we can.').strip()
-            auto_reply = request.form.get('auto_reply') in ('on', 'true', '1', 'yes', 'enabled')
-            business_hours_enabled = request.form.get('business_hours_enabled') in ('on', 'true', '1', 'yes', 'enabled')
-            business_hours_start = (request.form.get('business_hours_start') or '09:00').strip()
-            business_hours_end = (request.form.get('business_hours_end') or '17:00').strip()
-            timezone_name = (request.form.get('timezone') or 'UTC').strip()
-
-            if not phone_number:
-                flash('WhatsApp business number is required.', 'danger')
-                return redirect(url_for('main.settings'))
-
-            account = ConnectedAccount.query.filter_by(user_id=current_user.id, provider='whatsapp').first()
-            if not account:
-                account = ConnectedAccount(user_id=current_user.id, provider='whatsapp')
-                db.session.add(account)
-
-            account.status = 'connected'
-            account.account_name = 'WhatsApp Business'
-            account.account_identifier = phone_number
-            if twilio_token:
-                account.encrypted_access_token = encrypt_token(twilio_token)
-
-            metadata = {
-                'phone_number': phone_number,
-                'auto_reply': auto_reply,
-                'away_message': away_message,
-                'business_hours_enabled': business_hours_enabled,
-                'business_hours_start': business_hours_start,
-                'business_hours_end': business_hours_end,
-                'timezone': timezone_name,
-            }
-            account.metadata_json = encrypt_token(json.dumps(metadata))
-            db.session.commit()
-            flash('WhatsApp auto-reply settings saved successfully.', 'success')
-            return redirect(url_for('main.settings'))
-
         # Legacy save logic for account/notifications if you have one
         pass
 
@@ -2097,27 +1977,7 @@ def settings():
         c.metadata_dict = json.loads(c.metadata_json) if c.metadata_json else {}
         service_creds[c.provider] = c
 
-    whatsapp_account = ConnectedAccount.query.filter_by(user_id=current_user.id, provider='whatsapp', status='connected').first()
-    whatsapp_settings = {
-        'enabled': False,
-        'phone_number': '',
-        'away_message': 'Thanks for messaging us. We are away right now, but we will reply as soon as we can.',
-        'business_hours_enabled': False,
-        'business_hours_start': '09:00',
-        'business_hours_end': '17:00',
-        'timezone': 'UTC',
-    }
-    if whatsapp_account:
-        whatsapp_settings['phone_number'] = whatsapp_account.account_identifier or ''
-        if whatsapp_account.metadata_json:
-            try:
-                metadata = json.loads(decrypt_token(whatsapp_account.metadata_json) or '{}')
-                if isinstance(metadata, dict):
-                    whatsapp_settings.update(metadata)
-            except Exception:
-                pass
-
-    return render_template('main/settings.html', service_creds=service_creds, whatsapp_settings=whatsapp_settings)
+    return render_template('main/settings.html', service_creds=service_creds)
 
 @main.route('/settings/credentials/save', methods=['POST'])
 @login_required

@@ -18,12 +18,22 @@ import os
 import requests
 
 
-def post_thread(tweets: list[str]) -> dict:
+def post_thread(
+    tweets: list[str],
+    api_key: str = None,
+    api_secret: str = None,
+    access_token: str = None,
+    access_secret: str = None
+) -> dict:
     """Post a thread of tweets. Each tweet replies to the previous one so they
     appear as a connected thread on X.
 
     Args:
         tweets: list of tweet texts, each <= 280 chars.
+        api_key: Consumer key
+        api_secret: Consumer secret
+        access_token: User access token
+        access_secret: User access token secret
 
     Returns:
         {ok: bool, tweet_ids: [str, ...], error: str|None}
@@ -42,10 +52,10 @@ def post_thread(tweets: list[str]) -> dict:
             "tweet_ids": [],
         }
 
-    api_key = os.environ.get("TWITTER_API_KEY", "")
-    api_secret = os.environ.get("TWITTER_API_SECRET", "")
-    access_token = os.environ.get("TWITTER_ACCESS_TOKEN", "")
-    access_secret = os.environ.get("TWITTER_ACCESS_SECRET", "")
+    api_key = api_key or os.environ.get("TWITTER_API_KEY", "")
+    api_secret = api_secret or os.environ.get("TWITTER_API_SECRET", "")
+    access_token = access_token or os.environ.get("TWITTER_ACCESS_TOKEN", "")
+    access_secret = access_secret or os.environ.get("TWITTER_ACCESS_SECRET", "")
 
     if not all([api_key, api_secret, access_token, access_secret]):
         return {

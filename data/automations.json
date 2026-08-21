@@ -1,0 +1,764 @@
+{
+    "workflows": [
+        {
+            "id": "wf_test_run",
+            "name": "Test Workflow",
+            "trigger": "manual",
+            "nodes": [
+                {
+                    "type": "generate_content",
+                    "label": "Generate Copy",
+                    "prompt": "Write a short marketing blurb"
+                }
+            ],
+            "user_id": 1
+        }
+    ],
+    "logs": [
+        {
+            "id": "log_380d788a",
+            "workflow_id": "wf_47f72e68",
+            "workflow_name": "newsletter",
+            "started_at": "2026-07-19T11:06:36.252436+00:00",
+            "status": "completed",
+            "nodes_executed": [
+                {
+                    "node_type": "generate_content",
+                    "label": "Generate Blog/Copy",
+                    "status": "success",
+                    "timestamp": "2026-07-19T11:06:36.252506+00:00"
+                }
+            ],
+            "credits_used": 0,
+            "completed_at": "2026-07-19T11:06:36.252539+00:00"
+        },
+        {
+            "id": "log_6b3e0d6c",
+            "workflow_id": "wf_41e13ff8",
+            "workflow_name": "blog",
+            "started_at": "2026-07-20T13:58:47.593859+00:00",
+            "status": "completed",
+            "nodes_executed": [
+                {
+                    "node_type": "generate_content",
+                    "label": "Generate Blog/Copy",
+                    "success": true,
+                    "provider": "AutomationEngine",
+                    "duration_seconds": 0.0,
+                    "credits_consumed": 0,
+                    "asset": null,
+                    "timestamp": "2026-07-20T13:58:47.594060+00:00"
+                }
+            ],
+            "credits_used": 0,
+            "assets": [],
+            "completed_at": "2026-07-20T13:58:47.594090+00:00"
+        },
+        {
+            "id": "log_573afd4c",
+            "workflow_id": "wf_47f72e68",
+            "workflow_name": "newsletter",
+            "started_at": "2026-07-20T14:12:16.667611+00:00",
+            "status": "completed",
+            "nodes_executed": [
+                {
+                    "node_type": "generate_content",
+                    "label": "Generate Blog/Copy",
+                    "success": true,
+                    "provider": "AutomationEngine",
+                    "duration_seconds": 0.0,
+                    "credits_consumed": 0,
+                    "asset": null,
+                    "timestamp": "2026-07-20T14:12:16.667722+00:00"
+                }
+            ],
+            "credits_used": 0,
+            "assets": [],
+            "completed_at": "2026-07-20T14:12:16.667736+00:00"
+        },
+        {
+            "id": "log_cb78429e",
+            "workflow_id": "wf_41e13ff8",
+            "workflow_name": "blog",
+            "started_at": "2026-07-20T14:26:57.507152+00:00",
+            "status": "completed",
+            "nodes_executed": [
+                {
+                    "node_type": "generate_blog",
+                    "label": "Generate Blog/Copy",
+                    "success": true,
+                    "provider": "BlogService",
+                    "duration_seconds": 18.941,
+                    "credits_consumed": 2,
+                    "asset": {
+                        "type": "blog",
+                        "title": "Crafting Engaging AI Videos for Nigerian Travel Vloggers",
+                        "content": "<p style=\"color: #C9D1D9; margin-bottom: 16px;\">As a Nigerian travel vlogger, you're likely no stranger to the beauty and diversity of Nigeria's landscapes and cultures. From the vibrant streets of Lagos to the stunning natural wonders of the Osun Osogbo Sacred Grove, there's no shortage of exciting content to share with your audience. However, creating engaging videos that showcase your travels can be time-consuming and costly, especially when working with traditional video production methods. This is where Afrigen's AI video tools come in \u2013 allowing you to create high-quality, captivating videos in a fraction of the time and cost.</p>\n<h4 style=\"color: #F5A623;\">Getting Started with AI Video Creation</h4>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">To get started with creating AI videos for your travel vlog, you'll need to sign up for an Afrigen account and familiarize yourself with the platform's AI video tools. With a Pro subscription costing around \u20a620,000 per month, you'll have access to a range of features and templates to help you create stunning videos. For example, you can use the \"Travel Vlog\" template to create a video showcasing your trip to the Yankari Game Reserve, complete with animated maps, text overlays, and vibrant visuals.</p>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">Let's take a look at a real-world example. Suppose you want to create a video showcasing your visit to the National Museum in Lagos. You can use the following prompt: \"Create a 60-second video showcasing the National Museum in Lagos, featuring shots of the museum's exterior, interior, and exhibits, with a mix of animated text overlays and upbeat background music.\" With Afrigen's AI video tools, you can generate a high-quality video in just a few minutes, complete with professional-grade visuals and sound design.</p>\n<h4 style=\"color: #F5A623;\">Optimizing Your AI Videos for Social Media</h4>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">Once you've created your AI video, it's time to optimize it for social media platforms like Instagram Reels, TikTok, and YouTube Shorts. With over 250,000 active influencers in Nigeria, the competition for attention can be fierce. To stand out, you'll need to ensure your video is engaging, informative, and visually stunning. You can use Afrigen's AI video tools to add captions, tags, and other metadata to your video, making it more discoverable and shareable.</p>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">For example, you can use the following strategy to promote your AI video on Instagram Reels: post a 15-second teaser clip featuring a stunning visual from your video, with a caption like \"Explore the beauty of Nigeria with me! #NigerianTravel #TravelVlog #AfrigenAI\". You can also use relevant hashtags like #LagosTourism or #NigerianCulture to reach a wider audience. With a budget of around \u20a65,000 per month for Instagram ads, you can reach thousands of potential viewers and drive engagement with your content.</p>\n<div class=\"p-3 mb-3\" style=\"background: #21262D; border-radius: 8px; border-left: 3px solid #F5A623;\"><p style=\"color: #C9D1D9; margin: 0;\">By leveraging Afrigen's AI video tools and optimizing your content for social media, you can create engaging, captivating videos that showcase the best of Nigeria's travel destinations. Whether you're a seasoned travel vlogger or just starting out, Afrigen's AI video tools can help you take your content to the next level and reach a wider audience.</p></div>\n<h4 style=\"color: #F5A623;\">Monetizing Your AI Videos</h4>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">As your audience grows, you can start monetizing your AI videos through sponsorships, affiliate marketing, and ads. For example, you can partner with a local tour operator to create sponsored content featuring their tours and packages. With a sponsorship deal worth around \u20a650,000 per video, you can earn a significant income from your content. You can also use Afrigen's AI video tools to create engaging, high-quality videos that showcase your sponsors' products and services.</p>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">In conclusion, creating engaging AI videos for your Nigerian travel vlog has never been easier, thanks to Afrigen's AI video tools. By following the tips and strategies outlined in this article, you can create stunning, captivating videos that showcase the best of Nigeria's travel destinations and reach a wider audience. So why not get started today and take your travel vlog to the next level with Afrigen's AI video tools?</p>",
+                        "slug": "crafting-engaging-ai-videos-for-nigerian-travel-vloggers",
+                        "asset_id": "asset_51daa4c9",
+                        "storage": "file"
+                    },
+                    "timestamp": "2026-07-20T14:27:16.457310+00:00"
+                }
+            ],
+            "credits_used": 2,
+            "assets": [
+                {
+                    "type": "blog",
+                    "title": "Crafting Engaging AI Videos for Nigerian Travel Vloggers",
+                    "content": "<p style=\"color: #C9D1D9; margin-bottom: 16px;\">As a Nigerian travel vlogger, you're likely no stranger to the beauty and diversity of Nigeria's landscapes and cultures. From the vibrant streets of Lagos to the stunning natural wonders of the Osun Osogbo Sacred Grove, there's no shortage of exciting content to share with your audience. However, creating engaging videos that showcase your travels can be time-consuming and costly, especially when working with traditional video production methods. This is where Afrigen's AI video tools come in \u2013 allowing you to create high-quality, captivating videos in a fraction of the time and cost.</p>\n<h4 style=\"color: #F5A623;\">Getting Started with AI Video Creation</h4>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">To get started with creating AI videos for your travel vlog, you'll need to sign up for an Afrigen account and familiarize yourself with the platform's AI video tools. With a Pro subscription costing around \u20a620,000 per month, you'll have access to a range of features and templates to help you create stunning videos. For example, you can use the \"Travel Vlog\" template to create a video showcasing your trip to the Yankari Game Reserve, complete with animated maps, text overlays, and vibrant visuals.</p>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">Let's take a look at a real-world example. Suppose you want to create a video showcasing your visit to the National Museum in Lagos. You can use the following prompt: \"Create a 60-second video showcasing the National Museum in Lagos, featuring shots of the museum's exterior, interior, and exhibits, with a mix of animated text overlays and upbeat background music.\" With Afrigen's AI video tools, you can generate a high-quality video in just a few minutes, complete with professional-grade visuals and sound design.</p>\n<h4 style=\"color: #F5A623;\">Optimizing Your AI Videos for Social Media</h4>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">Once you've created your AI video, it's time to optimize it for social media platforms like Instagram Reels, TikTok, and YouTube Shorts. With over 250,000 active influencers in Nigeria, the competition for attention can be fierce. To stand out, you'll need to ensure your video is engaging, informative, and visually stunning. You can use Afrigen's AI video tools to add captions, tags, and other metadata to your video, making it more discoverable and shareable.</p>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">For example, you can use the following strategy to promote your AI video on Instagram Reels: post a 15-second teaser clip featuring a stunning visual from your video, with a caption like \"Explore the beauty of Nigeria with me! #NigerianTravel #TravelVlog #AfrigenAI\". You can also use relevant hashtags like #LagosTourism or #NigerianCulture to reach a wider audience. With a budget of around \u20a65,000 per month for Instagram ads, you can reach thousands of potential viewers and drive engagement with your content.</p>\n<div class=\"p-3 mb-3\" style=\"background: #21262D; border-radius: 8px; border-left: 3px solid #F5A623;\"><p style=\"color: #C9D1D9; margin: 0;\">By leveraging Afrigen's AI video tools and optimizing your content for social media, you can create engaging, captivating videos that showcase the best of Nigeria's travel destinations. Whether you're a seasoned travel vlogger or just starting out, Afrigen's AI video tools can help you take your content to the next level and reach a wider audience.</p></div>\n<h4 style=\"color: #F5A623;\">Monetizing Your AI Videos</h4>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">As your audience grows, you can start monetizing your AI videos through sponsorships, affiliate marketing, and ads. For example, you can partner with a local tour operator to create sponsored content featuring their tours and packages. With a sponsorship deal worth around \u20a650,000 per video, you can earn a significant income from your content. You can also use Afrigen's AI video tools to create engaging, high-quality videos that showcase your sponsors' products and services.</p>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">In conclusion, creating engaging AI videos for your Nigerian travel vlog has never been easier, thanks to Afrigen's AI video tools. By following the tips and strategies outlined in this article, you can create stunning, captivating videos that showcase the best of Nigeria's travel destinations and reach a wider audience. So why not get started today and take your travel vlog to the next level with Afrigen's AI video tools?</p>",
+                    "slug": "crafting-engaging-ai-videos-for-nigerian-travel-vloggers",
+                    "asset_id": "asset_51daa4c9",
+                    "storage": "file"
+                }
+            ],
+            "completed_at": "2026-07-20T14:27:16.457355+00:00"
+        },
+        {
+            "id": "log_9154e54e",
+            "workflow_id": "wf_live_verify",
+            "workflow_name": "Live Verification Workflow",
+            "started_at": "2026-07-20T14:28:30.579810+00:00",
+            "status": "completed",
+            "nodes_executed": [
+                {
+                    "node_type": "generate_blog",
+                    "label": "Generate Blog Draft",
+                    "success": false,
+                    "provider": "BlogService",
+                    "duration_seconds": 26.734,
+                    "credits_consumed": 0,
+                    "asset": null,
+                    "error": "All AI providers failed. Last error: None",
+                    "timestamp": "2026-07-20T14:28:57.314314+00:00"
+                }
+            ],
+            "credits_used": 0,
+            "assets": [],
+            "completed_at": "2026-07-20T14:28:57.314340+00:00"
+        },
+        {
+            "id": "log_a06760ba",
+            "workflow_id": "wf_live_verify",
+            "workflow_name": "Live Verification Workflow",
+            "started_at": "2026-07-20T14:34:03.103271+00:00",
+            "status": "completed",
+            "nodes_executed": [
+                {
+                    "node_type": "generate_blog",
+                    "label": "Generate Blog Draft",
+                    "success": false,
+                    "provider": "BlogService",
+                    "duration_seconds": 24.241,
+                    "credits_consumed": 0,
+                    "asset": null,
+                    "error": "All AI providers failed. Last error: None",
+                    "timestamp": "2026-07-20T14:34:27.343843+00:00"
+                }
+            ],
+            "credits_used": 0,
+            "assets": [],
+            "completed_at": "2026-07-20T14:34:27.343865+00:00"
+        },
+        {
+            "id": "log_f7e8c3b0",
+            "workflow_id": "wf_live_verify_2",
+            "workflow_name": "Live Verification Workflow",
+            "started_at": "2026-07-20T14:54:47.140776+00:00",
+            "status": "completed",
+            "nodes_executed": [
+                {
+                    "node_type": "generate_blog",
+                    "label": "Generate Blog Draft",
+                    "success": false,
+                    "provider": "BlogService",
+                    "duration_seconds": 23.685,
+                    "credits_consumed": 0,
+                    "asset": null,
+                    "error": "All AI providers failed. Last error: None",
+                    "timestamp": "2026-07-20T14:55:10.825664+00:00"
+                }
+            ],
+            "credits_used": 0,
+            "assets": [],
+            "completed_at": "2026-07-20T14:55:10.825699+00:00"
+        },
+        {
+            "id": "log_4735c4d8",
+            "workflow_id": "wf_tmp_verify",
+            "workflow_name": "Temporary Verification Workflow",
+            "started_at": "2026-07-20T14:57:17.294774+00:00",
+            "status": "completed",
+            "nodes_executed": [
+                {
+                    "node_type": "generate_blog",
+                    "label": "Generate Blog Draft",
+                    "success": false,
+                    "provider": "BlogService",
+                    "duration_seconds": 28.967,
+                    "credits_consumed": 0,
+                    "asset": null,
+                    "error": "All AI providers failed. Last error: None",
+                    "timestamp": "2026-07-20T14:57:46.261785+00:00"
+                }
+            ],
+            "credits_used": 0,
+            "assets": [],
+            "completed_at": "2026-07-20T14:57:46.261819+00:00"
+        },
+        {
+            "id": "log_deb20dc8",
+            "workflow_id": "wf_tmp_verify",
+            "workflow_name": "Temporary Verification Workflow",
+            "started_at": "2026-07-20T14:59:05.848055+00:00",
+            "status": "completed",
+            "nodes_executed": [
+                {
+                    "node_type": "generate_blog",
+                    "label": "Generate Blog Draft",
+                    "success": false,
+                    "provider": "BlogService",
+                    "duration_seconds": 26.725,
+                    "credits_consumed": 0,
+                    "asset": null,
+                    "error": "All AI providers failed. Last error: None",
+                    "timestamp": "2026-07-20T14:59:32.573630+00:00"
+                }
+            ],
+            "credits_used": 0,
+            "assets": [],
+            "completed_at": "2026-07-20T14:59:32.573681+00:00"
+        },
+        {
+            "id": "log_c4bf39f2",
+            "workflow_id": "wf_env_verify",
+            "workflow_name": "Env Verify",
+            "started_at": "2026-07-20T15:02:38.004478+00:00",
+            "status": "completed",
+            "nodes_executed": [
+                {
+                    "node_type": "generate_blog",
+                    "label": "Generate Blog Draft",
+                    "success": true,
+                    "provider": "BlogService",
+                    "duration_seconds": 18.689,
+                    "credits_consumed": 2,
+                    "asset": {
+                        "type": "blog",
+                        "title": "Crafting Engaging AI Video for Nigerian Travel Vloggers",
+                        "content": "<p style=\"color: #C9D1D9; margin-bottom: 16px;\">As a Nigerian travel vlogger, you know how important it is to showcase the beauty and diversity of our country. With the rise of AI video tools, you can now create engaging and high-quality videos without breaking the bank. In this post, we'll explore how to craft captivating AI videos for Nigerian travel vloggers, using platforms like TikTok, Instagram Reels, and YouTube Shorts.</p>\n<h4 style=\"color: #F5A623;\">Understanding Your Audience</h4>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">Before creating your AI video, it's essential to understand your target audience. Are you catering to local tourists or international travelers? What type of content do they engage with? For example, if you're targeting adventure-seekers, you may want to create videos showcasing Nigeria's beautiful landscapes, such as the <strong>Osun Osogbo Sacred Grove</strong> or the <strong>Obudu Plateau</strong>. On the other hand, if you're targeting foodies, you may want to create videos highlighting Nigeria's diverse cuisine, such as <strong>jollof rice</strong> or <strong>egusi soup</strong>.</p>\n<h4 style=\"color: #F5A623;\">Crafting Compelling Prompts</h4>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">To create engaging AI videos, you need to craft compelling prompts. A good prompt should be specific, concise, and relevant to your audience. For example, if you're creating a video about Lagos, your prompt could be: \"Create a 60-second video showcasing the vibrant streets of Lagos, featuring the <strong>National Museum</strong>, <strong>Tarkwa Bay Beach</strong>, and <strong>Balogun Market</strong>.\" You can then use this prompt to generate a high-quality AI video using platforms like Afrigen.</p>\n<ul style=\"color: #C9D1D9; margin-bottom: 16px;\">\n<li>Keep your prompt concise and to the point</li>\n<li>Use specific keywords and locations to add context</li>\n<li>Define the tone and style of your video</li>\n</ul>\n<h4 style=\"color: #F5A623;\">Optimizing for Social Media</h4>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">Once you've created your AI video, it's time to optimize it for social media. Each platform has its unique requirements and best practices. For example, on TikTok, you'll want to keep your videos short and engaging, using relevant hashtags like <strong>#LagosVibes</strong> or <strong>#NigeriaTourism</strong>. On Instagram Reels, you may want to use a more polished and curated approach, highlighting your video's visuals and sound design. On YouTube Shorts, you can create longer-form content, such as <strong>vlogs</strong> or <strong>travel guides</strong>.</p>\n<div class=\"p-3 mb-3\" style=\"background: #21262D; border-radius: 8px; border-left: 3px solid #F5A623;\"><p style=\"color: #C9D1D9; margin: 0;\">To give you a better idea, let's consider a real-world example. Suppose you're a travel vlogger who wants to create a video about Abuja. You can use a prompt like: \"Create a 90-second video showcasing the beauty of Abuja, featuring the <strong>National Assembly</strong>, <strong>Aso Rock</strong>, and <strong>Millennium Park</strong>.\" You can then generate a high-quality AI video using Afrigen, and optimize it for TikTok, Instagram Reels, or YouTube Shorts. With a <strong>Pro subscription</strong> to Afrigen, which costs around <strong>\u20a620,000</strong> per month, you can create unlimited AI videos and access advanced features like custom branding and analytics.</p></div>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">In conclusion, crafting engaging AI videos for Nigerian travel vloggers requires a deep understanding of your audience, compelling prompts, and optimization for social media. By following these tips and using platforms like Afrigen, you can create high-quality videos that showcase the beauty and diversity of Nigeria, without breaking the bank. So why not give it a try? Create your first AI video today and start showcasing the wonders of Nigeria to the world!</p>",
+                        "slug": "crafting-engaging-ai-video-for-nigerian-travel-vloggers",
+                        "asset_id": "asset_da122ea6",
+                        "storage": "file"
+                    },
+                    "timestamp": "2026-07-20T15:02:56.703834+00:00"
+                }
+            ],
+            "credits_used": 2,
+            "assets": [
+                {
+                    "type": "blog",
+                    "title": "Crafting Engaging AI Video for Nigerian Travel Vloggers",
+                    "content": "<p style=\"color: #C9D1D9; margin-bottom: 16px;\">As a Nigerian travel vlogger, you know how important it is to showcase the beauty and diversity of our country. With the rise of AI video tools, you can now create engaging and high-quality videos without breaking the bank. In this post, we'll explore how to craft captivating AI videos for Nigerian travel vloggers, using platforms like TikTok, Instagram Reels, and YouTube Shorts.</p>\n<h4 style=\"color: #F5A623;\">Understanding Your Audience</h4>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">Before creating your AI video, it's essential to understand your target audience. Are you catering to local tourists or international travelers? What type of content do they engage with? For example, if you're targeting adventure-seekers, you may want to create videos showcasing Nigeria's beautiful landscapes, such as the <strong>Osun Osogbo Sacred Grove</strong> or the <strong>Obudu Plateau</strong>. On the other hand, if you're targeting foodies, you may want to create videos highlighting Nigeria's diverse cuisine, such as <strong>jollof rice</strong> or <strong>egusi soup</strong>.</p>\n<h4 style=\"color: #F5A623;\">Crafting Compelling Prompts</h4>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">To create engaging AI videos, you need to craft compelling prompts. A good prompt should be specific, concise, and relevant to your audience. For example, if you're creating a video about Lagos, your prompt could be: \"Create a 60-second video showcasing the vibrant streets of Lagos, featuring the <strong>National Museum</strong>, <strong>Tarkwa Bay Beach</strong>, and <strong>Balogun Market</strong>.\" You can then use this prompt to generate a high-quality AI video using platforms like Afrigen.</p>\n<ul style=\"color: #C9D1D9; margin-bottom: 16px;\">\n<li>Keep your prompt concise and to the point</li>\n<li>Use specific keywords and locations to add context</li>\n<li>Define the tone and style of your video</li>\n</ul>\n<h4 style=\"color: #F5A623;\">Optimizing for Social Media</h4>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">Once you've created your AI video, it's time to optimize it for social media. Each platform has its unique requirements and best practices. For example, on TikTok, you'll want to keep your videos short and engaging, using relevant hashtags like <strong>#LagosVibes</strong> or <strong>#NigeriaTourism</strong>. On Instagram Reels, you may want to use a more polished and curated approach, highlighting your video's visuals and sound design. On YouTube Shorts, you can create longer-form content, such as <strong>vlogs</strong> or <strong>travel guides</strong>.</p>\n<div class=\"p-3 mb-3\" style=\"background: #21262D; border-radius: 8px; border-left: 3px solid #F5A623;\"><p style=\"color: #C9D1D9; margin: 0;\">To give you a better idea, let's consider a real-world example. Suppose you're a travel vlogger who wants to create a video about Abuja. You can use a prompt like: \"Create a 90-second video showcasing the beauty of Abuja, featuring the <strong>National Assembly</strong>, <strong>Aso Rock</strong>, and <strong>Millennium Park</strong>.\" You can then generate a high-quality AI video using Afrigen, and optimize it for TikTok, Instagram Reels, or YouTube Shorts. With a <strong>Pro subscription</strong> to Afrigen, which costs around <strong>\u20a620,000</strong> per month, you can create unlimited AI videos and access advanced features like custom branding and analytics.</p></div>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">In conclusion, crafting engaging AI videos for Nigerian travel vloggers requires a deep understanding of your audience, compelling prompts, and optimization for social media. By following these tips and using platforms like Afrigen, you can create high-quality videos that showcase the beauty and diversity of Nigeria, without breaking the bank. So why not give it a try? Create your first AI video today and start showcasing the wonders of Nigeria to the world!</p>",
+                    "slug": "crafting-engaging-ai-video-for-nigerian-travel-vloggers",
+                    "asset_id": "asset_da122ea6",
+                    "storage": "file"
+                }
+            ],
+            "completed_at": "2026-07-20T15:02:56.703895+00:00"
+        },
+        {
+            "id": "log_ec364bdd",
+            "workflow_id": "wf_38ba8fd5",
+            "workflow_name": "E2E Workflow",
+            "started_at": "2026-07-29T20:32:16.966589+00:00",
+            "status": "completed",
+            "nodes_executed": [
+                {
+                    "node_type": "generate_blog",
+                    "label": "Generate Copy",
+                    "success": false,
+                    "provider": "BlogService",
+                    "duration_seconds": 20.72,
+                    "credits_consumed": 0,
+                    "asset": null,
+                    "error": "cannot import name 'client' from 'services.claude' (C:\\Users\\ADEDAMOLA\\Desktop\\afrigen\\services\\claude.py)",
+                    "timestamp": "2026-07-29T20:32:37.687094+00:00"
+                }
+            ],
+            "credits_used": 0,
+            "assets": [],
+            "completed_at": "2026-07-29T20:32:37.687163+00:00"
+        },
+        {
+            "id": "log_cbd0823a",
+            "workflow_id": "wf_57f01174",
+            "workflow_name": "E2E Workflow",
+            "started_at": "2026-07-29T20:35:20.894091+00:00",
+            "status": "completed",
+            "nodes_executed": [
+                {
+                    "node_type": "generate_blog",
+                    "label": "Generate Copy",
+                    "success": false,
+                    "provider": "BlogService",
+                    "duration_seconds": 20.832,
+                    "credits_consumed": 0,
+                    "asset": null,
+                    "error": "cannot import name 'client' from 'services.claude' (C:\\Users\\ADEDAMOLA\\Desktop\\afrigen\\services\\claude.py)",
+                    "timestamp": "2026-07-29T20:35:41.726174+00:00"
+                }
+            ],
+            "credits_used": 0,
+            "assets": [],
+            "completed_at": "2026-07-29T20:35:41.726205+00:00"
+        },
+        {
+            "id": "log_8975380b",
+            "workflow_id": "wf_a06e2680",
+            "workflow_name": "E2E Workflow",
+            "started_at": "2026-07-29T20:38:31.934760+00:00",
+            "status": "completed",
+            "nodes_executed": [
+                {
+                    "node_type": "generate_blog",
+                    "label": "Generate Copy",
+                    "success": false,
+                    "provider": "BlogService",
+                    "duration_seconds": 24.549,
+                    "credits_consumed": 0,
+                    "asset": null,
+                    "error": "cannot import name 'client' from 'services.claude' (C:\\Users\\ADEDAMOLA\\Desktop\\afrigen\\services\\claude.py)",
+                    "timestamp": "2026-07-29T20:38:56.483872+00:00"
+                }
+            ],
+            "credits_used": 0,
+            "assets": [],
+            "completed_at": "2026-07-29T20:38:56.483920+00:00"
+        },
+        {
+            "id": "log_397e7f0b",
+            "workflow_id": "wf_e51e90ea",
+            "workflow_name": "E2E Workflow",
+            "started_at": "2026-07-29T20:42:18.699782+00:00",
+            "status": "completed",
+            "nodes_executed": [
+                {
+                    "node_type": "generate_blog",
+                    "label": "Generate Copy",
+                    "success": false,
+                    "provider": "BlogService",
+                    "duration_seconds": 27.647,
+                    "credits_consumed": 0,
+                    "asset": null,
+                    "error": "cannot import name 'client' from 'services.claude' (C:\\Users\\ADEDAMOLA\\Desktop\\afrigen\\services\\claude.py)",
+                    "timestamp": "2026-07-29T20:42:46.347093+00:00"
+                }
+            ],
+            "credits_used": 0,
+            "assets": [],
+            "completed_at": "2026-07-29T20:42:46.347123+00:00"
+        },
+        {
+            "id": "log_67ee3c32",
+            "workflow_id": "wf_97d6662a",
+            "workflow_name": "E2E Workflow",
+            "started_at": "2026-07-29T20:49:29.896120+00:00",
+            "status": "completed",
+            "nodes_executed": [
+                {
+                    "node_type": "generate_blog",
+                    "label": "Generate Copy",
+                    "success": false,
+                    "provider": "BlogService",
+                    "duration_seconds": 22.125,
+                    "credits_consumed": 0,
+                    "asset": null,
+                    "error": "cannot import name 'client' from 'services.claude' (C:\\Users\\ADEDAMOLA\\Desktop\\afrigen\\services\\claude.py)",
+                    "timestamp": "2026-07-29T20:49:52.021051+00:00"
+                }
+            ],
+            "credits_used": 0,
+            "assets": [],
+            "completed_at": "2026-07-29T20:49:52.021080+00:00"
+        },
+        {
+            "id": "log_bb28b239",
+            "workflow_id": "wf_27b3833b",
+            "workflow_name": "E2E Workflow",
+            "started_at": "2026-07-29T20:50:57.916267+00:00",
+            "status": "completed",
+            "nodes_executed": [
+                {
+                    "node_type": "generate_blog",
+                    "label": "Generate Copy",
+                    "success": false,
+                    "provider": "BlogService",
+                    "duration_seconds": 19.66,
+                    "credits_consumed": 0,
+                    "asset": null,
+                    "error": "cannot import name 'client' from 'services.claude' (C:\\Users\\ADEDAMOLA\\Desktop\\afrigen\\services\\claude.py)",
+                    "timestamp": "2026-07-29T20:51:17.576161+00:00"
+                }
+            ],
+            "credits_used": 0,
+            "assets": [],
+            "completed_at": "2026-07-29T20:51:17.578117+00:00"
+        },
+        {
+            "id": "log_7e892746",
+            "workflow_id": "wf_8a5b4b8a",
+            "workflow_name": "E2E Workflow",
+            "started_at": "2026-07-29T20:52:15.460532+00:00",
+            "status": "completed",
+            "nodes_executed": [
+                {
+                    "node_type": "generate_blog",
+                    "label": "Generate Copy",
+                    "success": false,
+                    "provider": "BlogService",
+                    "duration_seconds": 28.333,
+                    "credits_consumed": 0,
+                    "asset": null,
+                    "error": "cannot import name 'client' from 'services.claude' (C:\\Users\\ADEDAMOLA\\Desktop\\afrigen\\services\\claude.py)",
+                    "timestamp": "2026-07-29T20:52:43.793694+00:00"
+                }
+            ],
+            "credits_used": 0,
+            "assets": [],
+            "completed_at": "2026-07-29T20:52:43.793848+00:00"
+        },
+        {
+            "id": "log_94dcea81",
+            "workflow_id": "wf_33190baf",
+            "workflow_name": "E2E Workflow",
+            "started_at": "2026-07-29T20:54:38.177031+00:00",
+            "status": "completed",
+            "nodes_executed": [
+                {
+                    "node_type": "generate_blog",
+                    "label": "Generate Copy",
+                    "success": false,
+                    "provider": "BlogService",
+                    "duration_seconds": 23.707,
+                    "credits_consumed": 0,
+                    "asset": null,
+                    "error": "'ProviderManager' object has no attribute 'generate'",
+                    "timestamp": "2026-07-29T20:55:01.884106+00:00"
+                }
+            ],
+            "credits_used": 0,
+            "assets": [],
+            "completed_at": "2026-07-29T20:55:01.884382+00:00"
+        },
+        {
+            "id": "log_a4d20d0d",
+            "workflow_id": "wf_8bec85ee",
+            "workflow_name": "E2E Workflow",
+            "started_at": "2026-07-29T20:56:49.651520+00:00",
+            "status": "completed",
+            "nodes_executed": [
+                {
+                    "node_type": "generate_blog",
+                    "label": "Generate Copy",
+                    "success": false,
+                    "provider": "BlogService",
+                    "duration_seconds": 20.844,
+                    "credits_consumed": 0,
+                    "asset": null,
+                    "error": "Entity namespace for \"provider_health\" has no property \"provider_name\"",
+                    "timestamp": "2026-07-29T20:57:10.495515+00:00"
+                }
+            ],
+            "credits_used": 0,
+            "assets": [],
+            "completed_at": "2026-07-29T20:57:10.495815+00:00"
+        },
+        {
+            "id": "log_3b6fa879",
+            "workflow_id": "wf_35c8efaf",
+            "workflow_name": "E2E Workflow",
+            "started_at": "2026-07-29T20:57:57.856010+00:00",
+            "status": "completed",
+            "nodes_executed": [
+                {
+                    "node_type": "generate_blog",
+                    "label": "Generate Copy",
+                    "success": false,
+                    "provider": "BlogService",
+                    "duration_seconds": 27.493,
+                    "credits_consumed": 0,
+                    "asset": null,
+                    "error": "'ProviderHealth' object has no attribute 'total_requests'",
+                    "timestamp": "2026-07-29T20:58:25.348672+00:00"
+                }
+            ],
+            "credits_used": 0,
+            "assets": [],
+            "completed_at": "2026-07-29T20:58:25.348976+00:00"
+        },
+        {
+            "id": "log_58d2207c",
+            "workflow_id": "wf_38fdce00",
+            "workflow_name": "E2E Workflow",
+            "started_at": "2026-07-29T20:59:50.273232+00:00",
+            "status": "completed",
+            "nodes_executed": [
+                {
+                    "node_type": "generate_blog",
+                    "label": "Generate Copy",
+                    "success": true,
+                    "provider": "BlogService",
+                    "duration_seconds": 15.03,
+                    "credits_consumed": 2,
+                    "asset": {
+                        "type": "blog",
+                        "title": "Boosting Local Nigerian Businesses with AI Video",
+                        "content": "<p style=\"color: #C9D1D9; margin-bottom: 16px;\">As a Nigerian business owner, you're likely no stranger to the power of social media in reaching your target audience. With the rise of AI video generation tools like Afrigen, creating high-quality video content has never been easier or more affordable. In this post, we'll explore how you can leverage AI video to promote your local Nigerian business and reach a wider audience on platforms like TikTok, Instagram Reels, and YouTube Shorts.</p>\n<h4 style=\"color: #F5A623;\">The Cost-Effective Alternative to Traditional Videography</h4>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">Hiring a professional videographer to create promotional videos for your business can be costly, with prices ranging from \u20a650,000 to \u20a6200,000 or more per video, depending on the length and production quality. In contrast, using an AI video generation tool like Afrigen can help you create high-quality videos at a fraction of the cost. For example, with a Pro subscription to Afrigen, you can create up to 10 videos per month for just \u20a620,000, making it a much more affordable option for small businesses.</p>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">Let's consider a scenario where you own a fashion boutique in Lagos and want to create a series of videos showcasing your latest clothing collection. With Afrigen, you can create a prompt like \"Showcase a model wearing a traditional Nigerian outfit, with a background of a busy Lagos market\" and generate a high-quality video in minutes. You can then share this video on your social media platforms, such as Instagram Reels or TikTok, to reach a wider audience and drive sales.</p>\n<h4 style=\"color: #F5A623;\">Reaching a Wider Audience with AI Video</h4>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">One of the key benefits of using AI video generation tools is the ability to create content that resonates with your target audience. By using prompts that are specific to your business and location, you can create videos that speak directly to your customers and showcase your products or services in a unique and engaging way. For example, if you own a restaurant in Abuja, you can create a prompt like \"Showcase a chef preparing a traditional Nigerian dish, with a background of a bustling Abuja market\" and generate a video that highlights the flavors and aromas of your cuisine.</p>\n<ul style=\"color: #C9D1D9; margin-bottom: 16px;\">\n<li>Use specific keywords and hashtags to reach a wider audience on platforms like TikTok and Instagram Reels</li>\n<li>Create videos that showcase your products or services in a unique and engaging way, such as a \"before and after\" transformation or a \"day in the life\" vlog</li>\n<li>Utilize Facebook to share your videos and reach a wider audience, with a potential reach of up to 10 million people in Nigeria alone</li>\n</ul>\n<div class=\"p-3 mb-3\" style=\"background: #21262D; border-radius: 8px; border-left: 3px solid #F5A623;\">\n<p style=\"color: #C9D1D9; margin: 0;\">By following these tips and using AI video generation tools like Afrigen, you can create engaging and effective video content that promotes your local Nigerian business and reaches a wider audience on social media platforms. With the potential to save up to 70% on video production costs and reach a wider audience, the benefits of using AI video for your business are clear.</p>\n</div>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">In conclusion, leveraging AI video generation tools like Afrigen can be a <strong>game-changer</strong> for local Nigerian businesses, providing a cost-effective and efficient way to create high-quality video content that resonates with your target audience. By using specific prompts and keywords, and sharing your videos on social media platforms, you can reach a wider audience and drive sales for your business. With the rise of social media and the increasing demand for video content, now is the perfect time to start creating and sharing your own AI-generated videos.</p>",
+                        "slug": null,
+                        "asset_id": "asset_cc2b471b",
+                        "storage": "database",
+                        "user_content_id": 1
+                    },
+                    "timestamp": "2026-07-29T21:00:08.566679+00:00"
+                }
+            ],
+            "credits_used": 2,
+            "assets": [
+                {
+                    "type": "blog",
+                    "title": "Boosting Local Nigerian Businesses with AI Video",
+                    "content": "<p style=\"color: #C9D1D9; margin-bottom: 16px;\">As a Nigerian business owner, you're likely no stranger to the power of social media in reaching your target audience. With the rise of AI video generation tools like Afrigen, creating high-quality video content has never been easier or more affordable. In this post, we'll explore how you can leverage AI video to promote your local Nigerian business and reach a wider audience on platforms like TikTok, Instagram Reels, and YouTube Shorts.</p>\n<h4 style=\"color: #F5A623;\">The Cost-Effective Alternative to Traditional Videography</h4>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">Hiring a professional videographer to create promotional videos for your business can be costly, with prices ranging from \u20a650,000 to \u20a6200,000 or more per video, depending on the length and production quality. In contrast, using an AI video generation tool like Afrigen can help you create high-quality videos at a fraction of the cost. For example, with a Pro subscription to Afrigen, you can create up to 10 videos per month for just \u20a620,000, making it a much more affordable option for small businesses.</p>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">Let's consider a scenario where you own a fashion boutique in Lagos and want to create a series of videos showcasing your latest clothing collection. With Afrigen, you can create a prompt like \"Showcase a model wearing a traditional Nigerian outfit, with a background of a busy Lagos market\" and generate a high-quality video in minutes. You can then share this video on your social media platforms, such as Instagram Reels or TikTok, to reach a wider audience and drive sales.</p>\n<h4 style=\"color: #F5A623;\">Reaching a Wider Audience with AI Video</h4>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">One of the key benefits of using AI video generation tools is the ability to create content that resonates with your target audience. By using prompts that are specific to your business and location, you can create videos that speak directly to your customers and showcase your products or services in a unique and engaging way. For example, if you own a restaurant in Abuja, you can create a prompt like \"Showcase a chef preparing a traditional Nigerian dish, with a background of a bustling Abuja market\" and generate a video that highlights the flavors and aromas of your cuisine.</p>\n<ul style=\"color: #C9D1D9; margin-bottom: 16px;\">\n<li>Use specific keywords and hashtags to reach a wider audience on platforms like TikTok and Instagram Reels</li>\n<li>Create videos that showcase your products or services in a unique and engaging way, such as a \"before and after\" transformation or a \"day in the life\" vlog</li>\n<li>Utilize Facebook to share your videos and reach a wider audience, with a potential reach of up to 10 million people in Nigeria alone</li>\n</ul>\n<div class=\"p-3 mb-3\" style=\"background: #21262D; border-radius: 8px; border-left: 3px solid #F5A623;\">\n<p style=\"color: #C9D1D9; margin: 0;\">By following these tips and using AI video generation tools like Afrigen, you can create engaging and effective video content that promotes your local Nigerian business and reaches a wider audience on social media platforms. With the potential to save up to 70% on video production costs and reach a wider audience, the benefits of using AI video for your business are clear.</p>\n</div>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">In conclusion, leveraging AI video generation tools like Afrigen can be a <strong>game-changer</strong> for local Nigerian businesses, providing a cost-effective and efficient way to create high-quality video content that resonates with your target audience. By using specific prompts and keywords, and sharing your videos on social media platforms, you can reach a wider audience and drive sales for your business. With the rise of social media and the increasing demand for video content, now is the perfect time to start creating and sharing your own AI-generated videos.</p>",
+                    "slug": null,
+                    "asset_id": "asset_cc2b471b",
+                    "storage": "database",
+                    "user_content_id": 1
+                }
+            ],
+            "completed_at": "2026-07-29T21:00:08.566922+00:00"
+        },
+        {
+            "id": "log_c2742c82",
+            "workflow_id": "wf_47f72e68",
+            "workflow_name": "newsletter",
+            "started_at": "2026-07-31T16:36:37.058144+00:00",
+            "status": "completed",
+            "nodes_executed": [
+                {
+                    "node_type": "generate_blog",
+                    "label": "Generate Blog/Copy",
+                    "success": true,
+                    "provider": "BlogService",
+                    "duration_seconds": 15.352,
+                    "credits_consumed": 2,
+                    "asset": {
+                        "type": "blog",
+                        "title": "Leveraging AI Video for Nigerian Events",
+                        "content": "<p style=\"color: #C9D1D9; margin-bottom: 16px;\">As a Nigerian event planner or coordinator, you're likely no stranger to the importance of creating engaging and memorable experiences for your guests. With the rise of AI video tools, you can now take your events to the next level with high-quality, customized video content. In this article, we'll explore how to leverage AI video for Nigerian events, such as weddings, conferences, and festivals.</p>\n<h4 style=\"color: #F5A623;\">Using AI Video for Wedding Planning</h4>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">Weddings are a significant part of Nigerian culture, and couples are always looking for ways to make their special day stand out. AI video tools can help create stunning wedding videos, save-the-date announcements, and even personalized invitations. For example, you can use Afrigen's AI video tool to create a beautiful wedding invitation video, complete with customized graphics, music, and footage of the couple. The cost of creating such a video can range from \u20a650,000 to \u20a6200,000, depending on the complexity and length of the video.</p>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">To create an AI-powered wedding invitation video, you can use a prompt like: \"Create a 2-minute wedding invitation video for a Nigerian couple, featuring a romantic montage of the couple's photos, with a mix of traditional and modern music, and including the wedding details, such as date, time, and location.\" You can then share the video on social media platforms like Instagram Reels, TikTok, or YouTube Shorts to reach a wider audience.</p>\n<h4 style=\"color: #F5A623;\">Enhancing Conferences with AI Video</h4>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">Conferences and seminars are an essential part of Nigeria's business and academic landscape. AI video tools can help create engaging conference videos, such as keynote presentations, panel discussions, and event highlights. For instance, you can use AI video to create a conference recap video, showcasing the main speakers, sessions, and takeaways from the event. The cost of creating such a video can range from \u20a6100,000 to \u20a6500,000, depending on the length and complexity of the video.</p>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">To create an AI-powered conference recap video, you can use a prompt like: \"Create a 5-minute conference recap video, featuring a mix of footage from the event, interviews with attendees, and key takeaways from the speakers, with a professional voiceover and background music.\" You can then share the video on YouTube, Facebook, or LinkedIn to reach a wider audience and provide value to your attendees.</p>\n<div class=\"p-3 mb-3\" style=\"background: #21262D; border-radius: 8px; border-left: 3px solid #F5A623;\"><p style=\"color: #C9D1D9; margin: 0;\">By leveraging AI video tools, Nigerian event planners and coordinators can create engaging, customized, and memorable experiences for their guests, while also saving time and resources. With the ability to create high-quality video content at a fraction of the cost of traditional video production, AI video is an exciting opportunity for the Nigerian events industry.</p></div>\n<h4 style=\"color: #F5A623;\">Getting Started with AI Video for Events</h4>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">To get started with AI video for events, you'll need to choose an AI video tool that suits your needs and budget. Some popular options include Afrigen, Lumen5, and Raw Shorts. You can also experiment with different prompts, styles, and formats to find what works best for your events. With a little creativity and practice, you can create stunning AI-powered video content that will take your Nigerian events to the next level.</p>\n<ul style=\"color: #C9D1D9; margin-bottom: 16px;\">\n<li>Choose an AI video tool that suits your needs and budget</li>\n<li>Experiment with different prompts, styles, and formats</li>\n<li>Keep your video content engaging, informative, and concise</li>\n<li>Share your video content on social media platforms to reach a wider audience</li>\n</ul>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">In conclusion, AI video tools offer a wide range of opportunities for Nigerian event planners and coordinators to create engaging, customized, and memorable experiences for their guests. By leveraging AI video, you can take your events to the next level, while also saving time and resources. So why not give AI video a try and see the difference it can make for your next event?</p>",
+                        "slug": null,
+                        "asset_id": "asset_561f8cac",
+                        "storage": "file",
+                        "user_content_id": 2
+                    },
+                    "timestamp": "2026-07-31T16:36:54.939223+00:00"
+                }
+            ],
+            "credits_used": 2,
+            "assets": [
+                {
+                    "type": "blog",
+                    "title": "Leveraging AI Video for Nigerian Events",
+                    "content": "<p style=\"color: #C9D1D9; margin-bottom: 16px;\">As a Nigerian event planner or coordinator, you're likely no stranger to the importance of creating engaging and memorable experiences for your guests. With the rise of AI video tools, you can now take your events to the next level with high-quality, customized video content. In this article, we'll explore how to leverage AI video for Nigerian events, such as weddings, conferences, and festivals.</p>\n<h4 style=\"color: #F5A623;\">Using AI Video for Wedding Planning</h4>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">Weddings are a significant part of Nigerian culture, and couples are always looking for ways to make their special day stand out. AI video tools can help create stunning wedding videos, save-the-date announcements, and even personalized invitations. For example, you can use Afrigen's AI video tool to create a beautiful wedding invitation video, complete with customized graphics, music, and footage of the couple. The cost of creating such a video can range from \u20a650,000 to \u20a6200,000, depending on the complexity and length of the video.</p>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">To create an AI-powered wedding invitation video, you can use a prompt like: \"Create a 2-minute wedding invitation video for a Nigerian couple, featuring a romantic montage of the couple's photos, with a mix of traditional and modern music, and including the wedding details, such as date, time, and location.\" You can then share the video on social media platforms like Instagram Reels, TikTok, or YouTube Shorts to reach a wider audience.</p>\n<h4 style=\"color: #F5A623;\">Enhancing Conferences with AI Video</h4>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">Conferences and seminars are an essential part of Nigeria's business and academic landscape. AI video tools can help create engaging conference videos, such as keynote presentations, panel discussions, and event highlights. For instance, you can use AI video to create a conference recap video, showcasing the main speakers, sessions, and takeaways from the event. The cost of creating such a video can range from \u20a6100,000 to \u20a6500,000, depending on the length and complexity of the video.</p>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">To create an AI-powered conference recap video, you can use a prompt like: \"Create a 5-minute conference recap video, featuring a mix of footage from the event, interviews with attendees, and key takeaways from the speakers, with a professional voiceover and background music.\" You can then share the video on YouTube, Facebook, or LinkedIn to reach a wider audience and provide value to your attendees.</p>\n<div class=\"p-3 mb-3\" style=\"background: #21262D; border-radius: 8px; border-left: 3px solid #F5A623;\"><p style=\"color: #C9D1D9; margin: 0;\">By leveraging AI video tools, Nigerian event planners and coordinators can create engaging, customized, and memorable experiences for their guests, while also saving time and resources. With the ability to create high-quality video content at a fraction of the cost of traditional video production, AI video is an exciting opportunity for the Nigerian events industry.</p></div>\n<h4 style=\"color: #F5A623;\">Getting Started with AI Video for Events</h4>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">To get started with AI video for events, you'll need to choose an AI video tool that suits your needs and budget. Some popular options include Afrigen, Lumen5, and Raw Shorts. You can also experiment with different prompts, styles, and formats to find what works best for your events. With a little creativity and practice, you can create stunning AI-powered video content that will take your Nigerian events to the next level.</p>\n<ul style=\"color: #C9D1D9; margin-bottom: 16px;\">\n<li>Choose an AI video tool that suits your needs and budget</li>\n<li>Experiment with different prompts, styles, and formats</li>\n<li>Keep your video content engaging, informative, and concise</li>\n<li>Share your video content on social media platforms to reach a wider audience</li>\n</ul>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">In conclusion, AI video tools offer a wide range of opportunities for Nigerian event planners and coordinators to create engaging, customized, and memorable experiences for their guests. By leveraging AI video, you can take your events to the next level, while also saving time and resources. So why not give AI video a try and see the difference it can make for your next event?</p>",
+                    "slug": null,
+                    "asset_id": "asset_561f8cac",
+                    "storage": "file",
+                    "user_content_id": 2
+                }
+            ],
+            "completed_at": "2026-07-31T16:36:55.260278+00:00"
+        },
+        {
+            "id": "log_7a0c4c3c",
+            "workflow_id": "wf_4e6e59a3",
+            "workflow_name": "E2E Workflow",
+            "started_at": "2026-08-01T10:08:13.777443+00:00",
+            "status": "completed",
+            "nodes_executed": [
+                {
+                    "node_type": "generate_blog",
+                    "label": "Generate Copy",
+                    "success": true,
+                    "provider": "BlogService",
+                    "duration_seconds": 16.334,
+                    "credits_consumed": 2,
+                    "asset": {
+                        "type": "blog",
+                        "title": "AI Video for Nigerian Events",
+                        "content": "<p style=\"color: #C9D1D9; margin-bottom: 16px;\">As a Nigerian event planner or promoter, you know how important it is to create engaging content to attract attendees and showcase your events. With the rise of AI video tools, you can now create high-quality videos to promote and cover your events without breaking the bank. In this article, we'll explore how to use AI video tools to take your event promotion to the next level.</p>\n<h4 style=\"color: #F5A623;\">Why Use AI Video for Events?</h4>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">Traditional video production can be expensive, with costs ranging from \u20a650,000 to \u20a6500,000 or more per video, depending on the production quality and length. However, with AI video tools like Afrigen, you can create high-quality videos for a fraction of the cost. For example, you can create a 60-second video to promote your event on Instagram Reels or YouTube Shorts for as little as \u20a65,000 to \u20a620,000, depending on the complexity of the video and the subscription plan you choose.</p>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">Another benefit of using AI video tools is the speed of production. With traditional video production, it can take days or even weeks to produce a single video. However, with AI video tools, you can create a video in a matter of minutes. This is especially useful for events that require quick turnaround times, such as weddings or festivals.</p>\n<h4 style=\"color: #F5A623;\">Examples of AI Video for Events</h4>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">Here are a few examples of how you can use AI video tools to promote and cover Nigerian events:</p>\n<ul style=\"color: #C9D1D9; margin-bottom: 16px;\">\n<li>Creating a promotional video for a wedding on Instagram Reels, using a prompt like \"Create a 60-second video showcasing a luxurious wedding in Lagos, with a mix of traditional and modern elements.\"</li>\n<li>Producing a highlight reel of a festival on YouTube Shorts, using a prompt like \"Create a 3-minute video showcasing the best moments of the Lagos Festival, with a focus on music, dance, and food.\"</li>\n<li>Creating a social media teaser for a concert on Facebook Status, using a prompt like \"Create a 15-second video teaser for a concert in Abuja, featuring a popular Nigerian artist, with a focus on energy and excitement.\"</li>\n</ul>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">These are just a few examples of how you can use AI video tools to promote and cover Nigerian events. The possibilities are endless, and the best part is that you can create high-quality videos without breaking the bank.</p>\n<div class=\"p-3 mb-3\" style=\"background: #21262D; border-radius: 8px; border-left: 3px solid #F5A623;\"><p style=\"color: #C9D1D9; margin: 0;\">To get started with AI video tools, you can sign up for a free trial or a Pro subscription on the Afrigen website. With a Pro subscription, you can create up to 10 videos per month, with a maximum length of 5 minutes per video, for as little as \u20a620,000 per month. This is a great option for event planners and promoters who need to create high-quality videos on a regular basis.</p></div>\n<h4 style=\"color: #F5A623;\">Conclusion</h4>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">In conclusion, AI video tools are a game-changer for Nigerian event planners and promoters. With the ability to create high-quality videos at a fraction of the cost and in a matter of minutes, you can take your event promotion to the next level. Whether you're promoting a wedding, festival, or concert, AI video tools can help you create engaging content that attracts attendees and showcases your events in the best possible light. So why not give it a try today and see the difference for yourself?</p>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">As a <strong>bonus</strong>, we're offering a 10% discount on all Pro subscriptions for the next month. Simply use the code EVENT10 at checkout to receive your discount. Don't miss out on this opportunity to take your event promotion to the next level with AI video tools.</p>",
+                        "slug": null,
+                        "asset_id": "asset_df5e6a42",
+                        "storage": "database",
+                        "user_content_id": 3
+                    },
+                    "timestamp": "2026-08-01T10:08:35.579530+00:00"
+                }
+            ],
+            "credits_used": 2,
+            "assets": [
+                {
+                    "type": "blog",
+                    "title": "AI Video for Nigerian Events",
+                    "content": "<p style=\"color: #C9D1D9; margin-bottom: 16px;\">As a Nigerian event planner or promoter, you know how important it is to create engaging content to attract attendees and showcase your events. With the rise of AI video tools, you can now create high-quality videos to promote and cover your events without breaking the bank. In this article, we'll explore how to use AI video tools to take your event promotion to the next level.</p>\n<h4 style=\"color: #F5A623;\">Why Use AI Video for Events?</h4>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">Traditional video production can be expensive, with costs ranging from \u20a650,000 to \u20a6500,000 or more per video, depending on the production quality and length. However, with AI video tools like Afrigen, you can create high-quality videos for a fraction of the cost. For example, you can create a 60-second video to promote your event on Instagram Reels or YouTube Shorts for as little as \u20a65,000 to \u20a620,000, depending on the complexity of the video and the subscription plan you choose.</p>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">Another benefit of using AI video tools is the speed of production. With traditional video production, it can take days or even weeks to produce a single video. However, with AI video tools, you can create a video in a matter of minutes. This is especially useful for events that require quick turnaround times, such as weddings or festivals.</p>\n<h4 style=\"color: #F5A623;\">Examples of AI Video for Events</h4>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">Here are a few examples of how you can use AI video tools to promote and cover Nigerian events:</p>\n<ul style=\"color: #C9D1D9; margin-bottom: 16px;\">\n<li>Creating a promotional video for a wedding on Instagram Reels, using a prompt like \"Create a 60-second video showcasing a luxurious wedding in Lagos, with a mix of traditional and modern elements.\"</li>\n<li>Producing a highlight reel of a festival on YouTube Shorts, using a prompt like \"Create a 3-minute video showcasing the best moments of the Lagos Festival, with a focus on music, dance, and food.\"</li>\n<li>Creating a social media teaser for a concert on Facebook Status, using a prompt like \"Create a 15-second video teaser for a concert in Abuja, featuring a popular Nigerian artist, with a focus on energy and excitement.\"</li>\n</ul>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">These are just a few examples of how you can use AI video tools to promote and cover Nigerian events. The possibilities are endless, and the best part is that you can create high-quality videos without breaking the bank.</p>\n<div class=\"p-3 mb-3\" style=\"background: #21262D; border-radius: 8px; border-left: 3px solid #F5A623;\"><p style=\"color: #C9D1D9; margin: 0;\">To get started with AI video tools, you can sign up for a free trial or a Pro subscription on the Afrigen website. With a Pro subscription, you can create up to 10 videos per month, with a maximum length of 5 minutes per video, for as little as \u20a620,000 per month. This is a great option for event planners and promoters who need to create high-quality videos on a regular basis.</p></div>\n<h4 style=\"color: #F5A623;\">Conclusion</h4>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">In conclusion, AI video tools are a game-changer for Nigerian event planners and promoters. With the ability to create high-quality videos at a fraction of the cost and in a matter of minutes, you can take your event promotion to the next level. Whether you're promoting a wedding, festival, or concert, AI video tools can help you create engaging content that attracts attendees and showcases your events in the best possible light. So why not give it a try today and see the difference for yourself?</p>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">As a <strong>bonus</strong>, we're offering a 10% discount on all Pro subscriptions for the next month. Simply use the code EVENT10 at checkout to receive your discount. Don't miss out on this opportunity to take your event promotion to the next level with AI video tools.</p>",
+                    "slug": null,
+                    "asset_id": "asset_df5e6a42",
+                    "storage": "database",
+                    "user_content_id": 3
+                }
+            ],
+            "completed_at": "2026-08-01T10:08:35.579650+00:00"
+        },
+        {
+            "id": "log_c5df3df3",
+            "workflow_id": "wf_e51e90ea",
+            "workflow_name": "E2E Workflow",
+            "started_at": "2026-08-01T11:21:57.818220+00:00",
+            "status": "completed",
+            "nodes_executed": [
+                {
+                    "node_type": "generate_blog",
+                    "label": "Generate Copy",
+                    "success": true,
+                    "provider": "BlogService",
+                    "duration_seconds": 13.984,
+                    "credits_consumed": 2,
+                    "asset": {
+                        "type": "blog",
+                        "title": "Navigating AI Video Costs for Nigerian Creators",
+                        "content": "<p style=\"color: #C9D1D9; margin-bottom: 16px;\">As a Nigerian creator or small business owner, you're likely exploring the potential of AI video tools to enhance your content and reach a wider audience. However, one crucial aspect to consider is the cost of producing and distributing AI-generated videos. In this article, we'll delve into the various expenses associated with AI video production, providing you with a clear understanding of how to budget and optimize your spending.</p>\n<h4 style=\"color: #F5A623;\">Understanding AI Video Production Costs</h4>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">The cost of producing AI videos can be broken down into several components, including the cost of the AI tool itself, data usage, and potential hiring of freelancers or videographers. For instance, a Pro subscription to Afrigen can cost around \u20a650,000 per month, while a videographer in Lagos might charge between \u20a680,000 to \u20a6200,000 per day, depending on their expertise and equipment.</p>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">To give you a better idea, let's consider a scenario where you want to create a 60-second AI video for your Instagram Reels campaign. Assuming you already have a Pro subscription to Afrigen, your primary cost would be the data used to generate and upload the video. With a average data cost of \u20a61,000 per GB in Nigeria, a 60-second video might consume around 500MB to 1GB of data, translating to a cost of \u20a6500 to \u20a61,000.</p>\n<h4 style=\"color: #F5A623;\">Calculating ROI for AI Video Campaigns</h4>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">To ensure you're getting the most out of your AI video investment, it's essential to calculate the return on investment (ROI) for your campaigns. Let's say you're a fashion influencer in Abuja, and you create an AI video showcasing a new clothing line. You spend a total of \u20a6100,000 on video production, including \u20a650,000 for the Afrigen Pro subscription, \u20a630,000 for data, and \u20a620,000 for hiring a freelancer to help with scripting and editing.</p>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">If your video generates 10,000 views on TikTok, with an engagement rate of 2% (200 likes, comments, and shares), and you earn an average of \u20a6500 per sponsored post, your total revenue would be \u20a6100,000 (200 engagements x \u20a6500 per engagement). In this scenario, your ROI would be 0%, indicating that you've broken even. However, if you're able to increase your engagement rate or negotiate higher sponsored post rates, your ROI could potentially increase to 20% or more.</p>\n<div class=\"p-3 mb-3\" style=\"background: #21262D; border-radius: 8px; border-left: 3px solid #F5A623;\"><p style=\"color: #C9D1D9; margin: 0;\">To maximize your ROI, consider the following strategies: <strong>repurpose your AI videos across multiple platforms</strong>, such as Instagram Reels, YouTube Shorts, and Facebook Status, to increase your reach and engagement. Additionally, <strong>collaborate with other creators or influencers</strong> in your niche to tap into their audience and build credibility.</p></div>\n<h4 style=\"color: #F5A623;\">Optimizing AI Video Production for Nigerian Creators</h4>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">To optimize your AI video production and reduce costs, consider the following tips: <ul style=\"color: #C9D1D9; margin-bottom: 16px;\"><li>Use free or low-cost AI tools, such as the basic version of Afrigen, for simple video projects</li><li>Batch your video production to minimize data usage and reduce the need for frequent uploads</li><li>Hire freelancers or videographers who offer competitive rates and can help you achieve high-quality results</li></ul></p>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">By understanding the costs associated with AI video production and implementing strategies to optimize your spending, you can create high-quality, engaging content that resonates with your Nigerian audience and drives real results for your business or personal brand.</p>",
+                        "slug": null,
+                        "asset_id": "asset_3c8ecb20",
+                        "storage": "database",
+                        "user_content_id": 4
+                    },
+                    "timestamp": "2026-08-01T11:22:16.594045+00:00"
+                }
+            ],
+            "credits_used": 2,
+            "assets": [
+                {
+                    "type": "blog",
+                    "title": "Navigating AI Video Costs for Nigerian Creators",
+                    "content": "<p style=\"color: #C9D1D9; margin-bottom: 16px;\">As a Nigerian creator or small business owner, you're likely exploring the potential of AI video tools to enhance your content and reach a wider audience. However, one crucial aspect to consider is the cost of producing and distributing AI-generated videos. In this article, we'll delve into the various expenses associated with AI video production, providing you with a clear understanding of how to budget and optimize your spending.</p>\n<h4 style=\"color: #F5A623;\">Understanding AI Video Production Costs</h4>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">The cost of producing AI videos can be broken down into several components, including the cost of the AI tool itself, data usage, and potential hiring of freelancers or videographers. For instance, a Pro subscription to Afrigen can cost around \u20a650,000 per month, while a videographer in Lagos might charge between \u20a680,000 to \u20a6200,000 per day, depending on their expertise and equipment.</p>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">To give you a better idea, let's consider a scenario where you want to create a 60-second AI video for your Instagram Reels campaign. Assuming you already have a Pro subscription to Afrigen, your primary cost would be the data used to generate and upload the video. With a average data cost of \u20a61,000 per GB in Nigeria, a 60-second video might consume around 500MB to 1GB of data, translating to a cost of \u20a6500 to \u20a61,000.</p>\n<h4 style=\"color: #F5A623;\">Calculating ROI for AI Video Campaigns</h4>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">To ensure you're getting the most out of your AI video investment, it's essential to calculate the return on investment (ROI) for your campaigns. Let's say you're a fashion influencer in Abuja, and you create an AI video showcasing a new clothing line. You spend a total of \u20a6100,000 on video production, including \u20a650,000 for the Afrigen Pro subscription, \u20a630,000 for data, and \u20a620,000 for hiring a freelancer to help with scripting and editing.</p>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">If your video generates 10,000 views on TikTok, with an engagement rate of 2% (200 likes, comments, and shares), and you earn an average of \u20a6500 per sponsored post, your total revenue would be \u20a6100,000 (200 engagements x \u20a6500 per engagement). In this scenario, your ROI would be 0%, indicating that you've broken even. However, if you're able to increase your engagement rate or negotiate higher sponsored post rates, your ROI could potentially increase to 20% or more.</p>\n<div class=\"p-3 mb-3\" style=\"background: #21262D; border-radius: 8px; border-left: 3px solid #F5A623;\"><p style=\"color: #C9D1D9; margin: 0;\">To maximize your ROI, consider the following strategies: <strong>repurpose your AI videos across multiple platforms</strong>, such as Instagram Reels, YouTube Shorts, and Facebook Status, to increase your reach and engagement. Additionally, <strong>collaborate with other creators or influencers</strong> in your niche to tap into their audience and build credibility.</p></div>\n<h4 style=\"color: #F5A623;\">Optimizing AI Video Production for Nigerian Creators</h4>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">To optimize your AI video production and reduce costs, consider the following tips: <ul style=\"color: #C9D1D9; margin-bottom: 16px;\"><li>Use free or low-cost AI tools, such as the basic version of Afrigen, for simple video projects</li><li>Batch your video production to minimize data usage and reduce the need for frequent uploads</li><li>Hire freelancers or videographers who offer competitive rates and can help you achieve high-quality results</li></ul></p>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">By understanding the costs associated with AI video production and implementing strategies to optimize your spending, you can create high-quality, engaging content that resonates with your Nigerian audience and drives real results for your business or personal brand.</p>",
+                    "slug": null,
+                    "asset_id": "asset_3c8ecb20",
+                    "storage": "database",
+                    "user_content_id": 4
+                }
+            ],
+            "completed_at": "2026-08-01T11:22:16.594568+00:00"
+        },
+        {
+            "id": "log_73aba6bb",
+            "workflow_id": "wf_47f72e68",
+            "workflow_name": "newsletter",
+            "started_at": "2026-08-01T11:32:49.751614+00:00",
+            "status": "completed",
+            "nodes_executed": [
+                {
+                    "node_type": "generate_blog",
+                    "label": "Generate Blog/Copy",
+                    "success": true,
+                    "provider": "BlogService",
+                    "duration_seconds": 12.894,
+                    "credits_consumed": 2,
+                    "asset": {
+                        "type": "blog",
+                        "title": "Crafting AI Videos for Nigerian Events",
+                        "content": "<p style=\"color: #C9D1D9; margin-bottom: 16px;\">As a Nigerian event planner or creator, you know how important it is to capture the essence of an event and share it with your audience. With the rise of AI video tools, you can now create stunning videos without breaking the bank. In this post, we'll explore how to craft AI videos for Nigerian events, such as weddings and festivals, using Afrigen's AI tools.</p>\n<h4 style=\"color: #F5A623;\">Understanding Your Event</h4>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">Before creating your AI video, it's essential to understand the event you're planning to capture. For example, if you're planning a wedding in Lagos, you'll want to consider the venue, decor, and cultural traditions that will be part of the event. This will help you create a prompt that accurately reflects the essence of the event. Let's say you're planning a traditional Yoruba wedding, your prompt could be: \"Create a 60-second AI video showcasing a Yoruba wedding in Lagos, with traditional attire, music, and decor.\"</p>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">To give you a better idea, let's break down the costs of creating a traditional wedding video without AI tools. Hiring a videographer can cost anywhere from \u20a6200,000 to \u20a6500,000, depending on the location and experience of the videographer. With Afrigen's AI tools, you can create a stunning video for a fraction of the cost, starting from \u20a620,000 for a Pro subscription.</p>\n<h4 style=\"color: #F5A623;\">Creating Your AI Video</h4>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">Once you have your prompt, you can use Afrigen's AI tools to create your video. The process is straightforward: simply input your prompt, select the style and tone you want, and let the AI do the rest. You can choose from a variety of templates, such as a festive template for a festival or a romantic template for a wedding.</p>\n<ul style=\"color: #C9D1D9; margin-bottom: 16px;\">\n<li>Choose a template that fits your event, such as a wedding or festival template</li>\n<li>Select the style and tone you want, such as traditional or modern</li>\n<li>Input your prompt and let the AI create your video</li>\n</ul>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">For example, if you're creating a video for the Osun Osogbo festival, your prompt could be: \"Create a 90-second AI video showcasing the Osun Osogbo festival, with traditional music, dance, and costumes.\" You can then share your video on social media platforms like Instagram Reels, TikTok, or YouTube Shorts, and reach a wider audience.</p>\n<div class=\"p-3 mb-3\" style=\"background: #21262D; border-radius: 8px; border-left: 3px solid #F5A623;\"><p style=\"color: #C9D1D9; margin: 0;\">To maximize the reach of your AI video, consider sharing it on multiple platforms, such as Instagram Reels, TikTok, and YouTube Shorts. You can also use paid advertising options, such as Facebook ads, to reach a wider audience. With a budget of \u20a650,000, you can reach up to 100,000 people on Facebook, depending on your targeting options.</p></div>\n<h4 style=\"color: #F5A623;\">Sharing Your AI Video</h4>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">Once you've created your AI video, it's time to share it with your audience. You can share it on social media platforms like Instagram Reels, TikTok, or YouTube Shorts, and reach a wider audience. You can also use paid advertising options, such as Facebook ads, to reach a wider audience. For example, if you're planning a wedding in Abuja, you can share your AI video on Instagram Reels and reach up to 10,000 people with a budget of \u20a610,000.</p>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">In conclusion, crafting AI videos for Nigerian events is a great way to capture the essence of an event and share it with your audience. With Afrigen's AI tools, you can create stunning videos without breaking the bank. By following the tips outlined in this post, you can create AI videos that showcase the beauty and diversity of Nigerian events, and reach a wider audience.</p>",
+                        "slug": null,
+                        "asset_id": "asset_9c1180a6",
+                        "storage": "file",
+                        "user_content_id": 5
+                    },
+                    "timestamp": "2026-08-01T11:33:04.485155+00:00"
+                }
+            ],
+            "credits_used": 2,
+            "assets": [
+                {
+                    "type": "blog",
+                    "title": "Crafting AI Videos for Nigerian Events",
+                    "content": "<p style=\"color: #C9D1D9; margin-bottom: 16px;\">As a Nigerian event planner or creator, you know how important it is to capture the essence of an event and share it with your audience. With the rise of AI video tools, you can now create stunning videos without breaking the bank. In this post, we'll explore how to craft AI videos for Nigerian events, such as weddings and festivals, using Afrigen's AI tools.</p>\n<h4 style=\"color: #F5A623;\">Understanding Your Event</h4>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">Before creating your AI video, it's essential to understand the event you're planning to capture. For example, if you're planning a wedding in Lagos, you'll want to consider the venue, decor, and cultural traditions that will be part of the event. This will help you create a prompt that accurately reflects the essence of the event. Let's say you're planning a traditional Yoruba wedding, your prompt could be: \"Create a 60-second AI video showcasing a Yoruba wedding in Lagos, with traditional attire, music, and decor.\"</p>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">To give you a better idea, let's break down the costs of creating a traditional wedding video without AI tools. Hiring a videographer can cost anywhere from \u20a6200,000 to \u20a6500,000, depending on the location and experience of the videographer. With Afrigen's AI tools, you can create a stunning video for a fraction of the cost, starting from \u20a620,000 for a Pro subscription.</p>\n<h4 style=\"color: #F5A623;\">Creating Your AI Video</h4>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">Once you have your prompt, you can use Afrigen's AI tools to create your video. The process is straightforward: simply input your prompt, select the style and tone you want, and let the AI do the rest. You can choose from a variety of templates, such as a festive template for a festival or a romantic template for a wedding.</p>\n<ul style=\"color: #C9D1D9; margin-bottom: 16px;\">\n<li>Choose a template that fits your event, such as a wedding or festival template</li>\n<li>Select the style and tone you want, such as traditional or modern</li>\n<li>Input your prompt and let the AI create your video</li>\n</ul>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">For example, if you're creating a video for the Osun Osogbo festival, your prompt could be: \"Create a 90-second AI video showcasing the Osun Osogbo festival, with traditional music, dance, and costumes.\" You can then share your video on social media platforms like Instagram Reels, TikTok, or YouTube Shorts, and reach a wider audience.</p>\n<div class=\"p-3 mb-3\" style=\"background: #21262D; border-radius: 8px; border-left: 3px solid #F5A623;\"><p style=\"color: #C9D1D9; margin: 0;\">To maximize the reach of your AI video, consider sharing it on multiple platforms, such as Instagram Reels, TikTok, and YouTube Shorts. You can also use paid advertising options, such as Facebook ads, to reach a wider audience. With a budget of \u20a650,000, you can reach up to 100,000 people on Facebook, depending on your targeting options.</p></div>\n<h4 style=\"color: #F5A623;\">Sharing Your AI Video</h4>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">Once you've created your AI video, it's time to share it with your audience. You can share it on social media platforms like Instagram Reels, TikTok, or YouTube Shorts, and reach a wider audience. You can also use paid advertising options, such as Facebook ads, to reach a wider audience. For example, if you're planning a wedding in Abuja, you can share your AI video on Instagram Reels and reach up to 10,000 people with a budget of \u20a610,000.</p>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">In conclusion, crafting AI videos for Nigerian events is a great way to capture the essence of an event and share it with your audience. With Afrigen's AI tools, you can create stunning videos without breaking the bank. By following the tips outlined in this post, you can create AI videos that showcase the beauty and diversity of Nigerian events, and reach a wider audience.</p>",
+                    "slug": null,
+                    "asset_id": "asset_9c1180a6",
+                    "storage": "file",
+                    "user_content_id": 5
+                }
+            ],
+            "completed_at": "2026-08-01T11:33:04.485396+00:00"
+        },
+        {
+            "id": "log_2449792f",
+            "workflow_id": "wf_test_run",
+            "workflow_name": "Test Workflow",
+            "started_at": "2026-08-08T13:14:30.907539+00:00",
+            "status": "completed",
+            "nodes_executed": [
+                {
+                    "node_type": "generate_blog",
+                    "label": "Generate Copy",
+                    "success": true,
+                    "provider": "BlogService",
+                    "duration_seconds": 31.185,
+                    "credits_consumed": 2,
+                    "asset": {
+                        "type": "blog",
+                        "title": "AI Video for Nigerian Events",
+                        "content": "<p style=\"color: #C9D1D9; margin-bottom: 16px;\">As a Nigerian event planner or promoter, you understand the importance of creating engaging content to attract attendees and sponsors. With the rise of AI video tools, you can now create high-quality video content without breaking the bank. In this article, we will explore how to leverage AI video for Nigerian events, including weddings, festivals, and conferences.</p>\n<h4 style=\"color: #F5A623;\">Understanding Your Target Audience</h4>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">Before creating AI video content for your event, it's essential to understand your target audience. Who are they? What are their interests? What type of content do they engage with? For example, if you're planning a wedding in Lagos, your target audience may be young couples who are active on social media platforms like Instagram and TikTok. You can create AI video content that showcases the beauty of the wedding venue, the happiness of the couple, and the excitement of the guests.</p>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">Let's take the wedding of <strong>Peller and Jarvis</strong> as an example. Their star-studded wedding in Lagos was a talked-about event, with many guests sharing photos and videos on social media. With AI video tools, you can create a similar buzz around your event by creating engaging video content that showcases the highlights of the event.</p>\n<h4 style=\"color: #F5A623;\">Creating Engaging AI Video Content</h4>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">To create engaging AI video content for your event, you need to start with a clear prompt. A prompt is a text description of the video content you want to create. For example, if you're planning a festival in Abuja, your prompt could be: \"Create a 60-second video showcasing the excitement of the festival, including the performances, food, and attendees.\" You can then use an AI video tool like Afrigen to generate a high-quality video based on your prompt.</p>\n<ul style=\"color: #C9D1D9; margin-bottom: 16px;\">\n<li>Define your event theme and tone</li>\n<li>Identify your target audience and their interests</li>\n<li>Create a clear prompt that showcases the highlights of your event</li>\n<li>Use an AI video tool to generate a high-quality video based on your prompt</li>\n</ul>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">The cost of creating AI video content can vary depending on the tool and the complexity of the prompt. However, with Afrigen, you can create high-quality video content for as low as \u20a65,000 per month. This is significantly cheaper than hiring a videographer, which can cost upwards of \u20a650,000 per day.</p>\n<div class=\"p-3 mb-3\" style=\"background: #21262D; border-radius: 8px; border-left: 3px solid #F5A623;\"><p style=\"color: #C9D1D9; margin: 0;\">To get started with creating AI video content for your Nigerian event, sign up for an Afrigen account today and start exploring the possibilities of AI video creation. With Afrigen, you can create engaging video content that showcases the highlights of your event and attracts attendees and sponsors.</p></div>\n<h4 style=\"color: #F5A623;\">Promoting Your Event with AI Video Content</h4>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">Once you have created your AI video content, it's time to promote your event. You can share your video content on social media platforms like Instagram, TikTok, and Facebook, as well as on your event website and email newsletters. You can also use paid advertising to reach a wider audience, with ad spend starting from as low as \u20a61,000 per day.</p>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">By leveraging AI video tools and creating engaging video content, you can increase attendance and engagement at your Nigerian event. Whether you're planning a wedding, festival, or conference, AI video content can help you showcase the highlights of your event and attract attendees and sponsors.</p>",
+                        "slug": null,
+                        "asset_id": "asset_22e0568b",
+                        "storage": "database",
+                        "user_content_id": 6
+                    },
+                    "timestamp": "2026-08-08T13:16:58.199255+00:00"
+                }
+            ],
+            "credits_used": 2,
+            "assets": [
+                {
+                    "type": "blog",
+                    "title": "AI Video for Nigerian Events",
+                    "content": "<p style=\"color: #C9D1D9; margin-bottom: 16px;\">As a Nigerian event planner or promoter, you understand the importance of creating engaging content to attract attendees and sponsors. With the rise of AI video tools, you can now create high-quality video content without breaking the bank. In this article, we will explore how to leverage AI video for Nigerian events, including weddings, festivals, and conferences.</p>\n<h4 style=\"color: #F5A623;\">Understanding Your Target Audience</h4>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">Before creating AI video content for your event, it's essential to understand your target audience. Who are they? What are their interests? What type of content do they engage with? For example, if you're planning a wedding in Lagos, your target audience may be young couples who are active on social media platforms like Instagram and TikTok. You can create AI video content that showcases the beauty of the wedding venue, the happiness of the couple, and the excitement of the guests.</p>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">Let's take the wedding of <strong>Peller and Jarvis</strong> as an example. Their star-studded wedding in Lagos was a talked-about event, with many guests sharing photos and videos on social media. With AI video tools, you can create a similar buzz around your event by creating engaging video content that showcases the highlights of the event.</p>\n<h4 style=\"color: #F5A623;\">Creating Engaging AI Video Content</h4>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">To create engaging AI video content for your event, you need to start with a clear prompt. A prompt is a text description of the video content you want to create. For example, if you're planning a festival in Abuja, your prompt could be: \"Create a 60-second video showcasing the excitement of the festival, including the performances, food, and attendees.\" You can then use an AI video tool like Afrigen to generate a high-quality video based on your prompt.</p>\n<ul style=\"color: #C9D1D9; margin-bottom: 16px;\">\n<li>Define your event theme and tone</li>\n<li>Identify your target audience and their interests</li>\n<li>Create a clear prompt that showcases the highlights of your event</li>\n<li>Use an AI video tool to generate a high-quality video based on your prompt</li>\n</ul>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">The cost of creating AI video content can vary depending on the tool and the complexity of the prompt. However, with Afrigen, you can create high-quality video content for as low as \u20a65,000 per month. This is significantly cheaper than hiring a videographer, which can cost upwards of \u20a650,000 per day.</p>\n<div class=\"p-3 mb-3\" style=\"background: #21262D; border-radius: 8px; border-left: 3px solid #F5A623;\"><p style=\"color: #C9D1D9; margin: 0;\">To get started with creating AI video content for your Nigerian event, sign up for an Afrigen account today and start exploring the possibilities of AI video creation. With Afrigen, you can create engaging video content that showcases the highlights of your event and attracts attendees and sponsors.</p></div>\n<h4 style=\"color: #F5A623;\">Promoting Your Event with AI Video Content</h4>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">Once you have created your AI video content, it's time to promote your event. You can share your video content on social media platforms like Instagram, TikTok, and Facebook, as well as on your event website and email newsletters. You can also use paid advertising to reach a wider audience, with ad spend starting from as low as \u20a61,000 per day.</p>\n<p style=\"color: #C9D1D9; margin-bottom: 16px;\">By leveraging AI video tools and creating engaging video content, you can increase attendance and engagement at your Nigerian event. Whether you're planning a wedding, festival, or conference, AI video content can help you showcase the highlights of your event and attract attendees and sponsors.</p>",
+                    "slug": null,
+                    "asset_id": "asset_22e0568b",
+                    "storage": "database",
+                    "user_content_id": 6
+                }
+            ],
+            "completed_at": "2026-08-08T13:16:58.200391+00:00"
+        },
+        {
+            "id": "log_e03e9ddc",
+            "workflow_id": "wf_test_run",
+            "workflow_name": "Test Workflow",
+            "started_at": "2026-08-16T18:36:24.576216+00:00",
+            "status": "completed",
+            "nodes_executed": [
+                {
+                    "node_type": "generate_blog",
+                    "label": "Generate Copy",
+                    "success": false,
+                    "provider": "BlogService",
+                    "duration_seconds": 29.924,
+                    "credits_consumed": 0,
+                    "asset": null,
+                    "error": "All AI providers failed. Last error: None",
+                    "timestamp": "2026-08-16T18:36:54.500071+00:00"
+                }
+            ],
+            "credits_used": 0,
+            "assets": [],
+            "completed_at": "2026-08-16T18:36:54.500111+00:00"
+        }
+    ]
+}

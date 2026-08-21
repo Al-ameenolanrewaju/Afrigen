@@ -28,20 +28,23 @@ import requests
 TELEGRAM_API = "https://api.telegram.org"
 
 
-def post_to_channel(text: str, concise: bool = True) -> dict:
+def post_to_channel(text: str, concise: bool = True, bot_token: str = None, channel_id: str = None) -> dict:
     """Post a message to the Telegram broadcast channel.
 
     Args:
         text: The formatted message to post.
         concise: Whether the post should be concise.
+        bot_token: Optional Telegram Bot Token. Falls back to TELEGRAM_BOT_TOKEN.
+        channel_id: Optional Telegram Channel ID. Falls back to TELEGRAM_CHANNEL_ID.
 
     Returns:
         {ok: bool, message_id: int|None, error: str|None}
     """
-    bot_token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
-    channel_id = os.environ.get("TELEGRAM_CHANNEL_ID", "")
+    bot_token = bot_token or os.environ.get("TELEGRAM_BOT_TOKEN", "")
+    channel_id = channel_id or os.environ.get("TELEGRAM_CHANNEL_ID", "")
 
     if not bot_token or not channel_id:
+        print("[telegram] ❌ missing credentials (TELEGRAM_BOT_TOKEN or TELEGRAM_CHANNEL_ID)")
         return {
             "ok": False,
             "error": "Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHANNEL_ID",

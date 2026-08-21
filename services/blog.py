@@ -86,7 +86,7 @@ SEED_POSTS = [
 <p style="color: #C9D1D9; margin-bottom: 16px;">It is tempting to generate flashy footage just because you can. Resist it. Before you type a single prompt, decide the one thing you want the viewer to do: visit your shop, send a DM, click a link, save the post. Every clip should serve that action. A boutique owner does not need a sci-fi city — she needs a clip that makes her clothes look desirable and tells people where to buy.</p>
 
 <h4 style="color: #F5A623;">Three video types that work for small businesses</h4>
-<p style="color: #C9D1D9; margin-bottom: 16px;"><strong>The mood clip.</strong> A short, beautiful scene that sets the feeling of your brand — a steaming plate of food, soft morning light through a salon window, a model walking confidently in your outfit. You overlay your logo and a line of text. This is the easiest win and works as a Story, a Reel intro, or a WhatsApp status.</p>
+<p style="color: #C9D1D9; margin-bottom: 16px;"><strong>The mood clip.</strong> A short, beautiful scene that sets the feeling of your brand — a steaming plate of food, soft morning light through a salon window, a model walking confidently in your outfit. You overlay your logo and a line of text. This is the easiest win and works as a Story or a Reel intro.</p>
 <p style="color: #C9D1D9; margin-bottom: 16px;"><strong>The product hero.</strong> One product, beautifully lit, presented like a premium advert. AI is excellent at making everyday products look high-end. Generate a clean, cinematic shot, then add your price and a "DM to order" caption.</p>
 <p style="color: #C9D1D9; margin-bottom: 16px;"><strong>The concept ad.</strong> A short narrative moment that sells a feeling — a tired worker relaxing after using your product, a family enjoying a meal, a customer's reaction. These build emotional connection and stop the scroll.</p>
 
@@ -98,7 +98,7 @@ SEED_POSTS = [
 </div>
 
 <h4 style="color: #F5A623;">Format for where it will be seen</h4>
-<p style="color: #C9D1D9; margin-bottom: 16px;">Most Nigerian small-business traffic comes from Instagram, TikTok, and WhatsApp — all vertical-first. Generate in 9:16 so your clip fills the phone screen instead of sitting in a small box. A vertical clip looks native and gets more reach than a landscape one squeezed into a Story.</p>
+<p style="color: #C9D1D9; margin-bottom: 16px;">Most Nigerian small-business traffic comes from Instagram and TikTok — both vertical-first. Generate in 9:16 so your clip fills the phone screen instead of sitting in a small box. A vertical clip looks native and gets more reach than a landscape one squeezed into a Story.</p>
 
 <h4 style="color: #F5A623;">Add the words on screen</h4>
 <p style="color: #C9D1D9; margin-bottom: 16px;">Most people watch with the sound off, especially while scrolling at work or in traffic. Your offer needs to be readable without audio. Put your key message — the product name, the price, the discount, the call to action — directly on the video as text. A gorgeous clip with no message is just decoration; a clip with one clear line of text is an advert.</p>
@@ -497,7 +497,7 @@ FRESH REAL-WORLD HEADLINES (for grounding and specificity — reference ideas/tr
 HARD REQUIREMENTS:
 - Length: 600 to 900 words in the body. Not shorter, not longer.
 - Audience: Nigerian / African creators and small businesses using AI video tools. Write to them directly.
-- Be CONCRETE. Use specific, real platforms by name (TikTok, Instagram Reels, YouTube Shorts, WhatsApp Status, Facebook). Use specific Nigerian/African places, scenarios, and content niches.
+- Be CONCRETE. Use specific, real platforms by name (TikTok, Instagram Reels, YouTube Shorts, Facebook). Use specific Nigerian/African places, scenarios, and content niches.
 - Where money is relevant, use REAL figures in Naira (₦) — e.g. realistic costs of a videographer, data, a Pro subscription, ad spend. Use believable, current ranges, not round hand-wavy numbers.
 - Give at least 2 concrete, worked examples (a real-sounding prompt, a real posting scenario, a before/after, a small calculation).
 - Genuinely useful and actionable: a reader should be able to DO something after reading.
@@ -582,8 +582,8 @@ def _generate_post(existing_titles, headlines):
     if not os.environ.get("GROQ_API_KEY"):
         raise RuntimeError("GROQ_API_KEY is not set")
 
-    # Reuse the shared Groq client the rest of the app initialises.
-    from services.claude import client
+    # Use the shared provider manager so we can switch providers consistently.
+    from services.provider_manager import provider_manager
 
     system, user = _build_blog_prompt(existing_titles, headlines)
 
@@ -592,15 +592,16 @@ def _generate_post(existing_titles, headlines):
     last_error = None
     for attempt in range(1, 3):
         print(f"[blog-draft] calling Groq ({BLOG_MODEL}) attempt {attempt}/2...")
-        resp = client.chat.completions.create(
-            model=BLOG_MODEL,
-            max_tokens=4000,
+        resp_text = provider_manager.generate_text(
+            "Blog Writing",
             messages=[
                 {"role": "system", "content": system},
                 {"role": "user", "content": user},
             ],
+            model=BLOG_MODEL,
+            max_tokens=4000,
         )
-        raw = resp.choices[0].message.content or ""
+        raw = resp_text or ""
         try:
             return _parse_post(raw)
         except ValueError as e:
@@ -608,6 +609,27 @@ def _generate_post(existing_titles, headlines):
             print(f"[blog-draft] parse failed on attempt {attempt}: {e}")
 
     raise ValueError(f"Could not parse a valid post after 2 attempts: {last_error}")
+
+
+def generate_blog_content():
+    """Generates blog content and returns it as a dictionary without saving to Admin CMS."""
+    titles, _slugs = existing_titles_and_slugs()
+    print(f"[blog-draft] {len(titles)} existing posts found (drafts + published).")
+
+    headlines = _fetch_blog_headlines()
+    print(f"[blog-draft] pulled {len(headlines)} fresh headlines for grounding.")
+
+    post = _generate_post(titles, headlines)
+
+    wc = _word_count(post["body"])
+    read_time = f"{max(1, round(wc / 200))} min read"
+    post["read_time"] = read_time
+    
+    print(f'[blog-draft] generated: "{post["title"]}" — {wc} words, tag={post["tag"]!r}')
+    if not (550 <= wc <= 1000):
+        print(f"[blog-draft] word count {wc} outside the 600-900 target.")
+
+    return post
 
 
 def run_daily_draft_generation():

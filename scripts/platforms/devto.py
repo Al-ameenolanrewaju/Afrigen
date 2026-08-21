@@ -19,7 +19,7 @@ DEVTO_API = "https://dev.to/api"
 
 
 def publish_article(title: str, content: str, tags: list[str],
-                    canonical_url: str, description: str = "") -> dict:
+                    canonical_url: str, description: str = "", api_key: str = None) -> dict:
     """Publish a Markdown article on Dev.to with a canonical URL back to Afrigen.
 
     Args:
@@ -28,11 +28,12 @@ def publish_article(title: str, content: str, tags: list[str],
         tags: Up to 4 lowercase alphanumeric tags.
         canonical_url: The original blog URL on afrigen.com.ng (SEO canonical).
         description: Optional short description/summary.
+        api_key: Optional API key. If not provided, falls back to DEVTO_API_KEY env var.
 
     Returns:
         {ok: bool, post_id, post_url, error}
     """
-    api_key = os.environ.get("DEVTO_API_KEY", "")
+    api_key = api_key or os.environ.get("DEVTO_API_KEY", "")
 
     if not api_key:
         # Graceful skip — missing credentials must not crash the pipeline.

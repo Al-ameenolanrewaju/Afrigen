@@ -7,7 +7,7 @@ markets the product — that's the whole loop.
 ## How to use this
 
 - **Post once a day minimum.** TikTok is priority #1, then Reels, then X. Repost
-  every clip to YouTube Shorts + WhatsApp Status with zero extra effort.
+  every clip to YouTube Shorts + Facebook Status with zero extra effort.
 - **Each clip is made *in Afrigen*** using the prompt given. Screen-record the
   prompt → cut to the result for the "type this → get this" days.
 - **Every post needs the CTA:** Afrigen link in bio, in the caption, AND pinned as

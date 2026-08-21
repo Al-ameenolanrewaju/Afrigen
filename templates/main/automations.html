@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block title %}Automation Engine | Afrigen{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4" style="max-width: 1200px;">
+    <div class="d-flex justify-content-between align-items-center mb-5">
+        <div>
+            <h2 style="color: #F0F6FC; font-weight: 700; letter-spacing: -0.5px;">Automation Engine</h2>
+            <p style="color: #8B949E; margin: 0;">Build and schedule Zapier-style automated creative workflows.</p>
+        </div>
+        <a href="{{ url_for('main.build_automation') }}" class="btn btn-warning px-4 py-2" style="font-weight: 600; border-radius: 8px;">
+            <i class="fa-solid fa-plus me-2"></i> Create Workflow
+        </a>
+    </div>
+
+    <!-- Active Workflows Grid -->
+    <h5 style="color: #F0F6FC; margin-bottom: 24px;"><i class="fa-solid fa-network-wired text-warning me-2"></i> Active Workflows</h5>
+    <div class="row g-4 mb-5" id="workflows-grid">
+        <div class="col-12 text-center" id="empty-workflows" style="display: none; padding: 40px 0;">
+            <div style="width: 80px; height: 80px; background: rgba(245,166,35,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
+                <i class="fa-solid fa-bolt fa-2x" style="color: #F5A623;"></i>
+            </div>
+            <h5 style="color: #C9D1D9;">No active workflows</h5>
+            <p style="color: #8B949E; max-width: 400px; margin: 0 auto;">Automate your marketing by creating your first workflow schedule.</p>
+        </div>
+    </div>
+
+    <!-- Execution Logs -->
+    <h5 style="color: #F0F6FC; margin-bottom: 24px;"><i class="fa-solid fa-list-check text-warning me-2"></i> Execution History</h5>
+    <div class="card" style="background: #161B22; border: 1px solid #30363D; border-radius: 12px; overflow: hidden;">
+        <table class="table table-dark table-hover mb-0" style="background: transparent;">
+            <thead>
+                <tr>
+                    <th style="border-bottom: 1px solid #30363D; color: #8B949E; font-weight: 500;">Workflow</th>
+                    <th style="border-bottom: 1px solid #30363D; color: #8B949E; font-weight: 500;">Started At</th>
+                    <th style="border-bottom: 1px solid #30363D; color: #8B949E; font-weight: 500;">Status</th>
+                    <th style="border-bottom: 1px solid #30363D; color: #8B949E; font-weight: 500;">Assets</th>
+                    <th style="border-bottom: 1px solid #30363D; color: #8B949E; font-weight: 500;">Credits Used</th>
+                    <th style="border-bottom: 1px solid #30363D; color: #8B949E; font-weight: 500;">Action</th>
+                </tr>
+            </thead>
+            <tbody id="logs-table">
+                <!-- JS populated -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", async () => {
+        try {
+            const res = await fetch("{{ url_for('main.api_automations_list') }}");
+            const data = await res.json();
+            
+            const grid = document.getElementById('workflows-grid');
+            const empty = document.getElementById('empty-workflows');
+            const tbody = document.getElementById('logs-table');
+            const workflows = Array.isArray(data.workflows) ? data.workflows : [];
+            const logs = Array.isArray(data.logs) ? data.logs : [];
+            
+            if (workflows.length === 0) {
+                empty.style.display = 'block';
+            } else {
+                workflows.forEach(wf => {
+                    grid.innerHTML += `
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card h-100" style="background: #161B22; border: 1px solid #30363D; border-radius: 12px;">
+                                <div class="card-body p-4">
+                                    <div class="d-flex justify-content-between align-items-start mb-3">
+                                        <div style="width: 40px; height: 40px; background: rgba(255,255,255,0.05); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                                            <i class="fa-solid fa-bolt" style="color: #C9D1D9;"></i>
+                                        </div>
+                                        <span class="badge bg-success">Active</span>
+                                    </div>
+                                    <h5 style="color: #F0F6FC; font-weight: 600;">${wf.name}</h5>
+                                    <p style="color: #8B949E; font-size: 13px; margin-bottom: 24px;">Trigger: ${wf.trigger} <br> Nodes: ${(wf.nodes || []).length}</p>
+                                    
+                                    <div class="d-flex gap-2">
+                                        <button class="btn btn-sm btn-outline-warning w-100" onclick="runWorkflow('${wf.id}')">
+                                            <i class="fa-solid fa-play me-2"></i> Run Now
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger w-100" onclick="deleteWorkflow('${wf.id}')">
+                                            <i class="fa-solid fa-trash me-2"></i> Delete
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            
+            if (logs.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4" style="color: #8B949E;">No executions yet.</td></tr>`;
+            } else {
+                logs.forEach(log => {
+                    let statusBadge = `<span class="badge bg-success">Completed</span>`;
+                    if(log.status === 'failed') statusBadge = `<span class="badge bg-danger">Failed</span>`;
+                    if(log.status === 'running') statusBadge = `<span class="badge bg-warning text-dark">Running...</span>`;
+                    
+                    const date = new Date(log.started_at).toLocaleString();
+                    
+                    tbody.innerHTML += `
+                        <tr>
+                            <td style="color: #C9D1D9;">${log.workflow_name}</td>
+                            <td style="color: #8B949E;">${date}</td>
+                            <td>${statusBadge}</td>
+                            <td style="color: #C9D1D9;">${log.asset_count || 0}</td>
+                            <td style="color: #C9D1D9;">${log.credits_used || 0}</td>
+                            <td><a class="btn btn-sm btn-outline-warning" href="/automations/${log.id}">View Results</a></td>
+                        </tr>
+                    `;
+                });
+            }
+        } catch(err) {
+            console.error(err);
+        }
+    });
+    
+    async function runWorkflow(id) {
+        const result = await Swal.fire({
+            title: 'Confirm',
+            text: 'Manually trigger this workflow? (Costs 10 Credits)',
+            icon: 'warning',
+            showCancelButton: true,
+            background: '#161B22',
+            color: '#F0F6FC',
+            confirmButtonColor: '#F5A623'
+        });
+        if(!result.isConfirmed) return;
+        try {
+            const res = await fetch(`/api/automations/run/${id}`, { method: 'POST' });
+            if(res.ok) {
+                alert('Workflow started! The backend APScheduler is now executing the nodes.');
+                setTimeout(() => window.location.reload(), 2000);
+            } else {
+                const data = await res.json();
+                alert(data.error || 'Failed to trigger workflow');
+            }
+        } catch(e) {
+            alert('Failed to trigger workflow');
+        }
+    }
+
+    async function deleteWorkflow(id) {
+        const result = await Swal.fire({
+            title: 'Delete Automation?',
+            text: 'Are you sure you want to delete this automation?',
+            icon: 'warning',
+            showCancelButton: true,
+            background: '#161B22',
+            color: '#F0F6FC',
+            confirmButtonColor: '#F5A623'
+        });
+        if(!result.isConfirmed) return;
+        try {
+            const res = await fetch(`/api/automations/${id}`, { method: 'DELETE' });
+            if(res.ok) {
+                window.location.reload();
+            } else {
+                const data = await res.json();
+                alert(data.error || 'Failed to delete workflow');
+            }
+        } catch(e) {
+            alert('Failed to delete workflow');
+        }
+    }
+</script>
+{% endblock %}

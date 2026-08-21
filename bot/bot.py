@@ -14,7 +14,6 @@ import threading
 from flask import Flask
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
-from groq import Groq
 
 from config import Config
 from models import db, User, TelegramUser, Generation
@@ -25,7 +24,6 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
-groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
 # Minimal Flask app so the bot can use the same SQLAlchemy models (and therefore
 # the same credit/limit rules) as the website. We do NOT import app.py here — it
@@ -123,6 +121,7 @@ IMAGE_STYLE_PROMPTS = {
 
 
 def refine_prompt(user_prompt, style="cinematic"):
+    from services.provider_manager import provider_manager
     fidelity_rules = (
         "\n\nFIDELITY: Keep the user's core subject, action and intent; enhance "
         "with detail but never replace or drop what they asked for. Preserve any "
@@ -131,21 +130,19 @@ def refine_prompt(user_prompt, style="cinematic"):
         "and legible. Never paraphrase or invent on-screen words."
     )
     system_message = STYLE_PROMPTS.get(style, STYLE_PROMPTS["cinematic"]) + fidelity_rules
-    response = groq_client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        messages=[
-            {"role": "system", "content": system_message},
-            {"role": "user", "content": (
-                "Refine this video prompt. Keep my subject and intent, and keep "
-                "any on-screen words exactly as written:\n\n" + user_prompt
-            )}
-        ],
-        max_tokens=300
-    )
-    return response.choices[0].message.content
+    messages = [
+        {"role": "system", "content": system_message},
+        {"role": "user", "content": (
+            "Refine this video prompt. Keep my subject and intent, and keep "
+            "any on-screen words exactly as written:\n\n" + user_prompt
+        )}
+    ]
+    with flask_app.app_context():
+        return provider_manager.generate_text("Prompt Refinement", messages, max_tokens=300)
 
 
 def refine_image_prompt(user_prompt, style="realistic"):
+    from services.provider_manager import provider_manager
     text_rules = (
         "\n\nCRITICAL: If the idea contains any words to appear in the image "
         "(flyer, billboard, poster, sign, logo), copy them VERBATIM, wrap them "
@@ -153,18 +150,15 @@ def refine_image_prompt(user_prompt, style="realistic"):
         "perfectly legible. Never paraphrase, drop, or invent wording."
     )
     system_message = IMAGE_STYLE_PROMPTS.get(style, IMAGE_STYLE_PROMPTS["realistic"]) + text_rules
-    response = groq_client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        messages=[
-            {"role": "system", "content": system_message},
-            {"role": "user", "content": (
-                "Refine this image prompt. Keep any words meant to appear in the "
-                "image exactly as written and make them bold and legible:\n\n" + user_prompt
-            )}
-        ],
-        max_tokens=300
-    )
-    return response.choices[0].message.content
+    messages = [
+        {"role": "system", "content": system_message},
+        {"role": "user", "content": (
+            "Refine this image prompt. Keep any words meant to appear in the "
+            "image exactly as written and make them bold and legible:\n\n" + user_prompt
+        )}
+    ]
+    with flask_app.app_context():
+        return provider_manager.generate_text("Prompt Refinement", messages, max_tokens=300)
 
 
 def extract_on_screen_text(text):

@@ -1,0 +1,569 @@
+{% extends "base.html" %}
+
+{% block title %}Create | Afrigen{% endblock %}
+
+{% block content %}
+<style>
+    /* Full Height Workspace adjustments */
+    .workspace-container {
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 72px); /* Adjust based on navbar height if any */
+        margin: -24px; /* Negate the padding from base if necessary, or just keep it */
+        background: #0D1117;
+    }
+    
+    .workspace-panels {
+        display: flex;
+        flex-grow: 1;
+        overflow: hidden;
+    }
+    
+    /* Left Panel - Type Selection */
+    .panel-left {
+        width: 260px;
+        background: #161B22;
+        border-right: 1px solid #30363D;
+        display: flex;
+        flex-direction: column;
+        flex-shrink: 0;
+    }
+    .type-btn {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 16px 20px;
+        color: #8B949E;
+        background: transparent;
+        border: none;
+        border-left: 3px solid transparent;
+        text-align: left;
+        font-weight: 500;
+        transition: all 0.2s;
+        cursor: pointer;
+    }
+    .type-btn:hover {
+        background: rgba(255,255,255,0.02);
+        color: #C9D1D9;
+    }
+    .type-btn.active {
+        background: rgba(245,166,35,0.1);
+        color: #F5A623;
+        border-left-color: #F5A623;
+    }
+    .type-icon {
+        width: 24px;
+        text-align: center;
+        font-size: 1.1rem;
+    }
+    
+    /* Center Panel - Prompt Editor */
+    .panel-center {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        background: #0D1117;
+        position: relative;
+    }
+    .prompt-area-wrapper {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        padding: 40px;
+        max-width: 900px;
+        margin: 0 auto;
+        width: 100%;
+    }
+    .prompt-textarea {
+        flex-grow: 1;
+        background: transparent;
+        border: none;
+        color: #F0F6FC;
+        font-size: 1.25rem;
+        resize: none;
+        box-shadow: none !important;
+        padding: 0;
+        line-height: 1.6;
+    }
+    .prompt-textarea:focus { outline: none; }
+    .prompt-textarea::placeholder { color: #484F58; }
+    
+    .editor-toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 16px;
+        border-top: 1px solid #21262D;
+        margin-top: 16px;
+    }
+    
+    /* Right Panel - Settings */
+    .panel-right {
+        width: 320px;
+        background: #161B22;
+        border-left: 1px solid #30363D;
+        display: flex;
+        flex-direction: column;
+        flex-shrink: 0;
+        overflow-y: auto;
+    }
+    .settings-group {
+        padding: 24px;
+        border-bottom: 1px solid #21262D;
+    }
+    .settings-title {
+        color: #F0F6FC;
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .setting-label {
+        color: #8B949E;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+        font-weight: 600;
+    }
+    .form-select, .form-control {
+        background-color: #0D1117;
+        border-color: #30363D;
+        color: #C9D1D9;
+    }
+    .form-select:focus, .form-control:focus {
+        border-color: #F5A623;
+        box-shadow: 0 0 0 0.2rem rgba(245,166,35,0.25);
+    }
+    
+    /* Bottom Bar */
+    .workspace-footer {
+        height: 72px;
+        background: #161B22;
+        border-top: 1px solid #30363D;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 24px;
+        flex-shrink: 0;
+    }
+    
+    /* Pill Radios */
+    .pill-radio { display: none; }
+    .pill-label {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 6px;
+        border: 1px solid #30363D;
+        color: #8B949E;
+        cursor: pointer;
+        font-size: 13px;
+        transition: all 0.2s;
+        text-align: center;
+        flex: 1;
+    }
+    .pill-label:hover { border-color: #8B949E; color: #C9D1D9; }
+    .pill-radio:checked + .pill-label {
+        background: #F5A623;
+        border-color: #F5A623;
+        color: #0D1117;
+        font-weight: 600;
+    }
+    .pill-group {
+        display: flex;
+        gap: 8px;
+    }
+
+    /* Progress Overlay */
+    #generation-overlay {
+        display: none; position: fixed; inset: 0; background: rgba(13,17,23,0.9);
+        backdrop-filter: blur(4px); z-index: 9999; flex-direction: column;
+        align-items: center; justify-content: center;
+    }
+</style>
+
+<div class="workspace-container m-0">
+    <div class="workspace-panels">
+        
+        <!-- Left Panel: Generation Types -->
+        <div class="panel-left">
+            <div class="p-4 border-bottom" style="border-color: #30363D !important;">
+                <h6 style="color: #F0F6FC; margin: 0; font-weight: 600; letter-spacing: 0.5px;">Create Workspace</h6>
+            </div>
+            
+            <div class="pt-2">
+                <button class="type-btn active" data-type="video">
+                    <span class="type-icon"><i class="fa-solid fa-clapperboard"></i></span>
+                    <div class="d-flex flex-column">
+                        <span>Video</span>
+                        <small style="color: #484F58; font-size: 11px;">Text to Video</small>
+                    </div>
+                </button>
+                <button class="type-btn" data-type="image">
+                    <span class="type-icon"><i class="fa-solid fa-image"></i></span>
+                    <div class="d-flex flex-column">
+                        <span>Image</span>
+                        <small style="color: #484F58; font-size: 11px;">Text to Image</small>
+                    </div>
+                </button>
+                <button class="type-btn" data-type="animate">
+                    <span class="type-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+                    <div class="d-flex flex-column">
+                        <span>Animate</span>
+                        <small style="color: #484F58; font-size: 11px;">Image to Video</small>
+                    </div>
+                </button>
+                <button class="type-btn" data-type="voice">
+                    <span class="type-icon"><i class="fa-solid fa-microphone"></i></span>
+                    <div class="d-flex flex-column">
+                        <span>Voice Over</span>
+                        <small style="color: #484F58; font-size: 11px;">Text to Speech</small>
+                    </div>
+                </button>
+            </div>
+        </div>
+
+        <!-- Center Panel: Editor -->
+        <div class="panel-center">
+            <div class="prompt-area-wrapper">
+                <h5 class="mb-4" style="color: #C9D1D9; font-weight: 400;">What would you like to create today?</h5>
+                
+                <textarea id="master_prompt" class="prompt-textarea" placeholder="Describe your idea in detail... Try to be as descriptive as possible."></textarea>
+                
+                <div class="editor-toolbar">
+                    <div class="d-flex align-items-center gap-3">
+                        <!-- Hook into existing /refine-prompt API visually -->
+                        <button type="button" class="btn btn-sm" style="background: rgba(245,166,35,0.1); color: #F5A623; border: 1px solid rgba(245,166,35,0.2);">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Enhance Prompt
+                        </button>
+                    </div>
+                    
+                    <div style="color: #8B949E; font-size: 12px;">
+                        <span id="char_count">0</span> / 1000
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel: Settings (Dynamic forms) -->
+        <div class="panel-right">
+            
+            <!-- Video Settings -->
+            <form id="form_video" class="settings-form" method="POST" action="{{ url_for('main.generate') }}">
+                <input type="hidden" name="prompt" class="sync-prompt">
+                <input type="hidden" name="genType" value="text">
+                
+                <div class="settings-group">
+                    <div class="settings-title"><i class="fa-solid fa-sliders"></i> Video Settings</div>
+                    
+                    <div class="mb-4">
+                        <div class="setting-label">Style Model</div>
+                        <select name="style" class="form-select mb-2">
+                            <option value="cinematic">Cinematic</option>
+                            <option value="anime">Anime</option>
+                            <option value="realistic">Realistic</option>
+                            <option value="african">African</option>
+                            <option value="social">Social Media</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <div class="setting-label">Resolution & Ratio</div>
+                        <div class="pill-group">
+                            <input type="radio" name="aspect_ratio" id="v_ratio_169" value="16:9" class="pill-radio" checked>
+                            <label for="v_ratio_169" class="pill-label">16:9</label>
+                            
+                            <input type="radio" name="aspect_ratio" id="v_ratio_916" value="9:16" class="pill-radio">
+                            <label for="v_ratio_916" class="pill-label">9:16</label>
+                            
+                            <input type="radio" name="aspect_ratio" id="v_ratio_11" value="1:1" class="pill-radio">
+                            <label for="v_ratio_11" class="pill-label">1:1</label>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <div class="setting-label">Duration</div>
+                        <select name="duration" class="form-select">
+                            <option value="5">5 Seconds</option>
+                            <option value="10">10 Seconds (+5 credits)</option>
+                            <option value="15">15 Seconds (+10 credits)</option>
+                            <option value="20">20 Seconds (+15 credits)</option>
+                        </select>
+                    </div>
+                    
+                    {% if current_user.plan == 'pro' %}
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" name="add_voiceover" id="v_add_voiceover" value="1">
+                        <label class="form-check-label" for="v_add_voiceover" style="color: #F5A623; font-size: 13px;">
+                            Include AI Voiceover
+                        </label>
+                    </div>
+                    {% endif %}
+                </div>
+            </form>
+
+            <!-- Image Settings -->
+            <form id="form_image" class="settings-form" style="display: none;" method="POST" action="{{ url_for('main.generate_image') }}">
+                <input type="hidden" name="prompt" class="sync-prompt">
+                
+                <div class="settings-group">
+                    <div class="settings-title"><i class="fa-solid fa-sliders"></i> Image Settings</div>
+                    
+                    <div class="mb-4">
+                        <div class="setting-label">Art Style</div>
+                        <select name="style" class="form-select">
+                            <option value="realistic">Realistic</option>
+                            <option value="anime">Anime</option>
+                            <option value="cinematic">Cinematic</option>
+                            <option value="african">African Art</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <div class="setting-label">Aspect Ratio</div>
+                        <div class="pill-group">
+                            <input type="radio" name="aspect_ratio" id="i_ratio_169" value="16:9" class="pill-radio" checked>
+                            <label for="i_ratio_169" class="pill-label">16:9</label>
+                            
+                            <input type="radio" name="aspect_ratio" id="i_ratio_916" value="9:16" class="pill-radio">
+                            <label for="i_ratio_916" class="pill-label">9:16</label>
+                            
+                            <input type="radio" name="aspect_ratio" id="i_ratio_11" value="1:1" class="pill-radio">
+                            <label for="i_ratio_11" class="pill-label">1:1</label>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <div class="setting-label">Seed (Optional)</div>
+                        <input type="number" name="seed" class="form-control form-control-sm" placeholder="Random">
+                    </div>
+                </div>
+            </form>
+
+            <!-- Animate Settings -->
+            <form id="form_animate" class="settings-form" style="display: none;" method="POST" action="{{ url_for('main.generate_from_image') }}" enctype="multipart/form-data">
+                <input type="hidden" name="prompt" class="sync-prompt">
+                
+                <div class="settings-group">
+                    <div class="settings-title"><i class="fa-solid fa-sliders"></i> Animation Settings</div>
+                    
+                    {% if current_user.plan == 'pro' %}
+                    <div class="mb-4">
+                        <div class="setting-label">Base Image</div>
+                        <div class="p-3 text-center mb-2" style="border: 1px dashed #30363D; border-radius: 8px; background: rgba(13,17,23,0.5);">
+                            <i class="fa-solid fa-upload fs-4 mb-2" style="color: #484F58;"></i>
+                            <p style="color: #8B949E; font-size: 12px; margin: 0;">Click or drag image here</p>
+                            <input type="file" name="image" class="form-control mt-2" style="font-size: 12px; background: transparent;" accept="image/*" required>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <div class="setting-label">Motion Intensity</div>
+                        <input type="range" class="form-range" min="1" max="100" value="50">
+                        <div class="d-flex justify-content-between">
+                            <small style="color: #484F58; font-size: 10px;">Subtle</small>
+                            <small style="color: #484F58; font-size: 10px;">Dynamic</small>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <div class="setting-label">Duration</div>
+                        <select name="duration" class="form-select">
+                            <option value="5">5 Seconds</option>
+                            <option value="10">10 Seconds</option>
+                        </select>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning" style="background: rgba(245,166,35,0.1); border-color: #F5A623; color: #F5A623;">
+                        <i class="fa-solid fa-lock"></i> Image-to-Video is a Pro feature. <a href="{{ url_for('main.upgrade') }}" style="color: #F5A623; text-decoration: underline;">Upgrade</a>
+                    </div>
+                    {% endif %}
+                </div>
+            </form>
+
+            <!-- Voice Over Settings -->
+            <form id="form_voice" class="settings-form" style="display: none;" onsubmit="handleVoiceOverSubmit(event)">
+                <input type="hidden" name="prompt" class="sync-prompt">
+                
+                <div class="settings-group">
+                    <div class="settings-title"><i class="fa-solid fa-sliders"></i> Voice Settings</div>
+                    
+                    <div class="mb-4">
+                        <div class="setting-label">Voice Model</div>
+                        <select name="voice" class="form-select">
+                            <option value="ayo">Ayo (Nigerian Male)</option>
+                            <option value="chisom">Chisom (Nigerian Female)</option>
+                            <option value="kwame">Kwame (Ghanaian Male)</option>
+                            <option value="thabo">Thabo (South African Male)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <div class="setting-label">Language / Accent</div>
+                        <select name="language" class="form-select">
+                            <option value="en-ng">English (Nigerian)</option>
+                            <option value="en-za">English (South African)</option>
+                            <option value="en-gh">English (Ghanaian)</option>
+                            <option value="sw">Swahili</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <div class="setting-label">Speed</div>
+                        <input type="range" class="form-range" min="0.5" max="2.0" step="0.1" value="1.0">
+                        <div class="d-flex justify-content-between">
+                            <small style="color: #484F58; font-size: 10px;">0.5x</small>
+                            <small style="color: #484F58; font-size: 10px;">1.0x</small>
+                            <small style="color: #484F58; font-size: 10px;">2.0x</small>
+                        </div>
+                    </div>
+                </div>
+            </form>
+
+        </div>
+    </div>
+    
+    <!-- Bottom Footer (Action Bar) -->
+    <div class="workspace-footer">
+        <div class="d-flex align-items-center gap-3">
+            <span style="color: #8B949E; font-size: 14px;">
+                <i class="fa-solid fa-coins" style="color: #F5A623;"></i> Available: <strong style="color: #F0F6FC;">{{ current_user.credits }} Credits</strong>
+            </span>
+        </div>
+        
+        <div>
+            {% if current_user.credits > 0 or current_user.plan == 'free' %}
+            <button type="button" id="masterSubmitBtn" class="btn btn-afrigen px-5" style="border-radius: 8px; font-weight: 600; padding: 12px 24px;">
+                <span id="btn-text">Generate Video</span> 
+                <span id="btn-cost" style="opacity: 0.8; margin-left: 8px; font-weight: 400; font-size: 13px;">(5 Credits)</span>
+            </button>
+            {% else %}
+            <a href="{{ url_for('main.upgrade') }}" class="btn btn-warning px-5" style="border-radius: 8px; font-weight: 600;">Upgrade to Generate</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Progress Overlay -->
+<div id="generation-overlay">
+  <div style="background:#161B22; border:1px solid #30363D; border-radius:16px; padding:40px; text-align:center; width:340px; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+    <h3 id="overlay-title" style="color:#F5A623; margin-bottom:8px; font-weight: 600;">Generating...</h3>
+    <p id="overlay-subtitle" style="color:#8B949E; font-size:14px; margin-bottom:24px;">Please wait</p>
+    <div style="background:#21262D; border-radius:99px; height:8px; overflow:hidden; margin-bottom:12px;">
+      <div id="overlay-bar" style="height:100%; width:0%; background:linear-gradient(90deg,#F5A623,#FFA114); border-radius:99px; transition:width 0.5s ease;"></div>
+    </div>
+    <p id="overlay-percent" style="color:#F0F6FC; font-weight:bold; font-size:22px; margin: 0;">0%</p>
+  </div>
+</div>
+
+<script>
+    const creditCosts = {
+        'video': 5,
+        'image': 1,
+        'animate': 5,
+        'voice': 1
+    };
+    
+    const actionTexts = {
+        'video': 'Generate Video',
+        'image': 'Generate Image',
+        'animate': 'Animate Image',
+        'voice': 'Generate Voice'
+    };
+
+    let activeType = 'video';
+
+    // Character Counter
+    const masterPrompt = document.getElementById('master_prompt');
+    const charCount = document.getElementById('char_count');
+    
+    masterPrompt.addEventListener('input', function() {
+        charCount.textContent = this.value.length;
+    });
+
+    // Left Panel Type Switching
+    document.querySelectorAll('.type-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            // Update active state in sidebar
+            document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Switch Right Panel Form
+            activeType = this.dataset.type;
+            document.querySelectorAll('.settings-form').forEach(f => f.style.display = 'none');
+            document.getElementById('form_' + activeType).style.display = 'block';
+            
+            // Update Bottom Button
+            document.getElementById('btn-text').textContent = actionTexts[activeType];
+            document.getElementById('btn-cost').textContent = `(${creditCosts[activeType]} Credits)`;
+        });
+    });
+
+    // Master Submit button logic
+    document.getElementById('masterSubmitBtn')?.addEventListener('click', function() {
+        let promptText = masterPrompt.value.trim();
+        if (!promptText && activeType !== 'animate') {
+            alert('Please enter a prompt to generate content.');
+            masterPrompt.focus();
+            return;
+        }
+        
+        // --- SPRINT 7: INJECT BRAND CONTEXT ---
+        if (window.BrandContext) {
+            promptText = window.BrandContext.inject(promptText);
+        }
+
+        const activeForm = document.getElementById('form_' + activeType);
+        
+        // Sync prompt to hidden input
+        const hiddenPrompt = activeForm.querySelector('.sync-prompt');
+        if(hiddenPrompt) hiddenPrompt.value = promptText;
+
+        // Overlay animation
+        let title = 'Generating';
+        if(activeType === 'video') title = 'Directing Video...';
+        if(activeType === 'image') title = 'Painting Image...';
+        if(activeType === 'animate') title = 'Animating Image...';
+        if(activeType === 'voice') title = 'Synthesizing Voice...';
+        
+        startProgress(title, 'Connecting to AI engines...', 20000); // UI visual only
+
+        if (activeType === 'voice') {
+            // Trigger Voice over placeholder submission
+            activeForm.dispatchEvent(new Event('submit'));
+        } else {
+            activeForm.submit();
+        }
+    });
+
+    function handleVoiceOverSubmit(e) {
+        e.preventDefault();
+        // Since there is no actual backend route for this yet, we show an alert.
+        setTimeout(() => {
+            document.getElementById('generation-overlay').style.display = 'none';
+            alert("Success! However, the standalone Voice Over API endpoint is scheduled for the next sprint. For now, you can add voiceovers directly by checking the box in the Video settings.");
+        }, 1500);
+    }
+
+    function startProgress(title, subtitle, durationMs) {
+        const overlay = document.getElementById('generation-overlay');
+        const bar = document.getElementById('overlay-bar');
+        const percent = document.getElementById('overlay-percent');
+        
+        document.getElementById('overlay-title').textContent = title;
+        document.getElementById('overlay-subtitle').textContent = subtitle;
+        overlay.style.display = 'flex';
+        
+        let start = Date.now();
+        let interval = setInterval(() => {
+            let elapsed = Date.now() - start;
+            let p = Math.min((elapsed / durationMs) * 100, 95);
+            bar.style.width = p + '%';
+            percent.textContent = Math.floor(p) + '%';
+            if(p >= 95) clearInterval(interval);
+        }, 500);
+    }
+</script>
+{% endblock %}

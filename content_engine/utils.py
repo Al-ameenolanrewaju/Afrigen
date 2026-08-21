@@ -2,11 +2,8 @@ import os
 import re
 import logging
 from typing import Callable, Tuple, Any
-from groq import Groq
 
-# Same Groq client configuration as scripts/generate_content.py
-MODEL = os.environ.get("BLOG_MODEL", "llama-3.3-70b-versatile")
-_client = None
+import logging
 
 def get_logger(name: str) -> logging.Logger:
     """Get a standard logger for the Content Engine."""
@@ -20,27 +17,33 @@ def get_logger(name: str) -> logging.Logger:
         logger.propagate = False
     return logger
 
-def _groq():
-    global _client
-    if _client is None:
-        _client = Groq(api_key=os.environ["GROQ_API_KEY"])
-    return _client
+# We use ProviderManager for LLM generation to benefit from health tracking and fallback.
+from flask import current_app
+from app import app
+from services.provider_manager import provider_manager
 
-def generate_with_llm(system: str, user: str, max_tokens: int = 2000, json_mode: bool = False, model: str = MODEL) -> str:
-    """Single Groq chat call. Returns stripped text content."""
+# Model parameter is kept for signature compatibility, but ProviderManager dictates the model via task_type.
+def generate_with_llm(system: str, user: str, max_tokens: int = 2000, json_mode: bool = False, model: str = None) -> str:
+    """Generate text via ProviderManager. Returns stripped text content."""
     kwargs = {
-        "model": model,
         "max_tokens": max_tokens,
-        "messages": [
-            {"role": "system", "content": system},
-            {"role": "user", "content": user},
-        ],
     }
     if json_mode:
         kwargs["response_format"] = {"type": "json_object"}
         
-    resp = _groq().chat.completions.create(**kwargs)
-    return (resp.choices[0].message.content or "").strip()
+    messages = [
+        {"role": "system", "content": system},
+        {"role": "user", "content": user},
+    ]
+
+    def do_generate():
+        return provider_manager.generate_text("AI Assistant", messages, **kwargs).strip()
+
+    # If running standalone outside a Flask request, we need an app context for DB logging
+    if not current_app:
+        with app.app_context():
+            return do_generate()
+    return do_generate()
 
 def strip_fences(text: str) -> str:
     """Remove markdown code fences that LLMs sometimes wrap output in."""

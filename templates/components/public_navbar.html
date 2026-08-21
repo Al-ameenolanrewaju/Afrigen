@@ -1,0 +1,43 @@
+<nav class="navbar navbar-dark">
+    <div class="container">
+        <a class="navbar-brand" href="/"><i class="fa-solid fa-clapperboard"></i> <span class="text-gradient">Afrigen</span></a>
+
+        <!-- Offcanvas Toggle -->
+        <button class="navbar-toggler" type="button"
+                data-bs-toggle="offcanvas"
+                data-bs-target="#offcanvasPublicNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <!-- Desktop links -->
+        <div class="d-none d-lg-flex align-items-center gap-3">
+            <a class="nav-link" href="{{ url_for('main.index') }}">Home</a>
+            <a class="nav-link" href="{{ url_for('main.upgrade') }}">Pricing</a>
+            <a class="nav-link" href="{{ url_for('main.docs') }}">API</a>
+            <a class="nav-link" href="{{ url_for('main.blog') }}">Blog</a>
+            
+            <a class="nav-link ms-3" href="{{ url_for('auth.login') }}">Login</a>
+            <a class="btn btn-afrigen btn-sm" href="{{ url_for('auth.register') }}">Sign Up</a>
+        </div>
+    </div>
+</nav>
+
+<!-- Offcanvas Sidebar (mobile public) -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasPublicNav"
+     style="background: #161B22; border-left: 1px solid #30363D; width: 260px;">
+    <div class="offcanvas-header" style="border-bottom: 1px solid #30363D;">
+        <h5 style="color: #F5A623;"><i class="fa-solid fa-clapperboard"></i> Afrigen</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body">
+        <ul class="nav flex-column gap-2">
+            <li><a class="nav-link" href="{{ url_for('main.index') }}" style="color: #F0F6FC;">Home</a></li>
+            <li><a class="nav-link" href="{{ url_for('main.upgrade') }}" style="color: #F0F6FC;">Pricing</a></li>
+            <li><a class="nav-link" href="{{ url_for('main.docs') }}" style="color: #F0F6FC;">API</a></li>
+            <li><a class="nav-link" href="{{ url_for('main.blog') }}" style="color: #F0F6FC;">Blog</a></li>
+            <li><hr style="border-color: #30363D;"></li>
+            <li><a class="nav-link" href="{{ url_for('auth.login') }}" style="color: #F0F6FC;">Login</a></li>
+            <li><a class="nav-link" href="{{ url_for('auth.register') }}" style="color: #F0F6FC;">Sign Up</a></li>
+        </ul>
+    </div>
+</div>

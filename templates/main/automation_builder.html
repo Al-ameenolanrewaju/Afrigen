@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+
+{% block title %}Workflow Builder | Afrigen{% endblock %}
+
+{% block content %}
+<style>
+    .builder-container {
+        max-width: 800px;
+        margin: 40px auto;
+        padding-bottom: 80px;
+    }
+    
+    .node-card {
+        background: #161B22;
+        border: 1px solid #30363D;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 0;
+        position: relative;
+        z-index: 2;
+    }
+    
+    .node-connector {
+        height: 40px;
+        width: 2px;
+        background: #30363D;
+        margin: 0 auto;
+        position: relative;
+        z-index: 1;
+    }
+    .node-connector::after {
+        content: '↓';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: #8B949E;
+        background: #0D1117;
+        padding: 4px;
+        font-size: 12px;
+    }
+
+    .node-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+    }
+    .node-title {
+        color: #F0F6FC;
+        font-weight: 600;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    
+    .form-control, .form-select {
+        background: #0D1117;
+        border: 1px solid #30363D;
+        color: #F0F6FC;
+    }
+    
+    .add-node-btn {
+        background: transparent;
+        border: 2px dashed #30363D;
+        color: #8B949E;
+        width: 100%;
+        padding: 16px;
+        border-radius: 12px;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+    .add-node-btn:hover {
+        border-color: #F5A623;
+        color: #F5A623;
+        background: rgba(245,166,35,0.05);
+    }
+</style>
+
+<div class="builder-container">
+    <div class="d-flex justify-content-between align-items-center mb-5">
+        <div>
+            <h2 style="color: #F0F6FC; font-weight: 700;">Workflow Builder</h2>
+            <input type="text" id="wf_name" class="form-control mt-2" placeholder="e.g. Weekly Social Media Blast" style="max-width: 400px; font-size: 16px;">
+        </div>
+        <button class="btn btn-warning px-4 py-2" style="font-weight: 600;" onclick="saveWorkflow()">
+            <i class="fa-solid fa-save me-2"></i> Save Automation
+        </button>
+    </div>
+    
+    <div id="canvas">
+        <!-- Trigger Node -->
+        <div class="node-card border-warning">
+            <div class="node-header">
+                <h5 class="node-title"><i class="fa-solid fa-bolt text-warning"></i> Trigger</h5>
+            </div>
+            <select class="form-select" id="wf_trigger">
+                <option value="manual">Manual Execution</option>
+                <option value="daily">Schedule: Every Day</option>
+                <option value="weekly">Schedule: Every Week</option>
+                <option value="monthly">Schedule: Every Month</option>
+                <option value="webhook">Incoming Webhook (Future)</option>
+            </select>
+        </div>
+    </div>
+    
+    <div class="node-connector"></div>
+    <button class="add-node-btn" data-bs-toggle="modal" data-bs-target="#addNodeModal">
+        <i class="fa-solid fa-plus me-2"></i> Add Action Node
+    </button>
+</div>
+
+<!-- Add Node Modal -->
+<div class="modal fade" id="addNodeModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background: #161B22; border: 1px solid #30363D;">
+            <div class="modal-header border-bottom-0">
+                <h5 class="modal-title text-white">Select Action</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body pb-4">
+                <div class="list-group">
+                    <button class="list-group-item list-group-item-action bg-dark text-white border-secondary mb-2 rounded" onclick="appendNode('generate_image', 'Generate Image', 'fa-image text-warning')">
+                        <i class="fa-solid fa-image text-warning me-3"></i> Generate Image
+                    </button>
+                    <button class="list-group-item list-group-item-action bg-dark text-white border-secondary mb-2 rounded" onclick="appendNode('generate_video', 'Generate Video', 'fa-clapperboard text-info')">
+                        <i class="fa-solid fa-clapperboard text-info me-3"></i> Generate Video
+                    </button>
+                    <button class="list-group-item list-group-item-action bg-dark text-white border-secondary mb-2 rounded" onclick="appendNode('generate_content', 'Generate Blog/Copy', 'fa-pen text-primary')">
+                        <i class="fa-solid fa-pen text-primary me-3"></i> Generate Copy
+                    </button>
+                    <button class="list-group-item list-group-item-action bg-dark text-white border-secondary mb-2 rounded" onclick="appendNode('publish_social', 'Publish to Social', 'fa-share-nodes text-success')">
+                        <i class="fa-solid fa-share-nodes text-success me-3"></i> Publish Content
+                    </button>
+                    <button class="list-group-item list-group-item-action bg-dark text-white border-secondary mb-2 rounded" onclick="appendNode('notify_email', 'Send Email Notification', 'fa-envelope text-white')">
+                        <i class="fa-solid fa-envelope text-white me-3"></i> Send Email
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let nodes = [];
+    
+    function appendNode(type, label, iconClass) {
+        nodes.push({ type, label });
+        renderCanvas();
+        document.querySelector('#addNodeModal .btn-close').click();
+    }
+    
+    function renderCanvas() {
+        const canvas = document.getElementById('canvas');
+        
+        // Keep trigger
+        const triggerHtml = `
+            <div class="node-card border-warning">
+                <div class="node-header">
+                    <h5 class="node-title"><i class="fa-solid fa-bolt text-warning"></i> Trigger</h5>
+                </div>
+                <select class="form-select" id="wf_trigger">
+                    <option value="manual">Manual Execution</option>
+                    <option value="daily">Schedule: Every Day</option>
+                    <option value="weekly">Schedule: Every Week</option>
+                </select>
+            </div>
+        `;
+        
+        let nodesHtml = '';
+        nodes.forEach((n, idx) => {
+            let icon = 'fa-cogs text-secondary';
+            if(n.type === 'generate_image') icon = 'fa-image text-warning';
+            if(n.type === 'generate_video') icon = 'fa-clapperboard text-info';
+            if(n.type === 'generate_content') icon = 'fa-pen text-primary';
+            if(n.type === 'publish_social') icon = 'fa-share-nodes text-success';
+            if(n.type === 'notify_email') icon = 'fa-envelope text-white';
+            
+            nodesHtml += `
+                <div class="node-connector"></div>
+                <div class="node-card">
+                    <div class="node-header">
+                        <h5 class="node-title"><i class="fa-solid ${icon}"></i> ${n.label}</h5>
+                        <button class="btn btn-sm text-danger" onclick="removeNode(${idx})"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                    <p style="color: #8B949E; margin: 0; font-size: 13px;">Executes automatically via Afrigen Backend Engine.</p>
+                </div>
+            `;
+        });
+        
+        canvas.innerHTML = triggerHtml + nodesHtml;
+    }
+    
+    function removeNode(idx) {
+        nodes.splice(idx, 1);
+        renderCanvas();
+    }
+    
+    async function saveWorkflow() {
+        const name = document.getElementById('wf_name').value;
+        const trigger = document.getElementById('wf_trigger').value;
+        
+        if(!name) { alert("Please provide a workflow name."); return; }
+        if(nodes.length === 0) { alert("Please add at least one action node."); return; }
+        
+        const payload = { name, trigger, nodes };
+        
+        try {
+            const res = await fetch("{{ url_for('main.api_automations_save') }}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if(res.ok) {
+                alert("Workflow Saved!");
+                window.location.href = "/automations";
+            }
+        } catch(e) {
+            alert("Error saving workflow.");
+        }
+    }
+</script>
+{% endblock %}

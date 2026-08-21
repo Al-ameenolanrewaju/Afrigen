@@ -7,33 +7,33 @@
     <link rel="icon"
       type="image/png"
       sizes="32x32"
-      href="{{ url_for('static', filename='favicon.jpeg') }}">
+      href="{{ url_for('static', filename='favicon.png') }}">
 
 <link rel="apple-touch-icon"
-      href="{{ url_for('static', filename='favicon.jpeg') }}">
-    <title>{% block title %}Afrigen{% endblock %} — Africa Creates, AI Generates</title>
+      href="{{ url_for('static', filename='favicon.png') }}">
+    <title>{% block title %}Afrigen AI{% endblock %} | AI Marketing & Campaign Platform</title>
     <meta name="description"
-content="{% block meta_description %}Afrigen is an AI-powered platform that helps creators generate videos, content, and creative media faster using artificial intelligence.{% endblock %}">
+content="{% block meta_description %}Afrigen AI is an AI-powered marketing and campaign platform that helps African creators and brands generate campaigns, blogs, social content, videos, images, and voiceovers from a single idea.{% endblock %}">
 
 <meta name="keywords"
-content="Afrigen, AI video generator, AI content creator, African AI platform, video generation, artificial intelligence, creators tools">
+content="Afrigen AI, AI marketing platform, campaign generator, AI content creation, AI video generator, AI image generator, social media automation, African creators, AI tools">
 
 <meta name="author" content="Afrigen">
 
 <meta name="robots" content="index, follow">
 
 <!-- Open Graph / Facebook -->
-<meta property="og:title" content="Afrigen — Africa Creates, AI Generates">
+<meta property="og:title" content="Afrigen AI | AI Generation ,Marketing & Campaign Platform">
 <meta property="og:description"
-content="Create AI-powered videos and content with Afrigen.">
+content="Create campaigns, content, videos, images, and voiceovers with Afrigen AI — the AI platform built for modern African creators and brands.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://afrigen.com.ng{{ request.path }}">
 
 <!-- Twitter -->
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Afrigen — Africa Creates, AI Generates">
+<meta name="twitter:title" content="Afrigen AI | AI Marketing & Campaign Platform">
 <meta name="twitter:description"
-content="Create AI-powered videos and content with Afrigen.">
+content="Generate campaigns, blogs, social media content, videos, and visuals with Afrigen AI.">
 
 <!-- Canonical URL -->
 <link rel="canonical" href="{% block canonical %}https://afrigen.com.ng{{ request.path }}{% endblock %}">
@@ -50,156 +50,113 @@ content="Create AI-powered videos and content with Afrigen.">
             .navbar-toggler { display: none !important; }
         }
     </style>
+    <!-- Brand Middleware (Sprint 7) -->
+    <script src="{{ url_for('static', filename='js/brand_middleware.js') }}"></script>
     <!-- Google AdSense -->
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7147056850651801"
      crossorigin="anonymous"></script>
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        .swal2-popup {
+            font-family: 'Inter', sans-serif !important;
+        }
+    </style>
     {% block og_meta %}{% endblock %}
 </head>
 <body>
-    <nav class="navbar navbar-dark">
-    <div class="container">
-        <a class="navbar-brand" href="/"><i class="fa-solid fa-clapperboard"></i> <span class="text-gradient">Afrigen</span></a>
+{% if current_user.is_authenticated %}
+<div class="d-flex flex-column flex-lg-row min-vh-100">
+    {% include 'components/auth_sidebar.html' %}
+    
+    <div class="flex-grow-1 d-flex flex-column" style="min-width: 0;">
+{% else %}
+    {% include 'components/public_navbar.html' %}
+{% endif %}
 
-        <!-- Offcanvas Toggle -->
-        <button class="navbar-toggler" type="button"
-                data-bs-toggle="offcanvas"
-                data-bs-target="#offcanvasNav">
-            <span class="navbar-toggler-icon"></span>
-        </button>
+        <div class="container mt-4 flex-grow-1">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <script>
+                        document.addEventListener("DOMContentLoaded", function() {
+                            {% for category, message in messages %}
+                                Swal.fire({
+                                    icon: '{{ "error" if category == "danger" else "success" if category == "success" else "info" if category == "info" else "warning" }}',
+                                    title: '{{ message | replace("'", "\\'") | safe }}',
+                                    toast: true,
+                                    position: 'top-end',
+                                    showConfirmButton: false,
+                                    timer: 3000,
+                                    timerProgressBar: true,
+                                    background: '#161B22',
+                                    color: '#F0F6FC'
+                                });
+                            {% endfor %}
+                        });
+                    </script>
+                {% endif %}
+            {% endwith %}
 
-        <!-- Desktop links -->
-        <div class="d-none d-lg-flex align-items-center gap-3">
-            <a class="nav-link" href="{{ url_for('main.blog') }}"><i class="fa-solid fa-newspaper"></i> Blog</a>
-            <a class="nav-link" href="{{ url_for('main.docs') }}"><i class="fa-solid fa-book-open"></i> Docs</a>
-            <a class="nav-link" href="{{ url_for('main.contact') }}"><i class="fa-solid fa-envelope-open"></i> Contact</a>
-            {% if current_user.is_authenticated %}
-            <a class="nav-link" href="{{ url_for('main.dashboard') }}">Dashboard</a>
-            <div class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                    My Account
-                </a>
-                <ul class="dropdown-menu dropdown-menu-end" style="background: #161B22; border: 1px solid #30363D;">
-                    <li><a class="dropdown-item" href="{{ url_for('main.history') }}" style="color: #F0F6FC;"><i class="fa-solid fa-clapperboard"></i> My Videos</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('main.analytics') }}" style="color: #F0F6FC;"><i class="fa-solid fa-chart-column"></i> Analytics</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('main.saved_prompts') }}" style="color: #F0F6FC;"><i class="fa-solid fa-floppy-disk"></i> Saved Prompts</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('main.referral') }}" style="color: #F0F6FC;"><i class="fa-solid fa-gift"></i> Referral</a></li>
-                    <li><hr class="dropdown-divider" style="border-color: #30363D;"></li>
-                    {% if current_user.plan == 'free' %}
-                    <li><a class="dropdown-item" href="{{ url_for('main.upgrade') }}" style="color: #F5A623;"><i class="fa-solid fa-star"></i> Go Pro</a></li>
-                    {% endif %}
-                    {% if current_user.email == 'oadedamola07@gmail.com' %}
-                    <li><a class="dropdown-item" href="{{ url_for('main.admin') }}" style="color: #F5A623;"><i class="fa-solid fa-gear"></i> Admin</a></li>
-                    {% endif %}
-                    <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}" style="color: #E74C3C;"><i class="fa-solid fa-right-from-bracket"></i> Logout</a></li>
-                </ul>
-            </div>
-            {% else %}
-            <a class="nav-link" href="{{ url_for('auth.login') }}">Login</a>
-            <a class="nav-link" href="{{ url_for('auth.register') }}">Register</a>
-            {% endif %}
+            {% block content %}{% endblock %}
         </div>
-    </div>
-</nav>
+        
+        {% block footer %}{% endblock %}
+        {% include 'components/footer.html' %}
 
-<!-- Offcanvas Sidebar (mobile) -->
-<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasNav"
-     style="background: #161B22; border-left: 1px solid #30363D; width: 260px;">
-    <div class="offcanvas-header" style="border-bottom: 1px solid #30363D;">
-        <h5 style="color: #F5A623;"><i class="fa-solid fa-clapperboard"></i> Afrigen</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
-    </div>
-    <div class="offcanvas-body">
-        <ul class="nav flex-column gap-2">
-            <li><a class="nav-link" href="{{ url_for('main.blog') }}" style="color: #F0F6FC;"><i class="fa-solid fa-newspaper"></i> Blog</a></li>
-            <li><a class="nav-link" href="{{ url_for('main.docs') }}" style="color: #F0F6FC;"><i class="fa-solid fa-book-open"></i> Docs</a></li>
-            <li><a class="nav-link" href="{{ url_for('main.contact') }}" style="color: #F0F6FC;"><i class="fa-solid fa-envelope-open"></i> Contact</a></li>
-
-            {% if current_user.is_authenticated %}
-            <li><hr style="border-color: #30363D;"></li>
-            <li><a class="nav-link" href="{{ url_for('main.dashboard') }}" style="color: #F0F6FC;"><i class="fa-solid fa-house"></i> Dashboard</a></li>
-            <li><a class="nav-link" href="{{ url_for('main.history') }}" style="color: #F0F6FC;"><i class="fa-solid fa-clapperboard"></i> My Videos</a></li>
-            <li><a class="nav-link" href="{{ url_for('main.analytics') }}" style="color: #F0F6FC;"><i class="fa-solid fa-chart-column"></i> Analytics</a></li>
-            <li><a class="nav-link" href="{{ url_for('main.saved_prompts') }}" style="color: #F0F6FC;"><i class="fa-solid fa-floppy-disk"></i> Saved Prompts</a></li>
-            <li><a class="nav-link" href="{{ url_for('main.referral') }}" style="color: #F0F6FC;"><i class="fa-solid fa-gift"></i> Referral</a></li>
-            <li><hr style="border-color: #30363D;"></li>
-            {% if current_user.plan == 'free' %}
-            <li><a class="nav-link" href="{{ url_for('main.upgrade') }}" style="color: #F5A623;"><i class="fa-solid fa-star"></i> Go Pro</a></li>
-            {% endif %}
-            {% if current_user.email == 'oadedamola07@gmail.com' %}
-            <li><a class="nav-link" href="{{ url_for('main.admin') }}" style="color: #F5A623;"><i class="fa-solid fa-gear"></i> Admin</a></li>
-            {% endif %}
-            <li><a class="nav-link" href="{{ url_for('auth.logout') }}" style="color: #E74C3C;"><i class="fa-solid fa-right-from-bracket"></i> Logout</a></li>
-            {% else %}
-            <li><hr style="border-color: #30363D;"></li>
-            <li><a class="nav-link" href="{{ url_for('auth.login') }}" style="color: #F0F6FC;">Login</a></li>
-            <li><a class="nav-link" href="{{ url_for('auth.register') }}" style="color: #F0F6FC;">Register</a></li>
-            {% endif %}
-        </ul>
+{% if current_user.is_authenticated %}
     </div>
 </div>
-
-    <div class="container mt-4">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }}">{{ message }}</div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-
-        {% block content %}{% endblock %}
-    </div>
-{% block footer %}{% endblock %}
-
-<!-- GLOBAL FOOTER -->
-<footer class="afrigen-footer">
-    <div class="container">
-        <div class="row">
-            <div class="col-md-3 mb-4">
-                <h5 style="color: #F5A623;">🎬 Afrigen</h5>
-                <p style="color: #888; font-size: 14px;">
-                    Africa Creates, AI Generates.<br>
-                    Built for African content creators.
-                </p>
-            </div>
-            <div class="col-md-3 mb-4">
-                <h6 style="color: #F5A623;">Product</h6>
-                <ul style="list-style: none; padding: 0;">
-                    <li><a href="{{ url_for('main.index') }}" style="color: #888; text-decoration: none;">Home</a></li>
-                    <li><a href="{{ url_for('main.blog') }}" style="color: #888; text-decoration: none;">Blog</a></li>
-                    <li><a href="{{ url_for('main.docs') }}" style="color: #888; text-decoration: none;">Documentation</a></li>
-                    <li><a href="{{ url_for('main.upgrade') }}" style="color: #888; text-decoration: none;">Pricing</a></li>
-                    <li><a href="https://t.me/AfrigenBot" style="color: #888; text-decoration: none;">Telegram Bot</a></li>
-                </ul>
-            </div>
-            <div class="col-md-3 mb-4">
-                <h6 style="color: #F5A623;">Support</h6>
-                <ul style="list-style: none; padding: 0;">
-                    <li><a href="{{ url_for('main.contact') }}" style="color: #888; text-decoration: none;">Contact Us</a></li>
-                    <li><a href="{{ url_for('main.feedback') }}" style="color: #888; text-decoration: none;">Give Feedback</a></li>
-                    <li><a href="{{ url_for('main.docs') }}" style="color: #888; text-decoration: none;">Help Center</a></li>
-                    <li><a href="{{ url_for('main.terms') }}" style="color: #888; text-decoration: none;"><i class="fa-solid fa-clipboard"></i> Terms of Service</a></li>
-                    <li><a href="{{ url_for('main.privacy') }}" style="color: #888; text-decoration: none;"><i class="fa-solid fa-lock"></i> Privacy Policy</a></li>
-                </ul>
-            </div>
-            <div class="col-md-3 mb-4">
-                <h6 style="color: #F5A623;">Connect</h6>
-                <ul style="list-style: none; padding: 0;">
-                    <li><a href="https://t.me/AfrigenBot" style="color: #888; text-decoration: none;"><i class="fa-brands fa-telegram"></i> Telegram</a></li>
-                    <li><a href="mailto:afrigenng@gmail.com" style="color: #888; text-decoration: none;"><i class="fa-solid fa-envelope"></i> Email</a></li>
-                </ul>
-            </div>
-        </div>
-        <hr style="border-color: #30363D;">
-        <div class="text-center">
-            <p style="color: #888; font-size: 14px; margin: 0;">
-                © 2026 Afrigen. Built with <i class="fa-solid fa-heart" style="color:#e25555;"></i> in Nigeria 🇳🇬 |
-                Africa Creates, AI Generates <i class="fa-solid fa-earth-africa"></i>
-            </p>
-        </div>
-    </div>
-</footer>
+{% endif %}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Global alert override
+        window.alert = function(message) {
+            Swal.fire({
+                text: message,
+                icon: 'info',
+                background: '#161B22',
+                color: '#F0F6FC',
+                confirmButtonColor: '#F5A623'
+            });
+        };
+
+        // SweetAlert helpers for confirms
+        window.sweetConfirmLink = function(event, message) {
+            event.preventDefault();
+            const href = event.currentTarget.href;
+            Swal.fire({
+                title: 'Confirm',
+                text: message,
+                icon: 'warning',
+                showCancelButton: true,
+                background: '#161B22',
+                color: '#F0F6FC',
+                confirmButtonColor: '#F5A623'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = href;
+                }
+            });
+        };
+
+        window.sweetConfirmSubmit = function(event, message) {
+            event.preventDefault();
+            const form = event.currentTarget;
+            Swal.fire({
+                title: 'Confirm',
+                text: message,
+                icon: 'warning',
+                showCancelButton: true,
+                background: '#161B22',
+                color: '#F0F6FC',
+                confirmButtonColor: '#F5A623'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    form.submit();
+                }
+            });
+        };
+    </script>
     <script>
         (function () {
             var els = document.querySelectorAll('.reveal');

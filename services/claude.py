@@ -1,7 +1,5 @@
 import os
-from groq import Groq
-
-client = Groq(api_key=os.environ['GROQ_API_KEY'])
+from services.provider_manager import provider_manager
 
 STYLE_PROMPTS = {
     "cinematic": """You are an expert cinematic video prompt engineer. 
@@ -77,15 +75,15 @@ def extract_on_screen_text(user_prompt):
         "words); never invent text the user did not ask for."
     )
     try:
-        response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+        response = provider_manager.generate_text(
+            task_type="Prompt Refinement",
             messages=[
                 {"role": "system", "content": system_message},
                 {"role": "user", "content": user_prompt},
             ],
             max_tokens=40,
         )
-        text = (response.choices[0].message.content or "").strip()
+        text = (response or "").strip()
         # Strip wrapping quotes the model sometimes adds, and guard against it
         # narrating "none"/"no text" instead of returning empty.
         text = text.strip().strip('"').strip("'").strip()
@@ -97,22 +95,84 @@ def extract_on_screen_text(user_prompt):
         return ""
 
 
-def refine_prompt(user_prompt, style="cinematic"):
-    system_message = STYLE_PROMPTS.get(style, STYLE_PROMPTS["cinematic"]) + VIDEO_FIDELITY_RULES
+def get_model_prompt_rules(model_name="fal-ai/ltx-2.3-quality/clean-plate", duration="5"):
+    """Return model-specific instructions for prompt generation.
 
-    response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
+    Different FAL backends have different failure modes: the free LTX model is
+    best with simple, stable compositions, while Kling handles more cinematic and
+    longer-duration continuity. We tune the prompt rather than trying to force a
+    single generic prompt across all models.
+    """
+    model_name = (model_name or "fal-ai/ltx-2.3-quality/clean-plate").lower()
+    duration = str(duration or "5")
+
+    if "kling" in model_name:
+        duration_hint = {
+            "5": "Keep the scene clear and cinematic with a smooth beginning and end.",
+            "10": "Maintain cinematic continuity and a believable subject arc across the full shot.",
+            "15": "Keep the camera steady and the subject consistent to preserve flow over a longer duration.",
+            "20": "Use a simple, coherent, slowly evolving scene to preserve visual continuity across a long clip.",
+        }.get(duration, "Keep the shot stable and coherent across time.")
+        return (
+            "You are refining a prompt for the premium Kling model. "
+            "Use cinematic continuity, smooth camera motion, and a believable subject arc. "
+            "Keep one main subject and one clear action. Avoid crowded compositions, scene jumps, duplicate objects, and unstable motion. "
+            f"{duration_hint} "
+            "Preserve the user's exact subject, location, and intent."
+        )
+
+    if "animatediff" in model_name:
+        duration_hint = {
+            "5": "Keep the motion compact and readable.",
+            "10": "Use a short, controlled motion loop with clear subject focus.",
+            "15": "Keep the action simple and steady to avoid jitter.",
+            "20": "Favor a stable, compact motion path over complex choreography.",
+        }.get(duration, "Keep the motion compact and readable.")
+        return (
+            "You are refining a prompt for the AnimateDiff model. "
+            "Use a compact, readable motion pattern with strong subject focus. "
+            "Keep the scene simple, structured, and visually stable. Avoid jitter, clutter, rapid scene changes, and conflicting actions. "
+            f"{duration_hint} "
+            "Preserve the user's exact subject and environment."
+        )
+
+    # Free LTX model: the safest default is to avoid heavy motion, crowding, and
+    # scene complexity, which are common causes of poor continuity and lapses.
+    duration_hint = {
+        "5": "Keep the action simple, stable, and complete in one clear motion.",
+        "10": "Keep one clear subject and one clean action with minimal motion complexity.",
+        "15": "Use a calm, stable composition with one main subject and one main action.",
+        "20": "Use minimal motion and a clean, coherent scene so the clip stays believable over a longer duration.",
+    }.get(duration, "Keep the scene simple, stable, and easy to track.")
+    return (
+        "You are refining a prompt for the free LTX model. "
+        "Use one main subject, one clear action, and one clean background. "
+        "Avoid sudden camera movement, scene jumps, clashing motion, duplicated objects, warped faces, and overly complex compositions. "
+        f"{duration_hint} "
+        "Preserve the user's exact subject, place, and intent."
+    )
+
+
+def refine_prompt(user_prompt, style="cinematic", model_name="fal-ai/ltx-2.3-quality/clean-plate", duration="5"):
+    system_message = (
+        STYLE_PROMPTS.get(style, STYLE_PROMPTS["cinematic"]) + "\n\n" +
+        get_model_prompt_rules(model_name=model_name, duration=duration) + "\n\n" +
+        VIDEO_FIDELITY_RULES
+    )
+
+    response = provider_manager.generate_text(
+        task_type="Prompt Refinement",
         messages=[
             {"role": "system", "content": system_message},
             {"role": "user", "content": (
                 "Refine this video prompt. Keep my subject and intent, and keep "
-                "any on-screen words exactly as written:\n\n" + user_prompt
+                "any on-screen words exactly as written:\n\n" + (user_prompt or "")
             )}
         ],
         max_tokens=300
     )
 
-    return response.choices[0].message.content
+    return response
 
 
 def refine_image_prompt(user_prompt, style="realistic"):
@@ -181,8 +241,8 @@ def refine_image_prompt(user_prompt, style="realistic"):
 
     system_message = IMAGE_STYLE_PROMPTS.get(style, IMAGE_STYLE_PROMPTS["realistic"])
 
-    response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
+    response = provider_manager.generate_text(
+        task_type="Prompt Refinement",
         messages=[
             {"role": "system", "content": system_message},
             {"role": "user", "content": (
@@ -194,4 +254,4 @@ def refine_image_prompt(user_prompt, style="realistic"):
         max_tokens=300
     )
 
-    return response.choices[0].message.content
+    return response

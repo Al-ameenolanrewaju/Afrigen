@@ -49,10 +49,10 @@ def generate_voiceover(script):
 
 def generate_video_script(prompt, style="cinematic"):
     """Generate voiceover script from prompt"""
-    from services.claude import client as groq_client
+    from services.provider_manager import provider_manager
 
-    response = groq_client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
+    response = provider_manager.generate_text(
+        task_type="Audio Script",
         messages=[
             {
                 "role": "system",
@@ -70,4 +70,4 @@ def generate_video_script(prompt, style="cinematic"):
         max_tokens=100
     )
 
-    return response.choices[0].message.content
+    return response

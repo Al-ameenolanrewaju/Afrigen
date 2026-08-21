@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "admin_base.html" %}
 
 {% block title %}Weekly Newsletter — Afrigen{% endblock %}
 
@@ -140,7 +140,16 @@ document.getElementById('previewBtn').addEventListener('click', () => {
 });
 
 document.getElementById('sendBtn').addEventListener('click', async () => {
-    if (!confirm('Send this newsletter to everyone now? This cannot be undone.')) return;
+    const result = await Swal.fire({
+        title: 'Confirm',
+        text: 'Send this newsletter to everyone now? This cannot be undone.',
+        icon: 'warning',
+        showCancelButton: true,
+        background: '#161B22',
+        color: '#F0F6FC',
+        confirmButtonColor: '#F5A623'
+    });
+    if (!result.isConfirmed) return;
     setStatus('Sending…', '#F5A623');
     const data = await post('{{ url_for("main.admin_newsletter_send") }}', {
         subject: subjectEl.value, body: bodyEl.value,

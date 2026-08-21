@@ -9,6 +9,7 @@ from flask_mail import Mail, Message
 from routes.main import main
 from routes.auth import auth
 from routes.api import api
+from routes.campaigns import campaigns_bp
 from authlib.integrations.flask_client import OAuth
 from flask_apscheduler import APScheduler
 from flask import render_template, redirect, url_for, request, jsonify
@@ -22,13 +23,32 @@ from flask import send_from_directory
 
 load_dotenv()
 app = Flask(__name__)
+app.url_map.strict_slashes = False
+
+
+def get_missing_required_env_vars():
+    """Return the set of required env vars for the current deployment.
+
+    These are not hard-blocking at import time so local development keeps working,
+    but they are validated once at startup and logged clearly in production.
+    """
+    required = {
+        "SECRET_KEY": "Flask session signing and auth token security",
+        "DATABASE_URL": "Database connection for the app",
+        "GROQ_API_KEY": "AI assistant and content generation flows",
+        "FAL_KEY": "Video/image generation provider",
+        "PAYSTACK_SECRET_KEY": "Payments and Pro upgrades",
+        "PAYSTACK_PUBLIC_KEY": "Frontend payment initialization",
+    }
+    return [key for key, _ in required.items() if not os.environ.get(key)]
+
 
 # Behind Render's proxy: trust X-Forwarded-* so url_for(_external=True) builds
 # correct https://afrigen... URLs. Without this the fal webhook URL can come out
 # with the wrong scheme/host and fal can't deliver the completion callback,
 # leaving videos stuck "processing" forever.
 from werkzeug.middleware.proxy_fix import ProxyFix
-app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_prefix=1)
 
 app.config.from_object(DevelopmentConfig)
 mail = Mail(app)
@@ -36,18 +56,33 @@ oauth = OAuth(app)
 scheduler = APScheduler()
 scheduler.init_app(app)
 scheduler.start()
+
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 telegram_app = None
 
-
 db.init_app(app)
+
+# Background worker queue is now managed by APScheduler below
+
 migrate = Migrate(app, db)
 login_manager = LoginManager(app)
 login_manager.login_view = "auth.login"
 
 @login_manager.user_loader
 def load_user(user_id):
-    return db.session.get(User, int(user_id))
+    user = db.session.get(User, int(user_id))
+    if user:
+        from routes.main import is_admin_user
+        if is_admin_user(user):
+            # Admin should always be on pro with effectively infinite credits
+            if user.plan != 'pro' or (user.credits or 0) < 900000:
+                user.plan = 'pro'
+                user.credits = 999999
+                try:
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
+    return user
 
 google = oauth.register(
     name='google',
@@ -87,10 +122,10 @@ def fail_stuck_generations():
     15 minutes as 'failed', and refund the free-tier monthly video count since the
     user got nothing (Pro credits are only charged on success, so there's nothing
     to refund there)."""
-    from datetime import datetime, timedelta
+    from datetime import datetime, timedelta, timezone
     with app.app_context():
         from models import db, Generation, User
-        cutoff = datetime.utcnow() - timedelta(minutes=15)
+        cutoff = datetime.now(timezone.utc) - timedelta(minutes=15)
         stuck = Generation.query.filter(
             Generation.status == 'processing',
             Generation.created_at < cutoff,
@@ -104,6 +139,17 @@ def fail_stuck_generations():
                 user.monthly_videos_used -= 1
         db.session.commit()
         print(f"⏱️ Failed {len(stuck)} stuck generation(s) past the 15-min timeout.")
+
+
+@scheduler.task('interval', id='process_publishing_queue', seconds=30)
+def process_publishing_queue():
+    """Poll the publishing retry queue every 30 seconds."""
+    with app.app_context():
+        try:
+            from services.connected_accounts.queue import process_queue
+            process_queue()
+        except Exception as e:
+            print(f"Publishing queue processor error: {e}")
 
 
 @scheduler.task('cron', id='generate_weekly_newsletter', day_of_week='sat', hour=9)
@@ -174,11 +220,17 @@ file_handler.setFormatter(logging.Formatter(
 file_handler.setLevel(logging.INFO)
 logger.addHandler(file_handler)
 
+missing = get_missing_required_env_vars()
+if missing:
+    logger.warning("Missing required environment variables: %s", ", ".join(missing))
+else:
+    logger.info("All required environment variables are present.")
 logger.info('Afrigen startup!')
 
 app.register_blueprint(main)
 app.register_blueprint(auth, url_prefix='/auth')
 app.register_blueprint(api, url_prefix='/api/v1')
+app.register_blueprint(campaigns_bp, url_prefix='/api/campaigns')
 
 from constants import (
     FACEBOOK_URL, TWITTER_URL, INSTAGRAM_URL, LINKEDIN_URL, TELEGRAM_URL
@@ -205,6 +257,11 @@ def server_error(e):
 @app.errorhandler(403)
 def forbidden(e):
     return render_template("errors/403.html"), 403
+
+
+@app.route('/favicon.ico')
+def favicon():
+    return redirect(url_for('static', filename='favicon.png'))
 
 
 @app.route('/set-webhook')
@@ -403,19 +460,9 @@ def ads_txt():
     # verification. Force text/plain so AdSense's crawler accepts it.
     return send_from_directory('static', 'ads.txt', mimetype='text/plain')
 
-with app.app_context():
-    db.create_all()
-    from flask_migrate import upgrade
-    upgrade()
-    # Seed the original 6 blog posts as published (idempotent — no-op if present).
-    try:
-        from services.blog import seed_blog_posts
-        seeded = seed_blog_posts()
-        if seeded:
-            print(f"Seeded {seeded} blog posts")
-    except Exception as e:
-        print(f"Blog seed skipped: {e}")
-    print("Afrigen database ready")
+# Removed dangerous auto-db initialization.
+# In production, use Render's Release Command or manual 'flask db upgrade'.
+# Local development should also use 'flask db upgrade' directly.
 
 if __name__ == '__main__':
     app.run(debug=True)

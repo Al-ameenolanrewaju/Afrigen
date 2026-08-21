@@ -23,7 +23,13 @@ import tempfile
 GRAPH_API = "https://graph.facebook.com/v19.0"
 
 
-def post_caption(caption: str, image_url: str = None, title: str = "") -> dict:
+def post_caption(
+    caption: str, 
+    image_url: str = None, 
+    title: str = "",
+    access_token: str = None,
+    ig_account_id: str = None
+) -> dict:
     """Post to Instagram with an image + caption.
 
     Instagram requires an image. If image_url is not provided, a text card
@@ -33,12 +39,14 @@ def post_caption(caption: str, image_url: str = None, title: str = "") -> dict:
         caption: Instagram caption text (max 2200 chars).
         image_url: Optional URL of an image to post (e.g., blog featured image).
         title: Blog post title (used for text card fallback).
+        access_token: User access token
+        ig_account_id: Instagram Business account ID
 
     Returns:
         {ok: bool, media_id: str|None, post_url: str|None, error: str|None}
     """
-    access_token = os.environ.get("META_PAGE_ACCESS_TOKEN", "")
-    ig_account_id = os.environ.get("META_INSTAGRAM_ACCOUNT_ID", "")
+    access_token = access_token or os.environ.get("META_PAGE_ACCESS_TOKEN", "")
+    ig_account_id = ig_account_id or os.environ.get("META_INSTAGRAM_ACCOUNT_ID", "")
 
     if not access_token or not ig_account_id:
         return {

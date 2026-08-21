@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} — Afrigen{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0 text-white">{{ title }}</h1>
+</div>
+
+<div class="card bg-dark border-secondary shadow-sm text-center py-5">
+    <div class="card-body py-5">
+        <i class="{{ icon }} fa-4x text-muted mb-4"></i>
+        <h3 class="text-white mb-3">No {{ title }} yet</h3>
+        <p class="text-muted mb-4">You haven't created any {{ title.lower() }} or this feature is currently in early access.</p>
+        <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-light rounded-pill px-4">Back to Dashboard</a>
+    </div>
+</div>
+{% endblock %}

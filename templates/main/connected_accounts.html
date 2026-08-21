@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block title %}Connected Accounts - Afrigen{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold mb-0">Connected Accounts</h2>
+        <p class="text-muted mb-0">Manage your external publishing destinations</p>
+    </div>
+
+    <div class="row g-4">
+        <!-- Supported Providers (Phase 1) -->
+        {% for provider in supported_providers %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-body text-center">
+                    <i class="{{ provider.icon }} display-4 mb-3 text-primary"></i>
+                    <h5 class="card-title fw-bold">{{ provider.name }}</h5>
+                    
+                    {% set account = connected_map.get(provider.id) %}
+                    {% if account %}
+                        <p class="text-success small mb-2"><i class="bi bi-check-circle-fill"></i> Connected</p>
+                        <p class="text-muted small mb-3">{{ account.account_name }}</p>
+                        <div class="d-flex justify-content-center gap-2">
+                            <form action="{{ url_for('main.disconnect_provider', provider=provider.id) }}" method="POST">
+                                <button type="submit" class="btn btn-outline-danger btn-sm">Disconnect</button>
+                            </form>
+                            <form action="{{ url_for('main.connect_provider', provider=provider.id) }}" method="POST" class="connect-form">
+                                <button type="submit" class="btn btn-outline-primary btn-sm">Reconnect</button>
+                            </form>
+                        </div>
+                    {% else %}
+                        <p class="text-muted small mb-2"><i class="bi bi-dash-circle"></i> Not Connected</p>
+                        <p class="text-muted small mb-3">&nbsp;</p>
+                        <form action="{{ url_for('main.connect_provider', provider=provider.id) }}" method="POST" class="connect-form">
+                            <button type="submit" class="btn btn-primary btn-sm px-4">Connect</button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+
+    </div>
+</div>
+
+<!-- Dynamic Connection Modal -->
+<div class="modal fade" id="connectModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="connectModalTitle">Connect Account</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="connectForm" method="POST" action="">
+          <div class="modal-body" id="connectModalBody">
+            <!-- Dynamic fields will be injected here -->
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">Connect</button>
+          </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const connectForms = document.querySelectorAll(".connect-form");
+    
+    connectForms.forEach(form => {
+        form.addEventListener("submit", async function(e) {
+            e.preventDefault();
+            const url = this.getAttribute("action");
+            const btn = this.querySelector("button");
+            const originalText = btn.innerHTML;
+            
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+            btn.disabled = true;
+            
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {'X-Requested-With': 'XMLHttpRequest'}
+                });
+                
+                // If it's a redirect (OAuth), the browser might automatically follow it 
+                // OR fetch follows it and we get the HTML page. 
+                // Better approach: server sends JSON for both. 
+                // Wait, our python code returns a redirect() for OAuth, which fetch follows.
+                // Let's check if the response is JSON.
+                
+                const contentType = response.headers.get("content-type");
+                if (contentType && contentType.includes("application/json")) {
+                    const data = await response.json();
+                    
+                    if (data.type === "form") {
+                        // Open modal
+                        const modal = new bootstrap.Modal(document.getElementById('connectModal'));
+                        document.getElementById('connectForm').setAttribute('action', url + '/token');
+                        
+                        const fieldDefinitions = {
+                            token: {label: 'API Key / Access Token', type: 'text'},
+                            page_id: {label: 'Page ID', type: 'text'},
+                            page_access_token: {label: 'Page Access Token', type: 'password'},
+                            ig_user_id: {label: 'Instagram User ID', type: 'text'},
+                            access_token: {label: 'Access Token', type: 'password'},
+                            author_urn: {label: 'Author URN', type: 'text'},
+                            consumer_key: {label: 'Consumer Key', type: 'text'},
+                            consumer_secret: {label: 'Consumer Secret', type: 'password'},
+                            access_token_secret: {label: 'Access Token Secret', type: 'password'},
+                            client_key: {label: 'Client Key', type: 'text'},
+                            client_secret: {label: 'Client Secret', type: 'password'},
+                            open_id: {label: 'Open ID', type: 'text'},
+                            board_id: {label: 'Board ID', type: 'text'},
+                            client_id: {label: 'Client ID', type: 'text'},
+                            refresh_token: {label: 'Refresh Token', type: 'password'},
+                            username: {label: 'Username', type: 'text'},
+                            app_password: {label: 'Application Password', type: 'password'},
+                            chat_id: {label: 'Chat ID / Channel ID', type: 'text'},
+                            site_url: {label: 'Site URL', type: 'url'}
+                        };
+
+                        const methods = data.methods || [];
+                        let html = '';
+
+                        if (methods.includes('app_password')) {
+                            html += '<div class="mb-3"><label class="form-label">Username</label><input type="text" name="username" class="form-control" required></div>';
+                            html += '<div class="mb-3"><label class="form-label">Application Password</label><input type="password" name="app_password" class="form-control" required></div>';
+                        }
+
+                        methods.forEach(field => {
+                            if (field === 'app_password' || field === 'username') {
+                                return;
+                            }
+
+                            const definition = fieldDefinitions[field] || {
+                                label: field.replace(/_/g, ' ').replace(/\b\w/g, match => match.toUpperCase()),
+                                type: 'text'
+                            };
+                            const inputType = definition.type === 'url' ? 'url' : definition.type;
+                            const placeholder = field === 'site_url' ? 'placeholder="https://..."' : '';
+                            html += `<div class="mb-3"><label class="form-label">${definition.label}</label><input type="${inputType}" name="${field}" class="form-control" ${placeholder} required></div>`;
+                        });
+
+                        if (methods.includes('chat_id')) {
+                            html += '<div class="mb-3"><label class="form-label">Chat ID / Channel ID</label><input type="text" name="chat_id" class="form-control" required></div>';
+                        }
+
+                        // For wordpress or ghost, we also need site_url
+                        if (url.includes('wordpress') || url.includes('ghost') || methods.includes('site_url')) {
+                            html += '<div class="mb-3"><label class="form-label">Site URL</label><input type="url" name="site_url" class="form-control" placeholder="https://..." required></div>';
+                        }
+                        
+                        document.getElementById('connectModalBody').innerHTML = html;
+                        modal.show();
+                    } else if (data.type === "redirect") {
+                        window.location.href = data.url;
+                    } else if (data.ok === false) {
+                        alert("Connection failed: " + (data.error || "Unknown error"));
+                    } else {
+                        // generic fallback
+                        window.location.reload();
+                    }
+                } else {
+                    // Fallback if not JSON
+                    window.location.reload();
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Connection failed");
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

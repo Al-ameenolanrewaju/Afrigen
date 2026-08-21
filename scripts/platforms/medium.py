@@ -19,7 +19,14 @@ import requests
 MEDIUM_API = "https://api.medium.com/v1"
 
 
-def publish_article(title: str, content: str, tags: list[str], canonical_url: str) -> dict:
+def publish_article(
+    title: str, 
+    content: str, 
+    tags: list[str], 
+    canonical_url: str,
+    access_token: str = None,
+    author_id: str = None
+) -> dict:
     """Publish a full article on Medium with a canonical URL back to Afrigen.
 
     Args:
@@ -27,12 +34,14 @@ def publish_article(title: str, content: str, tags: list[str], canonical_url: st
         content: Article body in markdown or HTML.
         tags: List of up to 5 topic tags.
         canonical_url: The original blog URL on afrigen.com.ng (SEO canonical).
+        access_token: User access token
+        author_id: User author ID
 
     Returns:
         {ok: bool, post_id: str|None, post_url: str|None, error: str|None}
     """
-    access_token = os.environ.get("MEDIUM_INTEGRATION_TOKEN", "")
-    author_id = os.environ.get("MEDIUM_AUTHOR_ID", "")
+    access_token = access_token or os.environ.get("MEDIUM_INTEGRATION_TOKEN", "")
+    author_id = author_id or os.environ.get("MEDIUM_AUTHOR_ID", "")
 
     if not access_token or not author_id:
         return {

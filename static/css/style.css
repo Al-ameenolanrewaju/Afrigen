@@ -23,7 +23,7 @@
     /* Text */
     --text:          #F2F5FA;
     --text-muted:    #AEB7C7;
-    --text-dim:      #6B7587;
+    --text-dim:      #9CA3AF;
 
     /* Lines & effects */
     --border:        rgba(255, 255, 255, 0.08);
@@ -79,6 +79,15 @@ a { transition: color 0.2s var(--ease); }
     border: 2px solid var(--bg);
 }
 ::-webkit-scrollbar-thumb:hover { background: var(--accent-hover); }
+
+/* Global Readability Overrides */
+.text-muted, .text-secondary, .text-white-50 {
+    color: var(--text-muted) !important;
+}
+::placeholder {
+    color: var(--text-dim) !important;
+    opacity: 1 !important;
+}
 
 /* Utility: gradient text */
 .text-gradient {

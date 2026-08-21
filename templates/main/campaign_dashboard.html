@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+
+{% block title %}Campaign Dashboard | Afrigen{% endblock %}
+
+{% block content %}
+<style>
+    .campaign-header {
+        background: #161B22;
+        border-bottom: 1px solid #30363D;
+        padding: 40px 24px 0;
+        margin: -24px -24px 24px;
+    }
+    
+    .strategy-card {
+        background: #0D1117;
+        border: 1px solid #30363D;
+        border-radius: 12px;
+        padding: 24px;
+        height: 100%;
+    }
+    
+    .asset-card {
+        background: #161B22;
+        border: 1px solid #30363D;
+        border-radius: 12px;
+        overflow: hidden;
+        margin-bottom: 16px;
+    }
+    .asset-card-header {
+        padding: 16px;
+        border-bottom: 1px solid #30363D;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(255,255,255,0.02);
+    }
+    .asset-card-body { padding: 20px; }
+    
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 99px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    .status-pending { background: #30363D; color: #C9D1D9; }
+    .status-generating { background: rgba(245,166,35,0.1); color: #F5A623; }
+    .status-completed { background: rgba(46,160,67,0.1); color: #2EA043; }
+    .status-failed { background: rgba(248,81,73,0.1); color: #F85149; }
+    
+    .gen-progress { height: 6px; background: #0D1117; border-radius: 99px; overflow: hidden; margin-top: 12px; }
+    .gen-bar { height: 100%; background: linear-gradient(90deg, #F5A623, #FFA114); width: 0%; transition: width 0.5s; }
+</style>
+
+<div class="campaign-header">
+    <div class="container-fluid" style="max-width: 1400px;">
+        <div class="d-flex justify-content-between align-items-start mb-4">
+            <div>
+                <span class="badge mb-2" id="c-goal" style="background: rgba(245,166,35,0.1); color: #F5A623;">Campaign</span>
+                <h2 style="color: #F0F6FC; font-weight: 700; margin: 0;" id="c-name">Loading...</h2>
+                <p style="color: #8B949E; margin-top: 4px;" id="c-biz"></p>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-dark" onclick="orchestrateGenerations()" id="btnStartGen">
+                    <i class="fa-solid fa-play text-warning me-2"></i> Start Generation
+                </button>
+            </div>
+        </div>
+        
+        <ul class="nav nav-tabs border-0" id="campaignTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#overview" style="background: transparent; color: #F5A623; border: none; border-bottom: 2px solid #F5A623;">Overview & Strategy</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#assets" style="background: transparent; color: #8B949E; border: none;">Deliverables (<span id="d-count">0</span>)</button>
+            </li>
+        </ul>
+    </div>
+</div>
+
+<div class="container-fluid" style="max-width: 1400px;">
+    <div class="tab-content">
+        <!-- Overview Tab -->
+        <div class="tab-pane fade show active" id="overview">
+            <div class="row g-4">
+                <div class="col-md-8">
+                    <div class="strategy-card">
+                        <h5 style="color: #F0F6FC; border-bottom: 1px solid #30363D; padding-bottom: 16px; margin-bottom: 24px;">
+                            <i class="fa-solid fa-chess-knight text-warning me-2"></i> AI Strategy
+                        </h5>
+                        <div class="mb-4">
+                            <h6 style="color: #8B949E; font-size: 13px; text-transform: uppercase;">Theme</h6>
+                            <p style="color: #C9D1D9; font-size: 18px;" id="s-theme"></p>
+                        </div>
+                        <div class="mb-4">
+                            <h6 style="color: #8B949E; font-size: 13px; text-transform: uppercase;">Key Messages</h6>
+                            <ul style="color: #C9D1D9;" id="s-msgs"></ul>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-4">
+                                <h6 style="color: #8B949E; font-size: 13px; text-transform: uppercase;">Call to Action</h6>
+                                <p style="color: #C9D1D9;" id="s-cta"></p>
+                            </div>
+                            <div class="col-md-6 mb-4">
+                                <h6 style="color: #8B949E; font-size: 13px; text-transform: uppercase;">Hashtags</h6>
+                                <p style="color: #58A6FF;" id="s-tags"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="strategy-card">
+                        <h5 style="color: #F0F6FC; border-bottom: 1px solid #30363D; padding-bottom: 16px; margin-bottom: 24px;">Details</h5>
+                        <ul class="list-unstyled" style="color: #8B949E; gap: 16px; display: flex; flex-direction: column;">
+                            <li><strong>Industry:</strong> <span id="c-ind" style="color: #C9D1D9;"></span></li>
+                            <li><strong>Audience:</strong> <span id="c-aud" style="color: #C9D1D9;"></span></li>
+                            <li><strong>Status:</strong> <span class="badge bg-dark ms-2">Planning</span></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Deliverables Tab -->
+        <div class="tab-pane fade" id="assets">
+            <div class="row" id="deliverables-container">
+                <!-- Rendered by JS -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const campaignId = "{{ campaign_id }}";
+    let isPolling = false;
+
+    async function loadCampaign() {
+        try {
+            const res = await fetch(`/api/campaigns/${campaignId}`);
+            if(!res.ok) throw new Error('Failed to load campaign');
+            const payload = await res.json();
+            const campaign = payload.campaign;
+
+            if(!campaign) {
+                alert('Campaign not found!'); window.location.href = '/campaigns';
+                return;
+            }
+
+            document.getElementById('c-name').textContent = campaign.title || 'Untitled';
+            document.getElementById('c-goal').textContent = campaign.business_goal || campaign.goal || '';
+            document.getElementById('c-biz').textContent = campaign.business_goal || '';
+            document.getElementById('c-ind').textContent = campaign.industry || '';
+            document.getElementById('c-aud').textContent = campaign.target_audience || '';
+
+            if(payload.brand) {
+                document.documentElement.style.setProperty('--brand-primary', payload.brand.primary_color || '#F5A623');
+            }
+
+            renderTasks(payload.tasks || []);
+            renderAssets(payload.assets || []);
+            
+            // Auto-poll if campaign is still running
+            if(campaign.status === 'running' || campaign.status === 'retrying') {
+                if(!isPolling) {
+                    isPolling = true;
+                    setTimeout(pollCampaign, 5000);
+                }
+            } else {
+                isPolling = false;
+            }
+
+        } catch(e) {
+            console.error(e);
+            alert('Failed to load campaign.');
+            window.location.href = '/campaigns';
+        }
+    }
+
+    async function pollCampaign() {
+        if(!isPolling) return;
+        try {
+            const res = await fetch(`/api/campaigns/${campaignId}`);
+            if(res.ok) {
+                const payload = await res.json();
+                renderTasks(payload.tasks || []);
+                renderAssets(payload.assets || []);
+                
+                if(payload.campaign.status === 'running' || payload.campaign.status === 'retrying') {
+                    setTimeout(pollCampaign, 5000);
+                } else {
+                    isPolling = false;
+                }
+            }
+        } catch(e) {
+            // Ignore polling errors to allow retries
+            setTimeout(pollCampaign, 5000);
+        }
+    }
+
+    function renderTasks(tasks) {
+        // Just used to display the count of tasks, or a summary.
+        // We'll show the count in the tab header
+        const count = tasks.length;
+        // Optionally render tasks in a progress UI, but for now we'll just let the assets tab show the results.
+    }
+
+    function renderAssets(assets) {
+        const container = document.getElementById('deliverables-container');
+        container.innerHTML = '';
+        document.getElementById('d-count').textContent = assets.length;
+        
+        if (assets.length === 0) {
+            container.innerHTML = `
+                <div class="col-12 text-center py-5">
+                    <div class="spinner-border text-warning mb-3" role="status"></div>
+                    <h5 style="color: #F0F6FC;">Generating Assets...</h5>
+                    <p style="color: #8B949E;">The AI is currently orchestrating your campaign in the background. Please wait.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        assets.forEach(a => {
+            let icon = 'fa-wand-magic-sparkles';
+            if(a.asset_type === 'video') icon = 'fa-clapperboard text-info';
+            else if(a.asset_type === 'image') icon = 'fa-image text-warning';
+            else icon = 'fa-pen text-primary';
+            
+            let resultHtml = '';
+            // Treat anything that isn't video/image as text content if it has text
+            if (a.asset_type === 'image' && a.file_url) {
+                resultHtml = `<div class="mt-3 text-center"><img src="${a.file_url}" style="max-width: 100%; border-radius: 8px; border: 1px solid #30363D;"></div>`;
+            } else if (a.asset_type === 'video' && a.file_url) {
+                resultHtml = `<div class="mt-3 text-center"><video controls src="${a.file_url}" style="max-width: 100%; border-radius: 8px; border: 1px solid #30363D;"></video></div>`;
+            } else {
+                // Formatting text content
+                let contentText = (a.content || '').replace(/\\n/g, '<br>');
+                resultHtml = `<div class="mt-3 p-3 rounded" style="background: #0D1117; border: 1px solid #30363D; color: #C9D1D9; max-height: 400px; overflow-y: auto;">${contentText}</div>`;
+            }
+            
+            container.innerHTML += `
+                <div class="col-12">
+                    <div class="asset-card" id="asset-${a.id}">
+                        <div class="asset-card-header">
+                            <div class="d-flex align-items-center gap-3">
+                                <i class="fa-solid ${icon} fs-4"></i>
+                                <div>
+                                    <h6 style="color: #F0F6FC; margin: 0;">${a.title}</h6>
+                                    <small style="color: #8B949E; text-transform: capitalize;">${a.asset_type}</small>
+                                </div>
+                            </div>
+                            <span class="status-badge status-completed"><i class="fa-solid fa-check me-1"></i> Ready</span>
+                        </div>
+                        <div class="asset-card-body">
+                            ${resultHtml}
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    loadCampaign();
+</script>
+{% endblock %}

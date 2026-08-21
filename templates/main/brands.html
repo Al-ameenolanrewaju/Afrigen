@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}Brand Workspace | Afrigen{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4" style="max-width: 1200px;">
+    <div class="d-flex justify-content-between align-items-center mb-5">
+        <div>
+            <h2 style="color: #F0F6FC; font-weight: 700; letter-spacing: -0.5px;">Brand Workspace</h2>
+            <p style="color: #8B949E; margin: 0;">Manage identities and automatically enforce brand context on AI generations.</p>
+        </div>
+        <button class="btn btn-warning px-4 py-2" data-bs-toggle="modal" data-bs-target="#createBrandModal" style="font-weight: 600; border-radius: 8px;">
+            <i class="fa-solid fa-plus me-2"></i> New Brand
+        </button>
+    </div>
+
+    <!-- Brands Grid -->
+    <div class="row g-4" id="brands-grid"></div>
+
+    <!-- Empty State -->
+    <div id="empty-brands" style="display: none; text-align: center; padding: 80px 20px;">
+        <div style="width: 100px; height: 100px; background: rgba(245,166,35,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px;">
+            <i class="fa-solid fa-crown fa-3x" style="color: #F5A623;"></i>
+        </div>
+        <h3 style="color: #F0F6FC; font-weight: 600; margin-bottom: 12px;">Create your first Brand</h3>
+        <p style="color: #8B949E; max-width: 500px; margin: 0 auto 32px;">
+            Define your brand's voice, colors, and rules once. Afrigen will automatically inject this context into all your future generations.
+        </p>
+        <button class="btn btn-warning px-5 py-3" data-bs-toggle="modal" data-bs-target="#createBrandModal" style="font-weight: 600; border-radius: 99px; font-size: 16px;">
+            Setup Brand Profile <i class="fa-solid fa-arrow-right ms-2"></i>
+        </button>
+    </div>
+</div>
+
+<!-- Create Brand Modal -->
+<div class="modal fade" id="createBrandModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="background: #161B22; border: 1px solid #30363D;">
+            <div class="modal-header border-bottom-0">
+                <h5 class="modal-title" style="color: #F0F6FC;">Create Brand Profile</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body pb-5">
+                <form id="brandForm">
+                    <div class="row g-3">
+                        <div class="col-md-6 form-group">
+                            <label style="color: #8B949E; font-size: 13px;">Brand Name *</label>
+                            <input type="text" id="b_name" class="form-control bg-dark text-white border-secondary" required>
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label style="color: #8B949E; font-size: 13px;">Industry</label>
+                            <input type="text" id="b_industry" class="form-control bg-dark text-white border-secondary">
+                        </div>
+                        <div class="col-md-12 form-group">
+                            <label style="color: #8B949E; font-size: 13px;">Voice & Tone (e.g. Professional, Playful, Elegant)</label>
+                            <input type="text" id="b_voice" class="form-control bg-dark text-white border-secondary">
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label style="color: #8B949E; font-size: 13px;">Primary Colors (e.g. Gold & Black)</label>
+                            <input type="text" id="b_colors" class="form-control bg-dark text-white border-secondary">
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label style="color: #8B949E; font-size: 13px;">Target Audience</label>
+                            <input type="text" id="b_audience" class="form-control bg-dark text-white border-secondary">
+                        </div>
+                        <div class="col-md-12 form-group">
+                            <label style="color: #8B949E; font-size: 13px;">Custom AI Instructions</label>
+                            <textarea id="b_instructions" class="form-control bg-dark text-white border-secondary" rows="3" placeholder="e.g. Always use minimalist aesthetics. Never use cartoonish illustrations."></textarea>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-end mt-4">
+                        <button type="submit" class="btn btn-warning px-4">Create Brand</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const grid = document.getElementById('brands-grid');
+        const empty = document.getElementById('empty-brands');
+        
+        function renderGrid() {
+            const brands = window.BrandContext.getBrands();
+            grid.innerHTML = '';
+            
+            if(brands.length === 0) {
+                empty.style.display = 'block';
+            } else {
+                empty.style.display = 'none';
+                brands.forEach(b => {
+                    const isActive = b.id === window.BrandContext.activeBrandId;
+                    const card = document.createElement('div');
+                    card.className = 'col-md-6 col-lg-4';
+                    card.innerHTML = `
+                        <div class="card h-100" style="background: #161B22; border: 1px solid ${isActive ? '#F5A623' : '#30363D'}; border-radius: 12px; transition: all 0.2s; cursor: pointer;">
+                            <div class="card-body p-4" onclick="window.location.href='/brand/${b.id}'">
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <div style="width: 48px; height: 48px; background: rgba(255,255,255,0.05); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                                        <i class="fa-solid fa-building fs-4" style="color: #C9D1D9;"></i>
+                                    </div>
+                                    ${isActive ? '<span class="badge bg-warning text-dark">Active</span>' : ''}
+                                </div>
+                                <h5 style="color: #F0F6FC; font-weight: 600; margin-bottom: 4px;">${b.name}</h5>
+                                <p style="color: #8B949E; font-size: 14px; margin-bottom: 0;">${b.industry || 'No industry set'}</p>
+                            </div>
+                            <div class="card-footer p-3 border-top" style="border-color: #30363D !important; background: transparent; display: flex; justify-content: space-between;">
+                                <button class="btn btn-sm btn-outline-secondary text-white" onclick="event.stopPropagation(); window.BrandContext.setActiveBrand('${b.id}'); window.location.reload();">Set Active</button>
+                                <button class="btn btn-sm text-danger" onclick="event.stopPropagation(); Swal.fire({title: 'Delete brand?', icon: 'warning', showCancelButton: true, background: '#161B22', color: '#F0F6FC', confirmButtonColor: '#F5A623'}).then((r) => { if(r.isConfirmed){ window.BrandContext.deleteBrand('${b.id}'); renderGrid(); } });"><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                        </div>
+                    `;
+                    grid.appendChild(card);
+                });
+            }
+        }
+        
+        renderGrid();
+        
+        document.getElementById('brandForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const brandData = {
+                name: document.getElementById('b_name').value,
+                industry: document.getElementById('b_industry').value,
+                voice: document.getElementById('b_voice').value,
+                colors: document.getElementById('b_colors').value,
+                audience: document.getElementById('b_audience').value,
+                instructions: document.getElementById('b_instructions').value
+            };
+            window.BrandContext.saveBrand(brandData);
+            document.querySelector('.btn-close').click(); // close modal
+            renderGrid();
+        });
+    });
+</script>
+{% endblock %}

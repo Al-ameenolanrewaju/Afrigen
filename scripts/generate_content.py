@@ -8,7 +8,6 @@ and returns a dict with {platform, content, [extra_fields]} ready for posting.
 import os
 import re
 import json
-from groq import Groq
 
 # ---------------------------------------------------------------------------
 # Cross-platform link constants — stored once, used everywhere.
@@ -38,17 +37,13 @@ MODEL = os.environ.get("BLOG_MODEL", "llama-3.3-70b-versatile")
 _client = None
 
 
-def _groq():
-    global _client
-    if _client is None:
-        _client = Groq(api_key=os.environ["GROQ_API_KEY"])
-    return _client
-
+from flask import current_app
 
 def _call(system: str, user: str, max_tokens: int = 2000, json_mode: bool = False) -> str:
-    """Single Groq chat call. Returns stripped text content."""
+    """Single generation call using ProviderManager."""
+    from services.provider_manager import provider_manager
+    from app import app
     kwargs = {
-        "model": MODEL,
         "max_tokens": max_tokens,
         "messages": [
             {"role": "system", "content": system},
@@ -58,8 +53,13 @@ def _call(system: str, user: str, max_tokens: int = 2000, json_mode: bool = Fals
     if json_mode:
         kwargs["response_format"] = {"type": "json_object"}
         
-    resp = _groq().chat.completions.create(**kwargs)
-    return (resp.choices[0].message.content or "").strip()
+    def do_generate():
+        return provider_manager.generate_text("Campaign", kwargs["messages"], **kwargs).strip()
+
+    if not current_app:
+        with app.app_context():
+            return do_generate()
+    return do_generate()
 
 
 def _strip_fences(text: str) -> str:
@@ -97,7 +97,7 @@ HARD RULES:
 - Tweet 1 MUST be a strong hook (question, bold claim, or surprising fact) — not "check out our blog post."
 - Tweet 2-5: deliver concrete value from the post — tips, insights, examples.
 - Tweet 6: link to the blog post {SITE_URL}/blog/{post['slug']}
-- Nigerian conversational tone. Write like you're talking to a friend on WhatsApp, not a press release.
+- Nigerian conversational tone. Write like you're talking to a friend on Telegram, not a press release.
 - Each tweet MUST be <= 280 characters.
 - NEVER use hashtags on tweet 6 (the link tweet).
 

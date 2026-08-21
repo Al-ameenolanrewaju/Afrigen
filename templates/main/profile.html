@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+
+{% block title %}Profile — Afrigen{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0 text-white">Profile</h1>
+</div>
+
+<div class="row">
+    <!-- Profile Info Card -->
+    <div class="col-md-4 mb-4">
+        <div class="card bg-dark border-secondary shadow-sm text-center py-4 h-100">
+            <div class="card-body">
+                {% if current_user.profile_picture %}
+                <img src="{{ current_user.profile_picture }}" class="rounded-circle mb-3 border border-2 border-secondary" width="100" height="100" alt="Avatar">
+                {% else %}
+                <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center mx-auto mb-3" style="width: 100px; height: 100px;">
+                    <span class="fs-1 text-white fw-bold">{{ current_user.username[:1].upper() }}</span>
+                </div>
+                {% endif %}
+                
+                <h4 class="text-white mb-1">{{ current_user.username }}</h4>
+                <p class="text-muted small mb-3">{{ current_user.email }}</p>
+                
+                <div class="d-flex justify-content-center gap-2 mb-3">
+                    <span class="badge bg-primary rounded-pill px-3 py-2 text-capitalize">{{ current_user.plan }} Plan</span>
+                </div>
+                
+                <hr class="border-secondary my-3">
+                
+                <div class="d-flex justify-content-between px-3 text-start mb-2">
+                    <span class="text-muted small">Daily Credits</span>
+                    <span class="text-white fw-bold">{{ current_user.credits - current_user.daily_credits_used }}/{{ current_user.credits }}</span>
+                </div>
+                <div class="d-flex justify-content-between px-3 text-start">
+                    <span class="text-muted small">Joined</span>
+                    <span class="text-white fw-bold">{{ current_user.created_at.strftime('%b %Y') if current_user.created_at else 'Unknown' }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Edit Profile Form -->
+    <div class="col-md-8 mb-4">
+        <div class="card bg-dark border-secondary shadow-sm h-100">
+            <div class="card-header border-secondary bg-transparent pt-4 pb-2">
+                <h5 class="text-white mb-0">Personal Information</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('main.profile') }}" enctype="multipart/form-data">
+                    <div class="mb-4">
+                        <label for="username" class="form-label text-muted small text-uppercase fw-bold">Full Name</label>
+                        <input type="text" class="form-control bg-dark border-secondary text-white" id="username" name="username" value="{{ current_user.username }}" required>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="email" class="form-label text-muted small text-uppercase fw-bold">Email Address</label>
+                        <input type="email" class="form-control bg-dark border-secondary text-white" id="email" name="email" value="{{ current_user.email }}" required>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="profile_picture" class="form-label text-muted small text-uppercase fw-bold">Profile Picture</label>
+                        <input type="file" class="form-control bg-dark border-secondary text-white" id="profile_picture" name="profile_picture" accept="image/png, image/jpeg, image/webp">
+                    </div>
+                    
+                    <div class="d-flex justify-content-end mt-4">
+                        <button type="submit" class="btn btn-primary rounded-pill px-4">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

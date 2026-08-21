@@ -1,6 +1,6 @@
 from ..models import GeneratedContent
 
-def publish_devto_article(generated: GeneratedContent) -> dict:
+def publish_devto_article(generated: GeneratedContent, api_key: str = None) -> dict:
     import os
     if os.environ.get("DRY_RUN") == "true":
         return {"ok": True, "mock": True, "detail": "Dry run devto article"}
@@ -16,5 +16,6 @@ def publish_devto_article(generated: GeneratedContent) -> dict:
         content=generated.content,
         tags=generated.extra_fields.get("tags", []),
         canonical_url=generated.extra_fields.get("canonicalUrl", ""),
-        description=generated.extra_fields.get("description", "")
+        description=generated.extra_fields.get("description", ""),
+        api_key=api_key
     )

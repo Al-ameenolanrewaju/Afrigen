@@ -1,0 +1,326 @@
+{% extends "base.html" %}
+
+{% block title %}Campaign Wizard | Afrigen{% endblock %}
+
+{% block content %}
+<style>
+    .wizard-container {
+        max-width: 800px;
+        margin: 40px auto;
+        background: #161B22;
+        border: 1px solid #30363D;
+        border-radius: 16px;
+        overflow: hidden;
+    }
+    .wizard-header {
+        background: #0D1117;
+        padding: 32px 40px;
+        border-bottom: 1px solid #30363D;
+    }
+    .step-indicator {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 24px;
+        position: relative;
+    }
+    .step-indicator::before {
+        content: '';
+        position: absolute;
+        top: 14px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: #30363D;
+        z-index: 1;
+    }
+    .step-dot {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: #161B22;
+        border: 2px solid #30363D;
+        color: #8B949E;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 14px;
+        z-index: 2;
+        position: relative;
+        transition: all 0.3s;
+    }
+    .step-dot.active {
+        background: #F5A623;
+        border-color: #F5A623;
+        color: #0D1117;
+    }
+    .step-dot.completed {
+        background: rgba(245,166,35,0.1);
+        border-color: #F5A623;
+        color: #F5A623;
+    }
+    .wizard-body {
+        padding: 40px;
+        position: relative;
+    }
+    
+    .form-group label {
+        color: #C9D1D9;
+        font-weight: 500;
+        margin-bottom: 8px;
+    }
+    .form-control, .form-select {
+        background: #0D1117;
+        border: 1px solid #30363D;
+        color: #F0F6FC;
+        padding: 12px 16px;
+        border-radius: 8px;
+    }
+    .form-control:focus, .form-select:focus {
+        background: #0D1117;
+        border-color: #F5A623;
+        box-shadow: 0 0 0 0.2rem rgba(245,166,35,0.25);
+        color: #F0F6FC;
+    }
+
+    .pill-select {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+    .pill-cb { display: none; }
+    .pill-label {
+        padding: 12px 24px;
+        border: 1px solid #30363D;
+        border-radius: 99px;
+        color: #8B949E;
+        cursor: pointer;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+    .pill-label:hover { background: rgba(255,255,255,0.05); }
+    .pill-cb:checked + .pill-label {
+        background: rgba(245,166,35,0.1);
+        border-color: #F5A623;
+        color: #F5A623;
+    }
+    
+    .step-content { display: none; }
+    .step-content.active { display: block; animation: fadeIn 0.4s; }
+    
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+
+<div class="wizard-container shadow-lg">
+    <div class="wizard-header">
+        <h3 style="color: #F0F6FC; font-weight: 700; margin: 0;">Campaign Builder</h3>
+        <p style="color: #8B949E; margin-top: 8px; margin-bottom: 0;">Describe your goal. We build the assets.</p>
+        
+        <div class="step-indicator">
+            <div class="step-dot active" id="dot-1">1</div>
+            <div class="step-dot" id="dot-2">2</div>
+            <div class="step-dot" id="dot-3">3</div>
+        </div>
+    </div>
+    
+    <div class="wizard-body">
+        <form id="campaignForm">
+            
+            <!-- Step 1: Context -->
+            <div class="step-content active" id="step-1">
+                <h5 class="mb-4" style="color: #F0F6FC;">Business Context</h5>
+                <div class="row g-4">
+                    <div class="col-md-12 form-group">
+                        <label>Campaign Name</label>
+                        <input type="text" id="c_name" class="form-control" placeholder="e.g. Summer Launch 2026" required>
+                    </div>
+                    <div class="col-md-6 form-group">
+                        <label>Business Name</label>
+                        <input type="text" id="c_biz" class="form-control" placeholder="e.g. Afrigen Coffee" required>
+                    </div>
+                    <div class="col-md-6 form-group">
+                        <label>Industry</label>
+                        <select id="c_ind" class="form-select" required>
+                            <option value="">Select industry...</option>
+                            <option value="Restaurant">Restaurant / Food</option>
+                            <option value="Fashion">Fashion & Apparel</option>
+                            <option value="Tech">Tech / Startup</option>
+                            <option value="Education">Education</option>
+                            <option value="Creator">Content Creator</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="col-md-12 form-group">
+                        <label>Target Audience</label>
+                        <input type="text" id="c_aud" class="form-control" placeholder="e.g. Young professionals in Lagos" required>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-end mt-5">
+                    <button type="button" class="btn btn-afrigen px-4" onclick="nextStep(2)">Next Step <i class="fa-solid fa-arrow-right ms-2"></i></button>
+                </div>
+            </div>
+
+            <!-- Step 2: Goal -->
+            <div class="step-content" id="step-2">
+                <h5 class="mb-4" style="color: #F0F6FC;">What is your primary goal?</h5>
+                
+                <div class="pill-select">
+                    <input type="radio" name="goal" id="g1" value="Sell product" class="pill-cb" checked>
+                    <label for="g1" class="pill-label">Sell Product</label>
+                    
+                    <input type="radio" name="goal" id="g2" value="Generate leads" class="pill-cb">
+                    <label for="g2" class="pill-label">Generate Leads</label>
+                    
+                    <input type="radio" name="goal" id="g3" value="Increase awareness" class="pill-cb">
+                    <label for="g3" class="pill-label">Increase Awareness</label>
+                    
+                    <input type="radio" name="goal" id="g4" value="Promote event" class="pill-cb">
+                    <label for="g4" class="pill-label">Promote Event</label>
+                    
+                    <input type="radio" name="goal" id="g5" value="Drive website traffic" class="pill-cb">
+                    <label for="g5" class="pill-label">Drive Traffic</label>
+                </div>
+                
+                <div class="d-flex justify-content-between mt-5">
+                    <button type="button" class="btn btn-dark px-4" onclick="prevStep(1)"><i class="fa-solid fa-arrow-left me-2"></i> Back</button>
+                    <button type="button" class="btn btn-afrigen px-4" onclick="nextStep(3)">Next Step <i class="fa-solid fa-arrow-right ms-2"></i></button>
+                </div>
+            </div>
+
+            <!-- Step 3: Deliverables -->
+            <div class="step-content" id="step-3">
+                <h5 class="mb-2" style="color: #F0F6FC;">Required Deliverables</h5>
+                <p style="color: #8B949E; margin-bottom: 24px; font-size: 14px;">Select the assets you want the AI to generate for this campaign.</p>
+                
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <div class="p-3 rounded" style="background: rgba(255,255,255,0.02); border: 1px solid #30363D;">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input deliv-cb" type="checkbox" value="image" id="d_img" checked>
+                                <label class="form-check-label text-white ms-2" for="d_img"><i class="fa-solid fa-image text-warning me-2"></i> Images</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3 rounded" style="background: rgba(255,255,255,0.02); border: 1px solid #30363D;">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input deliv-cb" type="checkbox" value="video" id="d_vid" checked>
+                                <label class="form-check-label text-white ms-2" for="d_vid"><i class="fa-solid fa-clapperboard text-info me-2"></i> Videos</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3 rounded" style="background: rgba(255,255,255,0.02); border: 1px solid #30363D;">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input deliv-cb" type="checkbox" value="content" id="d_fb" checked>
+                                <label class="form-check-label text-white ms-2" for="d_fb"><i class="fa-brands fa-facebook text-primary me-2"></i> Facebook Post</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3 rounded" style="background: rgba(255,255,255,0.02); border: 1px solid #30363D;">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input deliv-cb" type="checkbox" value="content" id="d_x">
+                                <label class="form-check-label text-white ms-2" for="d_x"><i class="fa-brands fa-x-twitter text-white me-2"></i> X Post</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3 rounded" style="background: rgba(255,255,255,0.02); border: 1px solid #30363D;">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input deliv-cb" type="checkbox" value="voice" id="d_voice">
+                                <label class="form-check-label text-white ms-2" for="d_voice"><i class="fa-solid fa-microphone text-danger me-2"></i> Voice Over</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between mt-5">
+                    <button type="button" class="btn btn-dark px-4" onclick="prevStep(2)"><i class="fa-solid fa-arrow-left me-2"></i> Back</button>
+                    <button type="button" class="btn btn-afrigen px-4" id="btnPlan"><i class="fa-solid fa-wand-magic-sparkles me-2"></i> Plan Campaign <span class="badge bg-dark ms-2 text-warning">10 Credits</span></button>
+                </div>
+            </div>
+            
+            <!-- Loading Overlay -->
+            <div id="planLoading" style="display: none; position: absolute; inset: 0; background: rgba(13,17,23,0.9); backdrop-filter: blur(4px); align-items: center; justify-content: center; flex-direction: column; z-index: 10;">
+                <div class="spinner-border text-warning mb-3" role="status" style="width: 3rem; height: 3rem;"></div>
+                <h4 style="color: #F5A623;">Designing Strategy...</h4>
+                <p style="color: #8B949E;">Afrigen AI is orchestrating your campaign.</p>
+            </div>
+            
+        </form>
+    </div>
+</div>
+
+<script>
+    function nextStep(step) {
+        if(step === 2) {
+            if(!document.getElementById('c_name').value || !document.getElementById('c_biz').value) {
+                alert("Please fill required fields."); return;
+            }
+        }
+        document.querySelectorAll('.step-content').forEach(el => el.classList.remove('active'));
+        document.getElementById(`step-${step}`).classList.add('active');
+        
+        document.getElementById(`dot-${step}`).classList.add('active');
+        document.getElementById(`dot-${step-1}`).classList.replace('active', 'completed');
+    }
+    function prevStep(step) {
+        document.querySelectorAll('.step-content').forEach(el => el.classList.remove('active'));
+        document.getElementById(`step-${step}`).classList.add('active');
+        
+        document.getElementById(`dot-${step+1}`).classList.remove('active');
+        document.getElementById(`dot-${step}`).classList.replace('completed', 'active');
+    }
+    
+    document.getElementById('btnPlan').addEventListener('click', async () => {
+        const deliverables = [];
+        document.querySelectorAll('.deliv-cb:checked').forEach(cb => deliverables.push(cb.value));
+        
+        if(deliverables.length === 0) { alert("Please select at least one deliverable."); return; }
+        
+        const data = {
+            id: 'camp_' + Date.now(),
+            name: document.getElementById('c_name').value,
+            business_name: document.getElementById('c_biz').value,
+            industry: document.getElementById('c_ind').value,
+            target_audience: document.getElementById('c_aud').value,
+            goal: document.querySelector('input[name="goal"]:checked').value,
+            deliverables_requested: deliverables
+        };
+        
+        document.getElementById('planLoading').style.display = 'flex';
+        
+        try {
+            const res = await fetch("{{ url_for('main.api_campaign_plan') }}", {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+            const plan = await res.json();
+            
+            if(!res.ok || plan.error) {
+                alert(plan.error || 'Failed to plan campaign.');
+                document.getElementById('planLoading').style.display = 'none';
+                return;
+            }
+            
+            // Save to localStorage
+            data.strategy = plan.strategy;
+            // Map returned deliverables to tracking objects
+            data.deliverables = (plan.deliverables || []).map(d => ({...d, status: 'pending'}));
+            
+            const campaigns = JSON.parse(localStorage.getItem('afrigen_campaigns')) || [];
+            campaigns.unshift(data);
+            localStorage.setItem('afrigen_campaigns', JSON.stringify(campaigns));
+            
+            const campaignId = data.id || plan.campaign_id || 'new';
+            window.location.href = `/campaign/${encodeURIComponent(campaignId)}`;
+            
+        } catch(err) {
+            alert('Failed to plan campaign. Please try again.');
+            document.getElementById('planLoading').style.display = 'none';
+        }
+    });
+</script>
+{% endblock %}

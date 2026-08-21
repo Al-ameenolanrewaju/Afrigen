@@ -39,7 +39,7 @@ def _slugify(tag: str) -> str:
 
 
 def publish_article(title: str, content: str, tags: list[str],
-                    canonical_url: str, subtitle: str = "") -> dict:
+                    canonical_url: str, subtitle: str = "", api_token: str = None, publication_id: str = None) -> dict:
     """Publish a Markdown article on Hashnode with a canonical URL back to Afrigen.
 
     Args:
@@ -48,12 +48,14 @@ def publish_article(title: str, content: str, tags: list[str],
         tags: Up to 5 topic tags.
         canonical_url: The original blog URL on afrigen.com.ng (SEO canonical).
         subtitle: Optional subtitle.
+        api_token: Optional API token. Falls back to HASHNODE_API_TOKEN.
+        publication_id: Optional publication ID. Falls back to HASHNODE_PUBLICATION_ID.
 
     Returns:
         {ok: bool, post_id, post_url, error}
     """
-    api_token = os.environ.get("HASHNODE_API_TOKEN", "")
-    publication_id = os.environ.get("HASHNODE_PUBLICATION_ID", "")
+    api_token = api_token or os.environ.get("HASHNODE_API_TOKEN", "")
+    publication_id = publication_id or os.environ.get("HASHNODE_PUBLICATION_ID", "")
 
     # Verify credentials are present and log (masked) what we resolved so a
     # misconfigured environment is obvious in the logs without leaking secrets.

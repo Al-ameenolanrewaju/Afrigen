@@ -1,359 +1,370 @@
-{% extends "base.html" %}
+{% extends "admin_base.html" %}
 
-{% block title %}Afrigen Admin{% endblock %}
+{% block title %}Admin Overview{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
+<!-- Top Stats Row -->
+<div class="row g-3 mb-4">
+    <!-- Total Users -->
+    <div class="col">
+        <div class="admin-stat-card">
+            <div class="admin-stat-header">
+                <span>Total Users</span>
+                <i class="fa-solid fa-users text-secondary"></i>
+            </div>
+            <h2 class="admin-stat-value">{{ total_users }}</h2>
+            <div class="admin-stat-sub">
+                Pro: {{ pro_users }} | Free: {{ free_users }}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Total Generations -->
+    <div class="col">
+        <div class="admin-stat-card">
+            <div class="admin-stat-header">
+                <span>Total Generations</span>
+                <i class="fa-solid fa-clapperboard text-secondary"></i>
+            </div>
+            <h2 class="admin-stat-value">{{ total_generations }}</h2>
+            <div class="admin-stat-sub">
+                Completed: {{ completed_generations }}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Success Rate -->
+    <div class="col">
+        <div class="admin-stat-card">
+            <div class="admin-stat-header">
+                <span>Success Rate</span>
+                <i class="fa-solid fa-bolt text-secondary"></i>
+            </div>
+            <h2 class="admin-stat-value">{{ success_rate }}%</h2>
+            <div class="admin-stat-sub">
+                Failed: {{ failed_generations }}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Automations -->
+    <div class="col">
+        <div class="admin-stat-card">
+            <div class="admin-stat-header">
+                <span>Automation Runs</span>
+                <i class="fa-solid fa-play text-secondary"></i>
+            </div>
+            <h2 class="admin-stat-value">{{ total_automation_runs }}</h2>
+            <div class="admin-stat-sub">
+                Workflows: {{ total_automation_workflows }}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Assets -->
+    <div class="col">
+        <div class="admin-stat-card">
+            <div class="admin-stat-header">
+                <span>Campaign Assets</span>
+                <i class="fa-solid fa-box-open text-secondary"></i>
+            </div>
+            <h2 class="admin-stat-value">{{ total_campaign_assets }}</h2>
+            <div class="admin-stat-sub">
+                Active Campaigns
+            </div>
+        </div>
+    </div>
+</div>
 
-    <!-- Header -->
-    <div class="card p-4 mb-4 d-flex flex-row flex-wrap justify-content-between align-items-center gap-2">
+<!-- Chart Section -->
+<div class="admin-chart-container">
+    <div class="admin-chart-header">
         <div>
-            <h1 style="color: #F5A623; font-size: 1.75rem;"><i class="fa-solid fa-gear"></i> Afrigen Admin Panel</h1>
-            <p style="color: #C9D1D9; margin: 0;">Monitor platform performance and manage users</p>
+            <h5 class="admin-chart-title">Platform Activity (Last 7 Days)</h5>
+            <div class="admin-stat-sub">Signups and Generations.</div>
         </div>
-        <div class="d-flex flex-wrap gap-2">
-            <a href="{{ url_for('main.admin_blog') }}" class="btn btn-afrigen"><i class="fa-solid fa-newspaper"></i> Blog Drafts</a>
-            
-            <form action="{{ url_for('main.admin_facebook_trigger') }}" method="POST" class="d-inline">
-                <button type="submit" class="btn btn-afrigen" onclick="this.innerHTML='<i class=\'fa-solid fa-spinner fa-spin\'></i> Running...';"><i class="fa-brands fa-facebook"></i> Trigger FB Post</button>
-            </form>
-
-            <a href="{{ url_for('main.admin_distribution') }}" class="btn btn-afrigen"><i class="fa-solid fa-satellite-dish"></i> Distribution</a>
-            <a href="{{ url_for('main.admin_newsletter') }}" class="btn btn-afrigen"><i class="fa-solid fa-newspaper"></i> Weekly Newsletter</a>
+        <div class="d-flex gap-2">
+            <span class="btn-admin active">Last 7 Days</span>
         </div>
     </div>
-
-    <!-- Top Stats -->
-    <div class="row mb-4">
-        <div class="col-6 col-md-3 mb-3">
-            <div class="card p-4 text-center">
-                <h2 style="color: #F5A623;">{{ total_users }}</h2>
-                <p style="color: #888; font-size: 13px;">Total Users</p>
-            </div>
-        </div>
-        <div class="col-6 col-md-3 mb-3">
-            <div class="card p-4 text-center">
-                <h2 style="color: #F5A623;">{{ total_generations }}</h2>
-                <p style="color: #888; font-size: 13px;">Total Generations</p>
-            </div>
-        </div>
-        <div class="col-6 col-md-3 mb-3">
-            <div class="card p-4 text-center">
-                <h2 style="color: #F5A623;">{{ pro_users }}</h2>
-                <p style="color: #888; font-size: 13px;">Pro Users</p>
-            </div>
-        </div>
-        <div class="col-6 col-md-3 mb-3">
-            <div class="card p-4 text-center">
-                <h2 style="color: #27AE60;">{{ success_rate }}%</h2>
-                <p style="color: #888; font-size: 13px;">Success Rate</p>
-            </div>
-        </div>
+    <div style="height: 300px; position: relative;">
+        <canvas id="activityChart"></canvas>
     </div>
+</div>
 
-    <!-- Secondary Stats -->
-    <div class="row mb-4">
-        <div class="col-6 col-md-3 mb-3">
-            <div class="card p-4 text-center">
-                <h2 style="color: #27AE60;">{{ free_users }}</h2>
-                <p style="color: #888; font-size: 13px;">Free Users</p>
-            </div>
-        </div>
-        <div class="col-6 col-md-3 mb-3">
-            <div class="card p-4 text-center">
-                <h2 style="color: #E74C3C;">{{ banned_users }}</h2>
-                <p style="color: #888; font-size: 13px;">Banned Users</p>
-            </div>
-        </div>
-        <div class="col-6 col-md-3 mb-3">
-            <div class="card p-4 text-center">
-                <h2 style="color: #F5A623;">{{ video_generations }}</h2>
-                <p style="color: #888; font-size: 13px;"><i class="fa-solid fa-clapperboard"></i> Videos Generated</p>
-            </div>
-        </div>
-        <div class="col-6 col-md-3 mb-3">
-            <div class="card p-4 text-center">
-                <h2 style="color: #F5A623;">{{ image_generations }}</h2>
-                <p style="color: #888; font-size: 13px;"><i class="fa-solid fa-image"></i> Images Generated</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Charts Row -->
-    <div class="row mb-4">
-        <div class="col-md-6 mb-3">
-            <div class="card p-4">
-                <h5 style="color: #F5A623;" class="mb-3"><i class="fa-solid fa-users"></i> New Signups (Last 7 Days)</h5>
-                <div style="display: flex; align-items: flex-end; gap: 8px; height: 100px;">
-                    {% set max_signups = signups_7days | map(attribute='count') | max %}
-                    {% for day in signups_7days %}
-                    <div style="flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%;">
-                        <div style="flex: 1; width: 100%; display: flex; align-items: flex-end;">
-                            <div style="width: 100%; background: #F5A623; border-radius: 4px 4px 0 0; height: {% if max_signups > 0 %}{{ (day.count / max_signups * 100) | int }}%{% else %}4px{% endif %}; min-height: 4px;"></div>
-                        </div>
-                        <p style="color: #888; font-size: 10px; margin-top: 4px;">{{ day.day }}</p>
-                        <p style="color: #F5A623; font-size: 11px; font-weight: bold; margin: 0;">{{ day.count }}</p>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6 mb-3">
-            <div class="card p-4">
-                <h5 style="color: #F5A623;" class="mb-3"><i class="fa-solid fa-clapperboard"></i> Generations (Last 7 Days)</h5>
-                <div style="display: flex; align-items: flex-end; gap: 8px; height: 100px;">
-                    {% set max_gens = generations_7days | map(attribute='count') | max %}
-                    {% for day in generations_7days %}
-                    <div style="flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%;">
-                        <div style="flex: 1; width: 100%; display: flex; align-items: flex-end;">
-                            <div style="width: 100%; background: #27AE60; border-radius: 4px 4px 0 0; height: {% if max_gens > 0 %}{{ (day.count / max_gens * 100) | int }}%{% else %}4px{% endif %}; min-height: 4px;"></div>
-                        </div>
-                        <p style="color: #888; font-size: 10px; margin-top: 4px;">{{ day.day }}</p>
-                        <p style="color: #27AE60; font-size: 11px; font-weight: bold; margin: 0;">{{ day.count }}</p>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Country & Source Row -->
-    <div class="row mb-4">
-        <div class="col-md-6 mb-3">
-            <div class="card p-4">
-                <h5 style="color: #F5A623;" class="mb-3"><i class="fa-solid fa-earth-africa"></i> Top Countries</h5>
-                {% if top_countries %}
-                    {% set max_country = top_countries[0][1] %}
-                    {% for country, count in top_countries %}
-                    <div class="mb-3">
-                        <div class="d-flex justify-content-between mb-1">
-                            <span style="color: #C9D1D9;">{{ country }}</span>
-                            <span style="color: #F5A623;">{{ count }}</span>
-                        </div>
-                        <div style="background: #30363D; border-radius: 99px; height: 8px;">
-                            <div style="background: #F5A623; border-radius: 99px; height: 8px; width: {{ (count / max_country * 100) | int }}%;"></div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                {% else %}
-                    <p style="color: #888;">No country data yet.</p>
-                {% endif %}
-            </div>
-        </div>
-        <div class="col-md-6 mb-3">
-            <div class="card p-4">
-                <h5 style="color: #F5A623;" class="mb-3"><i class="fa-solid fa-chart-column"></i> Signup Sources</h5>
-                {% if source_breakdown %}
-                    {% set source_icons = {'direct': '<i class="fa-solid fa-link"></i>', 'google': '<i class="fa-solid fa-magnifying-glass"></i>', 'facebook': '<i class="fa-brands fa-facebook"></i>', 'twitter': '<i class="fa-brands fa-twitter"></i>', 'instagram': '<i class="fa-solid fa-camera"></i>', 'linkedin': '<i class="fa-solid fa-briefcase"></i>', 'telegram': '<i class="fa-brands fa-telegram"></i>'} %}
-                    {% set max_source = source_breakdown.values() | max %}
-                    {% for source, count in source_breakdown.items() %}
-                    <div class="mb-3">
-                        <div class="d-flex justify-content-between mb-1">
-                            <span style="color: #C9D1D9;">{{ source_icons.get(source, '<i class="fa-solid fa-link"></i>') | safe }} {{ source | capitalize }}</span>
-                            <span style="color: #F5A623;">{{ count }}</span>
-                        </div>
-                        <div style="background: #30363D; border-radius: 99px; height: 8px;">
-                            <div style="background: #27AE60; border-radius: 99px; height: 8px; width: {{ (count / max_source * 100) | int }}%;"></div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                {% else %}
-                    <p style="color: #888;">No source data yet.</p>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-
-    <!-- Generation Health -->
-    <div class="card p-4 mb-4">
-        <h5 style="color: #F5A623;" class="mb-3"><i class="fa-solid fa-bolt"></i> Generation Health</h5>
-        <div class="row text-center">
-            <div class="col-4">
-                <h3 style="color: #27AE60;">{{ completed_generations }}</h3>
-                <p style="color: #888; font-size: 13px;">Completed</p>
-            </div>
-            <div class="col-4">
-                <h3 style="color: #E74C3C;">{{ failed_generations }}</h3>
-                <p style="color: #888; font-size: 13px;">Failed</p>
-            </div>
-            <div class="col-4">
-                <h3 style="color: #2AABEE;">{{ total_telegram }}</h3>
-                <p style="color: #888; font-size: 13px;">Telegram Users</p>
-            </div>
-        </div>
-        <div class="mt-3">
-            <div class="d-flex justify-content-between mb-1">
-                <span style="color: #888; font-size: 13px;">Success Rate</span>
-                <span style="color: #27AE60; font-size: 13px;">{{ success_rate }}%</span>
-            </div>
-            <div style="background: #30363D; border-radius: 99px; height: 8px;">
-                <div style="background: #27AE60; border-radius: 99px; height: 8px; width: {{ success_rate }}%;"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Top 5 Most Active Users -->
-    <div class="card p-4 mb-4">
-        <h5 style="color: #F5A623;" class="mb-3"><i class="fa-solid fa-trophy"></i> Top 5 Most Active Users</h5>
-        <div class="table-responsive">
-            <table class="table" style="color: #F0F6FC;">
-                <thead style="color: #F5A623;">
-                    <tr>
-                        <th>#</th>
-                        <th>Username</th>
-                        <th>Plan</th>
-                        <th>Generations</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for user, count in top_users %}
-                    <tr>
-                        <td style="color: #F5A623;">{{ loop.index }}</td>
-                        <td>{{ user.username }}</td>
-                        <td>
-                            <span class="badge" style="background: {% if user.plan == 'pro' %}#F5A623{% else %}#21262D{% endif %}; color: {% if user.plan == 'pro' %}#0D1117{% else %}#C9D1D9{% endif %};">
-                                {{ user.plan.upper() }}
-                            </span>
-                        </td>
-                        <td style="color: #27AE60;">{{ count }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Telegram Users Table -->
-    <div class="card p-4 mb-4">
-        <h4 style="color: #2AABEE;" class="mb-3"><i class="fa-solid fa-robot"></i> Telegram Users</h4>
-        <div class="table-responsive">
-            <table class="table" style="color: #F0F6FC;">
-                <thead style="color: #2AABEE;">
-                    <tr>
-                        <th>Username</th>
-                        <th>First Name</th>
-                        <th>Prompts Refined</th>
-                        <th>Joined</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for tuser in telegram_users %}
-                    <tr>
-                        <td>@{{ tuser.username or 'No username' }}</td>
-                        <td>{{ tuser.first_name or 'N/A' }}</td>
-                        <td>{{ tuser.prompts_refined }}</td>
-                        <td>{% if tuser.joined_at %}{{ tuser.joined_at.strftime('%b %d, %Y') }}{% else %}N/A{% endif %}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-
+<!-- Grid Layout for Tables -->
+<div class="row g-4">
+    
     <!-- All Users Table -->
-    <div class="card p-4 mb-4">
-        <h4 style="color: #F5A623;" class="mb-3"><i class="fa-solid fa-users"></i> All Users</h4>
-        <div class="table-responsive">
-            <table class="table" style="color: #F0F6FC;">
-                <thead style="color: #F5A623;">
-                    <tr>
-                        <th>Username</th>
-                        <th>Email</th>
-                        <th>Plan</th>
-                        <th>Credits</th>
-                        <th>Country</th>
-                        <th>Source</th>
-                        <th>Joined</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for user in users %}
-                    <tr>
-                        <td>{{ user.username }}</td>
-                        <td>{{ user.email }}</td>
-                        <td>
-                            <span class="badge" style="background: {% if user.plan == 'pro' %}#F5A623{% elif user.plan == 'banned' %}#E74C3C{% else %}#21262D{% endif %}; color: {% if user.plan == 'pro' %}#0D1117{% else %}#C9D1D9{% endif %};">
-                                {{ user.plan.upper() }}
-                            </span>
-                        </td>
-                        <td>{{ user.credits }}</td>
-                        <td style="color: #888;">{{ user.country or 'Unknown' }}</td>
-                        <td style="color: #888;">{{ user.signup_source or 'direct' }}</td>
-                        <td>{{ user.created_at.strftime('%b %d, %Y') }}</td>
-                        <td>
-                            {% if user.email != 'oadedamola07@gmail.com' %}
-                                {% if user.plan == 'free' %}
-                                <a href="{{ url_for('main.upgrade_user', user_id=user.id) }}" class="btn btn-afrigen btn-sm me-1"><i class="fa-solid fa-star"></i> Upgrade</a>
-                                {% elif user.plan == 'pro' %}
-                                <a href="{{ url_for('main.downgrade_user', user_id=user.id) }}" class="btn btn-outline-warning btn-sm me-1">Downgrade</a>
-                                {% endif %}
-                                {% if user.plan != 'banned' %}
-                                <a href="{{ url_for('main.ban_user', user_id=user.id) }}" class="btn btn-warning btn-sm me-1" onclick="return confirm('Ban {{ user.username }}?')"><i class="fa-solid fa-ban"></i> Ban</a>
-                                {% else %}
-                                <a href="{{ url_for('main.upgrade_user', user_id=user.id) }}" class="btn btn-success btn-sm me-1"><i class="fa-solid fa-circle-check"></i> Unban</a>
-                                {% endif %}
-                                <a href="{{ url_for('main.delete_user', user_id=user.id) }}" class="btn btn-danger btn-sm" onclick="return confirm('DELETE {{ user.username }}?')"><i class="fa-solid fa-trash"></i> Delete</a>
-                            {% else %}
-                                <span style="color: #F5A623;"><i class="fa-solid fa-crown"></i> Admin</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+    <div class="col-12">
+        <div class="admin-chart-container" style="margin-bottom: 0;">
+            <div class="admin-chart-header mb-3">
+                <h5 class="admin-chart-title">All Users</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Plan</th>
+                            <th>Credits</th>
+                            <th>Joined</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td>
+                                <div class="fw-bold" style="color: white;">{{ user.username }}</div>
+                                <div style="font-size: 12px; color: var(--admin-text);">{{ user.country or 'Unknown' }} | {{ user.signup_source or 'direct' }}</div>
+                            </td>
+                            <td>{{ user.email }}</td>
+                            <td>
+                                <span class="admin-badge {% if user.plan == 'pro' %}admin-badge-orange{% elif user.plan == 'banned' %}admin-badge-red{% else %}admin-badge-gray{% endif %}">
+                                    {{ user.plan.upper() }}
+                                </span>
+                            </td>
+                            <td>{{ user.credits }}</td>
+                            <td>{{ user.created_at.strftime('%b %d, %Y') }}</td>
+                            <td>
+                                <div class="d-flex gap-2">
+                                    {% if user.email != 'oadedamola07@gmail.com' %}
+                                        {% if user.plan == 'free' %}
+                                        <a href="{{ url_for('main.upgrade_user', user_id=user.id) }}" class="btn-admin" style="text-decoration: none;">Upgrade</a>
+                                        {% elif user.plan == 'pro' %}
+                                        <a href="{{ url_for('main.downgrade_user', user_id=user.id) }}" class="btn-admin" style="text-decoration: none;">Downgrade</a>
+                                        {% endif %}
+                                        
+                                        {% if user.plan != 'banned' %}
+                                        <a href="{{ url_for('main.ban_user', user_id=user.id) }}" class="btn-admin" style="color: #F87171; border-color: rgba(239, 68, 68, 0.2); text-decoration: none;" onclick="sweetConfirmLink(event, 'Ban {{ user.username }}?')">Ban</a>
+                                        {% else %}
+                                        <a href="{{ url_for('main.upgrade_user', user_id=user.id) }}" class="btn-admin" style="color: #34D399; border-color: rgba(16, 185, 129, 0.2); text-decoration: none;" onclick="sweetConfirmLink(event, 'Unban {{ user.username }}?')">Unban</a>
+                                        {% endif %}
+                                        <a href="{{ url_for('main.delete_user', user_id=user.id) }}" class="btn-admin" style="color: #F87171; border-color: rgba(239, 68, 68, 0.2); text-decoration: none;" onclick="sweetConfirmLink(event, 'DELETE {{ user.username }}?')">Delete</a>
+                                    {% else %}
+                                        <span class="admin-badge admin-badge-orange"><i class="fa-solid fa-crown"></i> Admin</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Top Active Users & Telegram -->
+    <div class="col-md-6">
+        <div class="admin-chart-container h-100 mb-0">
+            <h5 class="admin-chart-title mb-3">Top 5 Most Active Users</h5>
+            <div class="table-responsive">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Username</th>
+                            <th>Generations</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user, count in top_users %}
+                        <tr>
+                            <td style="color: var(--admin-accent);">{{ loop.index }}</td>
+                            <td>{{ user.username }}</td>
+                            <td style="color: white; font-weight: 500;">{{ count }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="admin-chart-container h-100 mb-0">
+            <h5 class="admin-chart-title mb-3">Recent Telegram Users</h5>
+            <div class="table-responsive">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Refined</th>
+                            <th>Joined</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tuser in telegram_users[:5] %}
+                        <tr>
+                            <td style="color: white;">@{{ tuser.username or 'No username' }}</td>
+                            <td>{{ tuser.prompts_refined }}</td>
+                            <td>{% if tuser.joined_at %}{{ tuser.joined_at.strftime('%b %d') }}{% else %}N/A{% endif %}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
     <!-- Recent Generations -->
-    <div class="card p-4 mb-4">
-        <h4 style="color: #F5A623;" class="mb-3"><i class="fa-solid fa-clapperboard"></i> Recent Generations</h4>
-        <div class="table-responsive">
-            <table class="table" style="color: #F0F6FC;">
-                <thead style="color: #F5A623;">
-                    <tr>
-                        <th>User</th>
-                        <th>Prompt</th>
-                        <th>Type</th>
-                        <th>Status</th>
-                        <th>Date</th>
-                        <th>Link</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for gen in generations %}
-                    <tr>
-                        <td>{{ gen.user.username }}</td>
-                        <td>{{ gen.original_prompt[:40] }}...</td>
-                        <td style="color: #888;">{{ gen.generation_type or 'video' }}</td>
-                        <td>
-                            <span class="badge" style="background: {% if gen.status == 'completed' %}#27AE60{% else %}#E74C3C{% endif %};">
-                                {{ gen.status }}
-                            </span>
-                        </td>
-                        <td>{{ gen.created_at.strftime('%b %d, %Y') }}</td>
-                        <td>
-                            {% if gen.video_url %}
-                            <a href="{{ gen.video_url }}" target="_blank" class="btn btn-sm btn-outline-warning">Watch</a>
-                            {% elif gen.image_url %}
-                            <a href="{{ gen.image_url }}" target="_blank" class="btn btn-sm btn-outline-warning">View</a>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+    <div class="col-12">
+        <div class="admin-chart-container mb-0">
+            <h5 class="admin-chart-title mb-3">Recent Generations</h5>
+            <div class="table-responsive">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Prompt</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                            <th>Link</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for gen in generations %}
+                        <tr>
+                            <td>{{ gen.user.username }}</td>
+                            <td style="max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ gen.original_prompt }}</td>
+                            <td>
+                                <span class="admin-badge {% if gen.status == 'completed' %}admin-badge-green{% else %}admin-badge-red{% endif %}">
+                                    {{ gen.status }}
+                                </span>
+                            </td>
+                            <td>{{ gen.created_at.strftime('%b %d, %Y') }}</td>
+                            <td>
+                                {% if gen.video_url %}
+                                <a href="{{ gen.video_url }}" target="_blank" class="btn-admin" style="text-decoration: none;">Watch</a>
+                                {% elif gen.image_url %}
+                                <a href="{{ gen.image_url }}" target="_blank" class="btn-admin" style="text-decoration: none;">View</a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
 </div>
+{% endblock %}
 
-<style>
-    .btn-afrigen { background: #F5A623; color: #0D1117; border: none; font-weight: 600; }
-    .btn-afrigen:hover { background: #e09515; color: #0D1117; }
-    .card { background: #161B22; border: 1px solid #30363D; border-radius: 16px; }
-    .table thead th { border-bottom: 1px solid #30363D; }
-    .table td { border-bottom: 1px solid #21262D; vertical-align: middle; }
-</style>
+{% block scripts %}
+<script>
+    // Prepare data for Chart.js
+    const signupDataRaw = {{ signups_7days | tojson | safe }};
+    const genDataRaw = {{ generations_7days | tojson | safe }};
+    
+    const labels = signupDataRaw.map(d => d.day);
+    const signupCounts = signupDataRaw.map(d => d.count);
+    const genCounts = genDataRaw.map(d => d.count);
 
+    const ctx = document.getElementById('activityChart').getContext('2d');
+    
+    // Gradient for signups
+    const gradientSignups = ctx.createLinearGradient(0, 0, 0, 300);
+    gradientSignups.addColorStop(0, 'rgba(245, 166, 35, 0.4)'); // --admin-accent
+    gradientSignups.addColorStop(1, 'rgba(245, 166, 35, 0.0)');
+
+    // Gradient for generations
+    const gradientGens = ctx.createLinearGradient(0, 0, 0, 300);
+    gradientGens.addColorStop(0, 'rgba(16, 185, 129, 0.3)'); // Green
+    gradientGens.addColorStop(1, 'rgba(16, 185, 129, 0.0)');
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'User Signups',
+                    data: signupCounts,
+                    borderColor: '#F5A623',
+                    backgroundColor: gradientSignups,
+                    borderWidth: 2,
+                    tension: 0.4, // Smooth curve
+                    fill: true,
+                    pointBackgroundColor: '#0B0F19',
+                    pointBorderColor: '#F5A623',
+                    pointBorderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                },
+                {
+                    label: 'Generations',
+                    data: genCounts,
+                    borderColor: '#10B981',
+                    backgroundColor: gradientGens,
+                    borderWidth: 2,
+                    tension: 0.4,
+                    fill: true,
+                    pointBackgroundColor: '#0B0F19',
+                    pointBorderColor: '#10B981',
+                    pointBorderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                    align: 'end',
+                    labels: {
+                        color: '#9CA3AF',
+                        usePointStyle: true,
+                        boxWidth: 8
+                    }
+                },
+                tooltip: {
+                    backgroundColor: '#151C2C',
+                    titleColor: '#F3F4F6',
+                    bodyColor: '#9CA3AF',
+                    borderColor: '#1F2937',
+                    borderWidth: 1,
+                    padding: 12,
+                    boxPadding: 6,
+                    usePointStyle: true
+                }
+            },
+            scales: {
+                x: {
+                    grid: {
+                        color: 'rgba(31, 41, 55, 0.5)',
+                        drawBorder: false,
+                        tickLength: 0
+                    },
+                    ticks: {
+                        color: '#6B7280',
+                        padding: 10
+                    }
+                },
+                y: {
+                    grid: {
+                        color: 'rgba(31, 41, 55, 0.5)',
+                        drawBorder: false,
+                        tickLength: 0
+                    },
+                    ticks: {
+                        color: '#6B7280',
+                        padding: 10,
+                        stepSize: 1,
+                        beginAtZero: true
+                    }
+                }
+            },
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            }
+        }
+    });
+</script>
 {% endblock %}

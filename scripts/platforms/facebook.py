@@ -20,18 +20,20 @@ import requests
 GRAPH_API = "https://graph.facebook.com/v19.0"
 
 
-def post_to_page(text: str, link: str = None) -> dict:
+def post_to_page(text: str, link: str = None, access_token: str = None, page_id: str = None) -> dict:
     """Post a text update to a Facebook Page feed.
 
     Args:
         text: The post body.
         link: The link to include in the post.
+        access_token: Optional API token. Falls back to FACEBOOK_PAGE_ACCESS_TOKEN.
+        page_id: Optional page ID. Falls back to FACEBOOK_PAGE_ID.
 
     Returns:
         {ok: bool, post_id: str|None, post_url: str|None, error: str|None}
     """
-    access_token = os.environ.get("FACEBOOK_PAGE_ACCESS_TOKEN", "")
-    page_id = os.environ.get("FACEBOOK_PAGE_ID", "")
+    access_token = access_token or os.environ.get("FACEBOOK_PAGE_ACCESS_TOKEN", "")
+    page_id = page_id or os.environ.get("FACEBOOK_PAGE_ID", "")
 
     if not access_token or not page_id:
         return {
@@ -44,7 +46,6 @@ def post_to_page(text: str, link: str = None) -> dict:
     try:
         data = {
             "message": text,
-            "link": link,
             "access_token": access_token,
         }
         if link:
@@ -76,18 +77,20 @@ def post_to_page(text: str, link: str = None) -> dict:
             "post_url": None,
         }
 
-def post_photo_to_page(image_url: str, caption: str) -> dict:
+def post_photo_to_page(image_url: str, caption: str, access_token: str = None, page_id: str = None) -> dict:
     """Post an image with a caption to a Facebook Page.
 
     Args:
         image_url: URL of the image to post.
         caption: The text caption.
+        access_token: Optional API token.
+        page_id: Optional page ID.
 
     Returns:
         {ok: bool, post_id: str|None, post_url: str|None, error: str|None}
     """
-    access_token = os.environ.get("FACEBOOK_PAGE_ACCESS_TOKEN", "")
-    page_id = os.environ.get("FACEBOOK_PAGE_ID", "")
+    access_token = access_token or os.environ.get("FACEBOOK_PAGE_ACCESS_TOKEN", "")
+    page_id = page_id or os.environ.get("FACEBOOK_PAGE_ID", "")
 
     if not access_token or not page_id:
         return {

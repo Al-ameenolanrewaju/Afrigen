@@ -2,7 +2,7 @@ import json
 import os
 import random
 from typing import List, Dict, Any
-from datetime import datetime
+from datetime import datetime, timezone
 from .models import ContentCategory
 
 HISTORY_FILE = os.path.join(os.path.dirname(__file__), "content_history.json")
@@ -50,7 +50,7 @@ class ContentPlanner:
         selected = random.choice(available)
         
         self.history.setdefault("categories", []).append(selected.value)
-        self.history["last_run"] = datetime.utcnow().isoformat()
+        self.history["last_run"] = datetime.now(timezone.utc).isoformat()
         self._save_history()
         
         from .utils import get_logger

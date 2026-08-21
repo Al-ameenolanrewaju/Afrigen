@@ -7,7 +7,7 @@ from ..validators import validate_newsletter
 
 # Ground-truth list of things Afrigen can actually do
 AFRIGEN_FEATURES = [
-    "Public share pages: every video/image you generate gets its own clean shareable link with a 'create your own, free' button — great for WhatsApp Status, Reels, and bios.",
+    "Public share pages: every video/image you generate gets its own clean shareable link with a 'create your own, free' button — great for Reels and bios.",
     "Text-to-video from a simple prompt, with a built-in AI prompt refiner that expands your idea into a detailed shot.",
     "Five video styles: Cinematic, Anime, Realistic, African, and Social.",
     "AI image generation from text.",

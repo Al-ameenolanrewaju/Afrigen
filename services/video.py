@@ -70,10 +70,10 @@ def generate_video(
 
 
 # Text-to-video models, by length capability:
-#   LTX            - no length control at all (~short fixed clip).
-#   AnimateDiff    - frame count up to 32 @ 8fps (~4s); uses video_size, not aspect_ratio.
-#   Kling t2v pro  - real duration control: "5" or "10" seconds.
-LTX_MODEL = "fal-ai/ltx-video-v095"
+#   LTX 2.3 clean-plate - free-user default model for short, clean video output.
+#   AnimateDiff         - frame count up to 32 @ 8fps (~4s); uses video_size, not aspect_ratio.
+#   Kling t2v pro       - real duration control: "5" or "10" seconds.
+LTX_MODEL = "fal-ai/ltx-2.3-quality/clean-plate"
 ANIMATEDIFF_MODEL = "fal-ai/fast-animatediff/text-to-video"
 KLING_T2V_MODEL = "fal-ai/kling-video/v1.6/pro/text-to-video"
 
@@ -154,16 +154,33 @@ def _build_t2v_request(prompt, style, aspect_ratio, extended, duration="5"):
 def generate_video_async(prompt, style="cinematic", aspect_ratio="16:9", webhook_url=None, extended=False, duration="5"):
     model, arguments = _build_t2v_request(prompt, style, aspect_ratio, extended, duration=duration)
 
-    try:
-        handler = fal_client.submit(
-            model,
-            arguments=arguments,
-            webhook_url=webhook_url
-        )
-        return {"success": True, "request_id": handler.request_id}
-    except Exception as e:
-        print(f"FAL submit error: {e}")
-        return {"success": False, "error": str(e)}
+    last_error = None
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            print(f"Async Video attempt {attempt}/{MAX_RETRIES} - model: {model}")
+            handler = fal_client.submit(
+                model,
+                arguments=arguments,
+                webhook_url=webhook_url
+            )
+            return {"success": True, "request_id": handler.request_id}
+        except Exception as e:
+            error_str = str(e)
+            last_error = error_str
+            print(f"FAL submit error on attempt {attempt}: {error_str}")
+            
+            # Don't retry on balance/auth errors
+            if "Exhausted balance" in error_str or "403" in error_str or "401" in error_str:
+                return {
+                    "success": False,
+                    "error": "Account balance exhausted. Please add credits at fal.ai/dashboard/billing"
+                }
+                
+            if attempt < MAX_RETRIES:
+                print(f"Retrying in {RETRY_DELAY} seconds...")
+                time.sleep(RETRY_DELAY)
+                
+    return {"success": False, "error": f"Failed after {MAX_RETRIES} attempts. Last error: {last_error}"}
 
 
 def generate_video_from_image(image_url, prompt, duration="5", aspect_ratio="16:9"):
@@ -177,7 +194,7 @@ def generate_video_from_image(image_url, prompt, duration="5", aspect_ratio="16:
 
     models = [
         "fal-ai/kling-video/v1.6/pro/image-to-video",
-        "fal-ai/ltx-video-v095/image-to-video",
+        "fal-ai/ltx-2.3-quality/clean-plate/image-to-video",
     ]
 
     for model in models:

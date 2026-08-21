@@ -7,7 +7,7 @@ then it's sent to everyone (registered users + waitlist), minus unsubscribes.
 """
 import os
 import re
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 
 from models import db, User, Subscriber, Generation, NewsletterIssue, EmailOptOut
 from services.email import send_newsletter, BASE_URL
@@ -20,7 +20,7 @@ NEWSLETTER_MODEL = os.environ.get("NEWSLETTER_MODEL", "llama-3.3-70b-versatile")
 # newsletter only ever promotes REAL features (never hallucinated ones). Keep this
 # in sync with the product — the model picks ONE to spotlight each week.
 AFRIGEN_FEATURES = [
-    "Public share pages: every video/image you generate gets its own clean shareable link with a 'create your own, free' button — great for WhatsApp Status, Reels, and bios.",
+    "Public share pages: every video/image you generate gets its own clean shareable link with a 'create your own, free' button — great for Reels and bios.",
     "Text-to-video from a simple prompt, with a built-in AI prompt refiner that expands your idea into a detailed shot.",
     "Five video styles: Cinematic, Anime, Realistic, African, and Social.",
     "AI image generation from text.",
@@ -198,7 +198,7 @@ def send_issue(issue):
     )
     issue.status = "sent"
     issue.recipients_count = sent
-    issue.sent_at = datetime.utcnow()
+    issue.sent_at = datetime.now(timezone.utc)
     db.session.commit()
     return sent
 
