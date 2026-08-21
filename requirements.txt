@@ -58,7 +58,7 @@ grokcore.view==5.1
 grokcore.viewlet==5.1
 groq==1.1.1
 grpcio==1.82.1
-grpcio-status==1.71.2
+grpcio-status>=1.75.1
 gunicorn==26.0.0
 h11==0.16.0
 hf-xet==1.4.2
