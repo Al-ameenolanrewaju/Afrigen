@@ -170,8 +170,11 @@ def logout():
 @auth.route('/google')
 def google_login():
     from app import google
-    # Force https scheme in case proxy headers are stripped or mishandled
-    redirect_uri = url_for('auth.google_callback', _external=True, _scheme='https')
+    # Only force HTTPS in production. Locally, it should remain HTTP to match standard Flask behavior.
+    if os.environ.get('FLASK_ENV') == 'production' or os.environ.get('RENDER'):
+        redirect_uri = url_for('auth.google_callback', _external=True, _scheme='https')
+    else:
+        redirect_uri = url_for('auth.google_callback', _external=True)
     return google.authorize_redirect(redirect_uri)
 
 @auth.route('/google/callback')

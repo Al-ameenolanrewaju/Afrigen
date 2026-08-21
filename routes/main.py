@@ -127,6 +127,11 @@ def dashboard():
     completed_generations = Generation.query.filter_by(
         user_id=current_user.id, status='completed'
     ).count()
+    
+    recent_generations = Generation.query.filter_by(
+        user_id=current_user.id
+    ).order_by(Generation.created_at.desc()).limit(4).all()
+    
     # Telegram linking status + bot handle for the "Connect Telegram" card.
     telegram_linked = TelegramUser.query.filter_by(user_id=current_user.id).first() is not None
     telegram_bot_username = os.environ.get('TELEGRAM_BOT_USERNAME', '')
@@ -134,6 +139,7 @@ def dashboard():
         "main/dashboard.html",
         total_generations=total_generations,
         completed_generations=completed_generations,
+        recent_generations=recent_generations,
         telegram_linked=telegram_linked,
         telegram_bot_username=telegram_bot_username,
     )

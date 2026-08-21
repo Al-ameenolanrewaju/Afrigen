@@ -1,5 +1,6 @@
 import resend
 import os
+import json
 
 resend.api_key = os.environ.get("RESEND_API_KEY")
 
@@ -7,32 +8,106 @@ BASE_URL = os.environ.get("BASE_URL", "https://afrigen.com.ng")
 FROM_EMAIL = "Afrigen <hello@afrigen.com.ng>"
 
 
+def get_base_email_html(content):
+    social_links_text_html = ""
+    try:
+        from models import Brand
+        afrigen_brand = Brand.query.filter(Brand.name.ilike('%afrigen%')).first()
+        if not afrigen_brand:
+            afrigen_brand = Brand.query.first()
+            
+        if afrigen_brand and afrigen_brand.social_links:
+            if isinstance(afrigen_brand.social_links, str):
+                social_links = json.loads(afrigen_brand.social_links)
+            else:
+                social_links = afrigen_brand.social_links
+                
+            if social_links and isinstance(social_links, dict):
+                for platform, url in social_links.items():
+                    platform_name = platform.capitalize()
+                    social_links_text_html += f'<a href="{url}" target="_blank" style="color: #666666; font-size: 12px; text-decoration: none; margin-right: 16px;">{platform_name}</a>\n'
+    except Exception as e:
+        print(f"Error fetching social links for email template: {e}")
+
+    return f"""<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Afrigen</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #000000; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
+    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #000000;">
+        <tr>
+            <td align="center" style="padding: 60px 20px;">
+                <!-- Main Container -->
+                <table width="480" border="0" cellspacing="0" cellpadding="0" style="max-width: 480px; width: 100%; background-color: #0A0A0A; border: 1px solid #1A1A1A; border-radius: 12px; overflow: hidden;">
+                    
+                    <!-- Accent Line -->
+                    <tr>
+                        <td style="height: 2px; background-color: #F5A623;"></td>
+                    </tr>
+                    
+                    <tr>
+                        <td align="left" style="padding: 40px;">
+                            <!-- Header -->
+                            <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 40px;">
+                                <tr>
+                                    <td align="left">
+                                        <h1 style="color: #FFFFFF; margin: 0; font-size: 16px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;">Afrigen</h1>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <!-- Content -->
+                            {content}
+                            
+                            <!-- Footer -->
+                            <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 60px;">
+                                <tr>
+                                    <td style="border-top: 1px solid #222222; padding-top: 24px;" align="left">
+                                        <div style="margin-bottom: 16px;">
+                                            <a href="{BASE_URL}" target="_blank" style="color: #666666; font-size: 12px; text-decoration: none; margin-right: 16px;">Website</a>
+                                            <a href="{BASE_URL}/blog" target="_blank" style="color: #666666; font-size: 12px; text-decoration: none; margin-right: 16px;">Blog</a>
+                                            {social_links_text_html}
+                                        </div>
+                                        <p style="color: #444444; font-size: 12px; margin: 0;">Africa Creates, AI Generates 🌍</p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+                <p style="color: #333333; font-size: 11px; margin: 24px 0 0 0; text-align: center;">© 2026 Afrigen. All rights reserved.</p>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+"""
+
+
 def send_welcome_email(user_email, username):
     try:
+        content = f"""
+        <h2 style="color: #FFFFFF; font-size: 24px; font-weight: 600; margin: 0 0 24px 0; letter-spacing: -0.5px;">Welcome to Afrigen.</h2>
+        <p style="color: #A1A1AA; font-size: 15px; line-height: 1.6; margin: 0 0 16px 0;">Hi <strong style="color: #FFFFFF;">{username}</strong>,</p>
+        <p style="color: #A1A1AA; font-size: 15px; line-height: 1.6; margin: 0 0 32px 0;">
+            You're officially part of the African AI revolution. We've credited your account with 5 free credits so you can start creating immediately.
+        </p>
+        <table border="0" cellspacing="0" cellpadding="0">
+            <tr>
+                <td align="center" style="background-color: #EDEDED; border-radius: 6px;">
+                    <a href="{BASE_URL}/dashboard" target="_blank" style="display: inline-block; padding: 10px 24px; font-weight: 500; font-size: 14px; color: #000000; text-decoration: none; border-radius: 6px;">Start Generating</a>
+                </td>
+            </tr>
+        </table>
+        """
         resend.Emails.send({
             "from": FROM_EMAIL,
             "to": user_email,
-            "subject": "Welcome to Afrigen! 🎬",
-            "html": f"""
-            <div style="font-family: Arial; background: #0D1117;
-                        color: #F0F6FC; padding: 40px; max-width: 600px;">
-                <h1 style="color: #F5A623;">🎬 Welcome to Afrigen!</h1>
-                <p>Hi {username}! 👋</p>
-                <p>You're now part of the African AI revolution!</p>
-                <p style="color: #C9D1D9;">
-                    You have <strong style="color: #F5A623;">5 free credits</strong>
-                    to generate AI videos!
-                </p>
-                <a href="{BASE_URL}/dashboard"
-                   style="background: #F5A623; color: #0D1117;
-                          padding: 12px 24px; border-radius: 8px;
-                          text-decoration: none; font-weight: bold;">
-                    Start Generating! 🚀
-                </a>
-                <hr style="border-color: #21262D; margin: 30px 0;">
-                <p style="color: #888;">Africa Creates, AI Generates 🌍</p>
-            </div>
-            """
+            "subject": "Welcome to Afrigen",
+            "html": get_base_email_html(content)
         })
         print("Welcome email sent!")
     except Exception as e:
@@ -41,29 +116,31 @@ def send_welcome_email(user_email, username):
 
 def send_video_ready_email(user_email, username, original_prompt, video_url):
     try:
+        content = f"""
+        <h2 style="color: #FFFFFF; font-size: 24px; font-weight: 600; margin: 0 0 24px 0; letter-spacing: -0.5px;">Generation complete.</h2>
+        <p style="color: #A1A1AA; font-size: 15px; line-height: 1.6; margin: 0 0 24px 0;">Hi <strong style="color: #FFFFFF;">{username}</strong>, your AI generation has finished successfully based on your prompt:</p>
+        
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 32px;">
+            <tr>
+                <td style="border-left: 2px solid #333333; padding-left: 16px;">
+                    <p style="color: #E4E4E7; font-size: 15px; margin: 0; line-height: 1.6;">{original_prompt}</p>
+                </td>
+            </tr>
+        </table>
+
+        <table border="0" cellspacing="0" cellpadding="0">
+            <tr>
+                <td align="center" style="background-color: #EDEDED; border-radius: 6px;">
+                    <a href="{video_url}" target="_blank" style="display: inline-block; padding: 10px 24px; font-weight: 500; font-size: 14px; color: #000000; text-decoration: none; border-radius: 6px;">View Result</a>
+                </td>
+            </tr>
+        </table>
+        """
         resend.Emails.send({
             "from": FROM_EMAIL,
             "to": user_email,
-            "subject": "Your Afrigen video is ready! 🎬",
-            "html": f"""
-            <div style="font-family: Arial; background: #0D1117;
-                        color: #F0F6FC; padding: 40px; max-width: 600px;">
-                <h1 style="color: #F5A623;">🎬 Your Video Is Ready!</h1>
-                <p>Hi {username}! 👋</p>
-                <p>Your AI video has been generated!</p>
-                <p style="color: #C9D1D9;">
-                    Original idea: <em>"{original_prompt}"</em>
-                </p>
-                <a href="{video_url}"
-                   style="background: #F5A623; color: #0D1117;
-                          padding: 12px 24px; border-radius: 8px;
-                          text-decoration: none; font-weight: bold;">
-                    Watch Your Video 🎬
-                </a>
-                <hr style="border-color: #21262D; margin: 30px 0;">
-                <p style="color: #888;">Africa Creates, AI Generates 🌍</p>
-            </div>
-            """
+            "subject": "Your generation is ready",
+            "html": get_base_email_html(content)
         })
         print("Video ready email sent!")
     except Exception as e:
@@ -72,31 +149,25 @@ def send_video_ready_email(user_email, username, original_prompt, video_url):
 
 def send_credits_low_email(user_email, username, credits_left):
     try:
+        content = f"""
+        <h2 style="color: #FFFFFF; font-size: 24px; font-weight: 600; margin: 0 0 24px 0; letter-spacing: -0.5px;">Action required.</h2>
+        <p style="color: #A1A1AA; font-size: 15px; line-height: 1.6; margin: 0 0 16px 0;">Hi <strong style="color: #FFFFFF;">{username}</strong>,</p>
+        <p style="color: #A1A1AA; font-size: 15px; line-height: 1.6; margin: 0 0 32px 0;">
+            You only have {credits_left} credits remaining in your account. To ensure uninterrupted access to generations, please upgrade to a Pro plan.
+        </p>
+        <table border="0" cellspacing="0" cellpadding="0">
+            <tr>
+                <td align="center" style="background-color: #EDEDED; border-radius: 6px;">
+                    <a href="{BASE_URL}/upgrade" target="_blank" style="display: inline-block; padding: 10px 24px; font-weight: 500; font-size: 14px; color: #000000; text-decoration: none; border-radius: 6px;">View Plans</a>
+                </td>
+            </tr>
+        </table>
+        """
         resend.Emails.send({
             "from": FROM_EMAIL,
             "to": user_email,
-            "subject": f"You have {credits_left} credit left! ⚠️",
-            "html": f"""
-            <div style="font-family: Arial; background: #0D1117;
-                        color: #F0F6FC; padding: 40px; max-width: 600px;">
-                <h1 style="color: #F5A623;">⚠️ Credits Running Low!</h1>
-                <p>Hi {username}! 👋</p>
-                <p style="color: #C9D1D9;">
-                    You only have
-                    <strong style="color: #F5A623;">{credits_left} credit</strong>
-                    remaining!
-                </p>
-                <p>Upgrade to Pro for unlimited video generation!</p>
-                <a href="{BASE_URL}/upgrade"
-                   style="background: #F5A623; color: #0D1117;
-                          padding: 12px 24px; border-radius: 8px;
-                          text-decoration: none; font-weight: bold;">
-                    Upgrade to Pro ⭐
-                </a>
-                <hr style="border-color: #21262D; margin: 30px 0;">
-                <p style="color: #888;">Africa Creates, AI Generates 🌍</p>
-            </div>
-            """
+            "subject": f"Action required: {credits_left} credits remaining",
+            "html": get_base_email_html(content)
         })
         print("Credits low email sent!")
     except Exception as e:
@@ -105,29 +176,25 @@ def send_credits_low_email(user_email, username, credits_left):
 
 def send_credits_exhausted_email(user_email, username):
     try:
+        content = f"""
+        <h2 style="color: #FFFFFF; font-size: 24px; font-weight: 600; margin: 0 0 24px 0; letter-spacing: -0.5px;">Usage limit reached.</h2>
+        <p style="color: #A1A1AA; font-size: 15px; line-height: 1.6; margin: 0 0 16px 0;">Hi {username},</p>
+        <p style="color: #A1A1AA; font-size: 15px; line-height: 1.6; margin: 0 0 32px 0;">
+            You've used all your free credits for this billing cycle. To continue creating, please select a Pro plan.
+        </p>
+        <table border="0" cellspacing="0" cellpadding="0">
+            <tr>
+                <td align="center" style="background-color: #EDEDED; border-radius: 6px;">
+                    <a href="{BASE_URL}/upgrade" target="_blank" style="display: inline-block; padding: 10px 24px; font-weight: 500; font-size: 14px; color: #000000; text-decoration: none; border-radius: 6px;">Upgrade to Pro</a>
+                </td>
+            </tr>
+        </table>
+        """
         resend.Emails.send({
             "from": FROM_EMAIL,
             "to": user_email,
-            "subject": "You've used all your credits! 😔",
-            "html": f"""
-            <div style="font-family: Arial; background: #0D1117;
-                        color: #F0F6FC; padding: 40px; max-width: 600px;">
-                <h1 style="color: #E74C3C;">😔 No Credits Left!</h1>
-                <p>Hi {username}! 👋</p>
-                <p style="color: #C9D1D9;">
-                    You've used all your free credits this month.
-                </p>
-                <p>Upgrade to Pro for unlimited video generation!</p>
-                <a href="{BASE_URL}/upgrade"
-                   style="background: #F5A623; color: #0D1117;
-                          padding: 12px 24px; border-radius: 8px;
-                          text-decoration: none; font-weight: bold;">
-                    Upgrade to Pro ⭐
-                </a>
-                <hr style="border-color: #21262D; margin: 30px 0;">
-                <p style="color: #888;">Africa Creates, AI Generates 🌍</p>
-            </div>
-            """
+            "subject": "Usage limit reached",
+            "html": get_base_email_html(content)
         })
         print("Credits exhausted email sent!")
     except Exception as e:
@@ -136,38 +203,31 @@ def send_credits_exhausted_email(user_email, username):
 
 def send_pro_upgrade_email(user_email, username):
     try:
+        content = f"""
+        <h2 style="color: #FFFFFF; font-size: 24px; font-weight: 600; margin: 0 0 24px 0; letter-spacing: -0.5px;">Welcome to Pro.</h2>
+        <p style="color: #A1A1AA; font-size: 15px; line-height: 1.6; margin: 0 0 24px 0;">Hi <strong style="color: #FFFFFF;">{username}</strong>, your account has been successfully upgraded to the Pro plan. You now have access to:</p>
+        
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 32px;">
+            <tr><td style="padding-bottom: 8px; color: #E4E4E7; font-size: 15px;">— Unlimited video generation</td></tr>
+            <tr><td style="padding-bottom: 8px; color: #E4E4E7; font-size: 15px;">— 100 credits per month</td></tr>
+            <tr><td style="padding-bottom: 8px; color: #E4E4E7; font-size: 15px;">— Image to video capabilities</td></tr>
+            <tr><td style="padding-bottom: 8px; color: #E4E4E7; font-size: 15px;">— AI voiceovers</td></tr>
+            <tr><td style="color: #E4E4E7; font-size: 15px;">— Direct downloads without ads</td></tr>
+        </table>
+
+        <table border="0" cellspacing="0" cellpadding="0">
+            <tr>
+                <td align="center" style="background-color: #EDEDED; border-radius: 6px;">
+                    <a href="{BASE_URL}/dashboard" target="_blank" style="display: inline-block; padding: 10px 24px; font-weight: 500; font-size: 14px; color: #000000; text-decoration: none; border-radius: 6px;">Go to Dashboard</a>
+                </td>
+            </tr>
+        </table>
+        """
         resend.Emails.send({
             "from": FROM_EMAIL,
             "to": user_email,
-            "subject": "You've been upgraded to Afrigen Pro! ⭐",
-            "html": f"""
-            <div style="font-family: Arial; background: #0D1117;
-                        color: #F0F6FC; padding: 40px; max-width: 600px;">
-                <h1 style="color: #F5A623;">⭐ Welcome to Afrigen Pro!</h1>
-                <p>Hi {username}! 👋</p>
-                <p style="color: #C9D1D9;">
-                    Great news! You've been upgraded to
-                    <strong style="color: #F5A623;">Afrigen Pro!</strong>
-                </p>
-                <p>You now have:</p>
-                <ul style="color: #C9D1D9;">
-                    <li>✅ Unlimited video generation</li>
-                    <li>✅ 100 credits per month</li>
-                    <li>✅ Image generation</li>
-                    <li>✅ Image to video</li>
-                    <li>✅ AI voiceover</li>
-                    <li>✅ Direct download (no ads)</li>
-                </ul>
-                <a href="{BASE_URL}/dashboard"
-                   style="background: #F5A623; color: #0D1117;
-                          padding: 12px 24px; border-radius: 8px;
-                          text-decoration: none; font-weight: bold;">
-                    Start Generating! 🚀
-                </a>
-                <hr style="border-color: #21262D; margin: 30px 0;">
-                <p style="color: #888;">Africa Creates, AI Generates 🌍</p>
-            </div>
-            """
+            "subject": "Your account has been upgraded",
+            "html": get_base_email_html(content)
         })
         print("Pro upgrade email sent!")
     except Exception as e:
@@ -208,33 +268,27 @@ def verify_unsub_token(token):
 
 def send_reset_password_email(user_email, username, reset_url):
     try:
+        content = f"""
+        <h2 style="color: #FFFFFF; font-size: 24px; font-weight: 600; margin: 0 0 24px 0; letter-spacing: -0.5px;">Password Reset</h2>
+        <p style="color: #A1A1AA; font-size: 15px; line-height: 1.6; margin: 0 0 24px 0;">
+            A request was made to reset the password for your account. Click the button below to proceed.
+        </p>
+        <table border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 24px;">
+            <tr>
+                <td align="center" style="background-color: #EDEDED; border-radius: 6px;">
+                    <a href="{reset_url}" target="_blank" style="display: inline-block; padding: 10px 24px; font-weight: 500; font-size: 14px; color: #000000; text-decoration: none; border-radius: 6px;">Reset Password</a>
+                </td>
+            </tr>
+        </table>
+        <p style="color: #52525B; font-size: 13px; margin: 0; line-height: 1.6;">
+            This link expires in 1 hour. If you did not make this request, you can safely ignore this email.
+        </p>
+        """
         resend.Emails.send({
             "from": FROM_EMAIL,
             "to": user_email,
-            "subject": "Reset Your Afrigen Password 🔑",
-            "html": f"""
-            <div style="font-family: Arial; background: #0D1117;
-                        color: #F0F6FC; padding: 40px; max-width: 600px;">
-                <h1 style="color: #F5A623;">🔑 Reset Your Password</h1>
-                <p>Hi {username}! 👋</p>
-                <p style="color: #C9D1D9;">
-                    You requested to reset your password.
-                    Click the button below to reset it!
-                </p>
-                <a href="{reset_url}"
-                   style="background: #F5A623; color: #0D1117;
-                          padding: 12px 24px; border-radius: 8px;
-                          text-decoration: none; font-weight: bold;">
-                    Reset Password 🔑
-                </a>
-                <p style="color: #888; margin-top: 20px;">
-                    This link expires in 1 hour!
-                    If you didn't request this, ignore this email.
-                </p>
-                <hr style="border-color: #21262D; margin: 30px 0;">
-                <p style="color: #888;">Africa Creates, AI Generates 🌍</p>
-            </div>
-            """
+            "subject": "Reset your password",
+            "html": get_base_email_html(content)
         })
         print("Reset email sent!")
     except Exception as e:
@@ -243,24 +297,26 @@ def send_reset_password_email(user_email, username, reset_url):
 
 def send_contact_email(name, email, message):
     try:
+        content = f"""
+        <h2 style="color: #FFFFFF; font-size: 20px; font-weight: 600; margin: 0 0 32px 0;">New Contact Message</h2>
+        
+        <p style="color: #A1A1AA; font-size: 13px; margin: 0 0 4px 0; text-transform: uppercase; letter-spacing: 1px;">From</p>
+        <p style="color: #E4E4E7; font-size: 15px; margin: 0 0 24px 0;">{name} &lt;{email}&gt;</p>
+        
+        <p style="color: #A1A1AA; font-size: 13px; margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 1px;">Message</p>
+        <table width="100%" border="0" cellspacing="0" cellpadding="0">
+            <tr>
+                <td style="border-left: 2px solid #333333; padding-left: 16px;">
+                    <p style="color: #E4E4E7; font-size: 15px; line-height: 1.6; margin: 0; white-space: pre-wrap;">{message}</p>
+                </td>
+            </tr>
+        </table>
+        """
         resend.Emails.send({
             "from": FROM_EMAIL,
             "to": "contact@afrigen.com.ng",
-            "subject": f"New Contact from {name} - Afrigen",
-            "html": f"""
-            <div style="font-family: Arial; background: #0D1117;
-                        color: #F0F6FC; padding: 40px; max-width: 600px;">
-                <h1 style="color: #F5A623;">📬 New Contact Message</h1>
-                <p><strong>Name:</strong> {name}</p>
-                <p><strong>Email:</strong> {email}</p>
-                <p><strong>Message:</strong></p>
-                <p style="background: #161B22; padding: 15px; border-radius: 8px;">
-                    {message}
-                </p>
-                <hr style="border-color: #21262D;">
-                <p style="color: #888;">Africa Creates, AI Generates 🌍</p>
-            </div>
-            """
+            "subject": f"Contact: {name}",
+            "html": get_base_email_html(content)
         })
         print("Contact email sent!")
     except Exception as e:
@@ -268,29 +324,26 @@ def send_contact_email(name, email, message):
 
 
 def send_launch_confirmation(user_email, name):
-    """Confirm a pre-launch waitlist signup from the /launch page."""
     try:
+        content = f"""
+        <h2 style="color: #FFFFFF; font-size: 24px; font-weight: 600; margin: 0 0 24px 0; letter-spacing: -0.5px;">You're on the list.</h2>
+        <p style="color: #A1A1AA; font-size: 15px; line-height: 1.6; margin: 0 0 16px 0;">Hi <strong style="color: #FFFFFF;">{name}</strong>,</p>
+        <p style="color: #A1A1AA; font-size: 15px; line-height: 1.6; margin: 0 0 32px 0;">
+            Thank you for joining the Afrigen launch list. We'll notify you the exact moment we go live so you can secure your spot.
+        </p>
+        <table border="0" cellspacing="0" cellpadding="0">
+            <tr>
+                <td align="center" style="background-color: #EDEDED; border-radius: 6px;">
+                    <a href="{BASE_URL}/launch" target="_blank" style="display: inline-block; padding: 10px 24px; font-weight: 500; font-size: 14px; color: #000000; text-decoration: none; border-radius: 6px;">Return to Launch Page</a>
+                </td>
+            </tr>
+        </table>
+        """
         resend.Emails.send({
             "from": FROM_EMAIL,
             "to": user_email,
-            "subject": "You're on the AFRIGEN launch list! 🎬",
-            "html": f"""
-            <div style="font-family: Arial; background: #0D1117;
-                        color: #F0F6FC; padding: 40px; max-width: 600px;">
-                <h1 style="color: #F5A623;">🎬 You're on the list!</h1>
-                <p>Hi {name}! 👋</p>
-                <p>Thanks for joining the AFRIGEN launch list.
-                   We'll email you the moment we go live.</p>
-                <a href="{BASE_URL}/launch"
-                   style="background: #F5A623; color: #0D1117;
-                          padding: 12px 24px; border-radius: 8px;
-                          text-decoration: none; font-weight: bold;">
-                    View Launch Page 🚀
-                </a>
-                <hr style="border-color: #21262D; margin: 30px 0;">
-                <p style="color: #888;">Africa Creates, AI Generates 🌍</p>
-            </div>
-            """
+            "subject": "You're on the list",
+            "html": get_base_email_html(content)
         })
         print("Launch confirmation email sent!")
     except Exception as e:
@@ -298,37 +351,27 @@ def send_launch_confirmation(user_email, name):
 
 
 def send_newsletter(recipients, subject, body, base_url=BASE_URL, is_html=False):
-    """Send a newsletter to the given recipients.
-
-    recipients: iterable of (email, name) tuples.
-    is_html:    True if `body` is already HTML (e.g. the auto-generated digest);
-                False treats `body` as plain text and converts newlines to <br>.
-    Each email gets a per-recipient unsubscribe link.
-    Returns the number of emails successfully sent.
-    """
     html_body = body if is_html else (body or "").replace("\n", "<br>")
     sent = 0
     for email, name in recipients:
         try:
             unsub_url = f"{base_url}/unsubscribe/{generate_unsub_token(email)}"
+            content = f"""
+            <p style="color: #E4E4E7; font-size: 15px; margin: 0 0 24px 0;">Hi <strong style="color: #FFFFFF;">{name or 'there'}</strong>,</p>
+            <div style="color: #A1A1AA; font-size: 15px; line-height: 1.7; margin-bottom: 40px;">
+                {html_body}
+            </div>
+            
+            <p style="color: #52525B; font-size: 13px; margin: 0; line-height: 1.5; padding-top: 32px; border-top: 1px solid #222222;">
+                You're receiving this because you subscribed to updates.<br>
+                <a href="{unsub_url}" style="color: #A1A1AA; text-decoration: underline;">Unsubscribe from this list</a>.
+            </p>
+            """
             resend.Emails.send({
                 "from": FROM_EMAIL,
                 "to": email,
-                "subject": subject or "AFRIGEN Newsletter",
-                "html": f"""
-                <div style="font-family: Arial; background: #0D1117;
-                            color: #F0F6FC; padding: 40px; max-width: 600px;">
-                    <h1 style="color: #F5A623;">AFRIGEN</h1>
-                    <p>Hi {name or 'there'}! 👋</p>
-                    <div style="color: #C9D1D9; line-height: 1.6;">{html_body}</div>
-                    <hr style="border-color: #21262D; margin: 30px 0;">
-                    <p style="color: #888;">Africa Creates, AI Generates 🌍</p>
-                    <p style="color: #555; font-size: 12px;">
-                        You're receiving this because you joined Afrigen.
-                        <a href="{unsub_url}" style="color: #888;">Unsubscribe</a>
-                    </p>
-                </div>
-                """
+                "subject": subject or "Afrigen Update",
+                "html": get_base_email_html(content)
             })
             sent += 1
         except Exception as e:
@@ -337,29 +380,28 @@ def send_newsletter(recipients, subject, body, base_url=BASE_URL, is_html=False)
 
 
 def send_admin_notice(to_email, heading, message, button_url=None, button_text=None):
-    """Small branded internal notice to an admin (e.g. newsletter reminders)."""
     button_html = ""
     if button_url and button_text:
         button_html = f"""
-            <a href="{button_url}"
-               style="background: #F5A623; color: #0D1117; padding: 12px 24px;
-                      border-radius: 8px; text-decoration: none; font-weight: bold;
-                      display: inline-block; margin-top: 12px;">{button_text}</a>"""
+        <table border="0" cellspacing="0" cellpadding="0" style="margin-top: 24px;">
+            <tr>
+                <td align="center" style="background-color: #EDEDED; border-radius: 6px;">
+                    <a href="{button_url}" target="_blank" style="display: inline-block; padding: 8px 20px; font-weight: 500; font-size: 13px; color: #000000; text-decoration: none; border-radius: 6px;">{button_text}</a>
+                </td>
+            </tr>
+        </table>
+        """
     try:
+        content = f"""
+        <h2 style="color: #FFFFFF; font-size: 20px; font-weight: 600; margin: 0 0 16px 0;">{heading}</h2>
+        <p style="color: #A1A1AA; font-size: 15px; line-height: 1.6; margin: 0;">{message}</p>
+        {button_html}
+        """
         resend.Emails.send({
             "from": FROM_EMAIL,
             "to": to_email,
-            "subject": heading,
-            "html": f"""
-            <div style="font-family: Arial; background: #0D1117;
-                        color: #F0F6FC; padding: 40px; max-width: 600px;">
-                <h1 style="color: #F5A623;">{heading}</h1>
-                <p style="color: #C9D1D9; line-height: 1.6;">{message}</p>
-                {button_html}
-                <hr style="border-color: #21262D; margin: 30px 0;">
-                <p style="color: #888;">Africa Creates, AI Generates 🌍</p>
-            </div>
-            """
+            "subject": f"Notice: {heading}",
+            "html": get_base_email_html(content)
         })
         print("Admin notice sent!")
     except Exception as e:
@@ -368,29 +410,32 @@ def send_admin_notice(to_email, heading, message, button_url=None, button_text=N
 
 def send_feedback_email(user_email, rating, feedback_text, feature):
     try:
-        try:
-            stars = '⭐' * int(rating)
-        except (TypeError, ValueError):
-            stars = str(rating or 'N/A')
+        content = f"""
+        <h2 style="color: #FFFFFF; font-size: 20px; font-weight: 600; margin: 0 0 32px 0;">User Feedback</h2>
+        
+        <p style="color: #A1A1AA; font-size: 13px; margin: 0 0 4px 0; text-transform: uppercase; letter-spacing: 1px;">From</p>
+        <p style="color: #E4E4E7; font-size: 15px; margin: 0 0 20px 0;">{user_email}</p>
+        
+        <p style="color: #A1A1AA; font-size: 13px; margin: 0 0 4px 0; text-transform: uppercase; letter-spacing: 1px;">Rating</p>
+        <p style="color: #E4E4E7; font-size: 15px; margin: 0 0 20px 0;">{rating} / 5</p>
+        
+        <p style="color: #A1A1AA; font-size: 13px; margin: 0 0 4px 0; text-transform: uppercase; letter-spacing: 1px;">Feature</p>
+        <p style="color: #E4E4E7; font-size: 15px; margin: 0 0 24px 0;">{feature}</p>
+        
+        <p style="color: #A1A1AA; font-size: 13px; margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 1px;">Feedback</p>
+        <table width="100%" border="0" cellspacing="0" cellpadding="0">
+            <tr>
+                <td style="border-left: 2px solid #333333; padding-left: 16px;">
+                    <p style="color: #E4E4E7; font-size: 15px; line-height: 1.6; margin: 0; white-space: pre-wrap;">{feedback_text}</p>
+                </td>
+            </tr>
+        </table>
+        """
         resend.Emails.send({
             "from": FROM_EMAIL,
             "to": "contact@afrigen.com.ng",
-            "subject": f"New Feedback - {rating}/5 Stars - Afrigen",
-            "html": f"""
-            <div style="font-family: Arial; background: #0D1117;
-                        color: #F0F6FC; padding: 40px; max-width: 600px;">
-                <h1 style="color: #F5A623;">⭐ New Feedback</h1>
-                <p><strong>From:</strong> {user_email}</p>
-                <p><strong>Rating:</strong> {stars}</p>
-                <p><strong>Feature:</strong> {feature}</p>
-                <p><strong>Feedback:</strong></p>
-                <p style="background: #161B22; padding: 15px; border-radius: 8px;">
-                    {feedback_text}
-                </p>
-                <hr style="border-color: #21262D;">
-                <p style="color: #888;">Africa Creates, AI Generates 🌍</p>
-            </div>
-            """
+            "subject": f"Feedback ({rating}/5): {feature}",
+            "html": get_base_email_html(content)
         })
         print("Feedback email sent!")
     except Exception as e:
