@@ -34,14 +34,14 @@ Flask-SQLAlchemy==3.1.1
 Flask-WTF==1.2.2
 fsspec==2026.2.0
 
-google-ai-generativelanguage
-google-api-core
-google-api-python-client
-google-auth
-google-auth-httplib2
-google-auth-oauthlib
-google-generativeai
-googleapis-common-protos
+google-ai-generativelanguage==0.6.15
+google-api-core==2.24.0
+google-api-python-client==2.157.0
+google-auth==2.37.0
+google-auth-httplib2==0.2.0
+google-auth-oauthlib==1.2.1
+google-generativeai==0.8.6
+googleapis-common-protos==1.66.0
 
 greenlet==3.3.2
 grok==6.2
@@ -61,8 +61,8 @@ grokcore.viewlet==5.1
 
 groq==1.1.1
 
-grpcio
-grpcio-status
+grpcio==1.68.1
+grpcio-status==1.68.1
 
 gunicorn==26.0.0
 h11==0.16.0
@@ -98,9 +98,9 @@ persistent==6.5
 pluggy==1.6.0
 prompt-toolkit==3.0.43
 
-proto-plus
+proto-plus==1.25.0
 
-protobuf
+protobuf==5.29.1
 
 psycopg2-binary==2.9.12
 pyasn1==0.6.3
@@ -146,6 +146,7 @@ wcwidth==0.6.0
 websockets==16.0
 Werkzeug==3.1.6
 WTForms==3.2.1
+
 z3c.flashmessage==4.0
 z3c.pt==5.1
 zc.catalog==5.0
@@ -154,6 +155,7 @@ ZConfig==4.3
 zdaemon==5.2.1
 ZODB==6.2
 zodbpickle==4.3
+
 zope.annotation==6.0
 zope.app.appsetup==6.0
 zope.app.publication==6.0
