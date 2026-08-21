@@ -170,7 +170,8 @@ def logout():
 @auth.route('/google')
 def google_login():
     from app import google
-    redirect_uri = url_for('auth.google_callback', _external=True)
+    # Force https scheme in case proxy headers are stripped or mishandled
+    redirect_uri = url_for('auth.google_callback', _external=True, _scheme='https')
     return google.authorize_redirect(redirect_uri)
 
 @auth.route('/google/callback')
