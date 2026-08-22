@@ -10,7 +10,10 @@ from models import db, ProviderHealth, ProviderLog
 class ProviderAdapter(ABC):
     def __init__(self):
         self.name = self.__class__.__name__.replace("Adapter", "")
-        self.is_enabled = True
+
+    @property
+    def is_enabled(self):
+        return True
 
     @abstractmethod
     def generate(self, messages: List[Dict[str, str]], **kwargs) -> str:
@@ -20,16 +23,20 @@ class ProviderAdapter(ABC):
 class GroqAdapter(ProviderAdapter):
     def __init__(self):
         super().__init__()
-        api_key = os.environ.get('GROQ_API_KEY')
-        if not api_key:
-            self.is_enabled = False
-        else:
+        self._client = None
+        
+    @property
+    def is_enabled(self):
+        return bool(os.environ.get('GROQ_API_KEY'))
+
+    def _get_client(self):
+        if not self._client:
             from groq import Groq
-            self.client = Groq(api_key=api_key)
-            self.default_model = os.environ.get('GROQ_MODEL', 'llama-3.3-70b-versatile')
+            self._client = Groq(api_key=os.environ.get('GROQ_API_KEY'))
+        return self._client
 
     def generate(self, messages: List[Dict[str, str]], **kwargs) -> str:
-        model = kwargs.get('model', self.default_model)
+        model = kwargs.get('model') or os.environ.get('GROQ_MODEL') or 'openai/gpt-oss-20b'
         max_tokens = kwargs.get('max_tokens')
         temperature = kwargs.get('temperature', 0.7)
         
@@ -43,26 +50,30 @@ class GroqAdapter(ProviderAdapter):
         if kwargs.get('response_format'):
             args["response_format"] = kwargs['response_format']
             
-        response = self.client.chat.completions.create(**args)
+        response = self._get_client().chat.completions.create(**args)
         return response.choices[0].message.content
 
 
 class OpenRouterAdapter(ProviderAdapter):
     def __init__(self):
         super().__init__()
-        api_key = os.environ.get('OPENROUTER_API_KEY')
-        if not api_key:
-            self.is_enabled = False
-        else:
+        self._client = None
+
+    @property
+    def is_enabled(self):
+        return bool(os.environ.get('OPENROUTER_API_KEY'))
+
+    def _get_client(self):
+        if not self._client:
             from openai import OpenAI
-            self.client = OpenAI(
+            self._client = OpenAI(
                 base_url="https://openrouter.ai/api/v1",
-                api_key=api_key
+                api_key=os.environ.get('OPENROUTER_API_KEY')
             )
-            self.default_model = os.environ.get('OPENROUTER_MODEL', 'meta-llama/llama-3.3-70b-instruct:free')
+        return self._client
 
     def generate(self, messages: List[Dict[str, str]], **kwargs) -> str:
-        model = kwargs.get('model', self.default_model)
+        model = kwargs.get('model', os.environ.get('OPENROUTER_MODEL', 'meta-llama/llama-3.3-70b-instruct:free'))
         max_tokens = kwargs.get('max_tokens')
         temperature = kwargs.get('temperature', 0.7)
         
@@ -76,39 +87,44 @@ class OpenRouterAdapter(ProviderAdapter):
         if kwargs.get('response_format'):
             args["response_format"] = kwargs['response_format']
             
-        response = self.client.chat.completions.create(**args)
+        response = self._get_client().chat.completions.create(**args)
         return response.choices[0].message.content
 
 
 class GeminiAdapter(ProviderAdapter):
     def __init__(self):
         super().__init__()
-        api_key = os.environ.get('GEMINI_API_KEY')
-        if not api_key:
-            self.is_enabled = False
-        else:
-            self.default_model = os.environ.get('GEMINI_MODEL', 'gemini-2.0-flash')
-            self._use_new_sdk = False
-            self._client = None
-            self._types = None
-            self._genai_module = None
+        self._use_new_sdk = False
+        self._client = None
+        self._types = None
+        self._genai_module = None
+        self._initialized = False
 
-            try:
-                from google import genai as google_genai
-                self._client = google_genai.Client(api_key=api_key)
-                self._types = google_genai.types
-                self._use_new_sdk = True
-            except Exception:
-                with warnings.catch_warnings():
-                    warnings.simplefilter("ignore", FutureWarning)
-                    import google.generativeai as genai
-                if hasattr(genai, "configure"):
-                    genai.configure(api_key=api_key)
-                    self._genai_module = genai
-                else:
-                    self.is_enabled = False
+    @property
+    def is_enabled(self):
+        return bool(os.environ.get('GEMINI_API_KEY'))
+
+    def _initialize(self):
+        if self._initialized:
+            return
+            
+        api_key = os.environ.get('GEMINI_API_KEY')
+        try:
+            from google import genai as google_genai
+            self._client = google_genai.Client(api_key=api_key)
+            self._types = google_genai.types
+            self._use_new_sdk = True
+        except Exception:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", FutureWarning)
+                import google.generativeai as genai
+            if hasattr(genai, "configure"):
+                genai.configure(api_key=api_key)
+                self._genai_module = genai
+        self._initialized = True
 
     def generate(self, messages: List[Dict[str, str]], **kwargs) -> str:
+        self._initialize()
         if self._use_new_sdk:
             system_instruction = None
             prompt_parts = []
@@ -123,7 +139,7 @@ class GeminiAdapter(ProviderAdapter):
                     prompt_parts.append(f"Assistant: {content}")
 
             prompt_text = "\n".join(prompt_parts)
-            model_name = kwargs.get('model', self.default_model)
+            model_name = kwargs.get('model', os.environ.get('GEMINI_MODEL', 'gemini-2.0-flash'))
             config_kwargs = {
                 "temperature": kwargs.get('temperature', 0.7),
             }
@@ -161,7 +177,7 @@ class GeminiAdapter(ProviderAdapter):
             elif role == "assistant":
                 gemini_messages.append({"role": "model", "parts": [content]})
 
-        model_name = kwargs.get('model', self.default_model)
+        model_name = kwargs.get('model', os.environ.get('GEMINI_MODEL', 'gemini-2.0-flash'))
 
         generation_config = genai.types.GenerationConfig(
             temperature=kwargs.get('temperature', 0.7)
@@ -196,9 +212,9 @@ class ProviderManager:
             "Prompt Refinement": "Groq",
             "AI Assistant": "Groq",
             "Quick Chat": "Groq",
-            "Blog Writing": "Gemini",
-            "Newsletter": "Gemini",
-            "Long-form Writing": "OpenRouter",
+            "Blog Writing": "Groq",
+            "Newsletter": "Groq",
+            "Long-form Writing": "Groq",
             "Campaign": "Groq",
             "Audio Script": "Groq",
             "Default": "Groq"
@@ -255,16 +271,19 @@ class ProviderManager:
                 
         last_error = None
         fallback_triggered = False
+        skipped_providers = []
         
         for provider_name in attempt_sequence:
             adapter = self.adapters.get(provider_name)
             if not adapter or not adapter.is_enabled:
+                skipped_providers.append(f"{provider_name} (disabled)")
                 continue
                 
             # Check health
             health = self._get_health(provider_name)
-            if health.status == "offline":
-                continue # Skip dead providers
+            if health.status == "offline" and provider_name != primary_provider_name:
+                skipped_providers.append(f"{provider_name} (offline)")
+                continue
                 
             start_time = time.time()
             try:
@@ -287,6 +306,9 @@ class ProviderManager:
                 print(f"[ProviderManager] {provider_name} failed: {error_msg}. Falling back...")
                 
         # If all providers fail
+        if last_error is None:
+            skipped = ", ".join(skipped_providers) or "none"
+            raise Exception(f"All AI providers were unavailable. Skipped: {skipped}")
         raise Exception(f"All AI providers failed. Last error: {last_error}")
 
 provider_manager = ProviderManager()

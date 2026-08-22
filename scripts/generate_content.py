@@ -32,7 +32,11 @@ CROSS_LINK_FOOTER = (
     f"\U0001f4bc LinkedIn: {LINKEDIN_URL}"
 )
 
-MODEL = os.environ.get("BLOG_MODEL", "llama-3.3-70b-versatile")
+MODEL = (
+    os.environ.get("BLOG_MODEL")
+    or os.environ.get("GROQ_MODEL")
+    or "openai/gpt-oss-20b"
+)
 
 _client = None
 

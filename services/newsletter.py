@@ -14,7 +14,11 @@ from services.email import send_newsletter, BASE_URL
 
 
 # Same model the rest of the app uses (Groq). Override with NEWSLETTER_MODEL if desired.
-NEWSLETTER_MODEL = os.environ.get("NEWSLETTER_MODEL", "llama-3.3-70b-versatile")
+NEWSLETTER_MODEL = (
+    os.environ.get("NEWSLETTER_MODEL")
+    or os.environ.get("GROQ_MODEL")
+    or "openai/gpt-oss-20b"
+)
 
 # Ground-truth list of things Afrigen can actually do, fed to the model so the
 # newsletter only ever promotes REAL features (never hallucinated ones). Keep this

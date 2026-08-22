@@ -436,7 +436,11 @@ def seed_blog_posts():
 # weekly newsletter), and reused by scripts/generate_blog_draft.py for manual
 # runs. The model defaults to the same Groq model the rest of the app uses.
 
-BLOG_MODEL = os.environ.get("BLOG_MODEL", "llama-3.3-70b-versatile")
+BLOG_MODEL = (
+    os.environ.get("BLOG_MODEL")
+    or os.environ.get("GROQ_MODEL")
+    or "openai/gpt-oss-20b"
+)
 
 # Fresh headlines give the model concrete, current hooks to write around.
 _NEWS_QUERIES = [
