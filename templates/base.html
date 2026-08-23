@@ -47,8 +47,84 @@ content="Generate campaigns, blogs, social media content, videos, and visuals wi
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <style>
         .navbar-brand { color: var(--accent) !important; }
+        .copilot-launcher {
+            position: fixed;
+            right: 24px;
+            bottom: 24px;
+            z-index: 1040;
+            width: 62px;
+            height: 62px;
+            border: 1px solid rgba(255, 207, 92, 0.7);
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 30%, #FFE49A 0%, #F5A623 42%, #B95718 100%);
+            color: #1A1206;
+            box-shadow: 0 12px 30px rgba(245, 166, 35, 0.3), 0 0 0 6px rgba(245, 166, 35, 0.07);
+            font-size: 21px;
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+        }
+        .copilot-launcher::before {
+            content: "";
+            position: absolute;
+            inset: -7px;
+            border: 1px solid rgba(255, 207, 92, 0.28);
+            border-left-color: transparent;
+            border-radius: 50%;
+            animation: copilot-orbit 7s linear infinite;
+        }
+        .copilot-launcher::after {
+            content: "COPILOT";
+            position: absolute;
+            right: 68px;
+            top: 50%;
+            transform: translate(8px, -50%);
+            padding: 5px 9px;
+            border: 1px solid var(--border-strong);
+            border-radius: 6px;
+            background: var(--elevated);
+            color: var(--accent-2);
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.12em;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+        .copilot-launcher i { position: relative; z-index: 1; }
+        @keyframes copilot-orbit { to { transform: rotate(360deg); } }
+        .copilot-launcher:hover,
+        .copilot-launcher:focus-visible {
+            transform: translateY(-4px) scale(1.06);
+            box-shadow: 0 16px 38px rgba(245, 166, 35, 0.48), 0 0 0 8px rgba(245, 166, 35, 0.1);
+        }
+        .copilot-launcher:hover::after,
+        .copilot-launcher:focus-visible::after {
+            opacity: 1;
+            transform: translate(0, -50%);
+        }
+        .copilot-modal-content {
+            height: min(76vh, 720px);
+            overflow: hidden;
+            background: var(--surface);
+            border: 1px solid var(--border-strong);
+        }
+        .copilot-modal-content .modal-header {
+            background: var(--surface-2);
+            color: var(--text);
+            border-bottom: 1px solid var(--border);
+        }
+        .copilot-frame {
+            display: block;
+            width: 100%;
+            height: calc(min(76vh, 720px) - 58px);
+            border: 0;
+        }
         @media (min-width: 992px) {
             .navbar-toggler { display: none !important; }
+        }
+        @media (max-width: 576px) {
+            .copilot-launcher { right: 16px; bottom: 16px; }
+            .copilot-modal-content { height: 90vh; }
+            .copilot-frame { height: calc(90vh - 58px); }
         }
     </style>
     <!-- Brand Middleware (Sprint 7) -->
@@ -66,28 +142,57 @@ content="Generate campaigns, blogs, social media content, videos, and visuals wi
     {% block og_meta %}{% endblock %}
 </head>
 <body>
+{% if current_user.is_authenticated and not request.args.get('embedded') %}
+<button class="copilot-launcher" type="button" data-bs-toggle="modal" data-bs-target="#copilotModal" aria-label="Open Afrigen AI assistant" title="Open Afrigen AI assistant">
+    <i class="fa-solid fa-wand-magic-sparkles"></i>
+</button>
+<div class="modal fade" id="copilotModal" tabindex="-1" aria-labelledby="copilotModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content copilot-modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="copilotModalTitle"><i class="fa-solid fa-wand-magic-sparkles"></i> Afrigen Creative Copilot</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0">
+                <iframe src="{{ url_for('main.assistant', embedded=1) }}" title="Afrigen AI Assistant" class="copilot-frame"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% if current_user.is_authenticated %}
 <div class="d-flex flex-column flex-lg-row min-vh-100">
+    {% if not request.args.get('embedded') %}
     {% include 'components/auth_sidebar.html' %}
+    {% endif %}
     
     <div class="flex-grow-1 d-flex flex-column" style="min-width: 0;">
 {% else %}
     {% include 'components/public_navbar.html' %}
 {% endif %}
 
-        <div class="container mt-4 flex-grow-1">
+        <div class="container mt-4 flex-grow-1{% if request.args.get('embedded') %} embedded-container{% endif %}">
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
+                    <div class="flash-message-stack" aria-live="polite">
+                        {% for category, message in messages if category in ['danger', 'warning'] %}
+                            <div class="alert {{ 'alert-danger' if category == 'danger' else 'alert-warning' }} alert-dismissible fade show" role="alert">
+                                <strong>{{ 'Error' if category == 'danger' else 'Warning' }}:</strong>
+                                <span class="flash-message-text">{{ message }}</span>
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Dismiss"></button>
+                            </div>
+                        {% endfor %}
+                    </div>
                     <script>
                         document.addEventListener("DOMContentLoaded", function() {
-                            {% for category, message in messages %}
+                            {% for category, message in messages if category not in ['danger', 'warning'] %}
                                 Swal.fire({
                                     icon: '{{ "error" if category == "danger" else "success" if category == "success" else "info" if category == "info" else "warning" }}',
                                     title: '{{ message | replace("'", "\\'") | safe }}',
                                     toast: true,
                                     position: 'top-end',
                                     showConfirmButton: false,
-                                    timer: 3000,
+                                    timer: 5000,
                                     timerProgressBar: true,
                                     background: '#161B22',
                                     color: '#F0F6FC'

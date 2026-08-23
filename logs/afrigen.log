@@ -1088,3 +1088,262 @@
 2026-08-21 22:32:28,058 INFO Afrigen startup!
 2026-08-21 22:33:06,681 INFO All required environment variables are present.
 2026-08-21 22:33:06,686 INFO Afrigen startup!
+2026-08-21 22:37:01,662 INFO All required environment variables are present.
+2026-08-21 22:37:01,662 INFO Afrigen startup!
+2026-08-21 22:39:11,776 INFO All required environment variables are present.
+2026-08-21 22:39:11,777 INFO Afrigen startup!
+2026-08-22 09:56:12,637 INFO All required environment variables are present.
+2026-08-22 09:56:12,640 INFO Afrigen startup!
+2026-08-22 09:56:18,840 INFO All required environment variables are present.
+2026-08-22 09:56:18,840 INFO Afrigen startup!
+2026-08-22 10:14:14,475 INFO All required environment variables are present.
+2026-08-22 10:14:14,476 INFO Afrigen startup!
+2026-08-22 13:30:21,566 ERROR Blog draft generation failed
+Traceback (most recent call last):
+  File "C:\Users\ADEDAMOLA\Desktop\afrigen\routes\main.py", line 1175, in admin_blog_generate
+    draft = run_daily_draft_generation()
+  File "C:\Users\ADEDAMOLA\Desktop\afrigen\services\blog.py", line 646, in run_daily_draft_generation
+    post = _generate_post(titles, headlines)
+  File "C:\Users\ADEDAMOLA\Desktop\afrigen\services\blog.py", line 595, in _generate_post
+    resp_text = provider_manager.generate_text(
+        "Blog Writing",
+    ...<5 lines>...
+        max_tokens=4000,
+    )
+  File "C:\Users\ADEDAMOLA\Desktop\afrigen\services\provider_manager.py", line 290, in generate_text
+    raise Exception(f"All AI providers failed. Last error: {last_error}")
+Exception: All AI providers failed. Last error: None
+2026-08-22 13:31:55,960 INFO All required environment variables are present.
+2026-08-22 13:31:55,961 INFO Afrigen startup!
+2026-08-22 13:32:01,901 INFO All required environment variables are present.
+2026-08-22 13:32:01,901 INFO Afrigen startup!
+2026-08-22 13:34:25,581 INFO All required environment variables are present.
+2026-08-22 13:34:25,586 INFO Afrigen startup!
+2026-08-22 13:36:49,925 INFO All required environment variables are present.
+2026-08-22 13:36:49,926 INFO Afrigen startup!
+2026-08-22 13:36:54,347 INFO All required environment variables are present.
+2026-08-22 13:36:54,348 INFO Afrigen startup!
+2026-08-22 13:51:25,450 INFO All required environment variables are present.
+2026-08-22 13:51:25,450 INFO Afrigen startup!
+2026-08-22 13:52:14,490 INFO All required environment variables are present.
+2026-08-22 13:52:14,491 INFO Afrigen startup!
+2026-08-22 14:01:06,061 INFO All required environment variables are present.
+2026-08-22 14:01:06,062 INFO Afrigen startup!
+2026-08-22 14:06:27,155 INFO All required environment variables are present.
+2026-08-22 14:06:27,155 INFO Afrigen startup!
+2026-08-22 14:13:06,734 INFO All required environment variables are present.
+2026-08-22 14:13:06,734 INFO Afrigen startup!
+2026-08-22 19:47:58,800 INFO All required environment variables are present.
+2026-08-22 19:47:58,801 INFO Afrigen startup!
+2026-08-22 19:48:03,583 INFO All required environment variables are present.
+2026-08-22 19:48:03,584 INFO Afrigen startup!
+2026-08-22 19:49:42,640 INFO All required environment variables are present.
+2026-08-22 19:49:42,641 INFO Afrigen startup!
+2026-08-22 20:18:13,964 INFO All required environment variables are present.
+2026-08-22 20:18:13,964 INFO Afrigen startup!
+2026-08-22 21:04:19,280 INFO All required environment variables are present.
+2026-08-22 21:04:19,281 INFO Afrigen startup!
+2026-08-22 22:24:46,088 INFO All required environment variables are present.
+2026-08-22 22:24:46,090 INFO Afrigen startup!
+2026-08-22 22:24:52,340 INFO All required environment variables are present.
+2026-08-22 22:24:52,344 INFO Afrigen startup!
+2026-08-22 22:26:23,510 INFO All required environment variables are present.
+2026-08-22 22:26:23,546 INFO Afrigen startup!
+2026-08-22 22:34:40,735 INFO All required environment variables are present.
+2026-08-22 22:34:40,735 INFO Afrigen startup!
+2026-08-22 22:59:34,581 INFO All required environment variables are present.
+2026-08-22 22:59:34,582 INFO Afrigen startup!
+2026-08-22 22:59:38,148 INFO All required environment variables are present.
+2026-08-22 22:59:38,148 INFO Afrigen startup!
+2026-08-22 23:45:44,142 INFO All required environment variables are present.
+2026-08-22 23:45:44,144 INFO Afrigen startup!
+2026-08-22 23:45:50,042 INFO All required environment variables are present.
+2026-08-22 23:45:50,068 INFO Afrigen startup!
+2026-08-22 23:46:20,695 INFO All required environment variables are present.
+2026-08-22 23:46:20,742 INFO Afrigen startup!
+2026-08-23 10:58:48,663 INFO All required environment variables are present.
+2026-08-23 10:58:48,665 INFO Afrigen startup!
+2026-08-23 10:58:53,210 INFO All required environment variables are present.
+2026-08-23 10:58:53,211 INFO Afrigen startup!
+2026-08-23 10:59:45,629 INFO All required environment variables are present.
+2026-08-23 10:59:45,652 INFO Afrigen startup!
+2026-08-23 11:52:22,982 INFO All required environment variables are present.
+2026-08-23 11:52:22,983 INFO Afrigen startup!
+2026-08-23 12:46:30,009 INFO All required environment variables are present.
+2026-08-23 12:46:30,012 INFO Afrigen startup!
+2026-08-23 13:01:10,397 INFO All required environment variables are present.
+2026-08-23 13:01:10,398 INFO Afrigen startup!
+2026-08-23 13:01:15,101 INFO All required environment variables are present.
+2026-08-23 13:01:15,101 INFO Afrigen startup!
+2026-08-23 13:04:34,428 INFO All required environment variables are present.
+2026-08-23 13:04:34,429 INFO Afrigen startup!
+2026-08-23 13:19:32,037 INFO All required environment variables are present.
+2026-08-23 13:19:32,037 INFO Afrigen startup!
+2026-08-23 13:19:36,810 INFO All required environment variables are present.
+2026-08-23 13:19:36,810 INFO Afrigen startup!
+2026-08-23 14:11:42,908 INFO All required environment variables are present.
+2026-08-23 14:11:42,909 INFO Afrigen startup!
+2026-08-23 14:17:55,252 INFO All required environment variables are present.
+2026-08-23 14:17:55,252 INFO Afrigen startup!
+2026-08-23 14:25:24,128 INFO All required environment variables are present.
+2026-08-23 14:25:24,129 INFO Afrigen startup!
+2026-08-23 14:26:27,795 INFO All required environment variables are present.
+2026-08-23 14:26:27,796 INFO Afrigen startup!
+2026-08-23 14:40:06,256 INFO All required environment variables are present.
+2026-08-23 14:40:06,256 INFO Afrigen startup!
+2026-08-23 14:42:20,948 INFO All required environment variables are present.
+2026-08-23 14:42:20,948 INFO Afrigen startup!
+2026-08-23 14:45:52,403 INFO All required environment variables are present.
+2026-08-23 14:45:52,403 INFO Afrigen startup!
+2026-08-23 15:01:57,189 INFO All required environment variables are present.
+2026-08-23 15:01:57,190 INFO Afrigen startup!
+2026-08-23 15:03:14,379 INFO All required environment variables are present.
+2026-08-23 15:03:14,380 INFO Afrigen startup!
+2026-08-23 15:05:10,800 INFO All required environment variables are present.
+2026-08-23 15:05:10,800 INFO Afrigen startup!
+2026-08-23 15:06:02,644 INFO All required environment variables are present.
+2026-08-23 15:06:02,645 INFO Afrigen startup!
+2026-08-23 15:06:08,783 INFO All required environment variables are present.
+2026-08-23 15:06:08,783 INFO Afrigen startup!
+2026-08-23 15:12:53,793 INFO All required environment variables are present.
+2026-08-23 15:12:53,795 INFO Afrigen startup!
+2026-08-23 15:12:59,652 INFO All required environment variables are present.
+2026-08-23 15:12:59,653 INFO Afrigen startup!
+2026-08-23 15:26:17,892 INFO All required environment variables are present.
+2026-08-23 15:26:17,892 INFO Afrigen startup!
+2026-08-23 15:27:40,956 INFO All required environment variables are present.
+2026-08-23 15:27:40,956 INFO Afrigen startup!
+2026-08-23 15:34:36,076 INFO All required environment variables are present.
+2026-08-23 15:34:36,077 INFO Afrigen startup!
+2026-08-23 15:43:10,176 INFO All required environment variables are present.
+2026-08-23 15:43:10,177 INFO Afrigen startup!
+2026-08-23 15:43:17,403 INFO All required environment variables are present.
+2026-08-23 15:43:17,404 INFO Afrigen startup!
+2026-08-23 15:43:24,969 INFO All required environment variables are present.
+2026-08-23 15:43:24,969 INFO Afrigen startup!
+2026-08-23 15:43:33,050 INFO All required environment variables are present.
+2026-08-23 15:43:33,050 INFO Afrigen startup!
+2026-08-23 15:44:37,251 WARNING Missing required environment variables: FAL_KEY
+2026-08-23 15:44:37,251 INFO Afrigen startup!
+2026-08-23 15:44:52,013 INFO All required environment variables are present.
+2026-08-23 15:44:52,013 INFO Afrigen startup!
+2026-08-23 15:45:54,034 INFO All required environment variables are present.
+2026-08-23 15:45:54,034 INFO Afrigen startup!
+2026-08-23 16:12:25,190 INFO All required environment variables are present.
+2026-08-23 16:12:25,191 INFO Afrigen startup!
+2026-08-23 16:20:28,387 INFO All required environment variables are present.
+2026-08-23 16:20:28,387 INFO Afrigen startup!
+2026-08-23 16:44:20,626 INFO All required environment variables are present.
+2026-08-23 16:44:20,627 INFO Afrigen startup!
+2026-08-23 16:59:06,232 INFO All required environment variables are present.
+2026-08-23 16:59:06,234 INFO Afrigen startup!
+2026-08-23 17:06:54,131 INFO All required environment variables are present.
+2026-08-23 17:06:54,131 INFO Afrigen startup!
+2026-08-23 17:10:12,531 INFO All required environment variables are present.
+2026-08-23 17:10:12,532 INFO Afrigen startup!
+2026-08-23 17:15:01,845 INFO All required environment variables are present.
+2026-08-23 17:15:01,846 INFO Afrigen startup!
+2026-08-23 17:15:45,156 INFO All required environment variables are present.
+2026-08-23 17:15:45,156 INFO Afrigen startup!
+2026-08-23 17:28:58,671 INFO All required environment variables are present.
+2026-08-23 17:28:58,671 INFO Afrigen startup!
+2026-08-23 17:29:10,805 INFO All required environment variables are present.
+2026-08-23 17:29:10,805 INFO Afrigen startup!
+2026-08-23 17:36:08,913 INFO All required environment variables are present.
+2026-08-23 17:36:08,914 INFO Afrigen startup!
+2026-08-23 17:41:46,168 INFO All required environment variables are present.
+2026-08-23 17:41:46,169 INFO Afrigen startup!
+2026-08-23 17:41:49,076 INFO All required environment variables are present.
+2026-08-23 17:41:49,077 INFO Afrigen startup!
+2026-08-23 17:46:25,228 INFO All required environment variables are present.
+2026-08-23 17:46:25,229 INFO Afrigen startup!
+2026-08-23 17:52:47,438 INFO All required environment variables are present.
+2026-08-23 17:52:47,438 INFO Afrigen startup!
+2026-08-23 18:14:07,387 INFO All required environment variables are present.
+2026-08-23 18:14:07,388 INFO Afrigen startup!
+2026-08-23 18:17:03,282 INFO All required environment variables are present.
+2026-08-23 18:17:03,282 INFO Afrigen startup!
+2026-08-23 18:25:41,983 INFO All required environment variables are present.
+2026-08-23 18:25:41,983 INFO Afrigen startup!
+2026-08-23 18:27:45,339 INFO All required environment variables are present.
+2026-08-23 18:27:45,339 INFO Afrigen startup!
+2026-08-23 18:30:18,772 INFO All required environment variables are present.
+2026-08-23 18:30:18,772 INFO Afrigen startup!
+2026-08-23 18:31:08,417 INFO All required environment variables are present.
+2026-08-23 18:31:08,418 INFO Afrigen startup!
+2026-08-23 18:33:47,826 INFO All required environment variables are present.
+2026-08-23 18:33:47,826 INFO Afrigen startup!
+2026-08-23 18:33:54,845 INFO All required environment variables are present.
+2026-08-23 18:33:54,845 INFO Afrigen startup!
+2026-08-23 18:38:53,959 INFO All required environment variables are present.
+2026-08-23 18:38:53,959 INFO Afrigen startup!
+2026-08-23 18:40:19,881 INFO All required environment variables are present.
+2026-08-23 18:40:19,881 INFO Afrigen startup!
+2026-08-23 18:40:24,567 INFO All required environment variables are present.
+2026-08-23 18:40:24,568 INFO Afrigen startup!
+2026-08-23 18:46:10,004 INFO All required environment variables are present.
+2026-08-23 18:46:10,004 INFO Afrigen startup!
+2026-08-23 18:47:40,691 INFO All required environment variables are present.
+2026-08-23 18:47:40,691 INFO Afrigen startup!
+2026-08-23 18:48:25,288 INFO All required environment variables are present.
+2026-08-23 18:48:25,288 INFO Afrigen startup!
+2026-08-23 18:48:28,595 INFO All required environment variables are present.
+2026-08-23 18:48:28,595 INFO Afrigen startup!
+2026-08-23 18:52:05,445 INFO All required environment variables are present.
+2026-08-23 18:52:05,446 INFO Afrigen startup!
+2026-08-23 18:52:10,701 INFO All required environment variables are present.
+2026-08-23 18:52:10,701 INFO Afrigen startup!
+2026-08-23 19:06:15,320 INFO All required environment variables are present.
+2026-08-23 19:06:15,320 INFO Afrigen startup!
+2026-08-23 19:08:45,483 INFO All required environment variables are present.
+2026-08-23 19:08:45,484 INFO Afrigen startup!
+2026-08-23 19:20:53,868 INFO All required environment variables are present.
+2026-08-23 19:20:53,879 INFO Afrigen startup!
+2026-08-23 19:23:24,812 INFO All required environment variables are present.
+2026-08-23 19:23:24,813 INFO Afrigen startup!
+2026-08-23 19:26:09,602 INFO All required environment variables are present.
+2026-08-23 19:26:09,604 INFO Afrigen startup!
+2026-08-23 19:38:28,443 INFO All required environment variables are present.
+2026-08-23 19:38:28,444 INFO Afrigen startup!
+2026-08-23 19:41:21,879 INFO All required environment variables are present.
+2026-08-23 19:41:21,884 INFO Afrigen startup!
+2026-08-23 19:42:31,403 INFO All required environment variables are present.
+2026-08-23 19:42:31,403 INFO Afrigen startup!
+2026-08-23 19:43:12,280 INFO All required environment variables are present.
+2026-08-23 19:43:12,281 INFO Afrigen startup!
+2026-08-23 20:30:08,452 INFO All required environment variables are present.
+2026-08-23 20:30:08,455 INFO Afrigen startup!
+2026-08-23 20:42:33,647 INFO All required environment variables are present.
+2026-08-23 20:42:33,648 INFO Afrigen startup!
+2026-08-23 20:51:24,649 INFO All required environment variables are present.
+2026-08-23 20:51:24,650 INFO Afrigen startup!
+2026-08-23 21:23:52,681 INFO All required environment variables are present.
+2026-08-23 21:23:52,682 INFO Afrigen startup!
+2026-08-23 21:24:00,740 INFO All required environment variables are present.
+2026-08-23 21:24:00,741 INFO Afrigen startup!
+2026-08-23 21:38:36,866 INFO All required environment variables are present.
+2026-08-23 21:38:36,868 INFO Afrigen startup!
+2026-08-23 21:38:52,129 INFO All required environment variables are present.
+2026-08-23 21:38:52,130 INFO Afrigen startup!
+2026-08-23 21:51:40,423 INFO All required environment variables are present.
+2026-08-23 21:51:40,432 INFO Afrigen startup!
+2026-08-23 21:57:13,272 INFO All required environment variables are present.
+2026-08-23 21:57:13,273 INFO Afrigen startup!
+2026-08-23 22:09:16,871 INFO All required environment variables are present.
+2026-08-23 22:09:16,872 INFO Afrigen startup!
+2026-08-23 22:09:42,737 INFO All required environment variables are present.
+2026-08-23 22:09:42,737 INFO Afrigen startup!
+2026-08-23 22:15:35,155 INFO All required environment variables are present.
+2026-08-23 22:15:35,155 INFO Afrigen startup!
+2026-08-23 22:20:31,428 INFO All required environment variables are present.
+2026-08-23 22:20:31,428 INFO Afrigen startup!
+2026-08-23 22:22:19,213 INFO All required environment variables are present.
+2026-08-23 22:22:19,274 INFO Afrigen startup!
+2026-08-23 22:49:42,172 INFO All required environment variables are present.
+2026-08-23 22:49:42,174 INFO Afrigen startup!
+2026-08-23 23:09:55,528 INFO All required environment variables are present.
+2026-08-23 23:09:55,575 INFO Afrigen startup!
+2026-08-23 23:10:15,236 INFO All required environment variables are present.
+2026-08-23 23:10:15,237 INFO Afrigen startup!
+2026-08-24 00:19:44,569 INFO All required environment variables are present.
+2026-08-24 00:19:44,705 INFO Afrigen startup!

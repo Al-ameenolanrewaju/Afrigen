@@ -562,10 +562,8 @@ _GENERATORS = {
     "telegram": telegram_prompt,
     "linkedin": linkedin_post,
     "devto": devto_article,
-    "hashnode": hashnode_article,
     "pinterest": pinterest_pin,
     # --- disabled (not in ACTIVE_PLATFORMS) ---
-    "twitter": twitter_thread,
     "facebook": facebook_post,
     "instagram": instagram_caption,
     "medium": medium_article,

@@ -50,6 +50,7 @@ def save_workflow(workflow_data):
         workflow_data['id'] = "wf_" + str(uuid.uuid4())[:8]
         workflow_data['created_at'] = datetime.datetime.now(datetime.timezone.utc).isoformat()
         
+    _ensure_campaign_brand_on_workflow(workflow_data)
     workflows = data.get("workflows", [])
     
     # Update if exists
@@ -62,8 +63,6 @@ def save_workflow(workflow_data):
     data["workflows"] = workflows
     with open(DATA_FILE, 'w') as f:
         json.dump(data, f, indent=4)
-    # Enrich with campaign/brand context if available
-    _ensure_campaign_brand_on_workflow(workflow_data)
     return workflow_data
 
 def delete_workflow(workflow_id):
@@ -350,6 +349,7 @@ def _asset_type_for_node(node_type):
         "generate_voice": "voice",
         "ai_assistant": "assistant",
         "prompt_refinement": "prompt_refinement",
+        "publish_social": "publish_result",
     }.get(normalized, normalized)
 
 
@@ -381,6 +381,11 @@ def _provider_for_node(node_type):
 
 def _build_asset_payload(node_type, result):
     normalized = _normalize_node_type(node_type)
+    if normalized == "publish_social":
+        return {
+            "type": "publish_result",
+            "content": result,
+        }
     if normalized == "generate_blog":
         if isinstance(result, dict):
             return {
@@ -428,9 +433,74 @@ def _build_asset_payload(node_type, result):
     return None
 
 
-def _run_node(node, workflow_id: str, run_id: str, node_index: int, user_id: int | None = None, workflow: Dict[str, Any] | None = None):
+def _publish_automation_asset(user_id, provider, action, scheduled_for, asset, title):
+    """Publish the most recent generated asset from a workflow node."""
+    if not user_id or not provider:
+        raise ValueError("Publish node requires a provider and user")
+    if not asset or not asset.get("url"):
+        raise ValueError("Publish node requires a generated asset from a previous node")
+
+    from models import db, ConnectedAccount, PublishingRetryQueue, UserContent
+    account = ConnectedAccount.query.filter_by(
+        user_id=user_id, provider=provider, status="connected"
+    ).first()
+    if not account:
+        raise ValueError(f"{provider} is not connected")
+
+    content = UserContent(
+        user_id=user_id,
+        content_type=asset.get("type", "video"),
+        title=title[:300],
+        body="",
+        file_url=asset["url"],
+        status="draft",
+        source="automation_publish",
+    )
+    db.session.add(content)
+    db.session.flush()
+
+    if action == "schedule":
+        try:
+            next_attempt = datetime.datetime.fromisoformat(scheduled_for.replace("Z", "+00:00"))
+        except (AttributeError, ValueError):
+            raise ValueError("Scheduled publishing requires a valid scheduled_for value")
+        if next_attempt.tzinfo is None:
+            next_attempt = next_attempt.replace(tzinfo=datetime.timezone.utc)
+        if next_attempt <= datetime.datetime.now(datetime.timezone.utc):
+            raise ValueError("Scheduled publishing time must be in the future")
+        db.session.add(PublishingRetryQueue(
+            user_id=user_id,
+            content_id=content.id,
+            provider=provider,
+            status="pending",
+            next_attempt=next_attempt,
+        ))
+        db.session.commit()
+        return {"ok": True, "scheduled": True, "status": "pending"}
+
+    from services.connected_accounts.provider_registry import get_adapter
+    result = get_adapter(provider).publish(user_id, content, {})
+    if result.get("ok"):
+        content.status = "published"
+        content.published_to = provider
+        content.published_at = datetime.datetime.now(datetime.timezone.utc)
+    db.session.commit()
+    return result
+
+
+def _run_node(node, workflow_id: str, run_id: str, node_index: int, user_id: int | None = None, workflow: Dict[str, Any] | None = None, runtime_context: Dict[str, Any] | None = None):
     node_type = _normalize_node_type(node.get('type'))
     prompt = node.get('prompt') or node.get('text') or ''
+    runtime_context = runtime_context or {}
+    context_parts = []
+    if (workflow or {}).get('brand'):
+        brand = workflow['brand']
+        context_parts.append(f"Brand: {brand.get('name', '')}; colors: {brand.get('primary_color', '')}, {brand.get('secondary_color', '')}.")
+    if (workflow or {}).get('campaign'):
+        campaign = workflow['campaign']
+        context_parts.append(f"Campaign: {campaign.get('title', '')}; goal: {campaign.get('goal', '')}.")
+    if context_parts and node_type in {'generate_video', 'generate_image', 'generate_blog', 'generate_newsletter'}:
+        prompt = f"{prompt}\n\nContext: {' '.join(context_parts)}"
     provider = _provider_for_node(node_type)
     start_time = time.time()
     last_error = None
@@ -450,6 +520,15 @@ def _run_node(node, workflow_id: str, run_id: str, node_index: int, user_id: int
                     result = video_service.generate_image(prompt, style=node.get('style', 'african'))
                 elif node_type == 'generate_video':
                     result = video_service.generate_video(prompt, style=node.get('style', 'cinematic'))
+                elif node_type == 'publish_social':
+                    result = _publish_automation_asset(
+                        user_id=user_id,
+                        provider=node.get('provider'),
+                        action=node.get('action', 'publish_now'),
+                        scheduled_for=node.get('scheduled_for'),
+                        asset=runtime_context.get('last_asset'),
+                        title=node.get('label', 'Automation content'),
+                    )
                 elif node_type == 'generate_voice':
                     result = audio_service.generate_voiceover(prompt)
                 elif node_type == 'ai_assistant':
@@ -483,6 +562,9 @@ def _run_node(node, workflow_id: str, run_id: str, node_index: int, user_id: int
                 if asset_record:
                     asset["asset_id"] = asset_record.get("id")
                     asset["storage"] = asset_record.get("storage")
+
+                if asset and asset.get("url"):
+                    runtime_context["last_asset"] = asset
     
                 user_content = _persist_user_content(user_id, workflow_id, run_id, node, provider, asset, prompt, result)
                 if user_content:
@@ -539,8 +621,9 @@ def execute_workflow_sync(workflow_id, user_id: int | None = None):
     }
 
     try:
+        runtime_context = {}
         for index, node in enumerate(nodes):
-            node_record = _run_node(node, workflow_id=workflow_id, run_id=log_id, node_index=index, user_id=user_id, workflow=workflow)
+            node_record = _run_node(node, workflow_id=workflow_id, run_id=log_id, node_index=index, user_id=user_id, workflow=workflow, runtime_context=runtime_context)
             print(f"[automation] node_record {index} success={node_record.get('success')} asset_present={node_record.get('asset') is not None}")
             log['nodes_executed'].append(node_record)
             log['credits_used'] += node_record.get('credits_consumed', 0)

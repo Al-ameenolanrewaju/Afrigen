@@ -236,6 +236,8 @@ class TelegramUser(db.Model):
 
     username = db.Column(db.String(80), nullable=True)
     first_name = db.Column(db.String(80), nullable=True)
+    chat_id = db.Column(db.String(80), nullable=True)
+    chat_title = db.Column(db.String(255), nullable=True)
 
     prompts_refined = db.Column(db.Integer, default=0)
 

@@ -227,6 +227,21 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         with flask_app.app_context():
             existing = _get_telegram_user(user.id)
+            chat = update.effective_chat
+            payload = context.args[0].upper() if context.args else ""
+            if payload and chat and chat.type in ("group", "supergroup"):
+                account = User.query.filter_by(telegram_link_code=payload).first()
+                if account:
+                    if not existing:
+                        existing = TelegramUser(telegram_id=str(user.id))
+                        db.session.add(existing)
+                    existing.user_id = account.id
+                    existing.chat_id = str(chat.id)
+                    existing.chat_title = chat.title or "Telegram group"
+                    account.telegram_link_code = None
+                    db.session.commit()
+                    await update.message.reply_text("Afrigen is connected to this group.")
+                    return
             if not existing:
                 db.session.add(TelegramUser(
                     telegram_id=str(user.id),

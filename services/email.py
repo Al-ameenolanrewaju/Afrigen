@@ -143,8 +143,13 @@ def send_video_ready_email(user_email, username, original_prompt, video_url):
             "html": get_base_email_html(content)
         })
         print("Video ready email sent!")
+        return True
     except Exception as e:
-        print(f"Email error: {e}")
+        print(
+            f"EMAIL type=video_ready status=failed recipient={user_email!r} "
+            f"resend_api_key_configured={bool(os.environ.get('RESEND_API_KEY'))} error={e}"
+        )
+        return False
 
 
 def send_credits_low_email(user_email, username, credits_left):

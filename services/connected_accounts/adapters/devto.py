@@ -12,19 +12,25 @@ class DevtoAdapter(BaseProviderAdapter):
     def connect(self, user_id: int, **kwargs) -> Dict[str, Any]:
         token = kwargs.get("token")
         if not token:
-            return {"ok": False, "error": "Missing API key"}
-            
-        # Test connection
-        resp = requests.get("https://dev.to/api/users/me", headers={"api-key": token}, timeout=15)
-        if resp.status_code == 200:
-            user_data = resp.json()
+            return {"ok": False, "error": "Missing Dev.to API key"}
+
+        try:
+            response = requests.get(
+                "https://dev.to/api/users/me",
+                headers={"api-key": token},
+                timeout=15,
+            )
+            if response.status_code != 200:
+                return {"ok": False, "error": f"Invalid Dev.to API key: {response.text}"}
+            user_data = response.json()
             return {
                 "ok": True,
                 "token": token,
-                "account_name": user_data.get("username", "Dev.to User")
+                "account_identifier": user_data.get("username"),
+                "account_name": user_data.get("username", "Dev.to User"),
             }
-        else:
-            return {"ok": False, "error": f"Invalid API key: {resp.text}"}
+        except requests.RequestException as exc:
+            return {"ok": False, "error": str(exc)}
         
     def disconnect(self, user_id: int) -> Dict[str, Any]:
         return {"ok": True}

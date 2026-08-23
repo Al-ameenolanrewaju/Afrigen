@@ -24,7 +24,8 @@ from services.credits import (
 from services.audio import generate_voiceover, generate_video_script
 import os
 import secrets
-from datetime import date
+import uuid
+from datetime import date, datetime, timezone
 from functools import wraps
 from werkzeug.utils import secure_filename
 
@@ -133,7 +134,9 @@ def dashboard():
     ).order_by(Generation.created_at.desc()).limit(4).all()
     
     # Telegram linking status + bot handle for the "Connect Telegram" card.
-    telegram_linked = TelegramUser.query.filter_by(user_id=current_user.id).first() is not None
+    telegram_linked = TelegramUser.query.filter_by(user_id=current_user.id).filter(
+        TelegramUser.chat_id.isnot(None)
+    ).first() is not None
     telegram_bot_username = os.environ.get('TELEGRAM_BOT_USERNAME', '')
     return render_template(
         "main/dashboard.html",
@@ -152,10 +155,12 @@ def telegram_connect_code():
     code = secrets.token_hex(3).upper()  # 6 hex chars, e.g. "A3F9C1"
     current_user.telegram_link_code = code
     db.session.commit()
+    bot_username = (os.environ.get('TELEGRAM_BOT_USERNAME', 'AfrigenBot') or 'AfrigenBot').lstrip('@')
     return jsonify({
         "success": True,
         "code": code,
-        "bot_username": os.environ.get('TELEGRAM_BOT_USERNAME', ''),
+        "bot_username": bot_username,
+        "start_url": f"https://t.me/{bot_username}?startgroup={code}",
     })
 
 
@@ -163,18 +168,21 @@ def telegram_connect_code():
 @login_required
 def telegram_link_status():
     """Poll target so the dashboard can confirm a successful bind in real time."""
-    tg = TelegramUser.query.filter_by(user_id=current_user.id).first()
+    tg = TelegramUser.query.filter_by(user_id=current_user.id).filter(
+        TelegramUser.chat_id.isnot(None)
+    ).first()
     return jsonify({
         "success": True,
         "linked": tg is not None,
         "telegram_username": tg.username if tg else None,
-        "telegram_name": (tg.first_name if tg else None),
+        "telegram_name": (tg.chat_title or tg.first_name if tg else None),
     })
 
 
 @main.route('/generate', methods=['POST'])
 @login_required
 def generate():
+    request_id = uuid.uuid4().hex
     prompt = request.form.get('prompt')
     style = request.form.get('style', 'cinematic')
     action = request.form.get('action', 'generate')
@@ -212,10 +220,17 @@ def generate():
 
         webhook_url = url_for('main.fal_webhook', _external=True)
         video_cost = text_to_video_cost(style, extended=extended, duration=duration)
-        result = generate_video_async(refined, style, aspect_ratio, webhook_url=webhook_url, extended=extended, duration=duration)
+        print(f"GENERATION request_id={request_id} status=refined original_prompt={prompt!r} refined_prompt={refined!r}")
+        result = generate_video_async(
+            refined, style, aspect_ratio, webhook_url=webhook_url,
+            extended=extended, duration=duration, request_id=request_id,
+            original_prompt=prompt,
+        )
 
         if not result["success"]:
             raise Exception(result["error"])
+
+        print(f"GENERATION request_id={request_id} status=submitted fal_request_id={result['request_id']}")
 
         wants_voiceover = (add_voiceover == '1' and current_user.plan == 'pro')
         generation = Generation(
@@ -244,7 +259,8 @@ def generate():
 
     except Exception as e:
         db.session.rollback()
-        print("VIDEO GENERATION ERROR:", str(e))
+        error_detail = str(e) or "Unknown video generation error"
+        print("VIDEO GENERATION ERROR:", error_detail)
         generation = Generation(
             user_id=current_user.id,
             original_prompt=prompt,
@@ -254,30 +270,31 @@ def generate():
         )
         db.session.add(generation)
         db.session.commit()
-        return jsonify({"success": False, "error": "Video generation failed. Please try again."})
+        flash(f"Video generation failed: {error_detail}", "danger")
+        return jsonify({"success": False, "error": error_detail})
 
 @main.route('/connected-accounts')
 @login_required
 def connected_accounts():
-    from models import ConnectedAccount
+    from models import ConnectedAccount, TelegramUser
     accounts = ConnectedAccount.query.filter_by(user_id=current_user.id).all()
     connected_map = {acc.provider: acc for acc in accounts if acc.status == 'connected'}
+    telegram_linked = TelegramUser.query.filter_by(user_id=current_user.id).filter(
+        TelegramUser.chat_id.isnot(None)
+    ).first() is not None
     
     # Official providers
     supported_providers = [
         {"id": "facebook", "name": "Facebook Pages", "icon": "bi-facebook"},
         {"id": "instagram", "name": "Instagram Business", "icon": "bi-instagram"},
         {"id": "linkedin", "name": "LinkedIn", "icon": "bi-linkedin"},
-        {"id": "x", "name": "X (Twitter)", "icon": "bi-twitter-x"},
         {"id": "telegram", "name": "Telegram", "icon": "bi-telegram"},
         {"id": "tiktok", "name": "TikTok", "icon": "bi-tiktok"},
         {"id": "pinterest", "name": "Pinterest", "icon": "bi-pinterest"},
         {"id": "youtube", "name": "YouTube", "icon": "bi-youtube"},
         {"id": "wordpress", "name": "WordPress", "icon": "bi-wordpress"},
-        {"id": "ghost", "name": "Ghost", "icon": "bi-ghost"},
         {"id": "medium", "name": "Medium", "icon": "bi-medium"},
         {"id": "devto", "name": "Dev.to", "icon": "bi-code-square"},
-        {"id": "hashnode", "name": "Hashnode", "icon": "bi-hash"},
     ]
     
     coming_soon = []
@@ -285,7 +302,8 @@ def connected_accounts():
     return render_template("main/connected_accounts.html", 
                            supported_providers=supported_providers, 
                            coming_soon=coming_soon, 
-                           connected_map=connected_map)
+                           connected_map=connected_map,
+                           telegram_linked=telegram_linked)
 
 @main.route('/connected-accounts/<provider>/connect', methods=['GET', 'POST'])
 @login_required
@@ -596,6 +614,82 @@ def generate_image():
         db.session.rollback()
         print("IMAGE GENERATION ERROR:", str(e))
         return jsonify({"success": False, "error": "Image generation failed. Please try again."})
+
+
+@main.route('/generation/<int:generation_id>/retry', methods=['POST'])
+@login_required
+def retry_generation(generation_id):
+    generation = Generation.query.filter_by(
+        id=generation_id, user_id=current_user.id
+    ).first_or_404()
+
+    if generation.generation_type == 'image':
+        return generate_image_from_retry(generation)
+    return generate_video_from_retry(generation)
+
+
+def generate_image_from_retry(generation):
+    from services.credits import image_gate
+    ok, error = image_gate(current_user)
+    if not ok:
+        flash(error, 'danger')
+        return redirect(url_for('main.history'))
+    try:
+        style = 'realistic'
+        result = generate_ai_image(generation.refined_prompt, style, '1:1')
+        image_url = result.get('image_url') if result.get('success') else None
+        generation.image_url = image_url
+        generation.video_url = None
+        generation.status = 'completed' if image_url else 'failed'
+        if image_url:
+            charge_image(current_user)
+        db.session.commit()
+    except Exception as exc:
+        db.session.rollback()
+        print('IMAGE RETRY ERROR:', str(exc))
+        generation.status = 'failed'
+        generation.image_url = None
+        generation.video_url = None
+        db.session.commit()
+    return redirect(url_for('main.history'))
+
+
+def generate_video_from_retry(generation):
+    request_id = uuid.uuid4().hex
+    style = 'cinematic'
+    duration = '5'
+    extended = False
+    ok, error, _ = video_gate(current_user, style, extended=extended, duration=duration)
+    if not ok:
+        flash(error, 'danger')
+        return redirect(url_for('main.history'))
+    try:
+        model_name, _ = _build_t2v_request(generation.original_prompt, style, '16:9', extended, duration=duration)
+        refined = refine_prompt(generation.original_prompt, style, model_name=model_name, duration=duration)
+        result = generate_video_async(
+            refined, style, '16:9',
+            webhook_url=url_for('main.fal_webhook', _external=True),
+            extended=extended, duration=duration, request_id=request_id,
+            original_prompt=generation.original_prompt,
+        )
+        status = 'processing' if result.get('success') else 'failed'
+        generation.refined_prompt = refined
+        generation.video_url = None
+        generation.image_url = None
+        generation.status = status
+        generation.credit_cost = text_to_video_cost(style, extended=extended, duration=duration)
+        generation.fal_request_id = result.get('request_id')
+        if current_user.plan == 'free' and status == 'processing':
+            current_user.monthly_videos_used += 1
+        db.session.commit()
+    except Exception as exc:
+        db.session.rollback()
+        print('VIDEO RETRY ERROR:', str(exc))
+        generation.status = 'failed'
+        generation.video_url = None
+        generation.fal_request_id = None
+        db.session.commit()
+    return redirect(url_for('main.history'))
 
 
 @main.app_template_global('share_url_for')
@@ -1770,7 +1864,7 @@ def payment_webhook():
 @main.route('/fal/webhook', methods=['POST'])
 def fal_webhook():
     data = request.get_json()
-    print("FAL WEBHOOK RECEIVED:", data)
+    print(f"FAL WEBHOOK RECEIVED webhook_request_id={data.get('request_id') if data else None} status={data.get('status') if data else None}")
 
     request_id = data.get('request_id')
     if not request_id:
@@ -1778,11 +1872,13 @@ def fal_webhook():
 
     generation = Generation.query.filter_by(fal_request_id=request_id).first()
     if not generation:
+        print(f"GENERATION webhook_request_id={request_id} status=unknown_generation")
         return '', 404
 
     if data.get('status') == 'ERROR':
         generation.status = 'failed'
         db.session.commit()
+        print(f"GENERATION webhook_request_id={request_id} status=failed")
         return '', 200
 
     video_url = None
@@ -1798,6 +1894,7 @@ def fal_webhook():
 
         generation.video_url = video_url
         generation.status = 'completed'
+        print(f"GENERATION webhook_request_id={request_id} status=completed")
 
         # Deduct credits only on success
         user = User.query.get(generation.user_id)
@@ -1851,10 +1948,13 @@ def fal_webhook():
         # out promptly.
         try:
             from services.email import send_video_ready_email
-            send_video_ready_email(user.email, user.username,
-                                   generation.original_prompt, generation.video_url)
+            email_sent = send_video_ready_email(
+                user.email, user.username,
+                generation.original_prompt, generation.video_url
+            )
+            print(f"EMAIL webhook_request_id={request_id} type=video_ready status={'sent' if email_sent else 'failed'}")
         except Exception as e:
-            print(f"Email error: {e}")
+            print(f"EMAIL webhook_request_id={request_id} type=video_ready status=error error={e}")
     else:
         generation.status = 'failed'
         db.session.commit()
@@ -1962,6 +2062,86 @@ def automation_run_details(log_id):
 @login_required
 def assistant():
     return render_template('main/assistant.html')
+
+@main.route('/api/publishing/accounts', methods=['GET'])
+@login_required
+def publishing_accounts():
+    from models import ConnectedAccount
+    accounts = ConnectedAccount.query.filter_by(
+        user_id=current_user.id, status='connected'
+    ).order_by(ConnectedAccount.provider).all()
+    return jsonify({
+        'accounts': [
+            {'provider': account.provider, 'name': account.account_name or account.provider.title()}
+            for account in accounts
+        ]
+    })
+
+@main.route('/api/publishing/publish', methods=['POST'])
+@login_required
+def publish_generated_content():
+    from models import ConnectedAccount, PublishingRetryQueue, UserContent
+
+    data = request.get_json(silent=True) or {}
+    provider = (data.get('provider') or '').strip().lower()
+    media_url = (data.get('media_url') or '').strip()
+    if not provider or not media_url:
+        return jsonify({'ok': False, 'error': 'A provider and media URL are required.'}), 400
+
+    account = ConnectedAccount.query.filter_by(
+        user_id=current_user.id, provider=provider, status='connected'
+    ).first()
+    if not account:
+        return jsonify({'ok': False, 'error': 'That account is not connected.'}), 404
+
+    content = UserContent(
+        user_id=current_user.id,
+        content_type=data.get('media_type') or 'video',
+        title=(data.get('title') or 'Created with Afrigen')[:300],
+        body=data.get('text') or '',
+        file_url=media_url,
+        status='draft',
+        source='manual_publish',
+    )
+    db.session.add(content)
+    db.session.flush()
+
+    action = data.get('action', 'publish_now')
+    if action == 'schedule':
+        scheduled_for = data.get('scheduled_for')
+        try:
+            next_attempt = datetime.fromisoformat(scheduled_for.replace('Z', '+00:00'))
+            if next_attempt.tzinfo is None:
+                next_attempt = next_attempt.replace(tzinfo=timezone.utc)
+        except (AttributeError, ValueError):
+            db.session.rollback()
+            return jsonify({'ok': False, 'error': 'Choose a valid schedule time.'}), 400
+        if next_attempt <= datetime.now(timezone.utc):
+            db.session.rollback()
+            return jsonify({'ok': False, 'error': 'Schedule time must be in the future.'}), 400
+
+        db.session.add(PublishingRetryQueue(
+            user_id=current_user.id,
+            content_id=content.id,
+            provider=provider,
+            status='pending',
+            next_attempt=next_attempt,
+        ))
+        db.session.commit()
+        return jsonify({'ok': True, 'scheduled': True, 'message': 'Publishing scheduled.'})
+
+    try:
+        from services.connected_accounts.provider_registry import get_adapter
+        result = get_adapter(provider).publish(current_user.id, content, data)
+        if result.get('ok'):
+            content.status = 'published'
+            content.published_to = provider
+            content.published_at = datetime.now(timezone.utc)
+        db.session.commit()
+        return jsonify(result)
+    except Exception as exc:
+        db.session.rollback()
+        return jsonify({'ok': False, 'error': str(exc)}), 500
 
 @main.route('/settings', methods=['GET', 'POST'])
 @login_required
@@ -2082,7 +2262,10 @@ def profile():
 @main.route('/automation/build')
 @login_required
 def build_automation():
-    return render_template('main/automation_builder.html')
+    from models import Brand, Campaign
+    brand = Brand.query.filter_by(user_id=current_user.id).first()
+    campaigns = Campaign.query.filter_by(user_id=current_user.id).order_by(Campaign.created_at.desc()).all()
+    return render_template('main/automation_builder.html', brand=brand, campaigns=campaigns)
 
 @main.route('/campaign/build')
 @login_required
@@ -2171,8 +2354,13 @@ def api_automations_save():
         return jsonify({"ok": False, "error": "Workflow name is required"}), 400
 
     # Attach campaign and brand context when provided
-    from models import Brand
+    from models import Brand, Campaign
     brand = Brand.query.filter_by(user_id=current_user.id).first()
+    campaign_id = data.get('campaign_id') or None
+    if campaign_id:
+        campaign = Campaign.query.filter_by(id=campaign_id, user_id=current_user.id).first()
+        if not campaign:
+            return jsonify({"ok": False, "error": "Selected campaign was not found."}), 400
 
     workflow_data = {
         "id": data.get("id") or None,
@@ -2181,7 +2369,7 @@ def api_automations_save():
         "nodes": data.get("nodes", []),
         "created_at": data.get("created_at"),
         "user_id": current_user.id,
-        "campaign_id": data.get("campaign_id"),
+        "campaign_id": campaign_id,
         "brand": {
             "name": brand.name if brand else None,
             "primary_color": brand.primary_color if brand else None,
@@ -2268,3 +2456,4 @@ def api_campaign_plan():
         'strategy': strategy,
         'deliverables': deliverables
     })
+

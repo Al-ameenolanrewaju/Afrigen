@@ -88,6 +88,24 @@
             <i class="fa-solid fa-save me-2"></i> Save Automation
         </button>
     </div>
+
+    <div class="node-card mb-4">
+        <div class="node-header">
+            <h5 class="node-title"><i class="fa-solid fa-bullseye text-warning"></i> Workflow context</h5>
+        </div>
+        <label for="wf_campaign" class="form-label" style="color: #C9D1D9;">Campaign</label>
+        <select class="form-select" id="wf_campaign">
+            <option value="">No campaign</option>
+            {% for campaign in campaigns %}
+            <option value="{{ campaign.id }}">{{ campaign.title or 'Campaign ' ~ campaign.id }}</option>
+            {% endfor %}
+        </select>
+        {% if brand %}
+        <small style="color: #8B949E;">Brand context: {{ brand.name }}</small>
+        {% else %}
+        <small style="color: #F5A623;">Create a brand to include brand context in generated assets.</small>
+        {% endif %}
+    </div>
     
     <div id="canvas">
         <!-- Trigger Node -->
@@ -146,7 +164,12 @@
     let nodes = [];
     
     function appendNode(type, label, iconClass) {
-        nodes.push({ type, label });
+        const node = { type, label };
+        if (type === 'publish_social') {
+            node.provider = 'youtube';
+            node.action = 'publish_now';
+        }
+        nodes.push(node);
         renderCanvas();
         document.querySelector('#addNodeModal .btn-close').click();
     }
@@ -184,7 +207,27 @@
                         <h5 class="node-title"><i class="fa-solid ${icon}"></i> ${n.label}</h5>
                         <button class="btn btn-sm text-danger" onclick="removeNode(${idx})"><i class="fa-solid fa-trash"></i></button>
                     </div>
-                    <p style="color: #8B949E; margin: 0; font-size: 13px;">Executes automatically via Afrigen Backend Engine.</p>
+                    <label class="form-label" style="color: #C9D1D9;">Prompt</label>
+                    <textarea class="form-control mb-3" rows="2" placeholder="Describe what to generate..." oninput="nodes[${idx}].prompt = this.value">${n.prompt || ''}</textarea>
+                    ${n.type === 'publish_social' ? `
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <label class="form-label" style="color: #C9D1D9;">Connected provider</label>
+                                <select class="form-select" onchange="nodes[${idx}].provider = this.value">
+                                    <option value="youtube" ${n.provider === 'youtube' ? 'selected' : ''}>YouTube</option>
+                                    <option value="wordpress" ${n.provider === 'wordpress' ? 'selected' : ''}>WordPress</option>
+                                    <option value="tiktok" ${n.provider === 'tiktok' ? 'selected' : ''}>TikTok</option>
+                                    <option value="linkedin" ${n.provider === 'linkedin' ? 'selected' : ''}>LinkedIn</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" style="color: #C9D1D9;">Action</label>
+                                <select class="form-select" onchange="nodes[${idx}].action = this.value">
+                                    <option value="publish_now" ${n.action === 'publish_now' ? 'selected' : ''}>Publish now</option>
+                                    <option value="schedule" ${n.action === 'schedule' ? 'selected' : ''}>Schedule</option>
+                                </select>
+                            </div>
+                        </div>` : ''}
                 </div>
             `;
         });
@@ -204,7 +247,7 @@
         if(!name) { alert("Please provide a workflow name."); return; }
         if(nodes.length === 0) { alert("Please add at least one action node."); return; }
         
-        const payload = { name, trigger, nodes };
+        const payload = { name, trigger, nodes, campaign_id: document.getElementById('wf_campaign').value || null };
         
         try {
             const res = await fetch("{{ url_for('main.api_automations_save') }}", {

@@ -31,6 +31,52 @@
     </div>
     {% endif %}
     {% endif %}
+    
+    <!-- Hardcoded Video Entry -->
+    <div class="card p-4 mb-3 border-warning">
+        <div class="row">
+            <!-- Preview -->
+            <div class="col-md-4 mb-3 mb-md-0">
+                <video width="100%" controls style="border-radius: 8px;">
+                    <source src="{{ url_for('static', filename='uploads/dashboard_video.mp4') }}" type="video/mp4">
+                </video>
+            </div>
+
+            <!-- Details -->
+            <div class="col-md-8">
+                <!-- Type + Status badges -->
+                <div class="d-flex gap-2 mb-2 flex-wrap">
+                    <span class="badge" style="background: #21262D; color: #F5A623;">
+                        <i class="fa-solid fa-clapperboard"></i> Text to Video
+                    </span>
+                    <span class="badge" style="background: #27AE60; color: white;">
+                        COMPLETED
+                    </span>
+                    <span class="badge" style="background: rgba(245,166,35,0.2); color: #F5A623; border: 1px solid #F5A623;">
+                        <i class="fa-solid fa-star"></i> Featured
+                    </span>
+                    <small style="color: #888; align-self: center;">
+                        <i class="fa-solid fa-calendar-days"></i> Today
+                    </small>
+                </div>
+
+                <!-- Prompts -->
+                <div class="mb-2">
+                    <small style="color: #888;">Original Idea:</small>
+                    <p style="color: #C9D1D9; font-style: italic; margin: 0;">
+                        "Stunning AI generated masterpiece"
+                    </p>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="d-flex gap-2 flex-wrap mt-3">
+                    <a href="{{ url_for('static', filename='uploads/dashboard_video.mp4') }}" class="btn btn-afrigen btn-sm" target="_blank"><i class="fa-solid fa-clapperboard"></i> Watch</a>
+                    <a href="{{ url_for('static', filename='uploads/dashboard_video.mp4') }}" download class="btn btn-outline-warning btn-sm"><i class="fa-solid fa-download"></i> Download</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
     {% if generations %}
         {% for gen in generations %}
         <div class="card p-4 mb-3">
@@ -117,12 +163,21 @@
     {% if gen.status == 'completed' and (gen.video_url or gen.image_url) %}
     <a href="{{ share_url_for(gen.id) }}" target="_blank" class="btn btn-outline-warning btn-sm"
        title="Public share page with a sign-up invite — every view can become a new user"><i class="fa-solid fa-link"></i> Share</a>
+    
+    <button type="button" class="btn btn-outline-info btn-sm publish-social-trigger"
+        data-publish-text="{{ gen.refined_prompt or gen.original_prompt }}"
+        data-media-url="{{ gen.video_url if gen.video_url else gen.image_url }}"
+        data-media-type="{{ 'video' if gen.video_url else 'image' }}">
+        <i class="fa-solid fa-share-from-square"></i> Publish to Social
+    </button>
     {% endif %}
 
     {% if gen.status == 'failed' %}
-    <a href="{{ url_for('main.dashboard') }}" class="btn btn-sm" style="background: #21262D; color: #F5A623; border: 1px solid #F5A623;">
+    <form action="{{ url_for('main.retry_generation', generation_id=gen.id) }}" method="POST" class="d-inline">
+    <button type="submit" class="btn btn-sm" style="background: #21262D; color: #F5A623; border: 1px solid #F5A623;">
         <i class="fa-solid fa-arrows-rotate"></i> Try Again
-    </a>
+    </button>
+    </form>
     {% endif %}
 </div>
 
@@ -168,5 +223,6 @@ setTimeout(function() {
 }, 15000);
 {% endif %}
 </script>
+{% include "main/_social_publish_modal.html" %}
 
 {% endblock %}

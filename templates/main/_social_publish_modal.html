@@ -1,0 +1,162 @@
+<div class="modal fade" id="socialPublishModal" tabindex="-1" aria-labelledby="socialPublishModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background: #161B22; border: 1px solid #30363D;">
+            <div class="modal-header">
+                <h5 class="modal-title" id="socialPublishModalTitle" style="color: #F0F6FC;"><i class="fa-solid fa-share-from-square"></i> Publish to a connected account</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="small mb-3" style="color: #AEB7C7;">This publishes your content on the selected platform. Use Share separately to create a public Afrigen viewing link.</p>
+                <div id="socialPublishAlert" class="alert d-none" role="alert"></div>
+                <label for="socialPublishProvider" class="form-label">Connected account</label>
+                <select id="socialPublishProvider" class="form-select mb-3" required>
+                    <option value="">Loading connected accounts...</option>
+                </select>
+                <label for="socialPublishText" class="form-label">Caption or text</label>
+                <textarea id="socialPublishText" class="form-control mb-3" rows="4"></textarea>
+                <label for="socialPublishAction" class="form-label">When</label>
+                <select id="socialPublishAction" class="form-select mb-3">
+                    <option value="publish_now">Publish now</option>
+                    <option value="schedule">Schedule</option>
+                </select>
+                <div id="socialPublishSchedule" class="d-none">
+                    <label for="socialPublishDate" class="form-label">Date and time</label>
+                    <input id="socialPublishDate" class="form-control" type="datetime-local">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-afrigen" id="socialPublishSubmit">Publish</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let socialPublishState = { text: '', mediaUrl: '', mediaType: 'video' };
+
+function showSocialPublishAlert(message, type) {
+    const alert = document.getElementById('socialPublishAlert');
+    alert.textContent = message;
+    alert.className = `alert alert-${type}`;
+}
+
+async function readPublishResponse(response) {
+    const responseText = await response.text();
+    let data;
+    try {
+        data = responseText ? JSON.parse(responseText) : {};
+    } catch (error) {
+        if (response.redirected) {
+            throw new Error('Your session may have expired. Refresh the page and try publishing again.');
+        }
+        if (responseText.trimStart().startsWith('<!doctype') || responseText.trimStart().startsWith('<html')) {
+            throw new Error(`Server returned an HTML error page (${response.status}). Check the application logs.`);
+        }
+        throw new Error(`Server returned an invalid response (${response.status}).`);
+    }
+    return data;
+}
+
+async function openSocialPublishModal(text, mediaUrl, mediaType) {
+    if (!window.bootstrap || !document.getElementById('socialPublishModal')) {
+        window.alert('The publishing window could not load. Please refresh the page and try again.');
+        return;
+    }
+    socialPublishState = { text: text || '', mediaUrl: mediaUrl || '', mediaType: mediaType || 'video' };
+    document.getElementById('socialPublishText').value = socialPublishState.text;
+    document.getElementById('socialPublishAlert').className = 'alert d-none';
+    document.getElementById('socialPublishSchedule').classList.add('d-none');
+    document.getElementById('socialPublishAction').value = 'publish_now';
+
+    const select = document.getElementById('socialPublishProvider');
+    select.innerHTML = '<option value="">Loading connected accounts...</option>';
+    const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('socialPublishModal'));
+    modal.show();
+    try {
+        const response = await fetch('{{ url_for("main.publishing_accounts") }}', {
+            headers: { 'Accept': 'application/json' }
+        });
+        const data = await readPublishResponse(response);
+        if (!response.ok) throw new Error(data.error || `Account request failed (${response.status})`);
+        select.innerHTML = '';
+        if (!data.accounts || data.accounts.length === 0) {
+            select.innerHTML = '<option value="">No connected accounts</option>';
+            showSocialPublishAlert('Connect an account before publishing.', 'warning');
+            return;
+        }
+        data.accounts.forEach(account => {
+            const option = document.createElement('option');
+            option.value = account.provider;
+            option.textContent = account.name;
+            select.appendChild(option);
+        });
+    } catch (error) {
+        select.innerHTML = '<option value="">Could not load accounts</option>';
+        showSocialPublishAlert(error.message || 'Could not load connected accounts.', 'danger');
+    }
+}
+
+window.openSocialPublishModal = openSocialPublishModal;
+
+function initializeSocialPublishModal() {
+    const actionSelect = document.getElementById('socialPublishAction');
+    const submitButton = document.getElementById('socialPublishSubmit');
+    if (!actionSelect || !submitButton) return;
+
+    actionSelect.addEventListener('change', event => {
+        document.getElementById('socialPublishSchedule').classList.toggle('d-none', event.target.value !== 'schedule');
+    });
+
+    submitButton.addEventListener('click', async () => {
+        const provider = document.getElementById('socialPublishProvider').value;
+        const action = document.getElementById('socialPublishAction').value;
+        const scheduledFor = document.getElementById('socialPublishDate').value;
+        if (!provider) return showSocialPublishAlert('Select a connected account.', 'warning');
+        if (action === 'schedule' && !scheduledFor) return showSocialPublishAlert('Choose a schedule time.', 'warning');
+
+        const button = document.getElementById('socialPublishSubmit');
+        button.disabled = true;
+        try {
+        const response = await fetch('{{ url_for("main.publish_generated_content") }}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                provider,
+                action,
+                scheduled_for: action === 'schedule' ? new Date(scheduledFor).toISOString() : null,
+                text: document.getElementById('socialPublishText').value,
+                media_url: socialPublishState.mediaUrl,
+                media_type: socialPublishState.mediaType,
+                title: 'Created with Afrigen'
+            })
+        });
+        const data = await readPublishResponse(response);
+        if (!response.ok || !data.ok) throw new Error(data.error || 'Publishing failed.');
+        showSocialPublishAlert(data.message || 'Published successfully.', 'success');
+        if (action === 'publish_now') button.textContent = 'Published';
+        } catch (error) {
+            showSocialPublishAlert(error.message, 'danger');
+        } finally {
+            button.disabled = false;
+        }
+    });
+}
+
+document.addEventListener('click', event => {
+    const trigger = event.target.closest('.publish-social-trigger');
+    if (!trigger) return;
+    event.preventDefault();
+    openSocialPublishModal(
+        trigger.dataset.publishText,
+        trigger.dataset.mediaUrl,
+        trigger.dataset.mediaType
+    );
+});
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeSocialPublishModal);
+} else {
+    initializeSocialPublishModal();
+}
+</script>

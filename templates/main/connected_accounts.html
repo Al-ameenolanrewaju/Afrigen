@@ -3,7 +3,40 @@
 {% block title %}Connected Accounts - Afrigen{% endblock %}
 
 {% block content %}
-<div class="container py-4">
+<style>
+    .connected-accounts-page { color: #F0F6FC; }
+    .connected-accounts-page h2,
+    .connected-accounts-page .card-title { color: #F0F6FC !important; }
+    .connected-accounts-page .text-muted { color: #AEB7C7 !important; }
+    .connected-accounts-page .text-primary { color: #FFCF5C !important; }
+    .connected-accounts-page .btn-primary {
+        color: #161B22 !important;
+        background: #F5A623 !important;
+        border-color: #F5A623 !important;
+    }
+    .connected-accounts-page .btn-outline-primary {
+        color: #FFCF5C !important;
+        border-color: #F5A623 !important;
+    }
+    .connected-accounts-page .btn-outline-primary:hover {
+        color: #161B22 !important;
+        background: #F5A623 !important;
+    }
+    .connected-accounts-page .btn-secondary:disabled {
+        color: #AEB7C7 !important;
+        background: #30363D !important;
+        border-color: #484F58 !important;
+        opacity: 1;
+    }
+    .connected-account-modal { color: #F0F6FC; }
+    .connected-account-modal .modal-title { color: #F0F6FC !important; }
+    .connected-account-modal .modal-body,
+    .connected-account-modal .modal-footer { color: #F0F6FC; }
+    .connected-account-modal .modal-content { background: #161B22; border: 1px solid #30363D; }
+    .connected-account-modal .modal-header,
+    .connected-account-modal .modal-footer { border-color: #30363D; }
+</style>
+<div class="container py-4 connected-accounts-page">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="fw-bold mb-0">Connected Accounts</h2>
         <p class="text-muted mb-0">Manage your external publishing destinations</p>
@@ -19,6 +52,9 @@
                     <h5 class="card-title fw-bold">{{ provider.name }}</h5>
                     
                     {% set account = connected_map.get(provider.id) %}
+                    {% if provider.id == 'telegram' and telegram_linked %}
+                        {% set account = {'account_name': 'Telegram group'} %}
+                    {% endif %}
                     {% if account %}
                         <p class="text-success small mb-2"><i class="bi bi-check-circle-fill"></i> Connected</p>
                         <p class="text-muted small mb-3">{{ account.account_name }}</p>
@@ -30,6 +66,10 @@
                                 <button type="submit" class="btn btn-outline-primary btn-sm">Reconnect</button>
                             </form>
                         </div>
+                    {% elif not provider.get('available', True) %}
+                        <p class="text-muted small mb-2"><i class="bi bi-clock"></i> Coming soon</p>
+                        <p class="text-muted small mb-3">No official connection API</p>
+                        <button type="button" class="btn btn-secondary btn-sm px-4" disabled>Unavailable</button>
                     {% else %}
                         <p class="text-muted small mb-2"><i class="bi bi-dash-circle"></i> Not Connected</p>
                         <p class="text-muted small mb-3">&nbsp;</p>
@@ -47,8 +87,8 @@
 
 <!-- Dynamic Connection Modal -->
 <div class="modal fade" id="connectModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
+    <div class="modal-dialog">
+        <div class="modal-content connected-account-modal">
       <div class="modal-header">
         <h5 class="modal-title" id="connectModalTitle">Connect Account</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -157,7 +197,20 @@ document.addEventListener("DOMContentLoaded", function() {
                         document.getElementById('connectModalBody').innerHTML = html;
                         modal.show();
                     } else if (data.type === "redirect") {
-                        window.location.href = data.url;
+                        if (url.includes('/telegram/')) {
+                            const telegramWindow = window.open(data.url, 'afrigenTelegramConnect', 'width=520,height=720');
+                            const poll = setInterval(async () => {
+                                const status = await fetch("{{ url_for('main.telegram_link_status') }}").then(r => r.json());
+                                if (status.linked) {
+                                    clearInterval(poll);
+                                    if (telegramWindow && !telegramWindow.closed) telegramWindow.close();
+                                    window.location.reload();
+                                }
+                            }, 3000);
+                            setTimeout(() => clearInterval(poll), 300000);
+                        } else {
+                            window.location.href = data.url;
+                        }
                     } else if (data.ok === false) {
                         alert("Connection failed: " + (data.error || "Unknown error"));
                     } else {

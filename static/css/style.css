@@ -84,6 +84,8 @@ a { transition: color 0.2s var(--ease); }
 .text-muted, .text-secondary, .text-white-50 {
     color: var(--text-muted) !important;
 }
+.text-dark, .text-black { color: var(--text) !important; }
+.bg-light, .bg-white { background-color: var(--surface-2) !important; }
 ::placeholder {
     color: var(--text-dim) !important;
     opacity: 1 !important;

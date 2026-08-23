@@ -73,9 +73,9 @@ def generate_video(
 #   LTX 2.3 clean-plate - free-user default model for short, clean video output.
 #   AnimateDiff         - frame count up to 32 @ 8fps (~4s); uses video_size, not aspect_ratio.
 #   Kling t2v pro       - real duration control: "5" or "10" seconds.
-LTX_MODEL = "fal-ai/ltx-2.3-quality/clean-plate"
+LTX_MODEL = "fal-ai/ltx-video"
 ANIMATEDIFF_MODEL = "fal-ai/fast-animatediff/text-to-video"
-KLING_T2V_MODEL = "fal-ai/kling-video/v1.6/pro/text-to-video"
+KLING_T2V_MODEL = "fal-ai/kling-video/v1/standard/text-to-video"
 
 ANIMATEDIFF_STYLES = {"anime", "social"}
 
@@ -137,12 +137,7 @@ def _build_t2v_request(prompt, style, aspect_ratio, extended, duration="5"):
 
     arguments = {"prompt": prompt}
 
-    if model == ANIMATEDIFF_MODEL:
-        arguments["video_size"] = ANIMATEDIFF_VIDEO_SIZE.get(aspect_ratio, "landscape_16_9")
-        if extended or duration in {"10", "15", "20"}:
-            arguments["num_frames"] = 32
-            arguments["fps"] = 8
-    elif model == KLING_T2V_MODEL:
+    if model in (ANIMATEDIFF_MODEL, KLING_T2V_MODEL):
         arguments["aspect_ratio"] = aspect_ratio if aspect_ratio in ("16:9", "9:16", "1:1") else "16:9"
         arguments["duration"] = "10" if duration in {"10", "15", "20"} else "5"
     else:
@@ -151,36 +146,42 @@ def _build_t2v_request(prompt, style, aspect_ratio, extended, duration="5"):
     return model, arguments
 
 
-def generate_video_async(prompt, style="cinematic", aspect_ratio="16:9", webhook_url=None, extended=False, duration="5"):
+def generate_video_async(prompt, style="cinematic", aspect_ratio="16:9", webhook_url=None, extended=False, duration="5", request_id=None, original_prompt=None):
     model, arguments = _build_t2v_request(prompt, style, aspect_ratio, extended, duration=duration)
+    prompt_text = prompt.strip() if isinstance(prompt, str) else ""
+    if not prompt_text:
+        print(f"FAL submission skipped request_id={request_id} status=invalid_prompt original_prompt={original_prompt!r} refined_prompt={prompt!r}")
+        return {"success": False, "error": "The refined prompt was empty. Please try again."}
 
-    last_error = None
-    for attempt in range(1, MAX_RETRIES + 1):
-        try:
-            print(f"Async Video attempt {attempt}/{MAX_RETRIES} - model: {model}")
-            handler = fal_client.submit(
-                model,
-                arguments=arguments,
-                webhook_url=webhook_url
-            )
-            return {"success": True, "request_id": handler.request_id}
-        except Exception as e:
-            error_str = str(e)
-            last_error = error_str
-            print(f"FAL submit error on attempt {attempt}: {error_str}")
-            
-            # Don't retry on balance/auth errors
-            if "Exhausted balance" in error_str or "403" in error_str or "401" in error_str:
-                return {
-                    "success": False,
-                    "error": "Account balance exhausted. Please add credits at fal.ai/dashboard/billing"
-                }
-                
-            if attempt < MAX_RETRIES:
-                print(f"Retrying in {RETRY_DELAY} seconds...")
-                time.sleep(RETRY_DELAY)
-                
-    return {"success": False, "error": f"Failed after {MAX_RETRIES} attempts. Last error: {last_error}"}
+    arguments["prompt"] = prompt_text
+    print(
+        f"FAL submission request_id={request_id} status=attempting "
+        f"original_prompt={original_prompt!r} refined_prompt={prompt_text!r} "
+        f"model={model} arguments={arguments!r}"
+    )
+    try:
+        # Submit exactly once. A timeout after acceptance is ambiguous and must
+        # not trigger another potentially billable Fal job.
+        handler = fal_client.submit(
+            model,
+            arguments=arguments,
+            webhook_url=webhook_url
+        )
+        fal_request_id = getattr(handler, "request_id", None)
+        print(
+            f"FAL submission request_id={request_id} status=accepted "
+            f"fal_request_id={fal_request_id}"
+        )
+        if not fal_request_id:
+            return {"success": False, "error": "Fal accepted the request without returning a request ID."}
+        return {"success": True, "request_id": fal_request_id}
+    except Exception as e:
+        error_str = str(e)
+        print(
+            f"FAL submission request_id={request_id} status=unknown_error "
+            f"model={model} error={error_str}"
+        )
+        return {"success": False, "error": f"Fal submission failed or is unknown: {error_str}"}
 
 
 def generate_video_from_image(image_url, prompt, duration="5", aspect_ratio="16:9"):
@@ -193,8 +194,8 @@ def generate_video_from_image(image_url, prompt, duration="5", aspect_ratio="16:
         aspect_ratio = "16:9"
 
     models = [
-        "fal-ai/kling-video/v1.6/pro/image-to-video",
-        "fal-ai/ltx-2.3-quality/clean-plate/image-to-video",
+        "fal-ai/kling-video/v3/pro/image-to-video",
+        "fal-ai/kling-video/v3/standard/image-to-video",
     ]
 
     for model in models:

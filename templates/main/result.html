@@ -90,10 +90,13 @@
 
             <!-- Action Buttons -->
             <div class="text-center mt-3">
-                <button onclick="copyPrompt()" class="btn btn-outline-warning px-4 me-2">📋 Copy Prompt</button>
-                <button onclick="savePrompt()" class="btn btn-outline-warning px-4 me-2">💾 Save Prompt</button>
-                <a href="{{ url_for('main.dashboard') }}" class="btn btn-afrigen px-4 me-2">🔄 Generate Another</a>
-                <a href="{{ url_for('main.history') }}" class="btn btn-outline-warning px-4">📜 View History</a>
+                <button onclick="copyPrompt()" class="btn btn-outline-warning px-4 me-2 mb-2">📋 Copy Prompt</button>
+                <button onclick="savePrompt()" class="btn btn-outline-warning px-4 me-2 mb-2">💾 Save Prompt</button>
+                <button id="publishSocialBtn" type="button" class="btn btn-outline-info px-4 me-2 mb-2" style="display:none;">
+                    <i class="fa-solid fa-share-from-square"></i> Publish to Social
+                </button>
+                <a href="{{ url_for('main.dashboard') }}" class="btn btn-afrigen px-4 me-2 mb-2">🔄 Generate Another</a>
+                <a href="{{ url_for('main.history') }}" class="btn btn-outline-warning px-4 mb-2">📜 View History</a>
             </div>
 
         </div>
@@ -148,6 +151,16 @@ document.addEventListener('DOMContentLoaded', function() {
             sp.href = resultData.share_url;
             sp.style.display = 'inline-block';
         }
+        
+        // Show the publish to social button
+        const pubBtn = document.getElementById('publishSocialBtn');
+        pubBtn.style.display = 'inline-block';
+        pubBtn.addEventListener('click', () => {
+            const mediaUrl = resultData.video_url || resultData.image_url;
+            const mediaType = resultData.video_url ? 'video' : 'image';
+            const text = resultData.refined || resultData.original || '';
+            openSocialPublishModal(text, mediaUrl, mediaType);
+        });
     }
 });
 
@@ -183,5 +196,7 @@ async function savePrompt() {
     }
 }
 </script>
+
+{% include "main/_social_publish_modal.html" %}
 
 {% endblock %}

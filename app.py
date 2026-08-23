@@ -1,10 +1,12 @@
+import os
+from dotenv import load_dotenv
+load_dotenv()
+
 from flask import Flask
 from flask_migrate import Migrate
 from flask_login import LoginManager
 from models import db, User, Generation, TelegramUser, SavedPrompt, Referral
 from config import DevelopmentConfig
-import os
-from dotenv import load_dotenv
 from flask_mail import Mail, Message
 from routes.main import main
 from routes.auth import auth
@@ -19,9 +21,6 @@ import asyncio
 import json
 from flask import send_from_directory
 
-
-
-load_dotenv()
 app = Flask(__name__)
 app.url_map.strict_slashes = False
 
@@ -269,7 +268,7 @@ def set_webhook():
     """Set Telegram webhook"""
     import requests as req
 
-    webhook_url = f"https://afrigen.onrender.com/webhook/{TELEGRAM_TOKEN}"
+    webhook_url = request.url_root.rstrip('/') + f"/webhook/{TELEGRAM_TOKEN}"
 
     response = req.post(
         f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/setWebhook",
@@ -310,6 +309,23 @@ async def setup_telegram():
 
     async def start(update, context):
         user = update.effective_user
+        chat = update.effective_chat
+        payload = context.args[0].upper() if context.args else ""
+        if payload and chat and chat.type in ("group", "supergroup"):
+            with app.app_context():
+                account = User.query.filter_by(telegram_link_code=payload).first()
+                if account:
+                    telegram_user = TelegramUser.query.filter_by(telegram_id=str(user.id)).first()
+                    if not telegram_user:
+                        telegram_user = TelegramUser(telegram_id=str(user.id))
+                        db.session.add(telegram_user)
+                    telegram_user.user_id = account.id
+                    telegram_user.chat_id = str(chat.id)
+                    telegram_user.chat_title = chat.title or "Telegram group"
+                    account.telegram_link_code = None
+                    db.session.commit()
+                    await update.message.reply_text("Afrigen is connected to this group.")
+                    return
         keyboard = [
             [InlineKeyboardButton("🎬 Video Prompt", callback_data="menu_video"),
              InlineKeyboardButton("🖼️ Image Prompt", callback_data="menu_image")],
