@@ -11,6 +11,9 @@ from utils.encryption import decrypt_token
 
 class TiktokAdapter(BaseProviderAdapter):
     def _get_redirect_uri(self):
+        configured_uri = os.environ.get("TIKTOK_REDIRECT_URI")
+        if configured_uri:
+            return configured_uri.rstrip("/")
         return request.url_root.rstrip("/") + "/connected-accounts/tiktok/callback"
 
     @classmethod
