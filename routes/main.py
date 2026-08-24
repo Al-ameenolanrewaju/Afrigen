@@ -2133,6 +2133,7 @@ def publish_generated_content():
     try:
         from services.connected_accounts.provider_registry import get_adapter
         result = get_adapter(provider).publish(current_user.id, content, data)
+        print(f"PUBLISH provider={provider} user_id={current_user.id} status={'success' if result.get('ok') else 'failed'} result={result}")
         if result.get('ok'):
             content.status = 'published'
             content.published_to = provider
@@ -2140,6 +2141,7 @@ def publish_generated_content():
         db.session.commit()
         return jsonify(result)
     except Exception as exc:
+        print(f"PUBLISH provider={provider} user_id={current_user.id} status=error type={type(exc).__name__} error={exc}")
         db.session.rollback()
         return jsonify({'ok': False, 'error': str(exc)}), 500
 

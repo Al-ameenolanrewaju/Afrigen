@@ -111,7 +111,9 @@ class TiktokAdapter(BaseProviderAdapter):
 
         temp_path = None
         try:
+            print(f"TIKTOK publish start user_id={user_id} media_url_host={video_url.split('/')[2] if '://' in video_url else 'invalid'}")
             with requests.get(video_url, stream=True, timeout=120) as video_response:
+                print(f"TIKTOK media download status={video_response.status_code}")
                 video_response.raise_for_status()
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as video_file:
                     temp_path = video_file.name
@@ -147,6 +149,7 @@ class TiktokAdapter(BaseProviderAdapter):
                 },
                 timeout=30,
             )
+            print(f"TIKTOK init status={init_response.status_code} response={init_response.text[:500]}")
             if init_response.status_code not in (200, 201):
                 return {"ok": False, "error": f"TikTok publish failed ({init_response.status_code}): {init_response.text[:500]}"}
             data = init_response.json().get("data", {})
@@ -170,11 +173,16 @@ class TiktokAdapter(BaseProviderAdapter):
                         data=chunk,
                         timeout=120,
                     )
+                    print(
+                        f"TIKTOK upload chunk={chunk_number + 1}/{total_chunk_count} "
+                        f"status={upload_response.status_code} response={upload_response.text[:500]}"
+                    )
                     if upload_response.status_code not in (200, 201, 206):
                         return {"ok": False, "error": f"TikTok video upload failed ({upload_response.status_code}): {upload_response.text[:500]}"}
 
             return {"ok": True, "post_id": publish_id, "status": "processing"}
         except requests.RequestException as exc:
+            print(f"TIKTOK publish request error type={type(exc).__name__} error={exc}")
             return {"ok": False, "error": f"TikTok publish failed: {exc}"}
         finally:
             if temp_path:
