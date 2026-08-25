@@ -294,7 +294,7 @@
                     </div>
                     
                     {% if current_user.plan == 'pro' %}
-                    <div class="form-check mt-2">
+                    <div class="form-check mt-2" id="create_video_voiceover_option">
                         <input class="form-check-input" type="checkbox" name="add_voiceover" id="v_add_voiceover" value="1">
                         <label class="form-check-label" for="v_add_voiceover" style="color: #F5A623; font-size: 13px;">
                             Include AI Voiceover
@@ -355,7 +355,14 @@
                         <div class="p-3 text-center mb-2" style="border: 1px dashed #30363D; border-radius: 8px; background: rgba(13,17,23,0.5);">
                             <i class="fa-solid fa-upload fs-4 mb-2" style="color: #484F58;"></i>
                             <p style="color: #8B949E; font-size: 12px; margin: 0;">Click or drag image here</p>
-                            <input type="file" name="image" class="form-control mt-2" style="font-size: 12px; background: transparent;" accept="image/*" required>
+                            <input type="file" name="image" id="create_animate_image_input" class="form-control mt-2" style="font-size: 12px; background: transparent;" accept="image/*" required>
+                            <div id="create_animate_image_preview" class="mt-3" style="display: none;">
+                                <img id="create_animate_image_preview_img" class="img-fluid" alt="Selected image preview"
+                                    style="max-height: 220px; width: 100%; object-fit: contain; border-radius: 8px; border: 1px solid #30363D;">
+                                <button type="button" id="create_remove_animate_image" class="btn btn-sm btn-outline-warning mt-2">
+                                    <i class="fa-solid fa-xmark"></i> Remove image
+                                </button>
+                            </div>
                         </div>
                     </div>
                     
@@ -494,6 +501,12 @@
             activeType = this.dataset.type;
             document.querySelectorAll('.settings-form').forEach(f => f.style.display = 'none');
             document.getElementById('form_' + activeType).style.display = 'block';
+            const voiceTypeButton = document.querySelector('.type-btn[data-type="voice"]');
+            if (voiceTypeButton) voiceTypeButton.style.display = activeType === 'image' ? 'none' : '';
+            const voiceoverOption = document.getElementById('create_video_voiceover_option');
+            const voiceoverCheckbox = document.getElementById('v_add_voiceover');
+            if (voiceoverOption) voiceoverOption.style.display = activeType === 'image' ? 'none' : '';
+            if (activeType === 'image' && voiceoverCheckbox) voiceoverCheckbox.checked = false;
             
             // Update Bottom Button
             document.getElementById('btn-text').textContent = actionTexts[activeType];
@@ -536,6 +549,31 @@
         } else {
             activeForm.submit();
         }
+    });
+
+    const createAnimateImageInput = document.getElementById('create_animate_image_input');
+    const createAnimateImagePreview = document.getElementById('create_animate_image_preview');
+    const createAnimateImagePreviewImg = document.getElementById('create_animate_image_preview_img');
+    const createRemoveAnimateImage = document.getElementById('create_remove_animate_image');
+    let createAnimateImageObjectUrl = null;
+
+    createAnimateImageInput?.addEventListener('change', function () {
+        const file = this.files?.[0];
+        if (!file) return;
+        if (createAnimateImageObjectUrl) URL.revokeObjectURL(createAnimateImageObjectUrl);
+        createAnimateImageObjectUrl = URL.createObjectURL(file);
+        createAnimateImagePreviewImg.src = createAnimateImageObjectUrl;
+        createAnimateImagePreview.style.display = 'block';
+        this.style.display = 'none';
+    });
+
+    createRemoveAnimateImage?.addEventListener('click', function () {
+        createAnimateImageInput.value = '';
+        createAnimateImageInput.style.display = '';
+        createAnimateImagePreviewImg.removeAttribute('src');
+        createAnimateImagePreview.style.display = 'none';
+        if (createAnimateImageObjectUrl) URL.revokeObjectURL(createAnimateImageObjectUrl);
+        createAnimateImageObjectUrl = null;
     });
 
     function handleVoiceOverSubmit(e) {

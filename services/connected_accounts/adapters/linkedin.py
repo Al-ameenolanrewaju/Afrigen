@@ -116,4 +116,12 @@ class LinkedinAdapter(BaseProviderAdapter):
             return {"ok": False, "error": "No text content"}
             
         person_id = account.account_identifier or os.environ.get("LINKEDIN_PERSON_ID", "")
-        return post_article(text, access_token=access_token, person_id=person_id)
+        media_url = getattr(content, "file_url", "") or ""
+        media_type = "image" if (getattr(content, "content_type", "") or "").lower() == "image" else "video"
+        return post_article(
+            text,
+            access_token=access_token,
+            person_id=person_id,
+            media_url=media_url,
+            media_type=media_type,
+        )

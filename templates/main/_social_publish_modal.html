@@ -34,6 +34,7 @@
 
 <script>
 let socialPublishState = { text: '', mediaUrl: '', mediaType: 'video' };
+let socialPublishInProgress = false;
 
 function showSocialPublishAlert(message, type) {
     const alert = document.getElementById('socialPublishAlert');
@@ -64,12 +65,16 @@ async function openSocialPublishModal(text, mediaUrl, mediaType) {
         return;
     }
     socialPublishState = { text: text || '', mediaUrl: mediaUrl || '', mediaType: mediaType || 'video' };
+    socialPublishInProgress = false;
     document.getElementById('socialPublishText').value = socialPublishState.text;
     document.getElementById('socialPublishAlert').className = 'alert d-none';
     document.getElementById('socialPublishSchedule').classList.add('d-none');
     document.getElementById('socialPublishAction').value = 'publish_now';
 
     const select = document.getElementById('socialPublishProvider');
+    const submitButton = document.getElementById('socialPublishSubmit');
+    submitButton.disabled = false;
+    submitButton.textContent = 'Publish';
     select.innerHTML = '<option value="">Loading connected accounts...</option>';
     const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('socialPublishModal'));
     modal.show();
@@ -109,6 +114,7 @@ function initializeSocialPublishModal() {
     });
 
     submitButton.addEventListener('click', async () => {
+        if (socialPublishInProgress) return;
         const provider = document.getElementById('socialPublishProvider').value;
         const action = document.getElementById('socialPublishAction').value;
         const scheduledFor = document.getElementById('socialPublishDate').value;
@@ -116,6 +122,7 @@ function initializeSocialPublishModal() {
         if (action === 'schedule' && !scheduledFor) return showSocialPublishAlert('Choose a schedule time.', 'warning');
 
         const button = document.getElementById('socialPublishSubmit');
+        socialPublishInProgress = true;
         button.disabled = true;
         try {
         const response = await fetch('{{ url_for("main.publish_generated_content") }}', {
@@ -132,13 +139,17 @@ function initializeSocialPublishModal() {
             })
         });
         const data = await readPublishResponse(response);
-        if (!response.ok || !data.ok) throw new Error(data.error || 'Publishing failed.');
+        if (!response.ok || !data.ok) {
+            throw new Error(data.error || `Publishing failed (${response.status}).`);
+        }
         showSocialPublishAlert(data.message || 'Published successfully.', 'success');
-        if (action === 'publish_now') button.textContent = 'Published';
+        button.textContent = 'Published';
         } catch (error) {
+            socialPublishInProgress = false;
             showSocialPublishAlert(error.message, 'danger');
-        } finally {
             button.disabled = false;
+        } finally {
+            if (socialPublishInProgress) button.disabled = true;
         }
     });
 }

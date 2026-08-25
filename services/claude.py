@@ -182,28 +182,43 @@ def refine_prompt(user_prompt, style="cinematic", model_name="fal-ai/ltx-2.3-qua
         "keywords or a fragment. Preserve the user's subject and intent:\n\n"
         + (user_prompt or "")
     )
-    response = provider_manager.generate_text(
-        task_type="Prompt Refinement",
-        messages=[
-            {"role": "system", "content": system_message},
-            {"role": "user", "content": user_message}
-        ],
-        max_tokens=500
-    )
-
-    if not _refinement_is_usable(user_prompt, response):
+    try:
         response = provider_manager.generate_text(
             task_type="Prompt Refinement",
             messages=[
                 {"role": "system", "content": system_message},
-                {"role": "user", "content": (
-                    "Your previous answer was incomplete. Return ONLY one "
-                    "complete video prompt of at least 40 words. Include the "
-                    "original subject and action exactly; add setting, lighting, "
-                    "camera movement, and mood. Original idea:\n\n" + (user_prompt or "")
-                )}
+                {"role": "user", "content": user_message}
             ],
             max_tokens=500
+        )
+    except Exception as exc:
+        print("VIDEO PROMPT REFINEMENT ERROR:", str(exc))
+        response = ""
+
+    if not _refinement_is_usable(user_prompt, response):
+        try:
+            response = provider_manager.generate_text(
+                task_type="Prompt Refinement",
+                messages=[
+                    {"role": "system", "content": system_message},
+                    {"role": "user", "content": (
+                        "Your previous answer was incomplete. Return ONLY one "
+                        "complete video prompt of at least 40 words. Include the "
+                        "original subject and action exactly; add setting, lighting, "
+                        "camera movement, and mood. Original idea:\n\n" + (user_prompt or "")
+                    )}
+                ],
+                max_tokens=500
+            )
+        except Exception as exc:
+            print("VIDEO PROMPT RETRY ERROR:", str(exc))
+            response = ""
+
+    if not _refinement_is_usable(user_prompt, response):
+        response = (
+            f"{(user_prompt or '').strip()}. Create a detailed {style} video with one "
+            "clear main subject and action, a coherent setting, purposeful camera "
+            "movement, natural lighting, rich visual detail, and a consistent mood."
         )
 
     return response
@@ -281,28 +296,43 @@ def refine_image_prompt(user_prompt, style="realistic"):
         "composition, lighting, colors, and mood. Never return keywords or a "
         "fragment. Preserve the user's subject and intent:\n\n" + (user_prompt or "")
     )
-    response = provider_manager.generate_text(
-        task_type="Prompt Refinement",
-        messages=[
-            {"role": "system", "content": system_message},
-            {"role": "user", "content": user_message}
-        ],
-        max_tokens=500
-    )
-
-    if not _refinement_is_usable(user_prompt, response):
+    try:
         response = provider_manager.generate_text(
             task_type="Prompt Refinement",
             messages=[
                 {"role": "system", "content": system_message},
-                {"role": "user", "content": (
-                    "Your previous answer was incomplete. Return ONLY one "
-                    "complete image prompt of at least 40 words. Include the "
-                    "original subject exactly; add setting, composition, lighting, "
-                    "colors, and mood. Original idea:\n\n" + (user_prompt or "")
-                )}
+                {"role": "user", "content": user_message}
             ],
             max_tokens=500
+        )
+    except Exception as exc:
+        print("IMAGE PROMPT REFINEMENT ERROR:", str(exc))
+        response = ""
+
+    if not _refinement_is_usable(user_prompt, response):
+        try:
+            response = provider_manager.generate_text(
+                task_type="Prompt Refinement",
+                messages=[
+                    {"role": "system", "content": system_message},
+                    {"role": "user", "content": (
+                        "Your previous answer was incomplete. Return ONLY one "
+                        "complete image prompt of at least 40 words. Include the "
+                        "original subject exactly; add setting, composition, lighting, "
+                        "colors, and mood. Original idea:\n\n" + (user_prompt or "")
+                    )}
+                ],
+                max_tokens=500
+            )
+        except Exception as exc:
+            print("IMAGE PROMPT RETRY ERROR:", str(exc))
+            response = ""
+
+    if not _refinement_is_usable(user_prompt, response):
+        response = (
+            f"{(user_prompt or '').strip()}. Create a highly detailed {style} image "
+            "with a clear composition, natural lighting, rich colors, realistic "
+            "textures, strong subject focus, and a polished professional finish."
         )
 
     return response

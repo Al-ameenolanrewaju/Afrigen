@@ -2,6 +2,7 @@ from typing import Dict, Any
 from ..base import BaseProviderAdapter
 from models import ConnectedAccount
 from utils.encryption import decrypt_token
+import json
 
 class PinterestAdapter(BaseProviderAdapter):
     @classmethod
@@ -36,5 +37,23 @@ class PinterestAdapter(BaseProviderAdapter):
         account = ConnectedAccount.query.filter_by(user_id=user_id, provider="pinterest").first()
         if not account:
             return {"ok": False, "error": "Not connected"}
-            
-        return {"ok": False, "error": "Publishing not implemented"}
+
+        access_token = decrypt_token(account.encrypted_access_token)
+        metadata = decrypt_token(account.metadata_json) if account.metadata_json else {}
+        if isinstance(metadata, str):
+            metadata = json.loads(metadata)
+        board_id = metadata.get("board_id") or account.account_identifier
+        title = getattr(content, "title", None) or "Created with Afrigen"
+        description = getattr(content, "body", "") or getattr(content, "content", "") or title
+        image_url = getattr(content, "file_url", None) or ""
+
+        from scripts.platforms.pinterest import create_pin
+        return create_pin(
+            title=title,
+            description=description,
+            link="https://afrigen.com.ng",
+            image_url=image_url,
+            image_title=title,
+            access_token=access_token,
+            board_id=board_id,
+        )

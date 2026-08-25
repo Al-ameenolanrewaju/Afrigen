@@ -282,7 +282,7 @@
                     </div>
 
                     {% if current_user.plan == 'pro' %}
-                    <div class="form-check mt-2">
+                    <div class="form-check mt-2" id="video_voiceover_option">
                         <input class="form-check-input" type="checkbox" name="add_voiceover" id="v_add_voiceover"
                             value="1">
                         <label class="form-check-label" for="v_add_voiceover" style="color: #F5A623; font-size: 13px;">
@@ -347,9 +347,16 @@
                         <p
                             style="color: #8B949E; font-size: 12px; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">
                             Upload Base Image</p>
-                        <input type="file" name="image" class="form-control form-control-sm"
+                        <input type="file" name="image" id="animate_image_input" class="form-control form-control-sm"
                             style="background-color: #0D1117; border-color: #30363D; color: #C9D1D9;" accept="image/*"
                             required>
+                        <div id="animate_image_preview" class="mt-3" style="display: none;">
+                            <img id="animate_image_preview_img" class="img-fluid" alt="Selected image preview"
+                                style="max-height: 220px; width: 100%; object-fit: contain; border-radius: 8px; border: 1px solid #30363D;">
+                            <button type="button" id="remove_animate_image" class="btn btn-sm btn-outline-warning mt-2">
+                                <i class="fa-solid fa-xmark"></i> Remove image
+                            </button>
+                        </div>
                     </div>
                     <div class="row">
                         <div class="col-6">
@@ -636,7 +643,38 @@
             document.querySelectorAll('.workspace-form').forEach(f => f.style.display = 'none');
             activeFormId = this.dataset.target;
             document.getElementById(activeFormId).style.display = 'block';
+            const voiceoverButton = document.getElementById('btn-voiceover');
+            if (voiceoverButton) voiceoverButton.style.display = activeFormId === 'form_image' ? 'none' : '';
+            const voiceoverOption = document.getElementById('video_voiceover_option');
+            const voiceoverCheckbox = document.getElementById('v_add_voiceover');
+            if (voiceoverOption) voiceoverOption.style.display = activeFormId === 'form_image' ? 'none' : '';
+            if (activeFormId === 'form_image' && voiceoverCheckbox) voiceoverCheckbox.checked = false;
         });
+    });
+
+    const animateImageInput = document.getElementById('animate_image_input');
+    const animateImagePreview = document.getElementById('animate_image_preview');
+    const animateImagePreviewImg = document.getElementById('animate_image_preview_img');
+    const removeAnimateImage = document.getElementById('remove_animate_image');
+    let animateImageObjectUrl = null;
+
+    animateImageInput?.addEventListener('change', function () {
+        const file = this.files?.[0];
+        if (!file) return;
+        if (animateImageObjectUrl) URL.revokeObjectURL(animateImageObjectUrl);
+        animateImageObjectUrl = URL.createObjectURL(file);
+        animateImagePreviewImg.src = animateImageObjectUrl;
+        animateImagePreview.style.display = 'block';
+        this.style.display = 'none';
+    });
+
+    removeAnimateImage?.addEventListener('click', function () {
+        animateImageInput.value = '';
+        animateImageInput.style.display = '';
+        animateImagePreviewImg.removeAttribute('src');
+        animateImagePreview.style.display = 'none';
+        if (animateImageObjectUrl) URL.revokeObjectURL(animateImageObjectUrl);
+        animateImageObjectUrl = null;
     });
 
     // 3. Master Submit Logic

@@ -623,8 +623,13 @@ def generate_image():
 
         db.session.commit()
 
-        return jsonify({"success": True, "type": "image", "image_url": image, "refined": refined, "original": prompt,
-                        "generation_id": generation.id, "share_url": share_url_for(generation.id)})
+        return redirect(url_for(
+            'main.image_result',
+            image_url=image,
+            refined=refined,
+            original=prompt,
+            share_url=share_url_for(generation.id)
+        ))
 
     except Exception as e:
         db.session.rollback()
