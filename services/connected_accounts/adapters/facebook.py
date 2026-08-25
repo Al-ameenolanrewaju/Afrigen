@@ -33,6 +33,12 @@ class FacebookAdapter(BaseProviderAdapter):
         return {"ok": True}
 
     def publish(self, user_id: int, content: Any, preferences: Any = None) -> Dict[str, Any]:
+        from routes.main import is_admin_user
+        from models import User
+        user = User.query.get(user_id)
+        if user and is_admin_user(user):
+            return {"ok": False, "error": "Facebook publishing is disabled for admin accounts."}
+
         account = ConnectedAccount.query.filter_by(user_id=user_id, provider="facebook").first()
         if not account:
             return {"ok": False, "error": "Not connected"}

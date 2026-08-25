@@ -721,27 +721,34 @@
 
     // Telegram Placeholder Logic (for widget)
     async function generateTelegramCode() {
+        const connectButton = document.getElementById('tgConnectBtn');
+        if (connectButton) connectButton.disabled = true;
         const response = await fetch("{{ url_for('main.telegram_connect_code') }}", {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' }
         });
         const data = await response.json();
-        if (!data.success) return alert('Could not start Telegram connection.');
-        const dialog = await Swal.fire({
-            title: 'Connect Telegram',
-            html: '<p>Add <strong>@' + data.bot_username + '</strong> as an admin to your group.</p><p>Telegram will open so you can choose the group.</p>',
-            confirmButtonText: 'Open Telegram',
-            showCancelButton: true,
+        if (!data.success) {
+            if (connectButton) connectButton.disabled = false;
+            return alert('Could not generate a Telegram connection code.');
+        }
+        if (connectButton) {
+            connectButton.textContent = data.code;
+            connectButton.title = 'Send this code to the Afrigen bot as /link ' + data.code;
+        }
+        Swal.fire({
+            title: 'Telegram connection code',
+            html: '<strong style="font-size: 28px; letter-spacing: 3px;">' + data.code + '</strong>',
+            confirmButtonText: 'Done',
             background: '#161B22',
             color: '#F0F6FC',
             confirmButtonColor: '#F5A623'
         });
-        if (dialog.isConfirmed) window.open(data.start_url, '_blank', 'noopener');
         const poll = setInterval(async () => {
             const status = await fetch("{{ url_for('main.telegram_link_status') }}").then(r => r.json());
             if (status.linked) {
                 clearInterval(poll);
-                await Swal.fire({ title: 'Telegram connected', text: status.telegram_name || 'Your group is connected.', icon: 'success', background: '#161B22', color: '#F0F6FC' });
+                await Swal.fire({ title: 'Telegram connected', text: 'Your Afrigen bot account is ready for generation.', icon: 'success', background: '#161B22', color: '#F0F6FC' });
                 window.location.reload();
             }
         }, 3000);

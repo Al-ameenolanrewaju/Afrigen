@@ -52,9 +52,6 @@
                     <h5 class="card-title fw-bold">{{ provider.name }}</h5>
                     
                     {% set account = connected_map.get(provider.id) %}
-                    {% if provider.id == 'telegram' and telegram_linked %}
-                        {% set account = {'account_name': 'Telegram group'} %}
-                    {% endif %}
                     {% if account %}
                         <p class="text-success small mb-2"><i class="bi bi-check-circle-fill"></i> Connected</p>
                         <p class="text-muted small mb-3">{{ account.account_name }}</p>
@@ -147,6 +144,7 @@ document.addEventListener("DOMContentLoaded", function() {
                             page_access_token: {label: 'Page Access Token', type: 'password'},
                             ig_user_id: {label: 'Instagram User ID', type: 'text'},
                             access_token: {label: 'Access Token', type: 'password'},
+                            bot_token: {label: 'Telegram Bot Token', type: 'password'},
                             author_urn: {label: 'Author URN', type: 'text'},
                             consumer_key: {label: 'Consumer Key', type: 'text'},
                             consumer_secret: {label: 'Consumer Secret', type: 'password'},

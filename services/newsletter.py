@@ -7,6 +7,7 @@ then it's sent to everyone (registered users + waitlist), minus unsubscribes.
 """
 import os
 import re
+import json
 from datetime import datetime, date, timezone
 
 from models import db, User, Subscriber, Generation, NewsletterIssue, EmailOptOut
@@ -191,20 +192,28 @@ def approve_draft(issue, subject=None, body=None):
 
 
 def send_issue(issue):
-    """Send an issue to all recipients and mark it sent. Returns the count."""
+    """Send an issue and return delivery totals and failures."""
     recipients = collect_recipients()
-    sent = send_newsletter(
+    issue.send_attempted_at = datetime.now(timezone.utc)
+    db.session.commit()
+    result = send_newsletter(
         recipients,
         issue.subject,
         issue.body,
         base_url=BASE_URL,
         is_html=True,
+        return_details=True,
     )
-    issue.status = "sent"
-    issue.recipients_count = sent
-    issue.sent_at = datetime.now(timezone.utc)
+    issue.attempted_count = result["attempted"]
+    issue.failed_count = result["failed"]
+    issue.delivery_failures = json.dumps(result["failures"])
+    if result["sent"]:
+        issue.status = "sent"
+        issue.recipients_count = result["sent"]
+        issue.sent_at = datetime.now(timezone.utc)
+        result["sent_at"] = issue.sent_at.isoformat()
     db.session.commit()
-    return sent
+    return result
 
 
 # ---------- Admin notifications ----------
@@ -236,27 +245,39 @@ def run_weekly_generation():
     print(f"Weekly newsletter draft generated (issue {issue.id}).")
     _notify_admins(
         "📰 This week's Afrigen newsletter is ready to review",
-        "A draft has been auto-generated. Review and edit it, then click "
-        "<strong>Approve</strong> so it goes out Monday at 9am. "
-        "If it isn't approved, it won't be sent.",
+        "A draft has been generated for review. Use Send now when it is ready.",
     )
     return issue
 
 
 def run_weekly_send():
-    """Send the current draft — ONLY if it has been approved. Otherwise skip and
-    remind the admin. Called by the Monday scheduler / cron endpoint."""
+    """Send the current weekly draft automatically on Monday.
+
+    Approval remains available for preview and editing, but it is not required
+    for the scheduled delivery to happen.
+    """
     issue = get_current_draft()
 
-    if issue is None or issue.status != "approved":
+    if issue is None:
+        try:
+            issue = run_weekly_generation()
+        except Exception as exc:
+            _notify_admins(
+                "Weekly newsletter could not be generated",
+                f"The automatic send was skipped because generation failed: {exc}",
+            )
+            print(f"Weekly newsletter skipped: generation failed: {exc}")
+            return 0
+
+    if not issue.body:
         _notify_admins(
-            "⏸️ Weekly newsletter NOT sent — needs your approval",
-            "Monday's newsletter was skipped because there is no approved draft. "
-            "Open the dashboard to review and approve this week's issue.",
+            "Weekly newsletter NOT sent — empty draft",
+            "Monday's automatic newsletter had no body content and was not sent.",
         )
-        print("Weekly newsletter skipped: no approved draft.")
+        print("Weekly newsletter skipped: empty draft.")
         return 0
 
-    sent = send_issue(issue)
-    print(f"Weekly newsletter sent to {sent} recipients (issue {issue.id}).")
-    return sent
+        result = send_issue(issue)
+        print(f"Weekly newsletter sent to {result['sent']} recipients "
+            f"({result['failed']} failed, issue {issue.id}).")
+        return result["sent"]

@@ -340,6 +340,37 @@ async def setup_telegram():
             reply_markup=reply_markup
         )
 
+    async def link_command(update, context):
+        user = update.effective_user
+        if not context.args:
+            await update.message.reply_text("Usage: /link <code>")
+            return
+
+        code = context.args[0].strip().upper()
+        with app.app_context():
+            account = User.query.filter_by(telegram_link_code=code).first()
+            if not account:
+                await update.message.reply_text(
+                    "That code is invalid or already used. Generate a fresh code from your Afrigen Dashboard."
+                )
+                return
+
+            telegram_user = TelegramUser.query.filter_by(telegram_id=str(user.id)).first()
+            if not telegram_user:
+                telegram_user = TelegramUser(
+                    telegram_id=str(user.id),
+                    username=user.username,
+                    first_name=user.first_name,
+                )
+                db.session.add(telegram_user)
+            telegram_user.user_id = account.id
+            account.telegram_link_code = None
+            db.session.commit()
+
+        await update.message.reply_text(
+            "Your Afrigen account is connected. You can now generate from the Afrigen bot."
+        )
+
     async def handle_message(update, context):
         user_prompt = update.message.text
         style = context.user_data.get('style', 'cinematic')
@@ -421,6 +452,7 @@ async def setup_telegram():
 
     telegram_app = Application.builder().token(TELEGRAM_TOKEN).build()
     telegram_app.add_handler(CommandHandler("start", start))
+    telegram_app.add_handler(CommandHandler("link", link_command))
     telegram_app.add_handler(CallbackQueryHandler(handle_callback))
     telegram_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 

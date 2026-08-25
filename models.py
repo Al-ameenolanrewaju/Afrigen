@@ -301,6 +301,10 @@ class NewsletterIssue(db.Model):
     status = db.Column(db.String(20), default="draft")      # draft | sent
     auto_generated = db.Column(db.Boolean, default=True)
     recipients_count = db.Column(db.Integer, default=0)
+    attempted_count = db.Column(db.Integer, nullable=True)
+    failed_count = db.Column(db.Integer, nullable=True)
+    delivery_failures = db.Column(db.Text, nullable=True)
+    send_attempted_at = db.Column(db.DateTime, nullable=True)
 
     created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
     sent_at = db.Column(db.DateTime, nullable=True)

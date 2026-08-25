@@ -25,7 +25,7 @@ if _root_dir not in sys.path:
 logger = get_logger("ContentPipeline")
 
 # Only active platforms for the unified Content Engine
-ACTIVE_PLATFORMS = ["facebook", "linkedin", "telegram", "devto", "newsletter"]
+ACTIVE_PLATFORMS = ["linkedin", "telegram", "devto", "newsletter"]
 
 class ContentPipeline:
     def __init__(self, dry_run=False, preview=False):

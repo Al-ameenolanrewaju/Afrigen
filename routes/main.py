@@ -25,6 +25,7 @@ from services.audio import generate_voiceover, generate_video_script
 import os
 import secrets
 import uuid
+import re
 from datetime import date, datetime, timezone
 from functools import wraps
 from werkzeug.utils import secure_filename
@@ -108,6 +109,22 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
+def _usable_refinement(original_prompt, refined_prompt):
+    """Keep the user's complete prompt when an AI refiner returns a fragment."""
+    original_prompt = (original_prompt or '').strip()
+    refined_prompt = (refined_prompt or '').strip()
+    original_words = {
+        word.lower() for word in re.findall(r"[a-zA-Z0-9]+", original_prompt)
+        if len(word) > 3
+    }
+    refined_words = {
+        word.lower() for word in re.findall(r"[a-zA-Z0-9]+", refined_prompt)
+    }
+    if len(refined_prompt) < 20 or (original_words and not original_words & refined_words):
+        return original_prompt
+    return refined_prompt
+
+
 # ---------- Routes ----------
 
 @main.route("/")
@@ -134,9 +151,7 @@ def dashboard():
     ).order_by(Generation.created_at.desc()).limit(4).all()
     
     # Telegram linking status + bot handle for the "Connect Telegram" card.
-    telegram_linked = TelegramUser.query.filter_by(user_id=current_user.id).filter(
-        TelegramUser.chat_id.isnot(None)
-    ).first() is not None
+    telegram_linked = TelegramUser.query.filter_by(user_id=current_user.id).first() is not None
     telegram_bot_username = os.environ.get('TELEGRAM_BOT_USERNAME', '')
     return render_template(
         "main/dashboard.html",
@@ -160,7 +175,7 @@ def telegram_connect_code():
         "success": True,
         "code": code,
         "bot_username": bot_username,
-        "start_url": f"https://t.me/{bot_username}?startgroup={code}",
+        "start_url": f"https://t.me/{bot_username}?start={code}",
     })
 
 
@@ -168,9 +183,7 @@ def telegram_connect_code():
 @login_required
 def telegram_link_status():
     """Poll target so the dashboard can confirm a successful bind in real time."""
-    tg = TelegramUser.query.filter_by(user_id=current_user.id).filter(
-        TelegramUser.chat_id.isnot(None)
-    ).first()
+    tg = TelegramUser.query.filter_by(user_id=current_user.id).first()
     return jsonify({
         "success": True,
         "linked": tg is not None,
@@ -183,7 +196,7 @@ def telegram_link_status():
 @login_required
 def generate():
     request_id = uuid.uuid4().hex
-    prompt = request.form.get('prompt')
+    prompt = (request.form.get('prompt') or '').strip()
     style = request.form.get('style', 'cinematic')
     action = request.form.get('action', 'generate')
     add_voiceover = request.form.get('add_voiceover')
@@ -203,10 +216,12 @@ def generate():
     model_name, _ = _build_t2v_request(prompt, effective_style, aspect_ratio, extended, duration=duration)
 
     try:
-        refined = refine_prompt(prompt, effective_style, model_name=model_name, duration=duration)
+        refined = _usable_refinement(prompt, refine_prompt(
+            prompt, effective_style, model_name=model_name, duration=duration
+        ))
     except Exception as e:
-        print("REFINE ERROR:", str(e))
-        return jsonify({"success": False, "error": "Could not refine your prompt right now. Please try again."})
+        print("REFINE ERROR; sending original prompt to Fal:", str(e))
+        refined = prompt
 
     if action == 'refine_only':
         return jsonify({"success": True, "type": "refine_only", "refined": refined, "original": prompt})
@@ -222,7 +237,7 @@ def generate():
         video_cost = text_to_video_cost(style, extended=extended, duration=duration)
         print(f"GENERATION request_id={request_id} status=refined original_prompt={prompt!r} refined_prompt={refined!r}")
         result = generate_video_async(
-            refined, style, aspect_ratio, webhook_url=webhook_url,
+            prompt=refined, style=style, aspect_ratio=aspect_ratio, webhook_url=webhook_url,
             extended=extended, duration=duration, request_id=request_id,
             original_prompt=prompt,
         )
@@ -276,12 +291,9 @@ def generate():
 @main.route('/connected-accounts')
 @login_required
 def connected_accounts():
-    from models import ConnectedAccount, TelegramUser
+    from models import ConnectedAccount
     accounts = ConnectedAccount.query.filter_by(user_id=current_user.id).all()
     connected_map = {acc.provider: acc for acc in accounts if acc.status == 'connected'}
-    telegram_linked = TelegramUser.query.filter_by(user_id=current_user.id).filter(
-        TelegramUser.chat_id.isnot(None)
-    ).first() is not None
     
     # Official providers
     supported_providers = [
@@ -296,14 +308,18 @@ def connected_accounts():
         {"id": "medium", "name": "Medium", "icon": "bi-medium"},
         {"id": "devto", "name": "Dev.to", "icon": "bi-code-square"},
     ]
+    if is_admin_user(current_user):
+        supported_providers = [
+            provider for provider in supported_providers
+            if provider["id"] != "facebook"
+        ]
     
     coming_soon = []
     
     return render_template("main/connected_accounts.html", 
                            supported_providers=supported_providers, 
                            coming_soon=coming_soon, 
-                           connected_map=connected_map,
-                           telegram_linked=telegram_linked)
+                           connected_map=connected_map)
 
 @main.route('/connected-accounts/<provider>/connect', methods=['GET', 'POST'])
 @login_required
@@ -524,7 +540,7 @@ def generate_from_image():
         image_file.save(filepath)
 
         image_url = url_for('static', filename=f'uploads/{filename}', _external=True)
-        refined = refine_image_prompt(prompt, "cinematic")
+        refined = _usable_refinement(prompt, refine_image_prompt(prompt, "cinematic"))
         video_url = generate_video_from_image(image_url, refined, duration=duration, aspect_ratio=aspect_ratio)
 
         # Video models render text badly, so burn any words the user asked to
@@ -584,7 +600,7 @@ def generate_image():
         return jsonify({"success": False, "error": error})
 
     try:
-        refined = refine_image_prompt(prompt, style)
+        refined = _usable_refinement(prompt, refine_image_prompt(prompt, style))
         result = generate_ai_image(refined, style, aspect_ratio)
 
         if not result["success"]:
@@ -1694,11 +1710,32 @@ def admin_newsletter_send():
         return jsonify({'ok': False, 'error': 'Newsletter body is empty.'}), 400
 
     try:
-        sent = send_issue(draft)
+        result = send_issue(draft)
     except Exception as e:
         current_app.logger.exception("Newsletter send failed")
         return jsonify({'ok': False, 'error': str(e)}), 500
-    return jsonify({'ok': True, 'sent': sent})
+    if result['sent'] == 0:
+        return jsonify({
+            'ok': False,
+            'error': 'No emails were delivered. Check RESEND_API_KEY and your subscriber list.',
+            'attempted': result['attempted'],
+            'sent': 0,
+            'failed': result['failed'],
+            'failures': result['failures'][:10],
+            'sent_at': result.get('sent_at'),
+        }), 502
+    return jsonify({
+        'ok': result['failed'] == 0,
+        'sent': result['sent'],
+        'attempted': result['attempted'],
+        'failed': result['failed'],
+        'failures': result['failures'][:10],
+        'sent_at': result.get('sent_at'),
+        'message': (
+            f"Sent to {result['sent']} recipients. "
+            f"{result['failed']} failed."
+        ),
+    }), (200 if result['failed'] == 0 else 207)
 
 
 @main.route('/unsubscribe/<token>')
@@ -2070,6 +2107,8 @@ def publishing_accounts():
     accounts = ConnectedAccount.query.filter_by(
         user_id=current_user.id, status='connected'
     ).order_by(ConnectedAccount.provider).all()
+    if is_admin_user(current_user):
+        accounts = [account for account in accounts if account.provider != 'facebook']
     return jsonify({
         'accounts': [
             {'provider': account.provider, 'name': account.account_name or account.provider.title()}
@@ -2087,6 +2126,8 @@ def publish_generated_content():
     media_url = (data.get('media_url') or '').strip()
     if not provider or not media_url:
         return jsonify({'ok': False, 'error': 'A provider and media URL are required.'}), 400
+    if provider == 'facebook' and is_admin_user(current_user):
+        return jsonify({'ok': False, 'error': 'Facebook publishing is disabled for admin accounts.'}), 403
 
     account = ConnectedAccount.query.filter_by(
         user_id=current_user.id, provider=provider, status='connected'

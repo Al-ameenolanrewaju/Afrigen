@@ -355,9 +355,11 @@ def send_launch_confirmation(user_email, name):
         print(f"Launch confirmation email error: {e}")
 
 
-def send_newsletter(recipients, subject, body, base_url=BASE_URL, is_html=False):
+def send_newsletter(recipients, subject, body, base_url=BASE_URL, is_html=False,
+                    return_details=False):
     html_body = body if is_html else (body or "").replace("\n", "<br>")
     sent = 0
+    failures = []
     for email, name in recipients:
         try:
             unsub_url = f"{base_url}/unsubscribe/{generate_unsub_token(email)}"
@@ -381,6 +383,14 @@ def send_newsletter(recipients, subject, body, base_url=BASE_URL, is_html=False)
             sent += 1
         except Exception as e:
             print(f"Newsletter send error for {email}: {e}")
+            failures.append({"email": email, "error": str(e)})
+    if return_details:
+        return {
+            "attempted": len(recipients),
+            "sent": sent,
+            "failed": len(failures),
+            "failures": failures,
+        }
     return sent
 
 

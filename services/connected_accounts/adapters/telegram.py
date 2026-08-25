@@ -1,30 +1,25 @@
-import os
-import secrets
-from flask import session
+import json
 from typing import Dict, Any
 from ..base import BaseProviderAdapter
-from models import ConnectedAccount, User
+from models import ConnectedAccount
 from utils.encryption import decrypt_token
 
 class TelegramAdapter(BaseProviderAdapter):
     @classmethod
     def get_auth_methods(cls) -> list[str]:
-        return ['oauth']
+        return ['bot_token', 'chat_id']
         
     def connect(self, user_id: int, **kwargs) -> Dict[str, Any]:
-        code = secrets.token_hex(3).upper()
-        user = User.query.get(user_id)
-        if not user:
-            return {"ok": False, "error": "Afrigen user was not found."}
-        user.telegram_link_code = code
-        from models import db
-        db.session.commit()
-        bot_username = (os.environ.get("TELEGRAM_BOT_USERNAME", "AfrigenBot") or "AfrigenBot").lstrip("@")
-        session["telegram_connect_code"] = code
+        bot_token = kwargs.get("bot_token")
+        chat_id = kwargs.get("chat_id")
+        if not bot_token or not chat_id:
+            return {"ok": False, "error": "Missing bot token or channel/chat ID."}
         return {
             "ok": True,
-            "type": "redirect",
-            "url": f"https://t.me/{bot_username}?startgroup={code}",
+            "token": bot_token,
+            "metadata": {"chat_id": chat_id},
+            "account_identifier": chat_id,
+            "account_name": "Telegram automation destination",
         }
         
     def handle_callback(self, request_args: Dict[str, Any], user_id: int) -> Dict[str, Any]:
@@ -41,7 +36,17 @@ class TelegramAdapter(BaseProviderAdapter):
 
     def publish(self, user_id: int, content: Any, preferences: Any = None) -> Dict[str, Any]:
         account = ConnectedAccount.query.filter_by(user_id=user_id, provider="telegram").first()
-        if not account:
+        if not account or account.status != "connected":
             return {"ok": False, "error": "Not connected"}
-            
-        return {"ok": False, "error": "Publishing not implemented"}
+
+        bot_token = decrypt_token(account.encrypted_access_token)
+        metadata = decrypt_token(account.metadata_json) if account.metadata_json else {}
+        if isinstance(metadata, str):
+            metadata = json.loads(metadata)
+        chat_id = metadata.get("chat_id") or account.account_identifier
+        text = getattr(content, "body", "") or getattr(content, "content", "")
+        if not bot_token or not chat_id or not text:
+            return {"ok": False, "error": "Telegram automation credentials or content are missing."}
+
+        from scripts.platforms.telegram import post_to_channel
+        return post_to_channel(text, concise=False, bot_token=bot_token, channel_id=chat_id)

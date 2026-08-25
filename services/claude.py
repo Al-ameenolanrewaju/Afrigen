@@ -1,4 +1,5 @@
 import os
+import re
 from services.provider_manager import provider_manager
 
 STYLE_PROMPTS = {
@@ -55,6 +56,20 @@ VIDEO_FIDELITY_RULES = """
       copy them VERBATIM in double quotes and describe them as large, BOLD,
       high-contrast and legible. Never paraphrase or invent on-screen words.
     - Do not add unrelated subjects or change the scene the user described."""
+
+
+def _refinement_is_usable(original_prompt, refined_prompt):
+    original_words = {
+        word.lower() for word in re.findall(r"[a-zA-Z0-9]+", original_prompt or "")
+        if len(word) > 3
+    }
+    refined_words = {
+        word.lower() for word in re.findall(r"[a-zA-Z0-9]+", refined_prompt or "")
+    }
+    return (
+        len((refined_prompt or "").strip()) >= 20
+        and (not original_words or original_words & refined_words)
+    )
 
 
 def extract_on_screen_text(user_prompt):
@@ -160,17 +175,36 @@ def refine_prompt(user_prompt, style="cinematic", model_name="fal-ai/ltx-2.3-qua
         VIDEO_FIDELITY_RULES
     )
 
+    user_message = (
+        "Rewrite the following idea as one complete, detailed video-generation "
+        "prompt. It must be at least 40 words and include the subject, action, "
+        "setting, lighting, camera direction, and mood. Never return a list of "
+        "keywords or a fragment. Preserve the user's subject and intent:\n\n"
+        + (user_prompt or "")
+    )
     response = provider_manager.generate_text(
         task_type="Prompt Refinement",
         messages=[
             {"role": "system", "content": system_message},
-            {"role": "user", "content": (
-                "Refine this video prompt. Keep my subject and intent, and keep "
-                "any on-screen words exactly as written:\n\n" + (user_prompt or "")
-            )}
+            {"role": "user", "content": user_message}
         ],
-        max_tokens=300
+        max_tokens=500
     )
+
+    if not _refinement_is_usable(user_prompt, response):
+        response = provider_manager.generate_text(
+            task_type="Prompt Refinement",
+            messages=[
+                {"role": "system", "content": system_message},
+                {"role": "user", "content": (
+                    "Your previous answer was incomplete. Return ONLY one "
+                    "complete video prompt of at least 40 words. Include the "
+                    "original subject and action exactly; add setting, lighting, "
+                    "camera movement, and mood. Original idea:\n\n" + (user_prompt or "")
+                )}
+            ],
+            max_tokens=500
+        )
 
     return response
 
@@ -241,17 +275,34 @@ def refine_image_prompt(user_prompt, style="realistic"):
 
     system_message = IMAGE_STYLE_PROMPTS.get(style, IMAGE_STYLE_PROMPTS["realistic"])
 
+    user_message = (
+        "Rewrite the following idea as one complete, detailed image-generation "
+        "prompt. It must be at least 40 words and include the subject, setting, "
+        "composition, lighting, colors, and mood. Never return keywords or a "
+        "fragment. Preserve the user's subject and intent:\n\n" + (user_prompt or "")
+    )
     response = provider_manager.generate_text(
         task_type="Prompt Refinement",
         messages=[
             {"role": "system", "content": system_message},
-            {"role": "user", "content": (
-                "Refine this image prompt. If it contains any words that should "
-                "appear in the image, keep those words exactly as written and "
-                "make them bold and legible:\n\n" + user_prompt
-            )}
+            {"role": "user", "content": user_message}
         ],
-        max_tokens=300
+        max_tokens=500
     )
+
+    if not _refinement_is_usable(user_prompt, response):
+        response = provider_manager.generate_text(
+            task_type="Prompt Refinement",
+            messages=[
+                {"role": "system", "content": system_message},
+                {"role": "user", "content": (
+                    "Your previous answer was incomplete. Return ONLY one "
+                    "complete image prompt of at least 40 words. Include the "
+                    "original subject exactly; add setting, composition, lighting, "
+                    "colors, and mood. Original idea:\n\n" + (user_prompt or "")
+                )}
+            ],
+            max_tokens=500
+        )
 
     return response

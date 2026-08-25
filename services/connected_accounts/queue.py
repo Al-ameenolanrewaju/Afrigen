@@ -24,6 +24,16 @@ def process_queue():
         return
         
     for item in items:
+        if item.provider == "facebook":
+            from models import User
+            from routes.main import is_admin_user
+            user = User.query.get(item.user_id)
+            if user and is_admin_user(user):
+                item.status = "failed"
+                item.retry_count = 5
+                db.session.commit()
+                continue
+
         # Skip if provider is down
         if not ProviderHealthService.is_provider_healthy(item.provider):
             continue
