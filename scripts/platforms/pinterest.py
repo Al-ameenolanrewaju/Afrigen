@@ -19,6 +19,7 @@ API docs: https://developers.pinterest.com/docs/api/v5/pins-create/
 
 import os
 import base64
+import io
 import requests
 
 
@@ -28,11 +29,36 @@ PINTEREST_API = "https://api.pinterest.com/v5"
 def _render_card_base64(title: str) -> tuple[str, str] | None:
     """Render a branded Afrigen card for `title` and return (content_type, base64).
 
-    Reuses the Pillow text-card generator so Pinterest and Instagram share one
-    branded look. Returns None if image generation isn't available."""
+    Returns None if Pillow is not available."""
     try:
-        from platforms.instagram import _generate_text_card
-        png_bytes = _generate_text_card(title or "Afrigen")
+        from PIL import Image, ImageDraw, ImageFont
+
+        image = Image.new("RGB", (1080, 1080), (15, 23, 42))
+        draw = ImageDraw.Draw(image)
+        try:
+            font = ImageFont.truetype("DejaVuSans-Bold.ttf", 56)
+        except OSError:
+            font = ImageFont.load_default()
+        lines = []
+        words = (title or "Afrigen").split()
+        line = ""
+        for word in words:
+            candidate = f"{line} {word}".strip()
+            if draw.textlength(candidate, font=font) > 900 and line:
+                lines.append(line)
+                line = word
+            else:
+                line = candidate
+        if line:
+            lines.append(line)
+        y = (1080 - len(lines) * 75) // 2
+        for line in lines:
+            width = draw.textlength(line, font=font)
+            draw.text(((1080 - width) / 2, y), line, fill=(255, 255, 255), font=font)
+            y += 75
+        buffer = io.BytesIO()
+        image.save(buffer, format="PNG")
+        png_bytes = buffer.getvalue()
         return "image/png", base64.b64encode(png_bytes).decode("ascii")
     except Exception as e:
         print(f"[pinterest] card generation failed: {e}")

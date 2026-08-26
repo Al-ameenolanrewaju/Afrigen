@@ -1,25 +1,32 @@
 import json
+import os
+import secrets
 from typing import Dict, Any
 from ..base import BaseProviderAdapter
-from models import ConnectedAccount
+from models import ConnectedAccount, User, db
+from utils.encryption import encrypt_token
 from utils.encryption import decrypt_token
 
 class TelegramAdapter(BaseProviderAdapter):
     @classmethod
     def get_auth_methods(cls) -> list[str]:
-        return ['bot_token', 'chat_id']
+        return ['oauth']
         
     def connect(self, user_id: int, **kwargs) -> Dict[str, Any]:
-        bot_token = kwargs.get("bot_token")
-        chat_id = kwargs.get("chat_id")
-        if not bot_token or not chat_id:
-            return {"ok": False, "error": "Missing bot token or channel/chat ID."}
+        bot_token = os.environ.get("TELEGRAM_BOT_TOKEN")
+        bot_username = (os.environ.get("TELEGRAM_BOT_USERNAME", "AfrigenBot") or "AfrigenBot").lstrip("@")
+        if not bot_token:
+            return {"ok": False, "error": "Telegram bot is not configured."}
+        code = secrets.token_hex(3).upper()
+        user = User.query.get(user_id)
+        user.telegram_link_code = code
+        db.session.commit()
         return {
             "ok": True,
-            "token": bot_token,
-            "metadata": {"chat_id": chat_id},
-            "account_identifier": chat_id,
-            "account_name": "Telegram automation destination",
+            "type": "redirect",
+            "url": f"https://t.me/{bot_username}?startgroup={code}",
+            "bot_username": bot_username,
+            "start_url": f"https://t.me/{bot_username}?startgroup={code}",
         }
         
     def handle_callback(self, request_args: Dict[str, Any], user_id: int) -> Dict[str, Any]:

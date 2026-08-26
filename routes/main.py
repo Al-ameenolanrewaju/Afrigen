@@ -183,12 +183,40 @@ def telegram_connect_code():
 @login_required
 def telegram_link_status():
     """Poll target so the dashboard can confirm a successful bind in real time."""
+    from models import ConnectedAccount
+    from utils.encryption import encrypt_token
+    import json
     tg = TelegramUser.query.filter_by(user_id=current_user.id).first()
+    if tg and tg.chat_id:
+        account = ConnectedAccount.query.filter_by(user_id=current_user.id, provider="telegram").first()
+        if not account:
+            account = ConnectedAccount(user_id=current_user.id, provider="telegram")
+            db.session.add(account)
+        account.status = "connected"
+        account.account_name = tg.chat_title or "Telegram group"
+        account.account_identifier = str(tg.chat_id)
+        account.encrypted_access_token = encrypt_token(os.environ.get("TELEGRAM_BOT_TOKEN", ""))
+        account.metadata_json = encrypt_token(json.dumps({"chat_id": str(tg.chat_id)}))
+        db.session.commit()
     return jsonify({
         "success": True,
         "linked": tg is not None,
         "telegram_username": tg.username if tg else None,
         "telegram_name": (tg.chat_title or tg.first_name if tg else None),
+    })
+
+
+@main.route('/connected-accounts/<provider>/status')
+@login_required
+def connected_account_status(provider):
+    from models import ConnectedAccount
+    account = ConnectedAccount.query.filter_by(
+        user_id=current_user.id, provider=provider, status="connected"
+    ).first()
+    return jsonify({
+        "ok": True,
+        "connected": account is not None,
+        "account_name": account.account_name if account else None,
     })
 
 
@@ -298,13 +326,11 @@ def connected_accounts():
     # Official providers
     supported_providers = [
         {"id": "facebook", "name": "Facebook Pages", "icon": "bi-facebook"},
-        {"id": "instagram", "name": "Instagram Business", "icon": "bi-instagram"},
         {"id": "linkedin", "name": "LinkedIn", "icon": "bi-linkedin"},
         {"id": "telegram", "name": "Telegram", "icon": "bi-telegram"},
         {"id": "tiktok", "name": "TikTok", "icon": "bi-tiktok"},
         {"id": "pinterest", "name": "Pinterest", "icon": "bi-pinterest"},
         {"id": "youtube", "name": "YouTube", "icon": "bi-youtube"},
-        {"id": "wordpress", "name": "WordPress", "icon": "bi-wordpress"},
         {"id": "medium", "name": "Medium", "icon": "bi-medium"},
         {"id": "devto", "name": "Dev.to", "icon": "bi-code-square"},
     ]
@@ -338,7 +364,13 @@ def connect_provider(provider):
         if "oauth" in auth_methods:
             result = adapter.connect(current_user.id)
             if result.get("ok") and result.get("type") == "redirect":
-                return jsonify({"ok": True, "type": "redirect", "url": result.get("url")})
+                return jsonify({
+                    "ok": True,
+                    "type": "redirect",
+                    "url": result.get("url"),
+                    "bot_username": result.get("bot_username"),
+                    "start_url": result.get("start_url"),
+                })
             else:
                 return jsonify({"ok": False, "error": result.get("error")})
     except Exception as e:
@@ -376,6 +408,12 @@ def provider_callback(provider):
                 account.encrypted_access_token = encrypt_token(result.get("access_token"))
             if result.get("refresh_token"):
                 account.encrypted_refresh_token = encrypt_token(result.get("refresh_token"))
+
+            if result.get("token_expiry"):
+                account.token_expiry = result.get("token_expiry")
+            elif result.get("expires_in"):
+                from datetime import timedelta
+                account.token_expiry = datetime.now(timezone.utc) + timedelta(seconds=int(result["expires_in"]))
                 
             account.connected_at = datetime.now(timezone.utc)
             db.session.commit()

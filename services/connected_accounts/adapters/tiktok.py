@@ -1,19 +1,28 @@
 import os
 import math
 import tempfile
+import base64
+import hashlib
+import secrets
 import requests
+from datetime import datetime, timezone, timedelta
 from flask import request, session
 from typing import Dict, Any
 from urllib.parse import urlencode
 from ..base import BaseProviderAdapter
 from models import ConnectedAccount
 from utils.encryption import decrypt_token
+from utils.encryption import encrypt_token
+from models import db
 
 class TiktokAdapter(BaseProviderAdapter):
     def _get_redirect_uri(self):
         configured_uri = os.environ.get("TIKTOK_REDIRECT_URI")
         if configured_uri:
-            return configured_uri.rstrip("/")
+            return configured_uri.strip()
+        base_url = os.environ.get("APP_BASE_URL")
+        if base_url:
+            return base_url.strip().rstrip("/") + "/connected-accounts/tiktok/callback"
         return request.url_root.rstrip("/") + "/connected-accounts/tiktok/callback"
 
     @classmethod
@@ -22,18 +31,30 @@ class TiktokAdapter(BaseProviderAdapter):
 
     def connect(self, user_id: int, **kwargs) -> Dict[str, Any]:
         client_key = os.environ.get("TIKTOK_CLIENT_KEY")
-        if not client_key or not os.environ.get("TIKTOK_CLIENT_SECRET"):
-            return {"ok": False, "error": "TikTok OAuth is not configured."}
+        client_secret = os.environ.get("TIKTOK_CLIENT_SECRET")
+        missing = [name for name, value in {
+            "TIKTOK_CLIENT_KEY": client_key,
+            "TIKTOK_CLIENT_SECRET": client_secret,
+        }.items() if not value]
+        if missing:
+            return {"ok": False, "error": f"TikTok OAuth is not configured. Missing: {', '.join(missing)}. Add them to the deployment environment and restart the app."}
 
         state = os.urandom(32).hex()
+        code_verifier = secrets.token_urlsafe(64)
+        code_challenge = base64.urlsafe_b64encode(
+            hashlib.sha256(code_verifier.encode("ascii")).digest()
+        ).rstrip(b"=").decode("ascii")
         session["tiktok_oauth_state"] = state
-        scope = os.environ.get("TIKTOK_SCOPE", "user.info.basic")
+        session["tiktok_oauth_code_verifier"] = code_verifier
+        scope = os.environ.get("TIKTOK_SCOPE", "user.info.basic,video.publish")
         params = {
             "client_key": client_key,
             "response_type": "code",
             "scope": scope,
             "redirect_uri": self._get_redirect_uri(),
             "state": state,
+            "code_challenge": code_challenge,
+            "code_challenge_method": "S256",
         }
         return {
             "ok": True,
@@ -46,6 +67,9 @@ class TiktokAdapter(BaseProviderAdapter):
             return {"ok": False, "error": request_args.get("error_description", request_args["error"])}
         if request_args.get("state") != session.pop("tiktok_oauth_state", None):
             return {"ok": False, "error": "Invalid OAuth state."}
+        code_verifier = session.pop("tiktok_oauth_code_verifier", None)
+        if not code_verifier:
+            return {"ok": False, "error": "TikTok OAuth verifier is missing. Please try connecting again."}
 
         code = request_args.get("code")
         if not code:
@@ -60,6 +84,7 @@ class TiktokAdapter(BaseProviderAdapter):
                     "code": code,
                     "grant_type": "authorization_code",
                     "redirect_uri": self._get_redirect_uri(),
+                    "code_verifier": code_verifier,
                 },
                 timeout=15,
             )
@@ -84,6 +109,7 @@ class TiktokAdapter(BaseProviderAdapter):
                 "ok": True,
                 "access_token": access_token,
                 "refresh_token": token_data.get("refresh_token"),
+                "expires_in": token_data.get("expires_in"),
                 "account_identifier": open_id,
                 "account_name": account_name,
             }
@@ -94,7 +120,34 @@ class TiktokAdapter(BaseProviderAdapter):
         return {"ok": True}
 
     def refresh(self, user_id: int) -> Dict[str, Any]:
-        return {"ok": True}
+        account = ConnectedAccount.query.filter_by(user_id=user_id, provider="tiktok").first()
+        if not account or not account.encrypted_refresh_token:
+            return {"ok": False, "error": "TikTok refresh token is unavailable. Reconnect TikTok."}
+        try:
+            response = requests.post(
+                "https://open.tiktokapis.com/v2/oauth/token/",
+                data={
+                    "client_key": os.environ.get("TIKTOK_CLIENT_KEY"),
+                    "client_secret": os.environ.get("TIKTOK_CLIENT_SECRET"),
+                    "grant_type": "refresh_token",
+                    "refresh_token": decrypt_token(account.encrypted_refresh_token),
+                },
+                timeout=15,
+            )
+            if response.status_code != 200:
+                return {"ok": False, "error": f"TikTok token refresh failed: {response.text[:500]}"}
+            token_data = response.json()
+            if not token_data.get("access_token"):
+                return {"ok": False, "error": "TikTok token refresh returned no access token."}
+            account.encrypted_access_token = encrypt_token(token_data["access_token"])
+            if token_data.get("refresh_token"):
+                account.encrypted_refresh_token = encrypt_token(token_data["refresh_token"])
+            if token_data.get("expires_in"):
+                account.token_expiry = datetime.now(timezone.utc) + timedelta(seconds=int(token_data["expires_in"]))
+            db.session.commit()
+            return {"ok": True, "access_token": token_data["access_token"]}
+        except requests.RequestException as exc:
+            return {"ok": False, "error": str(exc)}
 
     def test_connection(self, user_id: int) -> Dict[str, Any]:
         return {"ok": True}
@@ -105,6 +158,16 @@ class TiktokAdapter(BaseProviderAdapter):
             return {"ok": False, "error": "Not connected"}
             
         access_token = decrypt_token(account.encrypted_access_token)
+        expiry = account.token_expiry
+        if expiry and expiry.tzinfo is None:
+            expiry = expiry.replace(tzinfo=timezone.utc)
+        if account.encrypted_refresh_token and (
+            not expiry or expiry <= datetime.now(timezone.utc)
+        ):
+            refreshed = self.refresh(user_id)
+            if not refreshed.get("ok"):
+                return refreshed
+            access_token = refreshed["access_token"]
         video_url = getattr(content, "file_url", None) or getattr(content, "video_url", None)
         if not video_url:
             return {"ok": False, "error": "TikTok requires a public video URL."}

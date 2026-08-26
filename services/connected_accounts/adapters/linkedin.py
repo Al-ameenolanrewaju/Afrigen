@@ -9,6 +9,12 @@ from models import db, ConnectedAccount
 class LinkedinAdapter(BaseProviderAdapter):
 
     def _get_redirect_uri(self):
+        configured_uri = os.environ.get("LINKEDIN_REDIRECT_URI")
+        if configured_uri:
+            return configured_uri.strip()
+        base_url = os.environ.get("APP_BASE_URL")
+        if base_url:
+            return base_url.strip().rstrip("/") + "/connected-accounts/linkedin/callback"
         return request.url_root.rstrip("/") + "/connected-accounts/linkedin/callback"
 
     @classmethod
@@ -17,8 +23,13 @@ class LinkedinAdapter(BaseProviderAdapter):
 
     def connect(self, user_id: int, **kwargs) -> Dict[str, Any]:
         client_id = os.environ.get("LINKEDIN_CLIENT_ID")
-        if not client_id or not os.environ.get("LINKEDIN_CLIENT_SECRET"):
-            return {"ok": False, "error": "LinkedIn OAuth is not configured."}
+        client_secret = os.environ.get("LINKEDIN_CLIENT_SECRET")
+        missing = [name for name, value in {
+            "LINKEDIN_CLIENT_ID": client_id,
+            "LINKEDIN_CLIENT_SECRET": client_secret,
+        }.items() if not value]
+        if missing:
+            return {"ok": False, "error": f"LinkedIn OAuth is not configured. Missing: {', '.join(missing)}. Add them to the deployment environment and restart the app."}
 
         state = os.urandom(32).hex()
         session["linkedin_oauth_state"] = state

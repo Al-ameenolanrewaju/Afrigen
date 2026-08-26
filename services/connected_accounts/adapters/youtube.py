@@ -7,6 +7,9 @@ from urllib.parse import urlencode
 from ..base import BaseProviderAdapter
 from models import ConnectedAccount
 from utils.encryption import decrypt_token
+from utils.encryption import encrypt_token
+from models import db
+from datetime import datetime, timezone, timedelta
 
 class YoutubeAdapter(BaseProviderAdapter):
     def _get_redirect_uri(self):
@@ -28,7 +31,7 @@ class YoutubeAdapter(BaseProviderAdapter):
             "client_id": client_id,
             "redirect_uri": redirect_uri,
             "response_type": "code",
-            "scope": "https://www.googleapis.com/auth/youtube.upload",
+            "scope": "https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly",
             "access_type": "offline",
             "prompt": "consent",
             "state": state,
@@ -65,11 +68,27 @@ class YoutubeAdapter(BaseProviderAdapter):
             if response.status_code != 200:
                 return {"ok": False, "error": f"Google token exchange failed: {response.text}"}
             token_data = response.json()
+            channel_response = requests.get(
+                "https://www.googleapis.com/youtube/v3/channels",
+                params={"part": "snippet", "mine": "true"},
+                headers={"Authorization": f"Bearer {token_data.get('access_token')}"},
+                timeout=15,
+            )
+            if channel_response.status_code != 200:
+                return {"ok": False, "error": f"YouTube channel lookup failed ({channel_response.status_code}): {channel_response.text[:300]}"}
+            channels = channel_response.json().get("items", [])
+            if not channels:
+                return {"ok": False, "error": "This Google account does not have a YouTube channel. Create a YouTube channel and reconnect."}
+            channel = channels[0]
+            channel_id = channel.get("id")
+            channel_title = channel.get("snippet", {}).get("title")
             return {
                 "ok": True,
                 "access_token": token_data.get("access_token"),
                 "refresh_token": token_data.get("refresh_token"),
-                "account_name": "YouTube channel",
+                "expires_in": token_data.get("expires_in"),
+                "account_identifier": channel_id,
+                "account_name": channel_title or "YouTube channel",
             }
         except requests.RequestException as exc:
             return {"ok": False, "error": str(exc)}
@@ -78,7 +97,32 @@ class YoutubeAdapter(BaseProviderAdapter):
         return {"ok": True}
 
     def refresh(self, user_id: int) -> Dict[str, Any]:
-        return {"ok": True}
+        account = ConnectedAccount.query.filter_by(user_id=user_id, provider="youtube").first()
+        if not account or not account.encrypted_refresh_token:
+            return {"ok": False, "error": "Google refresh token is unavailable. Reconnect YouTube."}
+        try:
+            response = requests.post(
+                "https://oauth2.googleapis.com/token",
+                data={
+                    "client_id": os.environ.get("GOOGLE_CLIENT_ID"),
+                    "client_secret": os.environ.get("GOOGLE_CLIENT_SECRET"),
+                    "grant_type": "refresh_token",
+                    "refresh_token": decrypt_token(account.encrypted_refresh_token),
+                },
+                timeout=15,
+            )
+            if response.status_code != 200:
+                return {"ok": False, "error": f"Google token refresh failed: {response.text[:500]}"}
+            token_data = response.json()
+            if not token_data.get("access_token"):
+                return {"ok": False, "error": "Google token refresh returned no access token."}
+            account.encrypted_access_token = encrypt_token(token_data["access_token"])
+            if token_data.get("expires_in"):
+                account.token_expiry = datetime.now(timezone.utc) + timedelta(seconds=int(token_data["expires_in"]))
+            db.session.commit()
+            return {"ok": True, "access_token": token_data["access_token"]}
+        except requests.RequestException as exc:
+            return {"ok": False, "error": str(exc)}
 
     def test_connection(self, user_id: int) -> Dict[str, Any]:
         return {"ok": True}
@@ -89,6 +133,16 @@ class YoutubeAdapter(BaseProviderAdapter):
             return {"ok": False, "error": "Not connected"}
 
         access_token = decrypt_token(account.encrypted_access_token)
+        expiry = account.token_expiry
+        if expiry and expiry.tzinfo is None:
+            expiry = expiry.replace(tzinfo=timezone.utc)
+        if account.encrypted_refresh_token and (
+            not expiry or expiry <= datetime.now(timezone.utc)
+        ):
+            refreshed = self.refresh(user_id)
+            if not refreshed.get("ok"):
+                return refreshed
+            access_token = refreshed["access_token"]
         video_url = getattr(content, "file_url", None) or getattr(content, "video_url", None)
         if not video_url:
             return {"ok": False, "error": "YouTube requires a video file URL."}
@@ -104,12 +158,12 @@ class YoutubeAdapter(BaseProviderAdapter):
             }
             metadata_response = requests.post(
                 "https://www.googleapis.com/upload/youtube/v3/videos",
-                params={"part": "snippet,status", "uploadType": "multipart"},
+                params={"part": "snippet,status", "uploadType": "resumable"},
                 headers={
                     "Authorization": f"Bearer {access_token}",
                     "X-Upload-Content-Type": video.headers.get("Content-Type", "video/mp4"),
                     "X-Upload-Content-Length": str(len(video.content)),
-                    "Content-Type": "application/json; charset=UTF-8",
+                    "Content-Type": "application/json",
                 },
                 data=json.dumps(metadata),
                 timeout=120,

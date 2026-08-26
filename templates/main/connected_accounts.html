@@ -142,7 +142,6 @@ document.addEventListener("DOMContentLoaded", function() {
                             token: {label: 'API Key / Access Token', type: 'text'},
                             page_id: {label: 'Page ID', type: 'text'},
                             page_access_token: {label: 'Page Access Token', type: 'password'},
-                            ig_user_id: {label: 'Instagram User ID', type: 'text'},
                             access_token: {label: 'Access Token', type: 'password'},
                             bot_token: {label: 'Telegram Bot Token', type: 'password'},
                             author_urn: {label: 'Author URN', type: 'text'},
@@ -187,8 +186,8 @@ document.addEventListener("DOMContentLoaded", function() {
                             html += '<div class="mb-3"><label class="form-label">Chat ID / Channel ID</label><input type="text" name="chat_id" class="form-control" required></div>';
                         }
 
-                        // For wordpress or ghost, we also need site_url
-                        if (url.includes('wordpress') || url.includes('ghost') || methods.includes('site_url')) {
+                        // Ghost connections also need a site URL.
+                        if (url.includes('ghost') || methods.includes('site_url')) {
                             html += '<div class="mb-3"><label class="form-label">Site URL</label><input type="url" name="site_url" class="form-control" placeholder="https://..." required></div>';
                         }
                         
@@ -196,7 +195,19 @@ document.addEventListener("DOMContentLoaded", function() {
                         modal.show();
                     } else if (data.type === "redirect") {
                         if (url.includes('/telegram/')) {
-                            const telegramWindow = window.open(data.url, 'afrigenTelegramConnect', 'width=520,height=720');
+                            const telegramWindow = window.open('', 'afrigenTelegramConnect', 'width=520,height=420');
+                            if (!telegramWindow) {
+                                alert('Please allow popups for Afrigen to connect Telegram.');
+                                return;
+                            }
+                            telegramWindow.document.write(`
+                                <title>Connect Telegram</title>
+                                <style>body{font-family:system-ui,sans-serif;padding:32px;color:#161B22}button{background:#229ED9;color:white;border:0;border-radius:6px;padding:12px 18px;font-size:15px;cursor:pointer}</style>
+                                <h2>Add @${data.bot_username || 'AfrigenBot'} as admin to your group</h2>
+                                <p>Telegram will open so you can choose the group to connect.</p>
+                                <button onclick="window.location.href='${data.start_url || data.url}'">Open Telegram</button>
+                            `);
+                            telegramWindow.document.close();
                             const poll = setInterval(async () => {
                                 const status = await fetch("{{ url_for('main.telegram_link_status') }}").then(r => r.json());
                                 if (status.linked) {
@@ -207,7 +218,25 @@ document.addEventListener("DOMContentLoaded", function() {
                             }, 3000);
                             setTimeout(() => clearInterval(poll), 300000);
                         } else {
-                            window.location.href = data.url;
+                            const provider = url.split('/connected-accounts/')[1].split('/')[0];
+                            const authWindow = window.open(data.url, `afrigen${provider}Connect`, 'width=620,height=760');
+                            if (!authWindow) {
+                                alert('Please allow popups for Afrigen to connect this account.');
+                                return;
+                            }
+                            const poll = setInterval(async () => {
+                                try {
+                                    const status = await fetch(`/connected-accounts/${provider}/status`).then(r => r.json());
+                                    if (status.connected) {
+                                        clearInterval(poll);
+                                        if (!authWindow.closed) authWindow.close();
+                                        window.location.reload();
+                                    }
+                                } catch (error) {
+                                    console.error(error);
+                                }
+                            }, 2500);
+                            setTimeout(() => clearInterval(poll), 300000);
                         }
                     } else if (data.ok === false) {
                         alert("Connection failed: " + (data.error || "Unknown error"));
