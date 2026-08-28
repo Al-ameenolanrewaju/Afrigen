@@ -58,7 +58,10 @@ def _call(system: str, user: str, max_tokens: int = 2000, json_mode: bool = Fals
         kwargs["response_format"] = {"type": "json_object"}
         
     def do_generate():
-        return provider_manager.generate_text("Campaign", kwargs["messages"], **kwargs).strip()
+        # Remove 'messages' from kwargs to avoid passing it twice (positionally and via **kwargs)
+        call_kwargs = dict(kwargs)
+        messages = call_kwargs.pop("messages")
+        return provider_manager.generate_text("Campaign", messages, **call_kwargs).strip()
 
     if not current_app:
         with app.app_context():
@@ -589,7 +592,7 @@ def generate_all(post: dict) -> list[dict]:
         source_context = f"Title: {post['title']}\nDescription: {post.get('description', '')}\nBody:\n{post.get('body', '')[:3000]}"
         brief = generate_content_brief(ContentCategory.BLOG_POST, source_context, source_blog=post)
     except Exception as e:
-        print(f"[generate] ⚠️ Master Brief generation failed: {e}. Falling back to legacy generators.")
+        print(f"[generate] WARN: Master Brief generation failed: {e}. Falling back to legacy generators.")
         brief = None
     
     results = []
@@ -598,10 +601,10 @@ def generate_all(post: dict) -> list[dict]:
             try:
                 gen = write_linkedin_post(brief)
                 results.append({"platform": name, "content": gen.content})
-                print(f"[generate] ✅ {name} content ready (Content Engine)")
+                print(f"[generate] OK: {name} content ready (Content Engine)")
                 continue
             except Exception as e:
-                print(f"[generate] ❌ {name} (Content Engine) FAILED: {e}")
+                print(f"[generate] FAIL: {name} (Content Engine) FAILED: {e}")
                 results.append({"platform": name, "error": str(e)})
                 continue
                 
@@ -609,10 +612,10 @@ def generate_all(post: dict) -> list[dict]:
             try:
                 gen = write_telegram_post(brief)
                 results.append({"platform": name, "content": gen.content})
-                print(f"[generate] ✅ {name} content ready (Content Engine)")
+                print(f"[generate] OK: {name} content ready (Content Engine)")
                 continue
             except Exception as e:
-                print(f"[generate] ❌ {name} (Content Engine) FAILED: {e}")
+                print(f"[generate] FAIL: {name} (Content Engine) FAILED: {e}")
                 results.append({"platform": name, "error": str(e)})
                 continue
                 
@@ -622,23 +625,23 @@ def generate_all(post: dict) -> list[dict]:
                 res = {"platform": name, "content": gen.content}
                 res.update(gen.extra_fields)
                 results.append(res)
-                print(f"[generate] ✅ {name} content ready (Content Engine)")
+                print(f"[generate] OK: {name} content ready (Content Engine)")
                 continue
             except Exception as e:
-                print(f"[generate] ❌ {name} (Content Engine) FAILED: {e}")
+                print(f"[generate] FAIL: {name} (Content Engine) FAILED: {e}")
                 results.append({"platform": name, "error": str(e)})
                 continue
 
         # Fallback to legacy generators
         fn = _GENERATORS.get(name)
         if not fn:
-            print(f"[generate] ⚠️ {name} has no generator — skipping")
+            print(f"[generate] WARN: {name} has no generator — skipping")
             continue
         try:
             results.append(fn(post))
-            print(f"[generate] ✅ {name} content ready (Legacy)")
+            print(f"[generate] OK: {name} content ready (Legacy)")
         except Exception as e:
-            print(f"[generate] ❌ {name} (Legacy) FAILED: {e}")
+            print(f"[generate] FAIL: {name} (Legacy) FAILED: {e}")
             results.append({"platform": name, "error": str(e)})
             
     return results

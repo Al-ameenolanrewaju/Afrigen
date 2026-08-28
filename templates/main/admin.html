@@ -4,7 +4,7 @@
 
 {% block content %}
 <!-- Top Stats Row -->
-<div class="row g-3 mb-4">
+<div id="overview" class="row g-3 mb-4">
     <!-- Total Users -->
     <div class="col">
         <div class="admin-stat-card">
@@ -77,7 +77,7 @@
 </div>
 
 <!-- Chart Section -->
-<div class="admin-chart-container">
+<div id="charts" class="admin-chart-container">
     <div class="admin-chart-header">
         <div>
             <h5 class="admin-chart-title">Platform Activity (Last 7 Days)</h5>
@@ -96,7 +96,7 @@
 <div class="row g-4">
     
     <!-- All Users Table -->
-    <div class="col-12">
+    <div id="users" class="col-12">
         <div class="admin-chart-container" style="margin-bottom: 0;">
             <div class="admin-chart-header mb-3">
                 <h5 class="admin-chart-title">All Users</h5>
@@ -210,7 +210,7 @@
     </div>
 
     <!-- Recent Generations -->
-    <div class="col-12">
+    <div id="generations" class="col-12">
         <div class="admin-chart-container mb-0">
             <h5 class="admin-chart-title mb-3">Recent Generations</h5>
             <div class="table-responsive">
@@ -250,6 +250,222 @@
         </div>
     </div>
 
+    <!-- New Section: Health & Revenue -->
+    <div id="health" class="col-md-6">
+        <div class="admin-chart-container h-100 mb-0">
+            <h5 class="admin-chart-title mb-3">AI Provider Health</h5>
+            <div class="table-responsive">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Provider</th>
+                            <th>Status</th>
+                            <th>Avg Latency</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for health in provider_health %}
+                        <tr>
+                            <td style="color: white; text-transform: capitalize;">{{ health.provider }}</td>
+                            <td>
+                                <span class="admin-badge {% if health.status == 'healthy' %}admin-badge-green{% elif health.status == 'degraded' %}admin-badge-orange{% else %}admin-badge-red{% endif %}">
+                                    {{ health.status.upper() }}
+                                </span>
+                            </td>
+                            <td>{{ health.avg_latency_ms }} ms</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="3" class="text-center">No provider health data</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div id="payments" class="col-md-6">
+        <div class="admin-chart-container h-100 mb-0">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="admin-chart-title mb-0">Recent Payments</h5>
+                <span class="admin-badge admin-badge-green">Revenue: ₦{{ total_revenue or 0 }}</span>
+            </div>
+            <div class="table-responsive">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Amount</th>
+                            <th>Plan</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for payment in recent_payments %}
+                        <tr>
+                            <td style="color: white;">{{ payment.user.username }}</td>
+                            <td>₦{{ payment.amount }}</td>
+                            <td><span class="admin-badge admin-badge-orange">{{ payment.plan.upper() }}</span></td>
+                            <td>{{ payment.created_at.strftime('%b %d') }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="4" class="text-center">No recent payments</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Section: Connected Accounts & Social Publishing -->
+    <div id="connected-accounts" class="col-12">
+        <div class="admin-chart-container mb-0">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="admin-chart-title mb-0">Connected Accounts (Total: {{ total_connected_accounts }})</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Provider</th>
+                            <th>Account Name</th>
+                            <th>Status</th>
+                            <th>Connected On</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for acc in recent_connected_accounts %}
+                        <tr>
+                            <td style="color: white;">{{ acc.user.username }}</td>
+                            <td style="text-transform: capitalize;">{{ acc.provider }}</td>
+                            <td>{{ acc.account_name or 'N/A' }}</td>
+                            <td>
+                                <span class="admin-badge {% if acc.status == 'connected' %}admin-badge-green{% else %}admin-badge-red{% endif %}">
+                                    {{ acc.status.upper() }}
+                                </span>
+                            </td>
+                            <td>{{ acc.connected_at.strftime('%b %d, %Y') }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="5" class="text-center">No connected accounts yet</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Content Hub: Distributions -->
+    <div id="content-distributions" class="col-12">
+        <div class="admin-chart-container mb-0">
+            <h5 class="admin-chart-title mb-3">Recent Content Distributions (Social Media)</h5>
+            <div class="table-responsive">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Blog Post</th>
+                            <th>Status</th>
+                            <th>Success / Total</th>
+                            <th>Date</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for run in recent_distributions %}
+                        <tr>
+                            <td>#{{ run.id }}</td>
+                            <td style="color: white; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                {{ run.blog_post.title if run.blog_post else 'Unknown' }}
+                            </td>
+                            <td>
+                                <span class="admin-badge {% if run.status == 'completed' %}admin-badge-green{% elif run.status == 'failed' %}admin-badge-red{% else %}admin-badge-orange{% endif %}">
+                                    {{ run.status.upper() }}
+                                </span>
+                            </td>
+                            <td>{{ run.success_count }} / {{ run.total_platforms }}</td>
+                            <td>{{ run.started_at.strftime('%b %d, %Y') }}</td>
+                            <td>
+                                <a href="{{ url_for('main.admin_distribution_run', run_id=run.id) }}" class="btn-admin" style="text-decoration: none;">View</a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="6" class="text-center">No distribution runs yet</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Content Hub: Blogs & Newsletters -->
+    <div id="content-blogs" class="col-md-6">
+        <div class="admin-chart-container h-100 mb-0">
+            <h5 class="admin-chart-title mb-3">Recent Blog Posts</h5>
+            <div class="table-responsive">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for post in recent_blogs %}
+                        <tr>
+                            <td style="color: white; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ post.title }}</td>
+                            <td>
+                                <span class="admin-badge {% if post.status == 'published' %}admin-badge-green{% else %}admin-badge-orange{% endif %}">
+                                    {{ post.status.upper() }}
+                                </span>
+                            </td>
+                            <td>
+                                <a href="{{ url_for('main.admin_blog') }}" class="btn-admin" style="text-decoration: none;">Manage</a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="3" class="text-center">No blog posts</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="admin-chart-container h-100 mb-0">
+            <h5 class="admin-chart-title mb-3">Recent Newsletters</h5>
+            <div class="table-responsive">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Subject</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for nl in recent_newsletters %}
+                        <tr>
+                            <td style="color: white; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ nl.subject }}</td>
+                            <td>
+                                <span class="admin-badge {% if nl.status == 'sent' %}admin-badge-green{% else %}admin-badge-orange{% endif %}">
+                                    {{ nl.status.upper() }}
+                                </span>
+                            </td>
+                            <td>
+                                <a href="{{ url_for('main.admin_newsletter') }}" class="btn-admin" style="text-decoration: none;">Manage</a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="3" class="text-center">No newsletters</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 

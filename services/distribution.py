@@ -166,7 +166,7 @@ def _execute_run(run_id: int):
     try:
         run = db.session.get(DistributionRun, run_id)
         if not run:
-            print(f"[distribution] ❌ run {run_id} not found")
+            print(f"[distribution] FAIL: run {run_id} not found")
             return
 
         post = run.blog_post
@@ -202,7 +202,7 @@ def _execute_run(run_id: int):
         for cr in content_results:
             platform = cr["platform"]
             if "error" in cr:
-                print(f"[distribution] ⚠️ {platform}: generation failed — {cr['error']}")
+                print(f"[distribution] WARN: {platform}: generation failed — {cr['error']}")
                 continue
 
             result_row = DistributionResult.query.filter_by(
@@ -225,16 +225,16 @@ def _execute_run(run_id: int):
                 db.session.commit()
 
                 if result["ok"]:
-                    print(f"[distribution] ✅ {platform}: {result_row.post_url or 'posted'}")
+                    print(f"[distribution] OK: {platform}: {result_row.post_url or 'posted'}")
                 else:
-                    print(f"[distribution] ❌ {platform}: {result_row.error}")
+                    print(f"[distribution] FAIL: {platform}: {result_row.error}")
 
             except Exception as e:
                 traceback.print_exc()
                 result_row.ok = False
                 result_row.error = str(e)[:500]
                 db.session.commit()
-                print(f"[distribution] ❌ {platform} exception: {e}")
+                print(f"[distribution] FAIL: {platform} exception: {e}")
 
         # Step 3: Google Indexing
         print(f"[distribution] Pinging Google Indexing...")
@@ -262,7 +262,7 @@ def _execute_run(run_id: int):
         try:
             _notify_admin(run)
         except Exception as e:
-            print(f"[distribution] ⚠️ Admin notification failed: {e}")
+            print(f"[distribution] WARN: Admin notification failed: {e}")
 
     except Exception as e:
         traceback.print_exc()

@@ -899,6 +899,26 @@ def admin():
         Campaign, func.count(CampaignAsset.id).label('asset_count')
     ).join(CampaignAsset).group_by(Campaign.id).order_by(func.count(CampaignAsset.id).desc()).limit(5).all()
 
+    from models import ProviderHealth, Payment, DistributionRun, BlogPost, NewsletterIssue, ConnectedAccount
+    
+    # Provider Health
+    provider_health = ProviderHealth.query.all()
+    
+    # Payments
+    recent_payments = Payment.query.order_by(Payment.created_at.desc()).limit(10).all()
+    total_revenue = sum(p.amount for p in Payment.query.filter(Payment.amount != None).all())
+    
+    # Distribution Runs
+    recent_distributions = DistributionRun.query.order_by(DistributionRun.started_at.desc()).limit(10).all()
+    
+    # Content Hub (Blogs & Newsletters)
+    recent_blogs = BlogPost.query.order_by(BlogPost.created_at.desc()).limit(10).all()
+    recent_newsletters = NewsletterIssue.query.order_by(NewsletterIssue.created_at.desc()).limit(10).all()
+    
+    # Connected Accounts
+    total_connected_accounts = ConnectedAccount.query.count()
+    recent_connected_accounts = ConnectedAccount.query.order_by(ConnectedAccount.connected_at.desc()).limit(10).all()
+
     return render_template(
         'main/admin.html',
         users=users,
@@ -927,7 +947,15 @@ def admin():
         campaigns_with_assets=campaigns_with_assets,
         top_automation_users=top_automation_users,
         workflow_logs=workflow_logs,
-        top_automated_campaigns=top_automated_campaigns
+        top_automated_campaigns=top_automated_campaigns,
+        provider_health=provider_health,
+        recent_payments=recent_payments,
+        total_revenue=total_revenue,
+        recent_distributions=recent_distributions,
+        recent_blogs=recent_blogs,
+        recent_newsletters=recent_newsletters,
+        total_connected_accounts=total_connected_accounts,
+        recent_connected_accounts=recent_connected_accounts
     )
 
 
@@ -1230,14 +1258,14 @@ def referral():
                 })
 
     total_referrals = len(used_referrals)
-    credits_earned = total_referrals * 2
+    videos_earned = total_referrals
 
     return render_template('main/referral.html',
         referral_link=referral_link,
         referral_code=referral.referral_code,
         referred_users=referred_users,
         total_referrals=total_referrals,
-        credits_earned=credits_earned
+        videos_earned=videos_earned
     )
 
 

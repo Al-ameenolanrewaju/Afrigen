@@ -33,6 +33,10 @@ INDEXING_API = "https://indexing.googleapis.com/v3/urlNotifications:publish"
 def _get_access_token(sa_input: str) -> str:
     """Exchange a service account JSON key for an OAuth 2.0 access token."""
     sa_input = sa_input.strip()
+    if sa_input.startswith("'") and sa_input.endswith("'"):
+        sa_input = sa_input[1:-1]
+    if sa_input.startswith('"') and sa_input.endswith('"'):
+        sa_input = sa_input[1:-1]
     
     # 1. Parse SA JSON from file or string
     if os.path.exists(sa_input):
@@ -130,7 +134,7 @@ def notify_url(url: str) -> dict:
     sa_json = os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON", "")
 
     if not sa_json:
-        print("[google_indexing] ❌ missing credentials: GOOGLE_SERVICE_ACCOUNT_JSON")
+        print("[google_indexing] FAIL: missing credentials: GOOGLE_SERVICE_ACCOUNT_JSON")
         return {
             "ok": False,
             "notified": False,
@@ -141,7 +145,7 @@ def notify_url(url: str) -> dict:
         access_token = _get_access_token(sa_json)
         print("[google_indexing] access token obtained")
     except Exception as e:
-        print(f"[google_indexing] ❌ auth failed: {e}")
+        print(f"[google_indexing] FAIL: auth failed: {e}")
         return {
             "ok": False,
             "notified": False,

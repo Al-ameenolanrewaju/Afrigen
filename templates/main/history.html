@@ -113,7 +113,7 @@
                             {% elif gen.generation_type == 'text' %}<i class="fa-solid fa-clapperboard"></i> Text to Video
                             {% else %}<i class="fa-solid fa-clapperboard"></i> Video{% endif %}
                         </span>
-                        <span class="badge" style="background: {% if gen.status == 'completed' %}#27AE60{% elif gen.status == 'failed' %}#E74C3C{% else %}#F5A623{% endif %}; color: white;">
+                        <span class="badge {% if gen.status == 'completed' %}bg-success{% elif gen.status == 'failed' %}bg-danger{% else %}bg-warning{% endif %}" style="color: white;">
                             {{ gen.status.upper() }}
                         </span>
                         <small style="color: #888; align-self: center;">
@@ -214,15 +214,15 @@
     border-radius: 16px;
 }
 </style>
-<script>
 {% set processing = generations | selectattr('status', 'equalto', 'processing') | list %}
 {% if processing %}
+<script>
 // Auto refresh every 15 seconds while videos are processing
 setTimeout(function() {
     window.location.reload();
 }, 15000);
-{% endif %}
 </script>
+{% endif %}
 {% include "main/_social_publish_modal.html" %}
 
 {% endblock %}

@@ -283,6 +283,35 @@
             </li>
         </ul>
 
+        <div class="admin-nav-section mt-3">DASHBOARD SECTIONS</div>
+        <ul class="admin-nav-list">
+            <li>
+                <a href="{{ url_for('main.admin') }}#users" class="admin-nav-item" style="font-size: 13px;">
+                    <i class="fa-solid fa-users"></i> Users & Activity
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('main.admin') }}#health" class="admin-nav-item" style="font-size: 13px;">
+                    <i class="fa-solid fa-heart-pulse"></i> AI Provider Health
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('main.admin') }}#payments" class="admin-nav-item" style="font-size: 13px;">
+                    <i class="fa-solid fa-money-bill"></i> Revenue & Payments
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('main.admin') }}#connected-accounts" class="admin-nav-item" style="font-size: 13px;">
+                    <i class="fa-solid fa-link"></i> Connected Accounts
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('main.admin') }}#content-distributions" class="admin-nav-item" style="font-size: 13px;">
+                    <i class="fa-solid fa-share-nodes"></i> Content Hub
+                </a>
+            </li>
+        </ul>
+
         <div class="admin-nav-section mt-3">NAVIGATION</div>
         <ul class="admin-nav-list">
             <li>

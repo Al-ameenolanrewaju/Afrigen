@@ -412,8 +412,10 @@
                 </div>
 
                 <div class="d-flex align-items-center gap-3">
+                    {% if current_user.plan != 'free' %}
                     <span style="color: #8B949E; font-size: 13px;"><i class="fa-solid fa-coins"
                             style="color: #F5A623;"></i> {{ current_user.credits }} Credits</span>
+                    {% endif %}
                     {% if current_user.credits > 0 or current_user.plan == 'free' %}
                     <button type="button" id="masterSubmitBtn" class="btn btn-afrigen px-4" style="border-radius: 8px;">
                         Generate <i class="fa-solid fa-arrow-right ms-1"></i>
@@ -484,7 +486,7 @@
                             <div class="btn-group">
                                 <button class="btn btn-sm btn-link text-decoration-none" style="color: #8B949E;"
                                     title="Duplicate Prompt"
-                                    onclick="duplicatePrompt('{{ gen.original_prompt|replace("'", "\\'") }}')"><i
+                                    onclick="duplicatePrompt(this.getAttribute('data-prompt'))" data-prompt="{{ gen.original_prompt }}"><i
                                         class="fa-regular fa-copy"></i></button>
                                 {% if gen.video_url or gen.image_url %}
                                 <a href="{{ url_for('main.download_video', generation_id=gen.id) }}"
@@ -609,12 +611,15 @@
     </div>
 </div>
 
+{% if recent_generations | selectattr('status', 'equalto', 'processing') | list %}
 <script>
-    {% if recent_generations | selectattr('status', 'equalto', 'processing') | list %}
     setTimeout(function () {
         window.location.reload();
     }, 10000);
-    {% endif %}
+</script>
+{% endif %}
+
+<script>
 
     // 1. Dynamic Greeting
     const hour = new Date().getHours();

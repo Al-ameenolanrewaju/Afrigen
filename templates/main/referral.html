@@ -8,7 +8,7 @@
             <!-- Header -->
             <div class="card p-4 mb-4 text-center">
                 <h1 style="color: #F5A623; font-size: 1.6rem;"><i class="fa-solid fa-gift"></i> Referral Program</h1>
-                <p style="color: #C9D1D9;">Invite friends and earn free credits!</p>
+                <p style="color: #C9D1D9;">Invite friends and earn bonus videos!</p>
             </div>
 
             <!-- Stats -->
@@ -21,16 +21,18 @@
                 </div>
                 <div class="col-4">
                     <div class="card p-4 text-center">
-                        <h2 style="color: #27AE60;">{{ credits_earned }}</h2>
-                        <p style="color: #888; font-size: 13px;">Credits Earned</p>
+                        <h2 style="color: #27AE60;">{{ videos_earned }}</h2>
+                        <p style="color: #888; font-size: 13px;">Bonus Videos Earned</p>
                     </div>
                 </div>
+                {% if current_user.plan != 'free' %}
                 <div class="col-4">
                     <div class="card p-4 text-center">
                         <h2 style="color: #F5A623;">{{ current_user.credits }}</h2>
                         <p style="color: #888; font-size: 13px;">Current Credits</p>
                     </div>
                 </div>
+                {% endif %}
             </div>
 
             <!-- How It Works -->
@@ -39,8 +41,8 @@
                 <ul style="color: #C9D1D9; list-style: none; padding: 0;">
                     <li class="mb-2"><i class="fa-solid fa-circle-check" style="color:#27AE60;"></i> Share your referral link</li>
                     <li class="mb-2"><i class="fa-solid fa-circle-check" style="color:#27AE60;"></i> Friend signs up using your link</li>
-                    <li class="mb-2"><i class="fa-solid fa-circle-check" style="color:#27AE60;"></i> You get 2 FREE credits!</li>
-                    <li class="mb-2"><i class="fa-solid fa-circle-check" style="color:#27AE60;"></i> Friend gets 2 BONUS credits!</li>
+                    <li class="mb-2"><i class="fa-solid fa-circle-check" style="color:#27AE60;"></i> You get 1 BONUS video (10 credits if Pro)!</li>
+                    <li class="mb-2"><i class="fa-solid fa-circle-check" style="color:#27AE60;"></i> Friend gets 1 BONUS video!</li>
                 </ul>
             </div>
 
@@ -88,7 +90,7 @@
                                 <th>Username</th>
                                 <th>Plan</th>
                                 <th>Joined</th>
-                                <th>Credits Earned</th>
+                                <th>Reward Earned</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -96,12 +98,12 @@
                             <tr>
                                 <td>{{ user.username }}</td>
                                 <td>
-                                    <span class="badge" style="background: {% if user.plan == 'pro' %}#F5A623{% else %}#21262D{% endif %}; color: {% if user.plan == 'pro' %}#0D1117{% else %}#C9D1D9{% endif %};">
+                                    <span class="badge {% if user.plan == 'pro' %}badge-pro{% else %}badge-free{% endif %}">
                                         {{ user.plan.upper() }}
                                     </span>
                                 </td>
                                 <td style="color: #888;">{{ user.joined }}</td>
-                                <td style="color: #27AE60;">+2 credits</td>
+                                <td style="color: #27AE60;">+1 video</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -110,7 +112,7 @@
                 {% else %}
                 <div class="text-center p-4">
                     <p style="color: #888;">No referrals yet. Share your link to get started!</p>
-                    <p style="color: #F5A623; font-size: 14px;">Each referral earns you 2 free credits <i class="fa-solid fa-champagne-glasses"></i></p>
+                    <p style="color: #F5A623; font-size: 14px;">Each referral earns you 1 bonus video! <i class="fa-solid fa-champagne-glasses"></i></p>
                 </div>
                 {% endif %}
             </div>
@@ -133,6 +135,14 @@ function copyReferralLink() {
     color: #0D1117;
     border: none;
     font-weight: 600;
+}
+.badge-pro {
+    background: #F5A623;
+    color: #0D1117;
+}
+.badge-free {
+    background: #21262D;
+    color: #C9D1D9;
 }
 .btn-afrigen:hover {
     background: #e09515;
