@@ -52,8 +52,6 @@ def post_to_channel(text: str, concise: bool = True, bot_token: str = None, chan
         }
 
     try:
-        if concise:
-            text = text[:200]  # truncate to 200 characters
         resp = requests.post(
             f"{TELEGRAM_API}/bot{bot_token}/sendMessage",
             json={

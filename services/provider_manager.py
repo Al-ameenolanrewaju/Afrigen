@@ -51,7 +51,10 @@ class GroqAdapter(ProviderAdapter):
             args["response_format"] = kwargs['response_format']
             
         response = self._get_client().chat.completions.create(**args)
-        return response.choices[0].message.content
+        choice = response.choices[0]
+        if choice.finish_reason == 'length':
+            raise Exception("AI response was truncated due to max_tokens limit.")
+        return choice.message.content
 
 
 class OpenRouterAdapter(ProviderAdapter):
@@ -88,7 +91,10 @@ class OpenRouterAdapter(ProviderAdapter):
             args["response_format"] = kwargs['response_format']
             
         response = self._get_client().chat.completions.create(**args)
-        return response.choices[0].message.content
+        choice = response.choices[0]
+        if choice.finish_reason == 'length':
+            raise Exception("AI response was truncated due to max_tokens limit.")
+        return choice.message.content
 
 
 class GeminiAdapter(ProviderAdapter):
@@ -155,6 +161,12 @@ class GeminiAdapter(ProviderAdapter):
                 contents=prompt_text,
                 config=self._types.GenerateContentConfig(**config_kwargs),
             )
+            
+            if hasattr(response, "candidates") and response.candidates:
+                # In new SDK, finish_reason is an enum
+                if getattr(response.candidates[0].finish_reason, "name", "") == "MAX_TOKENS" or response.candidates[0].finish_reason == 2:
+                    raise Exception("AI response was truncated due to max_tokens limit.")
+            
             return getattr(response, "text", str(response))
 
         if self._genai_module is not None:
@@ -197,6 +209,12 @@ class GeminiAdapter(ProviderAdapter):
             gemini_messages,
             generation_config=generation_config
         )
+        
+        if response.candidates and hasattr(response.candidates[0], "finish_reason"):
+            reason = response.candidates[0].finish_reason
+            if getattr(reason, "name", "") == "MAX_TOKENS" or reason == 2:
+                raise Exception("AI response was truncated due to max_tokens limit.")
+                
         return response.text
 
 
@@ -298,6 +316,18 @@ class ProviderManager:
             except Exception as e:
                 latency = time.time() - start_time
                 error_msg = str(e)
+                
+                # Sanitize raw JSON errors from API providers (e.g. Groq 400s)
+                import re, json
+                match = re.search(r"(\{.*\})", error_msg, re.DOTALL)
+                if match:
+                    try:
+                        err_json = json.loads(match.group(1))
+                        if "error" in err_json and "message" in err_json["error"]:
+                            error_msg = err_json["error"]["message"]
+                    except Exception:
+                        pass
+
                 self._update_health(provider_name, success=False, latency=latency, error_msg=error_msg)
                 self._log_request(task_type, provider_name, latency, fallback_triggered, success=False, error_msg=error_msg)
                 

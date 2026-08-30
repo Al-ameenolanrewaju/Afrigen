@@ -329,7 +329,7 @@ def connected_accounts():
         {"id": "linkedin", "name": "LinkedIn", "icon": "bi-linkedin"},
         {"id": "telegram", "name": "Telegram", "icon": "bi-telegram"},
         {"id": "tiktok", "name": "TikTok", "icon": "bi-tiktok"},
-        {"id": "pinterest", "name": "Pinterest", "icon": "bi-pinterest"},
+        {"id": "pinterest", "name": "Pinterest", "icon": "bi-pinterest", "available": False},
         {"id": "youtube", "name": "YouTube", "icon": "bi-youtube"},
         {"id": "medium", "name": "Medium", "icon": "bi-medium"},
         {"id": "devto", "name": "Dev.to", "icon": "bi-code-square"},
