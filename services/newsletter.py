@@ -277,7 +277,7 @@ def run_weekly_send():
         print("Weekly newsletter skipped: empty draft.")
         return 0
 
-        result = send_issue(issue)
-        print(f"Weekly newsletter sent to {result['sent']} recipients "
-            f"({result['failed']} failed, issue {issue.id}).")
-        return result["sent"]
+    result = send_issue(issue)
+    print(f"Weekly newsletter sent to {result['sent']} recipients "
+          f"({result['failed']} failed, issue {issue.id}).")
+    return result["sent"]

@@ -276,13 +276,11 @@ def forgot_password():
             # Send reset email
             try:
                 send_reset_password_email(email, user.username, reset_url)
-                flash('Reset link sent! Check your email! 📧', 'success')
             except Exception as e:
                 print(f"Email error: {e}")
-                flash('Error sending email!', 'danger')
-        else:
-            # Don't reveal if email exists or not
-            flash('If that email exists, a reset link has been sent!', 'success')
+                # Don't flash an error here to prevent enumeration by observing email failures
+        
+        flash('If that email exists, a reset link has been sent!', 'success')
 
         return redirect(url_for('auth.forgot_password'))
 

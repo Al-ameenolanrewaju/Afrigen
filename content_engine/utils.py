@@ -30,6 +30,7 @@ def generate_with_llm(system: str, user: str, max_tokens: int = 2000, json_mode:
     }
     if json_mode:
         kwargs["response_format"] = {"type": "json_object"}
+        system += " You MUST respond in valid JSON format."
         
     messages = [
         {"role": "system", "content": system},

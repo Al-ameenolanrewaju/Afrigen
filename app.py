@@ -104,21 +104,28 @@ def fail_stuck_generations():
     to refund there)."""
     from datetime import datetime, timedelta, timezone
     with app.app_context():
-        from models import db, Generation, User
-        cutoff = datetime.now(timezone.utc) - timedelta(minutes=15)
-        stuck = Generation.query.filter(
-            Generation.status == 'processing',
-            Generation.created_at < cutoff,
-        ).all()
-        if not stuck:
-            return
-        for gen in stuck:
-            gen.status = 'failed'
-            user = db.session.get(User, gen.user_id)
-            if user and user.plan == 'free' and (user.monthly_videos_used or 0) > 0:
-                user.monthly_videos_used -= 1
-        db.session.commit()
-        print(f"⏱️ Failed {len(stuck)} stuck generation(s) past the 15-min timeout.")
+        try:
+            from models import db, Generation, User
+            cutoff = datetime.now(timezone.utc) - timedelta(minutes=15)
+            stuck = Generation.query.filter(
+                Generation.status == 'processing',
+                Generation.created_at < cutoff,
+            ).with_for_update().all()
+            if not stuck:
+                return
+            for gen in stuck:
+                gen.status = 'failed'
+                user = db.session.get(User, gen.user_id)
+                if user:
+                    if user.plan == 'free' and (user.monthly_videos_used or 0) > 0:
+                        user.monthly_videos_used -= 1
+                    elif user.plan == 'pro':
+                        user.credits = (user.credits or 0) + gen.credit_cost
+            db.session.commit()
+            print(f"⏱️ Failed {len(stuck)} stuck generation(s) past the 15-min timeout.")
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error in fail_stuck_generations: {e}")
 
 
 @scheduler.task('interval', id='process_publishing_queue', seconds=30)

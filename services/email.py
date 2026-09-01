@@ -360,8 +360,12 @@ def send_newsletter(recipients, subject, body, base_url=BASE_URL, is_html=False,
     html_body = body if is_html else (body or "").replace("\n", "<br>")
     sent = 0
     failures = []
-    for email, name in recipients:
-        try:
+    
+    BATCH_SIZE = 100
+    for i in range(0, len(recipients), BATCH_SIZE):
+        batch = recipients[i:i + BATCH_SIZE]
+        payloads = []
+        for email, name in batch:
             unsub_url = f"{base_url}/unsubscribe/{generate_unsub_token(email)}"
             content = f"""
             <p style="color: #E4E4E7; font-size: 15px; margin: 0 0 24px 0;">Hi <strong style="color: #FFFFFF;">{name or 'there'}</strong>,</p>
@@ -374,16 +378,27 @@ def send_newsletter(recipients, subject, body, base_url=BASE_URL, is_html=False,
                 <a href="{unsub_url}" style="color: #A1A1AA; text-decoration: underline;">Unsubscribe from this list</a>.
             </p>
             """
-            resend.Emails.send({
+            payloads.append({
                 "from": FROM_EMAIL,
                 "to": email,
                 "subject": subject or "Afrigen Update",
                 "html": get_base_email_html(content)
             })
-            sent += 1
+            
+        try:
+            response = resend.Batch.send(payloads)
+            
+            if isinstance(response, dict) and response.get('data'):
+                # Each successful individual email is returned in data
+                sent += len(response['data'])
+            else:
+                sent += len(payloads)
+                
         except Exception as e:
-            print(f"Newsletter send error for {email}: {e}")
-            failures.append({"email": email, "error": str(e)})
+            print(f"Newsletter batch error: {e}")
+            for payload in payloads:
+                failures.append({"email": payload["to"], "error": str(e)})
+
     if return_details:
         return {
             "attempted": len(recipients),

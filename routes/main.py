@@ -254,11 +254,17 @@ def generate():
     if action == 'refine_only':
         return jsonify({"success": True, "type": "refine_only", "refined": refined, "original": prompt})
 
-    ok, error, _ = video_gate(current_user, effective_style, extended=extended, duration=duration)
-    if not ok:
-        return jsonify({"success": False, "error": error})
-
     try:
+        # Lock user row to make credit check and deduction perfectly atomic.
+        # This blocks concurrent /generate requests for this user, preventing
+        # them from bypassing limits by firing parallel API calls.
+        locked_user = User.query.with_for_update().get(current_user.id)
+
+        ok, error, _ = video_gate(locked_user, effective_style, extended=extended, duration=duration)
+        if not ok:
+            db.session.rollback()
+            return jsonify({"success": False, "error": error})
+
         style = effective_style
 
         webhook_url = url_for('main.fal_webhook', _external=True)
@@ -288,8 +294,7 @@ def generate():
         )
         db.session.add(generation)
 
-        if current_user.plan == 'free':
-            current_user.monthly_videos_used += 1
+        charge_video(locked_user, video_cost)
 
         db.session.commit()
 
@@ -1978,13 +1983,21 @@ def fal_webhook():
     if not request_id:
         return '', 400
 
-    generation = Generation.query.filter_by(fal_request_id=request_id).first()
+    generation = Generation.query.filter_by(fal_request_id=request_id).with_for_update().first()
     if not generation:
         print(f"GENERATION webhook_request_id={request_id} status=unknown_generation")
         return '', 404
 
     if data.get('status') == 'ERROR':
+        if generation.status == 'failed':
+            return '', 200
         generation.status = 'failed'
+        user = User.query.get(generation.user_id)
+        if user:
+            if user.plan == 'free':
+                user.monthly_videos_used = max(0, (user.monthly_videos_used or 0) - 1)
+            elif user.plan == 'pro':
+                user.credits = (user.credits or 0) + generation.credit_cost
         db.session.commit()
         print(f"GENERATION webhook_request_id={request_id} status=failed")
         return '', 200
@@ -2004,10 +2017,9 @@ def fal_webhook():
         generation.status = 'completed'
         print(f"GENERATION webhook_request_id={request_id} status=completed")
 
-        # Deduct credits only on success
+        # Check if user needs low credit warning
         user = User.query.get(generation.user_id)
         if user:
-            charge_video(user, generation.credit_cost)
             if user.plan == 'pro' and user.credits <= 5:
                 try:
                     from services.email import send_credits_low_email
