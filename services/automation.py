@@ -517,8 +517,15 @@ def _run_node(node, workflow_id: str, run_id: str, node_index: int, user_id: int
                 elif node_type == 'generate_newsletter':
                     result = newsletter_service.generate_weekly_digest()
                 elif node_type == 'generate_image':
-                    result = video_service.generate_image(prompt, style=node.get('style', 'african'))
+                    from models import db, User
+                    owner = db.session.get(User, user_id) if user_id else None
+                    provider = 'fal' if owner and owner.plan == 'pro' else 'huggingface'
+                    result = video_service.generate_image(prompt, style=node.get('style', 'african'), provider=provider)
                 elif node_type == 'generate_video':
+                    from models import db, User
+                    owner = db.session.get(User, user_id) if user_id else None
+                    if owner and owner.plan != 'pro':
+                        raise ValueError('Video generation is a Pro feature.')
                     result = video_service.generate_video(prompt, style=node.get('style', 'cinematic'))
                 elif node_type == 'publish_social':
                     result = _publish_automation_asset(

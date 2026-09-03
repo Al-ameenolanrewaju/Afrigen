@@ -192,7 +192,7 @@ def _account_summary(user):
     if user.plan == 'free':
         videos_left = max(0, 3 - (user.monthly_videos_used or 0))
         images_left = max(0, 2 - (user.monthly_images_used or 0))
-        return f"🆓 Free plan • {videos_left} videos & {images_left} images left this month"
+        return f"🆓 Free plan • Video generation requires Pro • {images_left} images left"
     return "Account restricted"
 
 
@@ -499,7 +499,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if mode == 'image':
         await update.message.chat.send_action("upload_photo")
         await update.message.reply_text("🎨 Generating your photo... give me a moment.")
-        result = await asyncio.to_thread(generate_image, refined, style, "1:1")
+        provider = "fal" if account.plan == "pro" else "huggingface"
+        result = await asyncio.to_thread(generate_image, refined, style, "1:1", provider)
         success = bool(result.get("success"))
         media_url = result.get("image_url")
         gen_error = result.get("error")
@@ -527,7 +528,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 db.session.commit()
         except Exception as e:
             logger.error(f"Failed-generation log error: {e}")
-        await update.message.reply_text(f"❌ {gen_error or 'Generation failed. Please try again.'}")
+        logger.error(f"Generation failed for account {account_id}: {gen_error}")
+        await update.message.reply_text("❌ Generation failed. Please try again later.")
         return
 
     # 5) Burn any quoted on-screen words onto videos (best-effort).

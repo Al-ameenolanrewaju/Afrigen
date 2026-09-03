@@ -241,6 +241,7 @@
             <textarea id="master_prompt" class="form-control prompt-textarea" rows="3"
                 placeholder="Describe your idea in detail..."></textarea>
 
+            {% if current_user.plan == 'pro' %}
             <!-- Form 1: Text to Video -->
             <form method="POST" action="{{ url_for('main.generate') }}" id="form_video" class="workspace-form">
                 <input type="hidden" name="prompt" id="hidden_video_prompt">
@@ -292,10 +293,11 @@
                     {% endif %}
                 </div>
             </form>
+            {% endif %}
 
             <!-- Form 2: Text to Image -->
             <form method="POST" action="{{ url_for('main.generate_image') }}" id="form_image" class="workspace-form"
-                style="display: none;">
+                style="display: {{ 'none' if current_user.plan == 'pro' else 'block' }};">
                 <input type="hidden" name="prompt" id="hidden_image_prompt">
 
                 <div class="config-drawer text-start">
@@ -395,10 +397,12 @@
             <!-- Quick Actions Footer -->
             <div class="quick-actions">
                 <div class="d-flex flex-wrap gap-2">
+                    {% if current_user.plan == 'pro' %}
                     <button type="button" class="action-btn active" data-target="form_video">
                         <i class="fa-solid fa-clapperboard"></i> Video
                     </button>
-                    <button type="button" class="action-btn" data-target="form_image">
+                    {% endif %}
+                    <button type="button" class="action-btn {{ '' if current_user.plan == 'pro' else 'active' }}" data-target="form_image">
                         <i class="fa-solid fa-image"></i> Image
                     </button>
                     <button type="button" class="action-btn" data-target="form_animate">

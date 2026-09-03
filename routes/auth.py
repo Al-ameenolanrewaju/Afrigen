@@ -103,19 +103,14 @@ def register():
             ).first()
 
             if referral:
-                # Give new user 1 bonus video by starting at -1
-                new_user.monthly_videos_used = -1
-                
                 referrer = User.query.get(referral.referrer_id)
                 if referrer:
-                    if referrer.plan == 'free':
-                        referrer.monthly_videos_used = (referrer.monthly_videos_used or 0) - 1
-                    else:
+                    if referrer.plan == 'pro':
                         referrer.credits += 10  # Equivalent value for pro users, or whatever is appropriate
                 
                 referral.referred_id = new_user.id
                 referral.is_used = True
-                flash('Bonus video added! 🎁', 'success')
+                flash('Referral recorded successfully!', 'success')
 
         db.session.commit()
 
@@ -228,13 +223,9 @@ def google_callback():
                     referral_code=ref_code, is_used=False
                 ).first()
                 if referral:
-                    user.monthly_videos_used = -1
-                    
                     referrer = User.query.get(referral.referrer_id)
                     if referrer:
-                        if referrer.plan == 'free':
-                            referrer.monthly_videos_used = (referrer.monthly_videos_used or 0) - 1
-                        else:
+                        if referrer.plan == 'pro':
                             referrer.credits += 10
                             
                     referral.referred_id = user.id

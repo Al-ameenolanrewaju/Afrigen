@@ -194,6 +194,7 @@
             </div>
             
             <div class="pt-2">
+                {% if current_user.plan == 'pro' %}
                 <button class="type-btn active" data-type="video">
                     <span class="type-icon"><i class="fa-solid fa-clapperboard"></i></span>
                     <div class="d-flex flex-column">
@@ -201,7 +202,8 @@
                         <small style="color: #484F58; font-size: 11px;">Text to Video</small>
                     </div>
                 </button>
-                <button class="type-btn" data-type="image">
+                {% endif %}
+                <button class="type-btn {{ '' if current_user.plan == 'pro' else 'active' }}" data-type="image">
                     <span class="type-icon"><i class="fa-solid fa-image"></i></span>
                     <div class="d-flex flex-column">
                         <span>Image</span>
@@ -250,6 +252,7 @@
         <!-- Right Panel: Settings (Dynamic forms) -->
         <div class="panel-right">
             
+            {% if current_user.plan == 'pro' %}
             <!-- Video Settings -->
             <form id="form_video" class="settings-form" method="POST" action="{{ url_for('main.generate') }}">
                 <input type="hidden" name="prompt" class="sync-prompt">
@@ -303,9 +306,10 @@
                     {% endif %}
                 </div>
             </form>
+            {% endif %}
 
             <!-- Image Settings -->
-            <form id="form_image" class="settings-form" style="display: none;" method="POST" action="{{ url_for('main.generate_image') }}">
+            <form id="form_image" class="settings-form" style="display: {{ 'none' if current_user.plan == 'pro' else 'block' }};" method="POST" action="{{ url_for('main.generate_image') }}">
                 <input type="hidden" name="prompt" class="sync-prompt">
                 
                 <div class="settings-group">
@@ -603,5 +607,6 @@
             if(p >= 95) clearInterval(interval);
         }, 500);
     }
+
 </script>
 {% endblock %}

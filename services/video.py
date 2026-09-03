@@ -4,6 +4,7 @@ import subprocess
 import tempfile
 import requests
 import fal_client
+from huggingface_hub import InferenceClient
 
 os.environ["FAL_KEY"] = os.environ.get("FAL_KEY", "")
 
@@ -351,7 +352,10 @@ def merge_audio_into_video(video_url, audio_url):
         return None
 
 
-def generate_image(prompt, style="realistic", aspect_ratio="1:1"):
+def generate_image(prompt, style="realistic", aspect_ratio="1:1", provider="fal"):
+    if provider == "huggingface":
+        return _generate_image_huggingface(prompt, aspect_ratio)
+
     MODELS = {
         "realistic": "fal-ai/flux/dev",
         "anime": "fal-ai/flux/dev",
@@ -437,3 +441,41 @@ def generate_image(prompt, style="realistic", aspect_ratio="1:1"):
                 time.sleep(RETRY_DELAY)
 
     return {"success": False, "error": f"Failed after {MAX_RETRIES} attempts. Last error: {last_error}"}
+
+
+def _generate_image_huggingface(prompt, aspect_ratio):
+    """Generate a free-tier image through Hugging Face Inference Providers."""
+    token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGINGFACE_API_KEY")
+    if not token:
+        return {
+            "success": False,
+            "error": "Hugging Face API token is not configured. Please set HF_TOKEN.",
+        }
+
+    model = os.environ.get("HF_IMAGE_MODEL", "black-forest-labs/FLUX.1-schnell")
+    provider = os.environ.get("HF_IMAGE_PROVIDER", "auto")
+
+    try:
+        image = InferenceClient(
+            model=model,
+            provider=provider,
+            token=token,
+            timeout=180,
+        ).text_to_image(
+            prompt,
+            num_inference_steps=4,
+        )
+        from io import BytesIO
+        image_buffer = BytesIO()
+        image.save(image_buffer, format="PNG")
+        return {
+            "success": True,
+            "image_bytes": image_buffer.getvalue(),
+            "content_type": "image/png",
+        }
+    except Exception as error:
+        print(f"HUGGING FACE IMAGE ERROR: {error}")
+        error_text = str(error).lower()
+        if "401" in error_text or "unauthorized" in error_text or "invalid token" in error_text:
+            return {"success": False, "error": "Invalid Hugging Face API token."}
+        return {"success": False, "error": "Hugging Face image generation failed. Please try again."}

@@ -65,7 +65,7 @@
                 <!-- Share Buttons -->
                 <div class="card p-4 mb-4 text-center">
                     <h5 style="color: #F5A623;"><i class="fa-solid fa-share-nodes"></i> Share it — and let them ask "how?"</h5>
-                    <p style="color: #888; margin-bottom: 0;">Shares open a page with your clip + a "make your own free" invite. That's how Afrigen grows. <i class="fa-solid fa-earth-africa"></i></p>
+                    <p style="color: #888; margin-bottom: 0;">Shares open a page with your clip and an invitation to create with Afrigen. <i class="fa-solid fa-earth-africa"></i></p>
                     <div class="d-flex justify-content-center gap-2 mt-3 flex-wrap">
                         <a id="shareTwitter" href="#" target="_blank" class="btn btn-info px-3" style="color:white;">🐦 Twitter</a>
                         <a id="shareFacebook" href="#" target="_blank" class="btn btn-primary px-3">📘 Facebook</a>
@@ -143,7 +143,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Prefer the per-clip share page (it shows the clip + a sign-up CTA and
         // gets a rich thumbnail preview); fall back to the site root.
         const shareTarget = resultData.share_url || SITE_URL;
-        const twText = `I made this with @AfrigenAI 🎬🌍 — one line of text became a video. Make yours free 👇`;
+        const twText = `I made this with @AfrigenAI 🎬🌍 — one line of text became a video. Create yours with Afrigen 👇`;
         document.getElementById('shareTwitter').href = `https://twitter.com/intent/tweet?text=${encodeURIComponent(twText)}&url=${encodeURIComponent(shareTarget)}`;
         document.getElementById('shareFacebook').href = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareTarget)}`;
         if (resultData.share_url) {
@@ -166,7 +166,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function copyLink() {
     const target = resultData.share_url || resultData.video_url || SITE_URL;
-    const invite = `I made this AI video with Afrigen 🎬🌍\nWatch & make your own free 👉 ${target}`;
+    const invite = `I made this AI video with Afrigen 🎬🌍\nWatch & create your own 👉 ${target}`;
     navigator.clipboard.writeText(invite);
     alert('Invite copied! Paste it anywhere 📋');
 }

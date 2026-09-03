@@ -1,7 +1,7 @@
 import logging
 import time
 from datetime import datetime, timezone
-from models import db, Campaign, CampaignTask, CampaignAsset, TaskStatus, CampaignStatus, AssetType
+from models import db, Campaign, CampaignTask, CampaignAsset, TaskStatus, CampaignStatus, AssetType, User
 from services.provider_manager import provider_manager
 from services.claude import refine_prompt, refine_image_prompt
 from services.video import generate_image, generate_video, generate_video_from_image
@@ -79,13 +79,17 @@ class WorkflowExecutor:
             try:
                 if task.task_type == AssetType.IMAGE.value:
                     refined = refine_image_prompt(prompt)
-                    res = generate_image(refined)
+                    provider = 'fal' if campaign.user_id and db.session.get(User, campaign.user_id).plan == 'pro' else 'huggingface'
+                    res = generate_image(refined, provider=provider)
                     if isinstance(res, dict) and res.get("success") is False:
                         raise Exception(res.get("error"))
                     file_url = res.get("url") if isinstance(res, dict) else res
                     result_text = refined
                     provider_used = "Fal (Image)"
                 elif task.task_type == AssetType.VIDEO.value:
+                    owner = db.session.get(User, campaign.user_id)
+                    if owner and owner.plan != 'pro':
+                        raise ValueError('Video generation is a Pro feature.')
                     refined = refine_prompt(prompt)
                     res = generate_video(refined)
                     if isinstance(res, dict) and res.get("success") is False:

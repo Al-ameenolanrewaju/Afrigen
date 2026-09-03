@@ -318,8 +318,8 @@ def generate():
         )
         db.session.add(generation)
         db.session.commit()
-        flash(f"Video generation failed: {error_detail}", "danger")
-        return jsonify({"success": False, "error": error_detail})
+        flash("Video generation failed. Please try again later.", "danger")
+        return jsonify({"success": False, "error": "Video generation failed. Please try again later."})
 
 @main.route('/connected-accounts')
 @login_required
@@ -644,12 +644,21 @@ def generate_image():
 
     try:
         refined = _usable_refinement(prompt, refine_image_prompt(prompt, style))
-        result = generate_ai_image(refined, style, aspect_ratio)
+        provider = "fal" if current_user.plan == "pro" else "huggingface"
+        result = generate_ai_image(refined, style, aspect_ratio, provider=provider)
 
         if not result["success"]:
             raise Exception(result["error"])
 
-        image = result["image_url"]
+        image = result.get("image_url")
+        if result.get("image_bytes"):
+            extension = "jpg" if "jpeg" in result.get("content_type", "") else "png"
+            filename = f"free_image_{uuid.uuid4().hex}.{extension}"
+            upload_dir = os.path.join("static", "uploads")
+            os.makedirs(upload_dir, exist_ok=True)
+            with open(os.path.join(upload_dir, filename), "wb") as image_file:
+                image_file.write(result["image_bytes"])
+            image = url_for("static", filename=f"uploads/{filename}", _external=True)
 
         generation = Generation(
             user_id=current_user.id,

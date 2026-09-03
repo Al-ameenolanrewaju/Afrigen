@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Terms of Service — Afrigen{% endblock %}
+
+{% block content %}
+<div class="container mt-4" style="max-width: 800px;">
+
+    <div class="card p-4 mb-4">
+        <h1 style="color: #F5A623; font-size: 1.6rem;"><i class="fa-solid fa-file-contract"></i> Terms of Service</h1>
+        <p style="color: #888;">Last updated: September 3, 2026</p>
+    </div>
+
+    <div class="card p-4 mb-4">
+        <h5 style="color: #F5A623;">1. Using Afrigen</h5>
+        <p style="color: #C9D1D9;">
+            Use Afrigen only for lawful content and only with material you have the right to upload or transform. You are responsible for the prompts, files, and content created through your account.
+        </p>
+    </div>
+
+    <div class="card p-4 mb-4">
+        <h5 style="color: #F5A623;">2. Accounts and Plans</h5>
+        <p style="color: #C9D1D9;">
+            Keep your account details secure and do not share access in a way that bypasses plan limits. Free accounts can generate photos within the displayed allowance. Video generation and premium Fal image generation are available to Pro accounts and consume the credits shown in the app.
+        </p>
+    </div>
+
+    <div class="card p-4 mb-4">
+        <h5 style="color: #F5A623;">3. Generated Content</h5>
+        <p style="color: #C9D1D9;">
+            AI output may be inaccurate, unexpected, or similar to other output. Review generated content before publishing it, and do not use Afrigen to create deceptive, illegal, or harmful material.
+        </p>
+    </div>
+
+    <div class="card p-4 mb-4">
+        <h5 style="color: #F5A623;">4. Availability and Billing</h5>
+        <p style="color: #C9D1D9;">
+            Generation depends on third-party services and may occasionally be delayed or unavailable. Credits are used only after a successful generation where stated in the app. Paid plans and purchases are subject to the terms shown at checkout.
+        </p>
+    </div>
+
+    <div class="card p-4 mb-4">
+        <h5 style="color: #F5A623;">5. Changes and Contact</h5>
+        <p style="color: #C9D1D9;">
+            We may update these terms as Afrigen changes. Continued use after an update means you accept the revised terms.
+        </p>
+        <p style="color: #C9D1D9; margin-bottom: 0;">
+            For questions about these terms, contact us at <a href="mailto:contact@afrigen.com.ng" style="color: #F5A623;">contact@afrigen.com.ng</a>.
+        </p>
+    </div>
+
+    <div class="text-center mb-4">
+        <a href="{{ url_for('main.privacy') }}" class="btn btn-outline-warning px-4 me-2"><i class="fa-solid fa-lock"></i> Privacy Policy</a>
+        <a href="{{ url_for('main.index') }}" class="btn btn-afrigen px-4"><i class="fa-solid fa-arrow-left"></i> Back to Home</a>
+    </div>
+
+</div>
+
+<style>
+.card { background: #161B22; border: 1px solid #30363D; border-radius: 16px; }
+.btn-afrigen { background: #F5A623; color: #0D1117; border: none; font-weight: 600; }
+.btn-afrigen:hover { background: #e09515; color: #0D1117; }
+</style>
+
+{% endblock %}

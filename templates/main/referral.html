@@ -8,7 +8,7 @@
             <!-- Header -->
             <div class="card p-4 mb-4 text-center">
                 <h1 style="color: #F5A623; font-size: 1.6rem;"><i class="fa-solid fa-gift"></i> Referral Program</h1>
-                <p style="color: #C9D1D9;">Invite friends and earn bonus videos!</p>
+                <p style="color: #C9D1D9;">Invite friends and earn Pro credits!</p>
             </div>
 
             <!-- Stats -->
@@ -22,7 +22,7 @@
                 <div class="col-4">
                     <div class="card p-4 text-center">
                         <h2 style="color: #27AE60;">{{ videos_earned }}</h2>
-                        <p style="color: #888; font-size: 13px;">Bonus Videos Earned</p>
+                        <p style="color: #888; font-size: 13px;">Bonus Credits Earned</p>
                     </div>
                 </div>
                 {% if current_user.plan != 'free' %}
@@ -41,8 +41,8 @@
                 <ul style="color: #C9D1D9; list-style: none; padding: 0;">
                     <li class="mb-2"><i class="fa-solid fa-circle-check" style="color:#27AE60;"></i> Share your referral link</li>
                     <li class="mb-2"><i class="fa-solid fa-circle-check" style="color:#27AE60;"></i> Friend signs up using your link</li>
-                    <li class="mb-2"><i class="fa-solid fa-circle-check" style="color:#27AE60;"></i> You get 1 BONUS video (10 credits if Pro)!</li>
-                    <li class="mb-2"><i class="fa-solid fa-circle-check" style="color:#27AE60;"></i> Friend gets 1 BONUS video!</li>
+                    <li class="mb-2"><i class="fa-solid fa-circle-check" style="color:#27AE60;"></i> Pro referrers get 10 bonus credits</li>
+                    <li class="mb-2"><i class="fa-solid fa-circle-check" style="color:#27AE60;"></i> Free accounts keep their image allowance</li>
                 </ul>
             </div>
 
@@ -103,7 +103,7 @@
                                     </span>
                                 </td>
                                 <td style="color: #888;">{{ user.joined }}</td>
-                                <td style="color: #27AE60;">+1 video</td>
+                                <td style="color: #27AE60;">+10 credits for Pro</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -112,7 +112,7 @@
                 {% else %}
                 <div class="text-center p-4">
                     <p style="color: #888;">No referrals yet. Share your link to get started!</p>
-                    <p style="color: #F5A623; font-size: 14px;">Each referral earns you 1 bonus video! <i class="fa-solid fa-champagne-glasses"></i></p>
+                    <p style="color: #F5A623; font-size: 14px;">Each successful referral earns Pro referrers 10 credits. <i class="fa-solid fa-champagne-glasses"></i></p>
                 </div>
                 {% endif %}
             </div>

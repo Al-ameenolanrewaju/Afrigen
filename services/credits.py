@@ -4,7 +4,7 @@ These pure helpers operate on a `User` instance plus the SQLAlchemy session and
 encode exactly one set of rules, so the website (`routes/main.py`) and the
 Telegram bot (`bot/bot.py`) charge and gate generations identically.
 
-- Free plan: capped at 1 video and 2 images (lifetime limits).
+- Free plan: video generation is unavailable; image generation is capped at 2 images (lifetime limit).
 - Pro plan: pays credits per generation (video cost depends on the model, image
   is a flat 2 credits).
 - Any other plan (e.g. "banned") is blocked.
@@ -20,15 +20,13 @@ from services.video import text_to_video_cost
 IMAGE_COST = 2
 
 # Free-tier total (lifetime) allowances.
-FREE_TOTAL_VIDEOS = 1
 FREE_TOTAL_IMAGES = 2
 
 
 def video_gate(user, style, extended=False, duration="5"):
     """Check whether `user` may generate a video.
 
-    Returns (ok, error_message, cost). On a free user this may reset the monthly
-    counter as a side effect (committed by the caller). `cost` is the credits a
+    Returns (ok, error_message, cost). `cost` is the credits a
     Pro user will be charged on success; it is irrelevant for free users.
     """
     duration = str(duration or "5")
@@ -39,11 +37,7 @@ def video_gate(user, style, extended=False, duration="5"):
     cost = text_to_video_cost(style, extended=extended, duration=duration)
 
     if user.plan == 'free':
-        if (user.monthly_videos_used or 0) >= FREE_TOTAL_VIDEOS:
-            return (False,
-                    "You've used your 1 free video. Upgrade to Pro for more!",
-                    cost)
-        return (True, None, cost)
+        return (False, "Video generation is a Pro feature. Upgrade to create videos!", cost)
 
     if user.plan == 'pro':
         if (user.credits or 0) < cost:
@@ -73,10 +67,8 @@ def image_gate(user):
 
 
 def charge_video(user, cost):
-    """Record a successful video generation (free: bump counter, pro: spend credits)."""
-    if user.plan == 'free':
-        user.monthly_videos_used = (user.monthly_videos_used or 0) + 1
-    elif user.plan == 'pro':
+    """Record a successful video generation for a Pro user."""
+    if user.plan == 'pro':
         user.credits = (user.credits or 0) - cost
         if user.credits < 0:
             user.credits = 0
