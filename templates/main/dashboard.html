@@ -634,7 +634,7 @@
     greetingEl.innerHTML = `${greeting}, {{ current_user.username }}`;
 
     // 2. Form Switching Logic
-    let activeFormId = 'form_video';
+    let activeFormId = '{{ "form_video" if current_user.plan == "pro" else "form_image" }}';
 
     document.querySelectorAll('.action-btn').forEach(btn => {
         btn.addEventListener('click', function () {
@@ -676,7 +676,6 @@
         animateImagePreview.style.display = 'block';
         this.style.display = 'none';
     });
-
     removeAnimateImage?.addEventListener('click', function () {
         animateImageInput.value = '';
         animateImageInput.style.display = '';

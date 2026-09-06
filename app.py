@@ -1,36 +1,37 @@
 import os
+import asyncio
+import json
+import logging
+from logging.handlers import RotatingFileHandler
+
 from dotenv import load_dotenv
+
 load_dotenv()
 
-from flask import Flask
+from flask import Flask, render_template, redirect, url_for, request, jsonify, Response, send_from_directory
 from flask_migrate import Migrate
 from flask_login import LoginManager
+from flask_mail import Mail, Message
+from flask_apscheduler import APScheduler
+from authlib.integrations.flask_client import OAuth
+from werkzeug.middleware.proxy_fix import ProxyFix
+
 from models import db, User, Generation, TelegramUser, SavedPrompt, Referral
 from config import DevelopmentConfig
-from flask_mail import Mail, Message
 from routes.main import main
 from routes.auth import auth
 from routes.api import api
 from routes.campaigns import campaigns_bp
-from authlib.integrations.flask_client import OAuth
-from flask_apscheduler import APScheduler
-from flask import render_template, redirect, url_for, request, jsonify
-from telegram import Update
-from telegram.ext import Application
-import asyncio
-import json
-from flask import send_from_directory
+from constants import (
+    FACEBOOK_URL, TWITTER_URL, INSTAGRAM_URL, LINKEDIN_URL, TELEGRAM_URL
+)
 
 app = Flask(__name__)
 app.url_map.strict_slashes = False
 
 
 def get_missing_required_env_vars():
-    """Return the set of required env vars for the current deployment.
-
-    These are not hard-blocking at import time so local development keeps working,
-    but they are validated once at startup and logged clearly in production.
-    """
+    """Return the set of required env vars for the current deployment."""
     required = {
         "SECRET_KEY": "Flask session signing and auth token security",
         "DATABASE_URL": "Database connection for the app",
@@ -42,14 +43,9 @@ def get_missing_required_env_vars():
     return [key for key, _ in required.items() if not os.environ.get(key)]
 
 
-# Behind Render's proxy: trust X-Forwarded-* so url_for(_external=True) builds
-# correct https://afrigen... URLs. Without this the fal webhook URL can come out
-# with the wrong scheme/host and fal can't deliver the completion callback,
-# leaving videos stuck "processing" forever.
-from werkzeug.middleware.proxy_fix import ProxyFix
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_prefix=1)
-
 app.config.from_object(DevelopmentConfig)
+
 mail = Mail(app)
 oauth = OAuth(app)
 scheduler = APScheduler()
@@ -60,12 +56,10 @@ TELEGRAM_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 telegram_app = None
 
 db.init_app(app)
-
-# Background worker queue is now managed by APScheduler below
-
 migrate = Migrate(app, db)
 login_manager = LoginManager(app)
 login_manager.login_view = "auth.login"
+
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -73,39 +67,28 @@ def load_user(user_id):
     if user:
         from routes.main import is_admin_user
         if is_admin_user(user):
-            # Admin should always be on pro with effectively infinite credits
+            # Ensure in-memory admin properties are set without forcing constant DB writes
             if user.plan != 'pro' or (user.credits or 0) < 900000:
                 user.plan = 'pro'
                 user.credits = 999999
-                try:
-                    db.session.commit()
-                except Exception:
-                    db.session.rollback()
     return user
+
 
 google = oauth.register(
     name='google',
-    client_id=app.config['GOOGLE_CLIENT_ID'],
-    client_secret=app.config['GOOGLE_CLIENT_SECRET'],
+    client_id=app.config.get('GOOGLE_CLIENT_ID'),
+    client_secret=app.config.get('GOOGLE_CLIENT_SECRET'),
     server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
     client_kwargs={'scope': 'openid email profile'}
 )
 
+
 @scheduler.task('interval', id='fail_stuck_generations', minutes=5)
 def fail_stuck_generations():
-    """Rescue videos orphaned in 'processing'.
-
-    Text-to-video is async: a row is created status='processing' and only flipped
-    to completed/failed by the fal webhook. If that webhook never arrives (delivery
-    failure, provider hiccup), the row is stuck forever and the user sees a
-    permanent spinner. Every 5 minutes, mark any video still 'processing' after
-    15 minutes as 'failed', and refund the free-tier monthly video count since the
-    user got nothing (Pro credits are only charged on success, so there's nothing
-    to refund there)."""
+    """Rescue videos orphaned in 'processing'."""
     from datetime import datetime, timedelta, timezone
     with app.app_context():
         try:
-            from models import db, Generation, User
             cutoff = datetime.now(timezone.utc) - timedelta(minutes=15)
             stuck = Generation.query.filter(
                 Generation.status == 'processing',
@@ -141,7 +124,6 @@ def process_publishing_queue():
 
 @scheduler.task('cron', id='generate_weekly_newsletter', day_of_week='sat', hour=9)
 def generate_weekly_newsletter():
-    """Saturday 9am: build this week's draft so the admin can review it."""
     with app.app_context():
         try:
             from services.newsletter import run_weekly_generation
@@ -152,7 +134,6 @@ def generate_weekly_newsletter():
 
 @scheduler.task('cron', id='send_weekly_newsletter', day_of_week='mon', hour=9)
 def send_weekly_newsletter():
-    """Monday 9am: send the current draft to all users + waitlist."""
     with app.app_context():
         try:
             from services.newsletter import run_weekly_send
@@ -163,9 +144,6 @@ def send_weekly_newsletter():
 
 @scheduler.task('cron', id='generate_daily_blog_draft', hour=7)
 def generate_daily_blog_draft():
-    """7am daily: generate ONE blog draft for the admin to review at /admin/blog.
-    It never publishes itself. Runs in-process on the always-on web service, so
-    it costs nothing extra (no paid Render cron)."""
     with app.app_context():
         try:
             from services.blog import run_daily_draft_generation
@@ -173,9 +151,9 @@ def generate_daily_blog_draft():
         except Exception as e:
             print(f"Daily blog draft generation failed: {e}")
 
+
 @scheduler.task('cron', id='generate_daily_content', hour=10)
 def generate_daily_content():
-    """10am daily: run the Content Engine automation."""
     with app.app_context():
         try:
             from content_engine.pipeline import ContentPipeline
@@ -185,9 +163,6 @@ def generate_daily_content():
             print(f"Daily Content Engine generation failed: {e}")
 
 
-import logging
-from logging.handlers import RotatingFileHandler
-
 # Setup logging
 if not os.path.exists('logs'):
     os.makedirs('logs')
@@ -195,10 +170,9 @@ if not os.path.exists('logs'):
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# File handler - rotates at 10MB, keeps 10 backups
 file_handler = RotatingFileHandler(
     'logs/afrigen.log',
-    maxBytes=10240000,  # 10MB
+    maxBytes=10240000,
     backupCount=10
 )
 file_handler.setFormatter(logging.Formatter(
@@ -219,9 +193,6 @@ app.register_blueprint(auth, url_prefix='/auth')
 app.register_blueprint(api, url_prefix='/api/v1')
 app.register_blueprint(campaigns_bp, url_prefix='/api/campaigns')
 
-from constants import (
-    FACEBOOK_URL, TWITTER_URL, INSTAGRAM_URL, LINKEDIN_URL, TELEGRAM_URL
-)
 
 @app.context_processor
 def inject_socials():
@@ -233,13 +204,16 @@ def inject_socials():
         TELEGRAM_URL=TELEGRAM_URL
     )
 
+
 @app.errorhandler(404)
 def page_not_found(e):
     return render_template("errors/404.html"), 404
 
+
 @app.errorhandler(500)
 def server_error(e):
     return render_template("errors/500.html"), 500
+
 
 @app.errorhandler(403)
 def forbidden(e):
@@ -253,26 +227,20 @@ def favicon():
 
 @app.route('/set-webhook')
 def set_webhook():
-    """Set Telegram webhook"""
     import requests as req
-
     webhook_url = request.url_root.rstrip('/') + f"/webhook/{TELEGRAM_TOKEN}"
-
     response = req.post(
         f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/setWebhook",
         json={"url": webhook_url}
     )
-
     result = response.json()
     print(f"Webhook set: {result}")
     return jsonify(result)
 
 
-
-
 @app.route(f'/webhook/{TELEGRAM_TOKEN}', methods=['POST'])
 def webhook():
-    """Handle incoming Telegram updates"""
+    """Handle incoming Telegram updates using safe event loop handling."""
     if request.method == 'POST':
         update_data = request.get_json()
 
@@ -280,20 +248,29 @@ def webhook():
             global telegram_app
             if telegram_app is None:
                 await setup_telegram()
+            from telegram import Update
             update = Update.de_json(update_data, telegram_app.bot)
             await telegram_app.process_update(update)
 
-        asyncio.run(process())
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+        if loop.is_running():
+            asyncio.ensure_future(process(), loop=loop)
+        else:
+            loop.run_until_complete(process())
+
         return 'OK', 200
 
 
 async def setup_telegram():
     global telegram_app
     from telegram.ext import CommandHandler, MessageHandler, CallbackQueryHandler, filters
-    from groq import Groq
     from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-
-    groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+    from services.provider_manager import provider_manager
 
     async def start(update, context):
         user = update.effective_user
@@ -368,16 +345,20 @@ async def setup_telegram():
         await update.message.reply_text("⏳ Refining your prompt with AI...")
 
         try:
-            response = groq_client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=[
-                    {"role": "system",
-                     "content": f"You are an African {mode} prompt engineer. Refine this {style} {mode} prompt into a detailed description. Keep under 200 words. Return ONLY the prompt."},
-                    {"role": "user", "content": f"Refine: {user_prompt}"}
-                ],
-                max_tokens=300
+            messages = [
+                {
+                    "role": "system",
+                    "content": f"You are an African {mode} prompt engineer. Refine this {style} {mode} prompt into a detailed description. Keep under 200 words. Return ONLY the prompt."
+                },
+                {"role": "user", "content": f"Refine: {user_prompt}"}
+            ]
+
+            # Integrated with provider_manager for failover support
+            refined = provider_manager.generate_text(
+                task_type="Prompt Refinement",
+                messages=messages,
+                max_tokens=500
             )
-            refined = response.choices[0].message.content
 
             keyboard = [
                 [InlineKeyboardButton("🎬 Video Prompt", callback_data="menu_video"),
@@ -446,20 +427,18 @@ async def setup_telegram():
 
     await telegram_app.initialize()
     print("Telegram webhook bot ready!")
+
+
 @app.route('/robots.txt')
 def robots():
     return send_from_directory('static', 'robots.txt')
 
+
 @app.route('/sitemap.xml')
 def sitemap():
-    # Built dynamically so blog drafts NEVER leak into the sitemap — only
-    # status='published' posts are queried. Static pages are listed first.
-    from flask import Response
     from services.blog import get_all_posts
 
     base = "https://afrigen.com.ng"
-    # Only public, crawlable pages — NOT /dashboard (login-gated, redirects
-    # crawlers to /login and wastes crawl budget).
     static_pages = [
         ("/", "1.00"),
         ("/blog", "0.80"),
@@ -483,22 +462,18 @@ def sitemap():
         )
 
     xml = (
-        '<?xml version="1.0" encoding="UTF-8"?>\n'
-        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-        + "\n".join(urls)
-        + "\n</urlset>"
+            '<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+            + "\n".join(urls)
+            + "\n</urlset>"
     )
     return Response(xml, mimetype="application/xml")
 
+
 @app.route('/ads.txt')
 def ads_txt():
-    # Served at the domain root (https://afrigen.com.ng/ads.txt) for Google AdSense
-    # verification. Force text/plain so AdSense's crawler accepts it.
     return send_from_directory('static', 'ads.txt', mimetype='text/plain')
 
-# Removed dangerous auto-db initialization.
-# In production, use Render's Release Command or manual 'flask db upgrade'.
-# Local development should also use 'flask db upgrade' directly.
 
 if __name__ == '__main__':
     app.run(debug=True)

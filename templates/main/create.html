@@ -173,7 +173,23 @@
     }
     .pill-group {
         display: flex;
+        flex-wrap: wrap;
         gap: 8px;
+    }
+    .ratio-pill-group .pill-label {
+        min-width: 0;
+        flex: 1 1 0;
+    }
+
+    @media (max-width: 576px) {
+        .ratio-pill-group {
+            gap: 6px;
+        }
+        .ratio-pill-group .pill-label {
+            padding-left: 8px;
+            padding-right: 8px;
+            font-size: 12px;
+        }
     }
 
     /* Progress Overlay */
@@ -274,7 +290,7 @@
                     
                     <div class="mb-4">
                         <div class="setting-label">Resolution & Ratio</div>
-                        <div class="pill-group">
+                        <div class="pill-group ratio-pill-group">
                             <input type="radio" name="aspect_ratio" id="v_ratio_169" value="16:9" class="pill-radio" checked>
                             <label for="v_ratio_169" class="pill-label">16:9</label>
                             
@@ -327,7 +343,7 @@
                     
                     <div class="mb-4">
                         <div class="setting-label">Aspect Ratio</div>
-                        <div class="pill-group">
+                        <div class="pill-group ratio-pill-group">
                             <input type="radio" name="aspect_ratio" id="i_ratio_169" value="16:9" class="pill-radio" checked>
                             <label for="i_ratio_169" class="pill-label">16:9</label>
                             
@@ -484,7 +500,7 @@
         'voice': 'Generate Voice'
     };
 
-    let activeType = 'video';
+    let activeType = '{{ "video" if current_user.plan == "pro" else "image" }}';
 
     // Character Counter
     const masterPrompt = document.getElementById('master_prompt');
@@ -551,7 +567,7 @@
             // Trigger Voice over placeholder submission
             activeForm.dispatchEvent(new Event('submit'));
         } else {
-            activeForm.submit();
+            activeForm.requestSubmit();
         }
     });
 

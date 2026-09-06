@@ -1,11 +1,14 @@
 import os
 import time
 import warnings
+import re
+import json
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any
 
 from flask import current_app
 from models import db, ProviderHealth, ProviderLog
+
 
 class ProviderAdapter(ABC):
     def __init__(self):
@@ -24,7 +27,7 @@ class GroqAdapter(ProviderAdapter):
     def __init__(self):
         super().__init__()
         self._client = None
-        
+
     @property
     def is_enabled(self):
         return bool(os.environ.get('GROQ_API_KEY'))
@@ -36,10 +39,10 @@ class GroqAdapter(ProviderAdapter):
         return self._client
 
     def generate(self, messages: List[Dict[str, str]], **kwargs) -> str:
-        model = kwargs.get('model') or os.environ.get('GROQ_MODEL') or 'openai/gpt-oss-20b'
+        model = kwargs.get('model') or os.environ.get('GROQ_MODEL') or 'llama-3.3-70b-versatile'
         max_tokens = kwargs.get('max_tokens')
         temperature = kwargs.get('temperature', 0.7)
-        
+
         args = {
             "model": model,
             "messages": messages,
@@ -49,12 +52,17 @@ class GroqAdapter(ProviderAdapter):
             args["max_tokens"] = max_tokens
         if kwargs.get('response_format'):
             args["response_format"] = kwargs['response_format']
-            
+
         response = self._get_client().chat.completions.create(**args)
         choice = response.choices[0]
+        content = choice.message.content or ""
+
+        # If response was truncated but generated valid text, use what was produced
         if choice.finish_reason == 'length':
+            if len(content.strip()) > 20:
+                return content.strip()
             raise Exception("AI response was truncated due to max_tokens limit.")
-        return choice.message.content
+        return content
 
 
 class OpenRouterAdapter(ProviderAdapter):
@@ -79,7 +87,7 @@ class OpenRouterAdapter(ProviderAdapter):
         model = kwargs.get('model', os.environ.get('OPENROUTER_MODEL', 'meta-llama/llama-3.3-70b-instruct:free'))
         max_tokens = kwargs.get('max_tokens')
         temperature = kwargs.get('temperature', 0.7)
-        
+
         args = {
             "model": model,
             "messages": messages,
@@ -89,12 +97,16 @@ class OpenRouterAdapter(ProviderAdapter):
             args["max_tokens"] = max_tokens
         if kwargs.get('response_format'):
             args["response_format"] = kwargs['response_format']
-            
+
         response = self._get_client().chat.completions.create(**args)
         choice = response.choices[0]
+        content = choice.message.content or ""
+
         if choice.finish_reason == 'length':
+            if len(content.strip()) > 20:
+                return content.strip()
             raise Exception("AI response was truncated due to max_tokens limit.")
-        return choice.message.content
+        return content
 
 
 class GeminiAdapter(ProviderAdapter):
@@ -113,7 +125,7 @@ class GeminiAdapter(ProviderAdapter):
     def _initialize(self):
         if self._initialized:
             return
-            
+
         api_key = os.environ.get('GEMINI_API_KEY')
         try:
             from google import genai as google_genai
@@ -145,7 +157,7 @@ class GeminiAdapter(ProviderAdapter):
                     prompt_parts.append(f"Assistant: {content}")
 
             prompt_text = "\n".join(prompt_parts)
-            model_name = kwargs.get('model', os.environ.get('GEMINI_MODEL', 'gemini-2.0-flash'))
+            model_name = kwargs.get('model', os.environ.get('GEMINI_MODEL', 'gemini-2.5-flash'))
             config_kwargs = {
                 "temperature": kwargs.get('temperature', 0.7),
             }
@@ -161,13 +173,17 @@ class GeminiAdapter(ProviderAdapter):
                 contents=prompt_text,
                 config=self._types.GenerateContentConfig(**config_kwargs),
             )
-            
+
+            res_text = getattr(response, "text", str(response))
             if hasattr(response, "candidates") and response.candidates:
-                # In new SDK, finish_reason is an enum
-                if getattr(response.candidates[0].finish_reason, "name", "") == "MAX_TOKENS" or response.candidates[0].finish_reason == 2:
+                finish_reason = getattr(response.candidates[0].finish_reason, "name", "") or response.candidates[
+                    0].finish_reason
+                if finish_reason in ("MAX_TOKENS", 2):
+                    if len(res_text.strip()) > 20:
+                        return res_text.strip()
                     raise Exception("AI response was truncated due to max_tokens limit.")
-            
-            return getattr(response, "text", str(response))
+
+            return res_text
 
         if self._genai_module is not None:
             genai = self._genai_module
@@ -176,7 +192,6 @@ class GeminiAdapter(ProviderAdapter):
                 warnings.filterwarnings("ignore", category=FutureWarning, module="google.generativeai")
                 import google.generativeai as genai
 
-        # Convert standard OpenAI messages to Gemini format
         system_instruction = None
         gemini_messages = []
         for msg in messages:
@@ -189,7 +204,7 @@ class GeminiAdapter(ProviderAdapter):
             elif role == "assistant":
                 gemini_messages.append({"role": "model", "parts": [content]})
 
-        model_name = kwargs.get('model', os.environ.get('GEMINI_MODEL', 'gemini-2.0-flash'))
+        model_name = kwargs.get('model', os.environ.get('GEMINI_MODEL', 'gemini-2.5-flash'))
 
         generation_config = genai.types.GenerationConfig(
             temperature=kwargs.get('temperature', 0.7)
@@ -209,13 +224,17 @@ class GeminiAdapter(ProviderAdapter):
             gemini_messages,
             generation_config=generation_config
         )
-        
+
+        res_text = getattr(response, "text", "")
         if response.candidates and hasattr(response.candidates[0], "finish_reason"):
             reason = response.candidates[0].finish_reason
-            if getattr(reason, "name", "") == "MAX_TOKENS" or reason == 2:
+            finish_reason = getattr(reason, "name", "") or reason
+            if finish_reason in ("MAX_TOKENS", 2):
+                if len(res_text.strip()) > 20:
+                    return res_text.strip()
                 raise Exception("AI response was truncated due to max_tokens limit.")
-                
-        return response.text
+
+        return res_text
 
 
 class ProviderManager:
@@ -225,7 +244,7 @@ class ProviderManager:
             "Gemini": GeminiAdapter(),
             "OpenRouter": OpenRouterAdapter()
         }
-        
+
         self.task_mappings = {
             "Prompt Refinement": "Groq",
             "AI Assistant": "Groq",
@@ -237,8 +256,7 @@ class ProviderManager:
             "Audio Script": "Groq",
             "Default": "Groq"
         }
-        
-        # Define fallback chain
+
         self.fallback_chain = ["Groq", "Gemini", "OpenRouter"]
 
     def _get_health(self, provider_name: str) -> ProviderHealth:
@@ -248,7 +266,7 @@ class ProviderManager:
             db.session.add(health)
             db.session.commit()
         return health
-        
+
     def _update_health(self, provider_name: str, success: bool, latency: float, error_msg: str = None):
         health = self._get_health(provider_name)
         if success:
@@ -258,11 +276,13 @@ class ProviderManager:
             health.last_error = None
         else:
             health.failure_count += 1
-            health.status = "degraded"
-            if health.failure_count > health.success_count and (health.success_count + health.failure_count) > 5:
-                health.status = "offline"
+            if error_msg and "max_tokens" not in error_msg.lower():
+                health.status = "degraded"
+                if health.failure_count > health.success_count and (health.success_count + health.failure_count) > 5:
+                    health.status = "offline"
             health.last_error = error_msg
-        health.avg_latency_ms = int((health.avg_latency_ms + (latency * 1000)) / 2) if health.avg_latency_ms else int(latency * 1000)
+        health.avg_latency_ms = int((health.avg_latency_ms + (latency * 1000)) / 2) if health.avg_latency_ms else int(
+            latency * 1000)
         db.session.commit()
 
     def _log_request(self, task_type, provider_name, latency, fallback_triggered, success, error_msg=None):
@@ -278,47 +298,47 @@ class ProviderManager:
         db.session.commit()
 
     def generate_text(self, task_type: str, messages: List[Dict[str, str]], **kwargs) -> str:
-        # Determine preferred provider
+        # Enforce higher token thresholds for prompt refinement and assistant tasks
+        if task_type in ["Prompt Refinement", "AI Assistant"]:
+            kwargs["max_tokens"] = max(kwargs.get("max_tokens", 0), 1000)
+        else:
+            kwargs["max_tokens"] = kwargs.get("max_tokens", 800)
+
         primary_provider_name = self.task_mappings.get(task_type, self.task_mappings["Default"])
-        
-        # Build attempt sequence starting with primary, then falling back based on chain
+
         attempt_sequence = [primary_provider_name]
         for p in self.fallback_chain:
             if p not in attempt_sequence:
                 attempt_sequence.append(p)
-                
+
         last_error = None
         fallback_triggered = False
         skipped_providers = []
-        
+
         for provider_name in attempt_sequence:
             adapter = self.adapters.get(provider_name)
-            if not adapter or not adapter.is_enabled:
+            if not adapter or not getattr(adapter, "is_enabled", True):
                 skipped_providers.append(f"{provider_name} (disabled)")
                 continue
-                
-            # Check health
+
             health = self._get_health(provider_name)
             if health.status == "offline" and provider_name != primary_provider_name:
                 skipped_providers.append(f"{provider_name} (offline)")
                 continue
-                
+
             start_time = time.time()
             try:
-                # Attempt generation
                 result = adapter.generate(messages, **kwargs)
                 latency = time.time() - start_time
-                
+
                 self._update_health(provider_name, success=True, latency=latency)
                 self._log_request(task_type, provider_name, latency, fallback_triggered, success=True)
-                
+
                 return result
             except Exception as e:
                 latency = time.time() - start_time
                 error_msg = str(e)
-                
-                # Sanitize raw JSON errors from API providers (e.g. Groq 400s)
-                import re, json
+
                 match = re.search(r"(\{.*\})", error_msg, re.DOTALL)
                 if match:
                     try:
@@ -329,16 +349,24 @@ class ProviderManager:
                         pass
 
                 self._update_health(provider_name, success=False, latency=latency, error_msg=error_msg)
-                self._log_request(task_type, provider_name, latency, fallback_triggered, success=False, error_msg=error_msg)
-                
+                self._log_request(task_type, provider_name, latency, fallback_triggered, success=False,
+                                  error_msg=error_msg)
+
                 last_error = error_msg
                 fallback_triggered = True
                 print(f"[ProviderManager] {provider_name} failed: {error_msg}. Falling back...")
-                
-        # If all providers fail
+
+        # Last-resort fallback for Prompt Refinement
+        if task_type == "Prompt Refinement" and messages:
+            print(
+                f"[ProviderManager] All providers failed during prompt refinement ({last_error}). Returning original prompt.")
+            return messages[-1].get("content", "")
+
         if last_error is None:
             skipped = ", ".join(skipped_providers) or "none"
             raise Exception(f"All AI providers were unavailable. Skipped: {skipped}")
+
         raise Exception(f"All AI providers failed. Last error: {last_error}")
+
 
 provider_manager = ProviderManager()

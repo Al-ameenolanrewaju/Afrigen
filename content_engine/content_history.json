@@ -1,8 +1,13 @@
 {
     "categories": [
         "PRODUCT_UPDATE",
-        "AI_NEWS"
+        "AI_NEWS",
+        "EDUCATIONAL_CONTENT",
+        "COMMUNITY_DISCUSSION"
     ],
-    "topics": [],
-    "last_run": "2026-09-01T07:08:56.819520+00:00"
+    "topics": [
+        "Afrigen is building AI tools that help African creators turn ideas into professional visual content.",
+        "African storytelling is entering a new era where creators can produce more with fewer resources."
+    ],
+    "last_run": "2026-09-03T09:00:03.488160+00:00"
 }

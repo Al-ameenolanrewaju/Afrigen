@@ -640,7 +640,8 @@ def generate_image():
     # Plan / credit gate (shared with the Telegram bot via services.credits).
     ok, error = image_gate(current_user)
     if not ok:
-        return jsonify({"success": False, "error": error})
+        flash(error, 'danger')
+        return redirect(url_for('main.dashboard'))
 
     try:
         refined = _usable_refinement(prompt, refine_image_prompt(prompt, style))
@@ -686,7 +687,8 @@ def generate_image():
     except Exception as e:
         db.session.rollback()
         print("IMAGE GENERATION ERROR:", str(e))
-        return jsonify({"success": False, "error": "Image generation failed. Please try again."})
+        flash("Image generation failed. Please try again.", 'danger')
+        return redirect(url_for('main.dashboard'))
 
 
 @main.route('/generation/<int:generation_id>/retry', methods=['POST'])
@@ -709,7 +711,8 @@ def generate_image_from_retry(generation):
         return redirect(url_for('main.history'))
     try:
         style = 'realistic'
-        result = generate_ai_image(generation.refined_prompt, style, '1:1')
+        provider = "fal" if current_user.plan == "pro" else "huggingface"
+        result = generate_ai_image(generation.refined_prompt, style, '1:1', provider=provider)
         image_url = result.get('image_url') if result.get('success') else None
         generation.image_url = image_url
         generation.video_url = None

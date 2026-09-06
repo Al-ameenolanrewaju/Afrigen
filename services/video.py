@@ -445,7 +445,11 @@ def generate_image(prompt, style="realistic", aspect_ratio="1:1", provider="fal"
 
 def _generate_image_huggingface(prompt, aspect_ratio):
     """Generate a free-tier image through Hugging Face Inference Providers."""
-    token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGINGFACE_API_KEY")
+    token = (
+        os.environ.get("HF_TOKEN")
+        or os.environ.get("HUGGINGFACE_API_KEY")
+        or os.environ.get("HUGGINGFACE_TOKEN")
+    )
     if not token:
         return {
             "success": False,
@@ -454,15 +458,21 @@ def _generate_image_huggingface(prompt, aspect_ratio):
 
     model = os.environ.get("HF_IMAGE_MODEL", "black-forest-labs/FLUX.1-schnell")
     provider = os.environ.get("HF_IMAGE_PROVIDER", "auto")
+    dimensions = {
+        "1:1": (1024, 1024),
+        "16:9": (1344, 768),
+        "9:16": (768, 1344),
+    }
+    width, height = dimensions.get(aspect_ratio, dimensions["1:1"])
 
     try:
-        image = InferenceClient(
-            model=model,
-            provider=provider,
-            token=token,
-            timeout=180,
-        ).text_to_image(
+        client_args = {"model": model, "token": token, "timeout": 180}
+        if provider and provider != "auto":
+            client_args["provider"] = provider
+        image = InferenceClient(**client_args).text_to_image(
             prompt,
+            width=width,
+            height=height,
             num_inference_steps=4,
         )
         from io import BytesIO
@@ -478,4 +488,8 @@ def _generate_image_huggingface(prompt, aspect_ratio):
         error_text = str(error).lower()
         if "401" in error_text or "unauthorized" in error_text or "invalid token" in error_text:
             return {"success": False, "error": "Invalid Hugging Face API token."}
-        return {"success": False, "error": "Hugging Face image generation failed. Please try again."}
+        if "403" in error_text or "permission" in error_text:
+            return {"success": False, "error": "The Hugging Face token cannot use this image model."}
+        if "model" in error_text and ("not found" in error_text or "unsupported" in error_text):
+            return {"success": False, "error": f"The Hugging Face image model is unavailable: {model}."}
+        return {"success": False, "error": "Hugging Face image generation is temporarily unavailable. Please try again."}
