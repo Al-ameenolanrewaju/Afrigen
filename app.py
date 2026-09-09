@@ -39,6 +39,7 @@ def get_missing_required_env_vars():
         "FAL_KEY": "Video/image generation provider",
         "PAYSTACK_SECRET_KEY": "Payments and Pro upgrades",
         "PAYSTACK_PUBLIC_KEY": "Frontend payment initialization",
+        "HF_TOKEN": "Hugging Face API token for free image generation",
     }
     return [key for key, _ in required.items() if not os.environ.get(key)]
 

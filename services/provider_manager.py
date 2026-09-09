@@ -39,7 +39,7 @@ class GroqAdapter(ProviderAdapter):
         return self._client
 
     def generate(self, messages: List[Dict[str, str]], **kwargs) -> str:
-        model = kwargs.get('model') or os.environ.get('GROQ_MODEL') or 'llama-3.3-70b-versatile'
+        model = kwargs.get('model') or os.environ.get('GROQ_MODEL') or 'llama-3.1-70b-versatile'
         max_tokens = kwargs.get('max_tokens')
         temperature = kwargs.get('temperature', 0.7)
 
@@ -84,7 +84,7 @@ class OpenRouterAdapter(ProviderAdapter):
         return self._client
 
     def generate(self, messages: List[Dict[str, str]], **kwargs) -> str:
-        model = kwargs.get('model', os.environ.get('OPENROUTER_MODEL', 'meta-llama/llama-3.3-70b-instruct:free'))
+        model = kwargs.get('model', os.environ.get('OPENROUTER_MODEL', 'meta-llama/llama-3.1-8b-instruct:free'))
         max_tokens = kwargs.get('max_tokens')
         temperature = kwargs.get('temperature', 0.7)
 
