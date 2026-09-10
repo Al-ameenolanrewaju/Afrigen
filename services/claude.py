@@ -59,6 +59,9 @@ VIDEO_FIDELITY_RULES = """
 
 
 def _refinement_is_usable(original_prompt, refined_prompt):
+    refined_prompt = (refined_prompt or "").strip()
+    if "Rewrite the following idea" in refined_prompt or "Return ONLY" in refined_prompt:
+        return False
     original_words = {
         word.lower() for word in re.findall(r"[a-zA-Z0-9]+", original_prompt or "")
         if len(word) > 3
@@ -67,7 +70,7 @@ def _refinement_is_usable(original_prompt, refined_prompt):
         word.lower() for word in re.findall(r"[a-zA-Z0-9]+", refined_prompt or "")
     }
     return (
-        len((refined_prompt or "").strip()) >= 20
+        len(refined_prompt) >= 40
         and (not original_words or original_words & refined_words)
     )
 

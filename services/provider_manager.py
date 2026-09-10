@@ -367,12 +367,6 @@ class ProviderManager:
                 fallback_triggered = True
                 print(f"[ProviderManager] {provider_name} failed: {error_msg}. Falling back...")
 
-        # Last-resort fallback for Prompt Refinement
-        if task_type == "Prompt Refinement" and messages:
-            print(
-                f"[ProviderManager] All providers failed during prompt refinement ({last_error}). Returning original prompt.")
-            return messages[-1].get("content", "")
-
         if last_error is None:
             skipped = ", ".join(skipped_providers) or "none"
             raise Exception(f"All AI providers were unavailable. Skipped: {skipped}")
