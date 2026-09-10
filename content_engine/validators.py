@@ -22,6 +22,9 @@ def validate_facebook(content: str, blog_url: str = "") -> Tuple[bool, str]:
     return True, ""
 
 def validate_linkedin(content: str, blog_url: str = "") -> Tuple[bool, str]:
+    if len(content.strip()) < 80 or len(content.split()) < 12:
+        return False, "LinkedIn content is too short; it must include the post body, not only a CTA."
+
     # Professional tone: check emoji count using actual emoji unicode ranges
     emoji_count = len(re.findall(r'[\U00010000-\U0010ffff]', content))
     if emoji_count > 10:
@@ -38,6 +41,8 @@ def validate_linkedin(content: str, blog_url: str = "") -> Tuple[bool, str]:
     return True, ""
 
 def validate_telegram(content: str) -> Tuple[bool, str]:
+    if len(content.strip()) < 80:
+        return False, "Telegram content is too short; it must include the practical prompt, not only a CTA."
     word_count = len(content.split())
     if word_count > 250:
         return False, f"Not concise enough. Expected < 250 words, got {word_count}."
@@ -65,6 +70,8 @@ def validate_devto(content: str) -> Tuple[bool, str]:
             return False, "Dev.to response must be a JSON object."
         if "title" not in data or "body" not in data:
             return False, "Dev.to JSON must contain 'title' and 'body' fields."
+        if len(str(data.get("body", "")).strip()) < 80:
+            return False, "Dev.to body is too short; it must contain the article, not only a CTA."
     except json.JSONDecodeError:
         return False, "Dev.to response is not valid JSON."
         

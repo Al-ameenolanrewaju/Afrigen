@@ -3,6 +3,7 @@ import time
 import warnings
 import re
 import json
+from datetime import datetime, timezone, timedelta
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any
 
@@ -39,7 +40,7 @@ class GroqAdapter(ProviderAdapter):
         return self._client
 
     def generate(self, messages: List[Dict[str, str]], **kwargs) -> str:
-        model = kwargs.get('model') or os.environ.get('GROQ_MODEL') or 'llama-3.1-70b-versatile'
+        model = kwargs.get('model') or os.environ.get('GROQ_MODEL') or 'llama-3.3-70b-versatile'
         max_tokens = kwargs.get('max_tokens')
         temperature = kwargs.get('temperature', 0.7)
 
@@ -281,6 +282,7 @@ class ProviderManager:
                 if health.failure_count > health.success_count and (health.success_count + health.failure_count) > 5:
                     health.status = "offline"
             health.last_error = error_msg
+            health.last_error_at = datetime.now(timezone.utc)
         health.avg_latency_ms = int((health.avg_latency_ms + (latency * 1000)) / 2) if health.avg_latency_ms else int(
             latency * 1000)
         db.session.commit()
@@ -322,7 +324,16 @@ class ProviderManager:
                 continue
 
             health = self._get_health(provider_name)
-            if health.status == "offline" and provider_name != primary_provider_name:
+            offline_cooldown = timedelta(minutes=5)
+            last_error_at = health.last_error_at
+            if last_error_at and last_error_at.tzinfo is None:
+                last_error_at = last_error_at.replace(tzinfo=timezone.utc)
+            is_recently_offline = (
+                health.status == "offline"
+                and last_error_at
+                and datetime.now(timezone.utc) - last_error_at < offline_cooldown
+            )
+            if is_recently_offline and provider_name != primary_provider_name:
                 skipped_providers.append(f"{provider_name} (offline)")
                 continue
 

@@ -92,5 +92,5 @@ def generate_with_validation(
             return content
         logger.warning(f"Validation failed (attempt {attempts}): {reason}")
     
-    logger.error("All validation attempts failed. Returning last generated content.")
-    return content
+    logger.error("All validation attempts failed. Refusing to publish invalid content.")
+    raise ValueError("Generated content failed validation after all attempts.")
