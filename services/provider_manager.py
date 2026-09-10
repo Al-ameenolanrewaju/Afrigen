@@ -28,6 +28,7 @@ class GroqAdapter(ProviderAdapter):
     def __init__(self):
         super().__init__()
         self._client = None
+        self._available_model = None
 
     @property
     def is_enabled(self):
@@ -39,8 +40,30 @@ class GroqAdapter(ProviderAdapter):
             self._client = Groq(api_key=os.environ.get('GROQ_API_KEY'))
         return self._client
 
+    def _get_model(self):
+        configured_model = os.environ.get('GROQ_MODEL')
+        if configured_model:
+            return configured_model
+        if self._available_model:
+            return self._available_model
+
+        preferred_models = (
+            'openai/gpt-oss-20b',
+            'llama-3.3-70b-versatile',
+            'llama-3.1-8b-instant',
+        )
+        models = self._get_client().models.list().data
+        available = {model.id for model in models}
+        self._available_model = next(
+            (model for model in preferred_models if model in available),
+            next(iter(available), None),
+        )
+        if not self._available_model:
+            raise RuntimeError('Groq returned no available chat models')
+        return self._available_model
+
     def generate(self, messages: List[Dict[str, str]], **kwargs) -> str:
-        model = kwargs.get('model') or os.environ.get('GROQ_MODEL') or 'llama-3.1-8b-instant'
+        model = kwargs.get('model') or self._get_model()
         max_tokens = kwargs.get('max_tokens')
         temperature = kwargs.get('temperature', 0.7)
 
