@@ -40,7 +40,7 @@ class GroqAdapter(ProviderAdapter):
         return self._client
 
     def generate(self, messages: List[Dict[str, str]], **kwargs) -> str:
-        model = kwargs.get('model') or os.environ.get('GROQ_MODEL') or 'llama-3.3-70b-versatile'
+        model = kwargs.get('model') or os.environ.get('GROQ_MODEL') or 'llama-3.1-8b-instant'
         max_tokens = kwargs.get('max_tokens')
         temperature = kwargs.get('temperature', 0.7)
 
