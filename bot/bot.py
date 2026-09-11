@@ -508,7 +508,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.chat.send_action("upload_video")
         wait_note = "this can take 2-5 minutes" if extended else "this can take 1-3 minutes"
         await update.message.reply_text(f"🎬 Generating your video... {wait_note}.")
-        result = await asyncio.to_thread(generate_video, refined, style, "16:9", extended)
+        result = await asyncio.to_thread(
+            generate_video, refined, style, "16:9", extended, account.plan == 'pro'
+        )
         success = bool(result.get("success"))
         media_url = result.get("video_url")
         gen_error = result.get("error")

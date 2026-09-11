@@ -520,13 +520,19 @@ def _run_node(node, workflow_id: str, run_id: str, node_index: int, user_id: int
                     from models import db, User
                     owner = db.session.get(User, user_id) if user_id else None
                     provider = 'fal' if owner and owner.plan == 'pro' else 'huggingface'
-                    result = video_service.generate_image(prompt, style=node.get('style', 'african'), provider=provider)
+                    result = video_service.generate_image(
+                        prompt, style=node.get('style', 'african'), provider=provider,
+                        allow_fal=bool(owner and owner.plan == 'pro'),
+                    )
                 elif node_type == 'generate_video':
                     from models import db, User
                     owner = db.session.get(User, user_id) if user_id else None
                     if owner and owner.plan != 'pro':
                         raise ValueError('Video generation is a Pro feature.')
-                    result = video_service.generate_video(prompt, style=node.get('style', 'cinematic'))
+                    result = video_service.generate_video(
+                        prompt, style=node.get('style', 'cinematic'),
+                        allow_fal=bool(owner and owner.plan == 'pro'),
+                    )
                 elif node_type == 'publish_social':
                     result = _publish_automation_asset(
                         user_id=user_id,

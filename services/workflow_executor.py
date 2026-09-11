@@ -80,7 +80,10 @@ class WorkflowExecutor:
                 if task.task_type == AssetType.IMAGE.value:
                     refined = refine_image_prompt(prompt)
                     provider = 'fal' if campaign.user_id and db.session.get(User, campaign.user_id).plan == 'pro' else 'huggingface'
-                    res = generate_image(refined, provider=provider)
+                    res = generate_image(
+                        refined, provider=provider,
+                        allow_fal=bool(campaign.user_id and db.session.get(User, campaign.user_id).plan == 'pro'),
+                    )
                     if isinstance(res, dict) and res.get("success") is False:
                         raise Exception(res.get("error"))
                     file_url = res.get("url") if isinstance(res, dict) else res
@@ -91,7 +94,7 @@ class WorkflowExecutor:
                     if owner and owner.plan != 'pro':
                         raise ValueError('Video generation is a Pro feature.')
                     refined = refine_prompt(prompt)
-                    res = generate_video(refined)
+                    res = generate_video(refined, allow_fal=bool(owner and owner.plan == 'pro'))
                     if isinstance(res, dict) and res.get("success") is False:
                         raise Exception(res.get("error"))
                     file_url = res.get("url") if isinstance(res, dict) else res

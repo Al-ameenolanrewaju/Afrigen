@@ -274,6 +274,7 @@ def generate():
             prompt=refined, style=style, aspect_ratio=aspect_ratio, webhook_url=webhook_url,
             extended=extended, duration=duration, request_id=request_id,
             original_prompt=prompt,
+            allow_fal=(locked_user.plan == 'pro'),
         )
 
         if not result["success"]:
@@ -584,7 +585,10 @@ def generate_from_image():
 
         image_url = url_for('static', filename=f'uploads/{filename}', _external=True)
         refined = _usable_refinement(prompt, refine_image_prompt(prompt, "cinematic"))
-        video_url = generate_video_from_image(image_url, refined, duration=duration, aspect_ratio=aspect_ratio)
+        video_url = generate_video_from_image(
+            image_url, refined, duration=duration, aspect_ratio=aspect_ratio,
+            allow_fal=(current_user.plan == 'pro'),
+        )
 
         # Video models render text badly, so burn any words the user asked to
         # show on screen onto the finished clip (best-effort; falls back to the
@@ -646,7 +650,10 @@ def generate_image():
     try:
         refined = _usable_refinement(prompt, refine_image_prompt(prompt, style))
         provider = "fal" if current_user.plan == "pro" else "huggingface"
-        result = generate_ai_image(refined, style, aspect_ratio, provider=provider)
+        result = generate_ai_image(
+            refined, style, aspect_ratio, provider=provider,
+            allow_fal=(current_user.plan == 'pro'),
+        )
 
         if not result["success"]:
             raise Exception(result["error"])
@@ -712,7 +719,10 @@ def generate_image_from_retry(generation):
     try:
         style = 'realistic'
         provider = "fal" if current_user.plan == "pro" else "huggingface"
-        result = generate_ai_image(generation.refined_prompt, style, '1:1', provider=provider)
+        result = generate_ai_image(
+            generation.refined_prompt, style, '1:1', provider=provider,
+            allow_fal=(current_user.plan == 'pro'),
+        )
         image_url = result.get('image_url') if result.get('success') else None
         generation.image_url = image_url
         generation.video_url = None
@@ -747,6 +757,7 @@ def generate_video_from_retry(generation):
             webhook_url=url_for('main.fal_webhook', _external=True),
             extended=extended, duration=duration, request_id=request_id,
             original_prompt=generation.original_prompt,
+            allow_fal=(current_user.plan == 'pro'),
         )
         status = 'processing' if result.get('success') else 'failed'
         generation.refined_prompt = refined

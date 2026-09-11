@@ -22,8 +22,11 @@ def generate_video(
     prompt,
     style="cinematic",
     aspect_ratio="16:9",
-    extended=False
+    extended=False,
+    allow_fal=False,
 ):
+    if not allow_fal:
+        return {"success": False, "error": "Video generation is a Pro feature."}
     # Same model selection as the website's async path: Pro users (extended=True)
     # get the premium 10s Kling clip on cinematic/realistic/african and a longer
     # AnimateDiff clip on anime/social; everyone else gets the short LTX clip.
@@ -147,7 +150,9 @@ def _build_t2v_request(prompt, style, aspect_ratio, extended, duration="5"):
     return model, arguments
 
 
-def generate_video_async(prompt, style="cinematic", aspect_ratio="16:9", webhook_url=None, extended=False, duration="5", request_id=None, original_prompt=None):
+def generate_video_async(prompt, style="cinematic", aspect_ratio="16:9", webhook_url=None, extended=False, duration="5", request_id=None, original_prompt=None, allow_fal=False):
+    if not allow_fal:
+        return {"success": False, "error": "Video generation is a Pro feature."}
     model, arguments = _build_t2v_request(prompt, style, aspect_ratio, extended, duration=duration)
     prompt_text = prompt.strip() if isinstance(prompt, str) else ""
     if not prompt_text:
@@ -185,7 +190,9 @@ def generate_video_async(prompt, style="cinematic", aspect_ratio="16:9", webhook
         return {"success": False, "error": f"Fal submission failed or is unknown: {error_str}"}
 
 
-def generate_video_from_image(image_url, prompt, duration="5", aspect_ratio="16:9"):
+def generate_video_from_image(image_url, prompt, duration="5", aspect_ratio="16:9", allow_fal=False):
+    if not allow_fal:
+        return None
     # Kling expects duration as the string "5" or "10". Guard against anything else.
     duration = str(duration)
     if duration not in ("5", "10"):
@@ -352,7 +359,9 @@ def merge_audio_into_video(video_url, audio_url):
         return None
 
 
-def generate_image(prompt, style="realistic", aspect_ratio="1:1", provider="fal"):
+def generate_image(prompt, style="realistic", aspect_ratio="1:1", provider="huggingface", allow_fal=False):
+    if provider == "fal" and not allow_fal:
+        return {"success": False, "error": "FAL image generation is a Pro feature."}
     if provider == "huggingface":
         return _generate_image_huggingface(prompt, aspect_ratio)
 
