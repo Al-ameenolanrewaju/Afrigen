@@ -4,6 +4,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from models import db, User, Referral
 from services.email import generate_reset_token, verify_reset_token, send_reset_password_email
 from services.email import send_welcome_email
+from extensions import limiter
 import logging
 import os
 from routes.main import get_country_from_ip, get_real_ip
@@ -32,6 +33,7 @@ def verify_user_password(stored_password, provided_password):
 
 
 @auth.route('/register', methods=['GET', 'POST'])
+@limiter.limit("10 per hour")
 def register():
     # Capture UTM source from GET params and store in session
     if request.method == 'GET':
@@ -132,6 +134,7 @@ def register():
 
 
 @auth.route('/login', methods=['GET', 'POST'])
+@limiter.limit("10 per hour")
 def login():
     if request.method == 'POST':
         email = request.form.get('email')

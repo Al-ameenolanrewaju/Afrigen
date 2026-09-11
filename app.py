@@ -17,11 +17,13 @@ from authlib.integrations.flask_client import OAuth
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from models import db, User, Generation, TelegramUser, SavedPrompt, Referral
-from config import DevelopmentConfig
+from config import DevelopmentConfig, ProductionConfig
+from extensions import limiter
 from routes.main import main
 from routes.auth import auth
 from routes.api import api
 from routes.campaigns import campaigns_bp
+from services.credits import refund_video
 from constants import (
     FACEBOOK_URL, TWITTER_URL, INSTAGRAM_URL, LINKEDIN_URL, TELEGRAM_URL
 )
@@ -45,7 +47,12 @@ def get_missing_required_env_vars():
 
 
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_prefix=1)
-app.config.from_object(DevelopmentConfig)
+is_production = (
+    os.environ.get("RENDER", "").lower() == "true"
+    or os.environ.get("FLASK_ENV") == "production"
+)
+app.config.from_object(ProductionConfig if is_production else DevelopmentConfig)
+limiter.init_app(app)
 
 mail = Mail(app)
 oauth = OAuth(app)
@@ -101,10 +108,7 @@ def fail_stuck_generations():
                 gen.status = 'failed'
                 user = db.session.get(User, gen.user_id)
                 if user:
-                    if user.plan == 'free' and (user.monthly_videos_used or 0) > 0:
-                        user.monthly_videos_used -= 1
-                    elif user.plan == 'pro':
-                        user.credits = (user.credits or 0) + gen.credit_cost
+                    refund_video(user, gen.credit_cost)
             db.session.commit()
             print(f"⏱️ Failed {len(stuck)} stuck generation(s) past the 15-min timeout.")
         except Exception as e:

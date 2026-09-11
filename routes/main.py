@@ -3,6 +3,7 @@ from flask import (
     jsonify, abort, session, current_app
 )
 from flask_login import login_required, current_user
+from extensions import limiter
 from models import db, Generation, User, TelegramUser, SavedPrompt, Referral, Payment
 from sqlalchemy.exc import IntegrityError
 from services.claude import refine_prompt, refine_image_prompt, extract_on_screen_text
@@ -528,6 +529,8 @@ def disconnect_provider(provider):
     return redirect(url_for('main.connected_accounts'))
 
 @main.route('/refine-prompt', methods=['POST'])
+@login_required
+@limiter.limit("20 per hour")
 def refine_prompt_free():
     data = request.get_json() or {}
     prompt = data.get('prompt')
@@ -541,6 +544,8 @@ def refine_prompt_free():
 
 
 @main.route('/refine-image-prompt', methods=['POST'])
+@login_required
+@limiter.limit("20 per hour")
 def refine_image_prompt_free():
     data = request.get_json() or {}
     prompt = data.get('prompt')
