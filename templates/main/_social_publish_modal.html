@@ -37,9 +37,10 @@ let socialPublishState = { text: '', mediaUrl: '', mediaType: 'video' };
 let socialPublishInProgress = false;
 
 function showSocialPublishAlert(message, type) {
-    const alert = document.getElementById('socialPublishAlert');
-    alert.textContent = message;
-    alert.className = `alert alert-${type}`;
+    window.showAfrigenAlert({
+        icon: type === 'danger' ? 'error' : type,
+        text: message
+    });
 }
 
 async function readPublishResponse(response) {

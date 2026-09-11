@@ -174,28 +174,13 @@ content="Generate campaigns, blogs, social media content, videos, and visuals wi
         <div class="container mt-4 flex-grow-1{% if request.args.get('embedded') %} embedded-container{% endif %}">
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
-                    <div class="flash-message-stack" aria-live="polite">
-                        {% for category, message in messages if category in ['danger', 'warning'] %}
-                            <div class="alert {{ 'alert-danger' if category == 'danger' else 'alert-warning' }} alert-dismissible fade show" role="alert">
-                                <strong>{{ 'Error' if category == 'danger' else 'Warning' }}:</strong>
-                                <span class="flash-message-text">{{ message }}</span>
-                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Dismiss"></button>
-                            </div>
-                        {% endfor %}
-                    </div>
                     <script>
                         document.addEventListener("DOMContentLoaded", function() {
-                            {% for category, message in messages if category not in ['danger', 'warning'] %}
-                                Swal.fire({
-                                    icon: '{{ "error" if category == "danger" else "success" if category == "success" else "info" if category == "info" else "warning" }}',
-                                    title: '{{ message | replace("'", "\\'") | safe }}',
-                                    toast: true,
-                                    position: 'top-end',
-                                    showConfirmButton: false,
-                                    timer: 5000,
-                                    timerProgressBar: true,
-                                    background: '#161B22',
-                                    color: '#F0F6FC'
+                            {% for category, message in messages %}
+                                window.showAfrigenAlert({
+                                    icon: {{ ('error' if category == 'danger' else category if category in ['success', 'info', 'warning'] else 'info') | tojson }},
+                                    text: {{ message | tojson }},
+                                    toast: true
                                 });
                             {% endfor %}
                         });
@@ -215,15 +200,24 @@ content="Generate campaigns, blogs, social media content, videos, and visuals wi
 {% endif %}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Global alert override
-        window.alert = function(message) {
+        window.showAfrigenAlert = function(options) {
             Swal.fire({
-                text: message,
-                icon: 'info',
+                icon: options.icon || 'info',
+                title: options.title,
+                text: options.text,
+                toast: options.toast === true,
+                position: options.toast === true ? 'top-end' : 'center',
+                showConfirmButton: options.toast !== true,
+                timer: options.toast === true ? 5000 : undefined,
+                timerProgressBar: options.toast === true,
                 background: '#161B22',
                 color: '#F0F6FC',
                 confirmButtonColor: '#F5A623'
             });
+        };
+
+        window.alert = function(message) {
+            window.showAfrigenAlert({ text: String(message) });
         };
 
         // SweetAlert helpers for confirms
