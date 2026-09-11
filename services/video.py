@@ -1,4 +1,5 @@
 import os
+import math
 import time
 import subprocess
 import tempfile
@@ -86,6 +87,7 @@ ANIMATEDIFF_STYLES = {"anime", "social"}
 # Credit pricing. Premium Kling videos cost more than the cheaper AnimateDiff path.
 KLING_VIDEO_COST = 10
 CHEAP_VIDEO_COST = 5
+KLING_CREDITS_PER_SECOND = 1.5
 
 
 def text_to_video_cost(style, extended=False, duration="5"):
@@ -105,7 +107,7 @@ def text_to_video_cost(style, extended=False, duration="5"):
         return CHEAP_VIDEO_COST
 
     if duration in {"10", "15", "20"}:
-        return int(duration)
+        return math.ceil(int(duration) * KLING_CREDITS_PER_SECOND)
     if extended:
         return KLING_VIDEO_COST
     return CHEAP_VIDEO_COST

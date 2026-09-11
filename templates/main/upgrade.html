@@ -94,7 +94,7 @@
                             MOST POPULAR
                         </div>
                         <h4 style="color: #F5A623;" class="mt-2">Monthly Plan</h4>
-                        <h2 style="color: #F0F6FC;">₦5,000</h2>
+                        <h2 style="color: #F0F6FC;">₦10,000</h2>
                         <p style="color: #888;">per month</p>
                         <ul style="list-style: none; padding: 0; color: #C9D1D9; text-align: left;">
                             <li class="mb-2">✅ Video generation with credits</li>
@@ -106,7 +106,7 @@
                         {% if current_user.is_authenticated %}
                         <form method="POST" action="{{ url_for('main.initialize_payment') }}">
                             <button type="submit" class="btn btn-afrigen w-100 mt-2">
-                                Pay ₦5,000 💳
+                                Pay ₦10,000 💳
                             </button>
                         </form>
                         {% else %}
@@ -125,7 +125,7 @@
                             SAVE ₦10,000
                         </div>
                         <h4 style="color: #27AE60;" class="mt-2">Annual Plan</h4>
-                        <h2 style="color: #F0F6FC;">₦50,000</h2>
+                        <h2 style="color: #F0F6FC;">₦110,000</h2>
                         <p style="color: #888;">per year</p>
                         <ul style="list-style: none; padding: 0; color: #C9D1D9; text-align: left;">
                             <li class="mb-2">✅ Everything in Monthly</li>
@@ -136,7 +136,7 @@
                         {% if current_user.is_authenticated %}
                         <form method="POST" action="{{ url_for('main.initialize_payment_annual') }}">
                             <button type="submit" class="btn btn-success w-100 mt-2">
-                                Pay ₦50,000/year 💳
+                                Pay ₦110,000/year 💳
                             </button>
                         </form>
                         {% else %}

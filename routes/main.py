@@ -18,8 +18,8 @@ from services.video import (
 )
 from services.credits import (
     video_gate, image_gate, charge_video, charge_image,
-    image_to_video_gate, charge_image_to_video, refund_video,
-    IMAGE_COST, IMAGE_TO_VIDEO_COST
+    image_to_video_gate, refund_video,
+    IMAGE_COST
 )
 from services.audio import generate_voiceover, generate_video_script
 import os
@@ -50,6 +50,17 @@ def generate_referral_code():
 
 
 main = Blueprint("main", __name__)
+
+PRO_MONTHLY_KOBO = 1_000_000   # ₦10,000
+PRO_ANNUAL_KOBO = 11_000_000   # ₦110,000
+
+def image_to_video_cost(duration="5"):
+    """Credits for animating an image into video. Scales with
+    duration since the underlying Kling models bill per-second."""
+    duration = str(duration or "5")
+    if duration not in {"5", "10"}:
+        duration = "5"
+    return 15 if duration == "5" else 28
 
 # ---------- Admin authorization ----------
 def _normalize_admin_list(raw_value):
@@ -546,8 +557,16 @@ def refine_image_prompt_free():
 @main.route('/generate-from-image', methods=['POST'])
 @login_required
 def generate_from_image():
+    duration = request.form.get('duration', '5')
+    if duration not in ('5', '10'):
+        duration = '5'
+    video_cost = image_to_video_cost(duration)
+
     locked_user = db.session.get(User, current_user.id, with_for_update=True)
     ok, error = image_to_video_gate(locked_user)
+    if ok and (locked_user.credits or 0) < video_cost:
+        ok = False
+        error = f"You need at least {video_cost} credits for image-to-video!"
     if not ok:
         flash(error, 'danger')
         return redirect(url_for('main.dashboard'))
@@ -557,11 +576,6 @@ def generate_from_image():
     if not prompt or not image_file:
         flash('Please provide both image and prompt!', 'danger')
         return redirect(url_for('main.dashboard'))
-
-    # Pro users choose clip length via the dashboard dropdown (5s or 10s).
-    duration = request.form.get('duration', '5')
-    if duration not in ('5', '10'):
-        duration = '5'
 
     # Honour the form's aspect-ratio dropdown instead of forcing 16:9.
     aspect_ratio = request.form.get('aspect_ratio', '16:9')
@@ -602,13 +616,13 @@ def generate_from_image():
             image_url=image_url,
             generation_type="image",
             status="completed" if video_url else "failed",
-            credit_cost=IMAGE_TO_VIDEO_COST,
+            credit_cost=video_cost,
         )
         db.session.add(generation)
 
         # Only deduct credits if video generation succeeded
         if video_url:
-            charge_image_to_video(locked_user)
+            locked_user.credits = max(0, (locked_user.credits or 0) - video_cost)
 
         db.session.commit()
 
@@ -1057,7 +1071,7 @@ def upgrade():
 @main.route('/payment/initialize', methods=['POST'])
 @login_required
 def initialize_payment():
-    amount = 500000
+    amount = PRO_MONTHLY_KOBO
     headers = {
         "Authorization": f"Bearer {os.environ.get('PAYSTACK_SECRET_KEY')}",
         "Content-Type": "application/json"
@@ -1083,7 +1097,7 @@ def initialize_payment():
 @main.route('/payment/initialize/annual', methods=['POST'])
 @login_required
 def initialize_payment_annual():
-    amount = 5000000
+    amount = PRO_ANNUAL_KOBO
     headers = {
         "Authorization": f"Bearer {os.environ.get('PAYSTACK_SECRET_KEY')}",
         "Content-Type": "application/json"
@@ -1130,7 +1144,7 @@ def payment_callback():
         and data.get('status') == 'success'
         and data.get('customer', {}).get('email') == current_user.email
         and str((data.get('metadata') or {}).get('user_id')) == str(current_user.id)
-        and amount in (500000, 5000000)
+        and amount in (PRO_MONTHLY_KOBO, PRO_ANNUAL_KOBO)
     )
 
     if not verified:
@@ -1145,7 +1159,7 @@ def payment_callback():
         return redirect(url_for('main.dashboard'))
 
     # Tier is derived from the verified amount, not the (spoofable) metadata.
-    is_annual = amount == 5000000
+    is_annual = amount == PRO_ANNUAL_KOBO
     current_user.plan = 'pro'
     current_user.credits = (current_user.credits or 0) + (1200 if is_annual else 100)
     db.session.add(Payment(
@@ -1978,10 +1992,10 @@ def payment_webhook():
         if (
             user
             and reference
-            and amount in (500000, 5000000)
+            and amount in (PRO_MONTHLY_KOBO, PRO_ANNUAL_KOBO)
             and not Payment.query.filter_by(reference=reference).first()
         ):
-            is_annual = amount == 5000000
+            is_annual = amount == PRO_ANNUAL_KOBO
             user.plan = 'pro'
             user.credits = (user.credits or 0) + (1200 if is_annual else 100)
             db.session.add(Payment(
