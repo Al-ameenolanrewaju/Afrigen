@@ -1,6 +1,7 @@
 import resend
 import os
 import json
+import html
 
 resend.api_key = os.environ.get("RESEND_API_KEY")
 
@@ -89,11 +90,12 @@ def get_base_email_html(content):
 
 def send_welcome_email(user_email, username):
     try:
+        safe_username = html.escape(username or "")
         content = f"""
         <h2 style="color: #FFFFFF; font-size: 24px; font-weight: 600; margin: 0 0 24px 0; letter-spacing: -0.5px;">Welcome to Afrigen.</h2>
-        <p style="color: #A1A1AA; font-size: 15px; line-height: 1.6; margin: 0 0 16px 0;">Hi <strong style="color: #FFFFFF;">{username}</strong>,</p>
+        <p style="color: #A1A1AA; font-size: 15px; line-height: 1.6; margin: 0 0 16px 0;">Hi <strong style="color: #FFFFFF;">{safe_username}</strong>,</p>
         <p style="color: #A1A1AA; font-size: 15px; line-height: 1.6; margin: 0 0 32px 0;">
-            You're officially part of the African AI revolution. We've credited your account with 5 free credits so you can start creating immediately.
+            You're officially part of the African AI revolution. Your free account includes 2 lifetime image generations. Video generation, image-to-video, and premium Fal images require Pro.
         </p>
         <table border="0" cellspacing="0" cellpadding="0">
             <tr>
@@ -116,14 +118,16 @@ def send_welcome_email(user_email, username):
 
 def send_video_ready_email(user_email, username, original_prompt, video_url):
     try:
+        safe_username = html.escape(username or "")
+        safe_original_prompt = html.escape(original_prompt or "")
         content = f"""
         <h2 style="color: #FFFFFF; font-size: 24px; font-weight: 600; margin: 0 0 24px 0; letter-spacing: -0.5px;">Generation complete.</h2>
-        <p style="color: #A1A1AA; font-size: 15px; line-height: 1.6; margin: 0 0 24px 0;">Hi <strong style="color: #FFFFFF;">{username}</strong>, your AI generation has finished successfully based on your prompt:</p>
+        <p style="color: #A1A1AA; font-size: 15px; line-height: 1.6; margin: 0 0 24px 0;">Hi <strong style="color: #FFFFFF;">{safe_username}</strong>, your AI generation has finished successfully based on your prompt:</p>
         
         <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 32px;">
             <tr>
                 <td style="border-left: 2px solid #333333; padding-left: 16px;">
-                    <p style="color: #E4E4E7; font-size: 15px; margin: 0; line-height: 1.6;">{original_prompt}</p>
+                    <p style="color: #E4E4E7; font-size: 15px; margin: 0; line-height: 1.6;">{safe_original_prompt}</p>
                 </td>
             </tr>
         </table>
@@ -154,11 +158,13 @@ def send_video_ready_email(user_email, username, original_prompt, video_url):
 
 def send_credits_low_email(user_email, username, credits_left):
     try:
+        safe_username = html.escape(username or "")
+        safe_credits_left = html.escape(str(credits_left or "0"))
         content = f"""
         <h2 style="color: #FFFFFF; font-size: 24px; font-weight: 600; margin: 0 0 24px 0; letter-spacing: -0.5px;">Action required.</h2>
-        <p style="color: #A1A1AA; font-size: 15px; line-height: 1.6; margin: 0 0 16px 0;">Hi <strong style="color: #FFFFFF;">{username}</strong>,</p>
+        <p style="color: #A1A1AA; font-size: 15px; line-height: 1.6; margin: 0 0 16px 0;">Hi <strong style="color: #FFFFFF;">{safe_username}</strong>,</p>
         <p style="color: #A1A1AA; font-size: 15px; line-height: 1.6; margin: 0 0 32px 0;">
-            You only have {credits_left} credits remaining in your account. To ensure uninterrupted access to generations, please upgrade to a Pro plan.
+            You only have {safe_credits_left} credits remaining in your account. To ensure uninterrupted access to generations, please upgrade to a Pro plan.
         </p>
         <table border="0" cellspacing="0" cellpadding="0">
             <tr>
@@ -171,7 +177,7 @@ def send_credits_low_email(user_email, username, credits_left):
         resend.Emails.send({
             "from": FROM_EMAIL,
             "to": user_email,
-            "subject": f"Action required: {credits_left} credits remaining",
+            "subject": f"Action required: {safe_credits_left} credits remaining",
             "html": get_base_email_html(content)
         })
         print("Credits low email sent!")
@@ -181,11 +187,12 @@ def send_credits_low_email(user_email, username, credits_left):
 
 def send_credits_exhausted_email(user_email, username):
     try:
+        safe_username = html.escape(username or "")
         content = f"""
         <h2 style="color: #FFFFFF; font-size: 24px; font-weight: 600; margin: 0 0 24px 0; letter-spacing: -0.5px;">Usage limit reached.</h2>
-        <p style="color: #A1A1AA; font-size: 15px; line-height: 1.6; margin: 0 0 16px 0;">Hi {username},</p>
+        <p style="color: #A1A1AA; font-size: 15px; line-height: 1.6; margin: 0 0 16px 0;">Hi {safe_username},</p>
         <p style="color: #A1A1AA; font-size: 15px; line-height: 1.6; margin: 0 0 32px 0;">
-            You've used all your free credits for this billing cycle. To continue creating, please select a Pro plan.
+            You've used your 2 free lifetime images. To continue creating images or unlock video generation, image-to-video, and premium Fal images, please select a Pro plan.
         </p>
         <table border="0" cellspacing="0" cellpadding="0">
             <tr>
@@ -208,12 +215,13 @@ def send_credits_exhausted_email(user_email, username):
 
 def send_pro_upgrade_email(user_email, username):
     try:
+        safe_username = html.escape(username or "")
         content = f"""
         <h2 style="color: #FFFFFF; font-size: 24px; font-weight: 600; margin: 0 0 24px 0; letter-spacing: -0.5px;">Welcome to Pro.</h2>
-        <p style="color: #A1A1AA; font-size: 15px; line-height: 1.6; margin: 0 0 24px 0;">Hi <strong style="color: #FFFFFF;">{username}</strong>, your account has been successfully upgraded to the Pro plan. You now have access to:</p>
+        <p style="color: #A1A1AA; font-size: 15px; line-height: 1.6; margin: 0 0 24px 0;">Hi <strong style="color: #FFFFFF;">{safe_username}</strong>, your account has been successfully upgraded to the Pro plan. You now have access to:</p>
         
         <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 32px;">
-            <tr><td style="padding-bottom: 8px; color: #E4E4E7; font-size: 15px;">— Unlimited video generation</td></tr>
+            <tr><td style="padding-bottom: 8px; color: #E4E4E7; font-size: 15px;">— Video generation using your monthly credits</td></tr>
             <tr><td style="padding-bottom: 8px; color: #E4E4E7; font-size: 15px;">— 100 credits per month</td></tr>
             <tr><td style="padding-bottom: 8px; color: #E4E4E7; font-size: 15px;">— Image to video capabilities</td></tr>
             <tr><td style="padding-bottom: 8px; color: #E4E4E7; font-size: 15px;">— AI voiceovers</td></tr>
@@ -273,6 +281,7 @@ def verify_unsub_token(token):
 
 def send_reset_password_email(user_email, username, reset_url):
     try:
+        safe_username = html.escape(username or "")
         content = f"""
         <h2 style="color: #FFFFFF; font-size: 24px; font-weight: 600; margin: 0 0 24px 0; letter-spacing: -0.5px;">Password Reset</h2>
         <p style="color: #A1A1AA; font-size: 15px; line-height: 1.6; margin: 0 0 24px 0;">
@@ -302,17 +311,20 @@ def send_reset_password_email(user_email, username, reset_url):
 
 def send_contact_email(name, email, message):
     try:
+        safe_name = html.escape(name or "")
+        safe_email = html.escape(email or "")
+        safe_message = html.escape(message or "")
         content = f"""
         <h2 style="color: #FFFFFF; font-size: 20px; font-weight: 600; margin: 0 0 32px 0;">New Contact Message</h2>
         
         <p style="color: #A1A1AA; font-size: 13px; margin: 0 0 4px 0; text-transform: uppercase; letter-spacing: 1px;">From</p>
-        <p style="color: #E4E4E7; font-size: 15px; margin: 0 0 24px 0;">{name} &lt;{email}&gt;</p>
+        <p style="color: #E4E4E7; font-size: 15px; margin: 0 0 24px 0;">{safe_name} &lt;{safe_email}&gt;</p>
         
         <p style="color: #A1A1AA; font-size: 13px; margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 1px;">Message</p>
         <table width="100%" border="0" cellspacing="0" cellpadding="0">
             <tr>
                 <td style="border-left: 2px solid #333333; padding-left: 16px;">
-                    <p style="color: #E4E4E7; font-size: 15px; line-height: 1.6; margin: 0; white-space: pre-wrap;">{message}</p>
+                    <p style="color: #E4E4E7; font-size: 15px; line-height: 1.6; margin: 0; white-space: pre-wrap;">{safe_message}</p>
                 </td>
             </tr>
         </table>
@@ -330,9 +342,10 @@ def send_contact_email(name, email, message):
 
 def send_launch_confirmation(user_email, name):
     try:
+        safe_name = html.escape(name or "")
         content = f"""
         <h2 style="color: #FFFFFF; font-size: 24px; font-weight: 600; margin: 0 0 24px 0; letter-spacing: -0.5px;">You're on the list.</h2>
-        <p style="color: #A1A1AA; font-size: 15px; line-height: 1.6; margin: 0 0 16px 0;">Hi <strong style="color: #FFFFFF;">{name}</strong>,</p>
+        <p style="color: #A1A1AA; font-size: 15px; line-height: 1.6; margin: 0 0 16px 0;">Hi <strong style="color: #FFFFFF;">{safe_name}</strong>,</p>
         <p style="color: #A1A1AA; font-size: 15px; line-height: 1.6; margin: 0 0 32px 0;">
             Thank you for joining the Afrigen launch list. We'll notify you the exact moment we go live so you can secure your spot.
         </p>
@@ -410,21 +423,24 @@ def send_newsletter(recipients, subject, body, base_url=BASE_URL, is_html=False,
 
 
 def send_admin_notice(to_email, heading, message, button_url=None, button_text=None):
+    safe_heading = html.escape(heading or "")
+    safe_message = html.escape(message or "")
+    safe_button_text = html.escape(button_text or "")
     button_html = ""
     if button_url and button_text:
         button_html = f"""
         <table border="0" cellspacing="0" cellpadding="0" style="margin-top: 24px;">
             <tr>
                 <td align="center" style="background-color: #EDEDED; border-radius: 6px;">
-                    <a href="{button_url}" target="_blank" style="display: inline-block; padding: 8px 20px; font-weight: 500; font-size: 13px; color: #000000; text-decoration: none; border-radius: 6px;">{button_text}</a>
+                    <a href="{button_url}" target="_blank" style="display: inline-block; padding: 8px 20px; font-weight: 500; font-size: 13px; color: #000000; text-decoration: none; border-radius: 6px;">{safe_button_text}</a>
                 </td>
             </tr>
         </table>
         """
     try:
         content = f"""
-        <h2 style="color: #FFFFFF; font-size: 20px; font-weight: 600; margin: 0 0 16px 0;">{heading}</h2>
-        <p style="color: #A1A1AA; font-size: 15px; line-height: 1.6; margin: 0;">{message}</p>
+        <h2 style="color: #FFFFFF; font-size: 20px; font-weight: 600; margin: 0 0 16px 0;">{safe_heading}</h2>
+        <p style="color: #A1A1AA; font-size: 15px; line-height: 1.6; margin: 0;">{safe_message}</p>
         {button_html}
         """
         resend.Emails.send({
@@ -440,23 +456,27 @@ def send_admin_notice(to_email, heading, message, button_url=None, button_text=N
 
 def send_feedback_email(user_email, rating, feedback_text, feature):
     try:
+        safe_user_email = html.escape(user_email or "")
+        safe_rating = html.escape(rating or "")
+        safe_feedback_text = html.escape(feedback_text or "")
+        safe_feature = html.escape(feature or "")
         content = f"""
         <h2 style="color: #FFFFFF; font-size: 20px; font-weight: 600; margin: 0 0 32px 0;">User Feedback</h2>
         
         <p style="color: #A1A1AA; font-size: 13px; margin: 0 0 4px 0; text-transform: uppercase; letter-spacing: 1px;">From</p>
-        <p style="color: #E4E4E7; font-size: 15px; margin: 0 0 20px 0;">{user_email}</p>
+        <p style="color: #E4E4E7; font-size: 15px; margin: 0 0 20px 0;">{safe_user_email}</p>
         
         <p style="color: #A1A1AA; font-size: 13px; margin: 0 0 4px 0; text-transform: uppercase; letter-spacing: 1px;">Rating</p>
-        <p style="color: #E4E4E7; font-size: 15px; margin: 0 0 20px 0;">{rating} / 5</p>
+        <p style="color: #E4E4E7; font-size: 15px; margin: 0 0 20px 0;">{safe_rating} / 5</p>
         
         <p style="color: #A1A1AA; font-size: 13px; margin: 0 0 4px 0; text-transform: uppercase; letter-spacing: 1px;">Feature</p>
-        <p style="color: #E4E4E7; font-size: 15px; margin: 0 0 24px 0;">{feature}</p>
+        <p style="color: #E4E4E7; font-size: 15px; margin: 0 0 24px 0;">{safe_feature}</p>
         
         <p style="color: #A1A1AA; font-size: 13px; margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 1px;">Feedback</p>
         <table width="100%" border="0" cellspacing="0" cellpadding="0">
             <tr>
                 <td style="border-left: 2px solid #333333; padding-left: 16px;">
-                    <p style="color: #E4E4E7; font-size: 15px; line-height: 1.6; margin: 0; white-space: pre-wrap;">{feedback_text}</p>
+                    <p style="color: #E4E4E7; font-size: 15px; line-height: 1.6; margin: 0; white-space: pre-wrap;">{safe_feedback_text}</p>
                 </td>
             </tr>
         </table>

@@ -405,9 +405,11 @@
                     <button type="button" class="action-btn {{ '' if current_user.plan == 'pro' else 'active' }}" data-target="form_image">
                         <i class="fa-solid fa-image"></i> Image
                     </button>
+                    {% if current_user.plan == 'pro' %}
                     <button type="button" class="action-btn" data-target="form_animate">
                         <i class="fa-solid fa-wand-magic-sparkles"></i> Animate Image
                     </button>
+                    {% endif %}
                     {% if current_user.plan == 'pro' %}
                     <button type="button" class="action-btn" id="btn-voiceover" data-target="form_video">
                         <i class="fa-solid fa-microphone"></i> Voice Over
@@ -420,9 +422,13 @@
                     <span style="color: #8B949E; font-size: 13px;"><i class="fa-solid fa-coins"
                             style="color: #F5A623;"></i> {{ current_user.credits }} Credits</span>
                     {% endif %}
-                    {% if current_user.credits > 0 or current_user.plan == 'free' %}
+                    {% if current_user.plan == 'pro' and current_user.credits > 0 %}
                     <button type="button" id="masterSubmitBtn" class="btn btn-afrigen px-4" style="border-radius: 8px;">
                         Generate <i class="fa-solid fa-arrow-right ms-1"></i>
+                    </button>
+                    {% elif current_user.plan == 'free' and (current_user.monthly_images_used or 0) < 2 %}
+                    <button type="button" id="masterSubmitBtn" class="btn btn-afrigen px-4" style="border-radius: 8px;">
+                        Generate Image <i class="fa-solid fa-arrow-right ms-1"></i>
                     </button>
                     {% else %}
                     <a href="{{ url_for('main.upgrade') }}" class="btn btn-outline-warning px-3"

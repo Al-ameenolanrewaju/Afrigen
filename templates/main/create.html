@@ -226,6 +226,7 @@
                         <small style="color: #484F58; font-size: 11px;">Text to Image</small>
                     </div>
                 </button>
+                {% if current_user.plan == 'pro' %}
                 <button class="type-btn" data-type="animate">
                     <span class="type-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
                     <div class="d-flex flex-column">
@@ -233,6 +234,7 @@
                         <small style="color: #484F58; font-size: 11px;">Image to Video</small>
                     </div>
                 </button>
+                {% endif %}
                 <button class="type-btn" data-type="voice">
                     <span class="type-icon"><i class="fa-solid fa-microphone"></i></span>
                     <div class="d-flex flex-column">
@@ -363,6 +365,7 @@
             </form>
 
             <!-- Animate Settings -->
+            {% if current_user.plan == 'pro' %}
             <form id="form_animate" class="settings-form" style="display: none;" method="POST" action="{{ url_for('main.generate_from_image') }}" enctype="multipart/form-data">
                 <input type="hidden" name="prompt" class="sync-prompt">
                 
@@ -409,6 +412,7 @@
                     {% endif %}
                 </div>
             </form>
+            {% endif %}
 
             <!-- Voice Over Settings -->
             <form id="form_voice" class="settings-form" style="display: none;" onsubmit="handleVoiceOverSubmit(event)">
@@ -456,15 +460,20 @@
     <div class="workspace-footer">
         <div class="d-flex align-items-center gap-3">
             <span style="color: #8B949E; font-size: 14px;">
-                <i class="fa-solid fa-coins" style="color: #F5A623;"></i> Available: <strong style="color: #F0F6FC;">{{ current_user.credits }} Credits</strong>
+                <i class="fa-solid fa-coins" style="color: #F5A623;"></i>
+                {% if current_user.plan == 'free' %}
+                Free image allowance: <strong style="color: #F0F6FC;">{{ [2 - (current_user.monthly_images_used or 0), 0]|max }}</strong>
+                {% else %}
+                Available: <strong style="color: #F0F6FC;">{{ current_user.credits }} Credits</strong>
+                {% endif %}
             </span>
         </div>
         
         <div>
-            {% if current_user.credits > 0 or current_user.plan == 'free' %}
+            {% if current_user.plan == 'pro' and current_user.credits > 0 or current_user.plan == 'free' and (current_user.monthly_images_used or 0) < 2 %}
             <button type="button" id="masterSubmitBtn" class="btn btn-afrigen px-5" style="border-radius: 8px; font-weight: 600; padding: 12px 24px;">
-                <span id="btn-text">Generate Video</span> 
-                <span id="btn-cost" style="opacity: 0.8; margin-left: 8px; font-weight: 400; font-size: 13px;">(5 Credits)</span>
+                <span id="btn-text">{{ 'Generate Video' if current_user.plan == 'pro' else 'Generate Image' }}</span>
+                <span id="btn-cost" style="opacity: 0.8; margin-left: 8px; font-weight: 400; font-size: 13px;">{{ '(5 Credits)' if current_user.plan == 'pro' else '(Free allowance)' }}</span>
             </button>
             {% else %}
             <a href="{{ url_for('main.upgrade') }}" class="btn btn-warning px-5" style="border-radius: 8px; font-weight: 600;">Upgrade to Generate</a>
@@ -488,8 +497,8 @@
 <script>
     const creditCosts = {
         'video': 5,
-        'image': 1,
-        'animate': 5,
+        'image': 2,
+        'animate': 10,
         'voice': 1
     };
     

@@ -18,6 +18,7 @@ from services.video import text_to_video_cost
 
 # Flat credit price of an image generation for Pro users (mirrors routes/main.py).
 IMAGE_COST = 2
+IMAGE_TO_VIDEO_COST = 10
 
 # Free-tier total (lifetime) allowances.
 FREE_TOTAL_IMAGES = 2
@@ -72,6 +73,29 @@ def charge_video(user, cost):
         user.credits = (user.credits or 0) - cost
         if user.credits < 0:
             user.credits = 0
+
+
+def image_to_video_gate(user):
+    """Check whether a Pro user may generate a video from an image."""
+    if user.plan != 'pro':
+        return False, "Image to Video is a Pro feature!"
+    if (user.credits or 0) < IMAGE_TO_VIDEO_COST:
+        return False, f"You need at least {IMAGE_TO_VIDEO_COST} credits for image-to-video!"
+    return True, None
+
+
+def charge_image_to_video(user):
+    """Deduct image-to-video credits without allowing a negative balance."""
+    if user.plan == 'pro':
+        user.credits = max(0, (user.credits or 0) - IMAGE_TO_VIDEO_COST)
+
+
+def refund_video(user, cost):
+    """Refund a failed video generation exactly once."""
+    if user.plan == 'free':
+        user.monthly_videos_used = max(0, (user.monthly_videos_used or 0) - 1)
+    elif user.plan == 'pro':
+        user.credits = (user.credits or 0) + cost
 
 
 def charge_image(user):

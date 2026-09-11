@@ -118,8 +118,13 @@
         <h5 style="color: #F5A623;" class="mb-3"><i class="fa-solid fa-credit-card"></i> Credits</h5>
         <div class="row text-center">
             <div class="col-6">
+                {% if current_user.plan == 'free' %}
+                <h2 style="color: #F5A623;">{{ [2 - (current_user.monthly_images_used or 0), 0]|max }}</h2>
+                <p style="color: #888;">Free images remaining</p>
+                {% else %}
                 <h2 style="color: #F5A623;">{{ current_user.credits }}</h2>
-                <p style="color: #888;">Remaining</p>
+                <p style="color: #888;">Credits remaining</p>
+                {% endif %}
             </div>
             <div class="col-6">
                 <h2 style="color: #F5A623;">{{ current_user.plan.upper() }}</h2>

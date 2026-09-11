@@ -16,10 +16,10 @@ from services.video import (
     _build_t2v_request,
     generate_image as generate_ai_image   # aliased to avoid conflict with route name
 )
-# Premium Kling image-to-video is charged at the higher rate.
-IMAGE_TO_VIDEO_COST = 10
 from services.credits import (
-    video_gate, image_gate, charge_video, charge_image, IMAGE_COST
+    video_gate, image_gate, charge_video, charge_image,
+    image_to_video_gate, charge_image_to_video, refund_video,
+    IMAGE_COST, IMAGE_TO_VIDEO_COST
 )
 from services.audio import generate_voiceover, generate_video_script
 import os
@@ -546,12 +546,10 @@ def refine_image_prompt_free():
 @main.route('/generate-from-image', methods=['POST'])
 @login_required
 def generate_from_image():
-    if current_user.plan != 'pro':
-        flash('Image to Video is a Pro feature!', 'danger')
-        return redirect(url_for('main.dashboard'))
-
-    if current_user.credits < IMAGE_TO_VIDEO_COST:
-        flash(f'You need at least {IMAGE_TO_VIDEO_COST} credits for image-to-video!', 'danger')
+    locked_user = db.session.get(User, current_user.id, with_for_update=True)
+    ok, error = image_to_video_gate(locked_user)
+    if not ok:
+        flash(error, 'danger')
         return redirect(url_for('main.dashboard'))
 
     prompt = request.form.get('prompt')
@@ -610,7 +608,7 @@ def generate_from_image():
 
         # Only deduct credits if video generation succeeded
         if video_url:
-            current_user.credits -= IMAGE_TO_VIDEO_COST
+            charge_image_to_video(locked_user)
 
         db.session.commit()
 
@@ -931,6 +929,8 @@ def admin():
     
     # Provider Health
     provider_health = ProviderHealth.query.all()
+    from services.provider_status import get_provider_status
+    external_provider_status = get_provider_status()
     
     # Payments
     recent_payments = Payment.query.order_by(Payment.created_at.desc()).limit(10).all()
@@ -977,6 +977,7 @@ def admin():
         workflow_logs=workflow_logs,
         top_automated_campaigns=top_automated_campaigns,
         provider_health=provider_health,
+        external_provider_status=external_provider_status,
         recent_payments=recent_payments,
         total_revenue=total_revenue,
         recent_distributions=recent_distributions,
@@ -1302,7 +1303,10 @@ def contact():
     if request.method == 'POST':
         name = request.form.get('name')
         email = request.form.get('email')
-        message = request.form.get('message')
+        message = request.form.get('message') or ''
+        if len(message) > 2000:
+            flash('Your message must be 2000 characters or fewer.', 'danger')
+            return redirect(url_for('main.contact'))
         try:
             from services.email import send_contact_email
             send_contact_email(name, email, message)
@@ -1318,8 +1322,11 @@ def contact():
 def feedback():
     if request.method == 'POST':
         rating = request.form.get('rating')
-        feedback_text = request.form.get('feedback')
+        feedback_text = request.form.get('feedback') or ''
         feature = request.form.get('feature')
+        if len(feedback_text) > 2000:
+            flash('Your feedback must be 2000 characters or fewer.', 'danger')
+            return redirect(url_for('main.feedback'))
         try:
             from services.email import send_feedback_email
             send_feedback_email(
@@ -2012,15 +2019,12 @@ def fal_webhook():
         return '', 404
 
     if data.get('status') == 'ERROR':
-        if generation.status == 'failed':
+        if generation.status in ('failed', 'completed'):
             return '', 200
         generation.status = 'failed'
-        user = User.query.get(generation.user_id)
+        user = db.session.get(User, generation.user_id)
         if user:
-            if user.plan == 'free':
-                user.monthly_videos_used = max(0, (user.monthly_videos_used or 0) - 1)
-            elif user.plan == 'pro':
-                user.credits = (user.credits or 0) + generation.credit_cost
+            refund_video(user, generation.credit_cost)
         db.session.commit()
         print(f"GENERATION webhook_request_id={request_id} status=failed")
         return '', 200
@@ -2036,12 +2040,21 @@ def fal_webhook():
         if generation.status == 'completed':
             return '', 200
 
+        # A timeout worker may have refunded this generation before Fal sent a
+        # late success webhook. Restore the charge before completing it.
+        user = db.session.get(User, generation.user_id)
+        if generation.status == 'failed' and user:
+            if user.plan == 'free':
+                user.monthly_videos_used = (user.monthly_videos_used or 0) + 1
+            elif user.plan == 'pro':
+                charge_video(user, generation.credit_cost)
+
         generation.video_url = video_url
         generation.status = 'completed'
         print(f"GENERATION webhook_request_id={request_id} status=completed")
 
         # Check if user needs low credit warning
-        user = User.query.get(generation.user_id)
+        user = db.session.get(User, generation.user_id)
         if user:
             if user.plan == 'pro' and user.credits <= 5:
                 try:
@@ -2099,7 +2112,13 @@ def fal_webhook():
         except Exception as e:
             print(f"EMAIL webhook_request_id={request_id} type=video_ready status=error error={e}")
     else:
+        if generation.status in ('failed', 'completed'):
+            return '', 200
+
         generation.status = 'failed'
+        user = db.session.get(User, generation.user_id)
+        if user:
+            refund_video(user, generation.credit_cost)
         db.session.commit()
 
     return '', 200
