@@ -288,6 +288,11 @@
                     <i class="fa-solid fa-envelope"></i> Newsletter
                 </a>
             </li>
+            <li>
+                <a href="{{ url_for('main.admin_pricing') }}" class="admin-nav-item {% if request.endpoint == 'main.admin_pricing' %}active{% endif %}">
+                    <i class="fa-solid fa-tags"></i> Pricing Configuration
+                </a>
+            </li>
         </ul>
 
         <div class="admin-nav-section mt-3">DASHBOARD SECTIONS</div>
