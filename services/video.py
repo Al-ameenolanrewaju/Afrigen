@@ -90,6 +90,23 @@ CHEAP_VIDEO_COST = 5
 KLING_CREDITS_PER_SECOND = 1.5
 
 
+def estimate_fal_video_cost(model, duration="5"):
+    """Estimate Fal spend for one video request in USD."""
+    duration_seconds = int(str(duration or "5"))
+    if "animatediff" in str(model).lower():
+        return 0.0
+    if "kling" in str(model).lower():
+        if "image-to-video" in str(model).lower():
+            return round(duration_seconds * 0.098, 3)
+        return round(duration_seconds * 0.045, 3)
+    return 0.02
+
+
+def estimate_fal_image_to_video_cost(duration="5"):
+    """Estimate Kling image-to-video spend using the midpoint of its price range."""
+    return estimate_fal_video_cost("kling image-to-video", duration)
+
+
 def text_to_video_cost(style, extended=False, duration="5"):
     """Credits for a text-to-video generation.
 
@@ -101,16 +118,20 @@ def text_to_video_cost(style, extended=False, duration="5"):
     if duration not in {"5", "10", "15", "20"}:
         duration = "5"
 
+    from services.pricing import get_pricing
+    cheap_video_cost = int(get_pricing("cheap_video_cost"))
+    kling_video_cost = int(get_pricing("kling_video_cost"))
+    kling_credits_per_second = get_pricing("kling_credits_per_second")
     if style in ANIMATEDIFF_STYLES:
         if duration in {"10", "15", "20"}:
             return int(duration)
-        return CHEAP_VIDEO_COST
+        return cheap_video_cost
 
     if duration in {"10", "15", "20"}:
-        return math.ceil(int(duration) * KLING_CREDITS_PER_SECOND)
+        return math.ceil(int(duration) * kling_credits_per_second)
     if extended:
-        return KLING_VIDEO_COST
-    return CHEAP_VIDEO_COST
+        return kling_video_cost
+    return cheap_video_cost
 
 # AnimateDiff takes a video_size enum instead of an aspect_ratio string.
 ANIMATEDIFF_VIDEO_SIZE = {

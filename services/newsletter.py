@@ -253,8 +253,7 @@ def run_weekly_generation():
 def run_weekly_send():
     """Send the current weekly draft automatically on Monday.
 
-    Approval remains available for preview and editing, but it is not required
-    for the scheduled delivery to happen.
+    Only an explicitly approved issue may be sent automatically.
     """
     issue = get_current_draft()
 
@@ -268,6 +267,10 @@ def run_weekly_send():
             )
             print(f"Weekly newsletter skipped: generation failed: {exc}")
             return 0
+
+    if issue.status != "approved":
+        print(f"Weekly newsletter skipped: issue {issue.id} is not approved.")
+        return 0
 
     if not issue.body:
         _notify_admins(

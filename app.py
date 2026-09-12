@@ -64,6 +64,8 @@ TELEGRAM_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 telegram_app = None
 
 db.init_app(app)
+from services.webhook_tasks import start_webhook_worker
+start_webhook_worker(app)
 migrate = Migrate(app, db)
 login_manager = LoginManager(app)
 login_manager.login_view = "auth.login"
@@ -109,11 +111,27 @@ def fail_stuck_generations():
                 user = db.session.get(User, gen.user_id)
                 if user:
                     refund_video(user, gen.credit_cost)
+                gen.refund_applied = True
             db.session.commit()
             print(f"⏱️ Failed {len(stuck)} stuck generation(s) past the 15-min timeout.")
         except Exception as e:
             db.session.rollback()
             print(f"Error in fail_stuck_generations: {e}")
+
+
+@scheduler.task('cron', id='alert_failed_generation_rate', hour=23, minute=55)
+def alert_failed_generation_rate():
+    from datetime import datetime, timedelta, timezone
+    with app.app_context():
+        since = datetime.now(timezone.utc) - timedelta(days=1)
+        total = Generation.query.filter(Generation.created_at >= since).count()
+        failed = Generation.query.filter(Generation.created_at >= since, Generation.status == 'failed').count()
+        if total >= 10 and failed / total >= 0.5:
+            try:
+                from services.alerts import notify_admin_alert
+                notify_admin_alert("Generation failure rate spike", f"{failed} of {total} generations failed in the last 24 hours.")
+            except Exception as exc:
+                print(f"Failure-rate alert error: {exc}")
 
 
 @scheduler.task('interval', id='process_publishing_queue', seconds=30)
@@ -230,19 +248,6 @@ def favicon():
     return redirect(url_for('static', filename='favicon.png'))
 
 
-@app.route('/set-webhook')
-def set_webhook():
-    import requests as req
-    webhook_url = request.url_root.rstrip('/') + f"/webhook/{TELEGRAM_TOKEN}"
-    response = req.post(
-        f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/setWebhook",
-        json={"url": webhook_url}
-    )
-    result = response.json()
-    print(f"Webhook set: {result}")
-    return jsonify(result)
-
-
 @app.route(f'/webhook/{TELEGRAM_TOKEN}', methods=['POST'])
 def webhook():
     """Handle incoming Telegram updates using safe event loop handling."""
@@ -273,7 +278,7 @@ def webhook():
 
 async def setup_telegram():
     global telegram_app
-    from telegram.ext import CommandHandler, MessageHandler, CallbackQueryHandler, filters
+    from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters
     from telegram import InlineKeyboardButton, InlineKeyboardMarkup
     from services.provider_manager import provider_manager
 

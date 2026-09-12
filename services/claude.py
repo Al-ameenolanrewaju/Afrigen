@@ -171,7 +171,13 @@ def get_model_prompt_rules(model_name="fal-ai/ltx-2.3-quality/clean-plate", dura
     )
 
 
-def refine_prompt(user_prompt, style="cinematic", model_name="fal-ai/ltx-2.3-quality/clean-plate", duration="5"):
+def refine_prompt(
+    user_prompt,
+    style="cinematic",
+    model_name="fal-ai/ltx-2.3-quality/clean-plate",
+    duration="5",
+    user=None,
+):
     system_message = (
         STYLE_PROMPTS.get(style, STYLE_PROMPTS["cinematic"]) + "\n\n" +
         get_model_prompt_rules(model_name=model_name, duration=duration) + "\n\n" +
@@ -192,6 +198,7 @@ def refine_prompt(user_prompt, style="cinematic", model_name="fal-ai/ltx-2.3-qua
                 {"role": "system", "content": system_message},
                 {"role": "user", "content": user_message}
             ],
+            user=user,
             max_tokens=500
         )
     except Exception as exc:
@@ -211,6 +218,7 @@ def refine_prompt(user_prompt, style="cinematic", model_name="fal-ai/ltx-2.3-qua
                         "camera movement, and mood. Original idea:\n\n" + (user_prompt or "")
                     )}
                 ],
+                user=user,
                 max_tokens=500
             )
         except Exception as exc:
@@ -227,7 +235,7 @@ def refine_prompt(user_prompt, style="cinematic", model_name="fal-ai/ltx-2.3-qua
     return response
 
 
-def refine_image_prompt(user_prompt, style="realistic"):
+def refine_image_prompt(user_prompt, style="realistic", user=None):
     """Refine prompt for image generation"""
 
     # Shared rules appended to every style. The critical one is TEXT
@@ -306,6 +314,7 @@ def refine_image_prompt(user_prompt, style="realistic"):
                 {"role": "system", "content": system_message},
                 {"role": "user", "content": user_message}
             ],
+            user=user,
             max_tokens=500
         )
     except Exception as exc:
@@ -325,6 +334,7 @@ def refine_image_prompt(user_prompt, style="realistic"):
                         "colors, and mood. Original idea:\n\n" + (user_prompt or "")
                     )}
                 ],
+                user=user,
                 max_tokens=500
             )
         except Exception as exc:

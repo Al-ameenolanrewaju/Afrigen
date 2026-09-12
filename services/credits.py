@@ -13,7 +13,7 @@ Callers are responsible for committing the session after a charge.
 """
 from datetime import date
 
-from models import db
+from models import db, CreditLedger
 from services.video import text_to_video_cost
 
 # Flat credit price of an image generation for Pro users (mirrors routes/main.py).
@@ -67,12 +67,17 @@ def image_gate(user):
     return (False, "Your account is restricted.")
 
 
-def charge_video(user, cost):
+def record_credit_change(user, delta, reason):
+    db.session.add(CreditLedger(user_id=user.id, delta=delta, reason=reason))
+
+
+def charge_video(user, cost, reason="Video generation"):
     """Record a successful video generation for a Pro user."""
     if user.plan == 'pro':
         user.credits = (user.credits or 0) - cost
         if user.credits < 0:
             user.credits = 0
+        record_credit_change(user, -cost, reason)
 
 
 def image_to_video_gate(user):
@@ -84,21 +89,23 @@ def image_to_video_gate(user):
     return True, None
 
 
-def charge_image_to_video(user):
+def charge_image_to_video(user, reason="Image-to-video generation"):
     """Deduct image-to-video credits without allowing a negative balance."""
     if user.plan == 'pro':
         user.credits = max(0, (user.credits or 0) - IMAGE_TO_VIDEO_COST)
+        record_credit_change(user, -IMAGE_TO_VIDEO_COST, reason)
 
 
-def refund_video(user, cost):
+def refund_video(user, cost, reason="Video generation refund"):
     """Refund a failed video generation exactly once."""
     if user.plan == 'free':
         user.monthly_videos_used = max(0, (user.monthly_videos_used or 0) - 1)
     elif user.plan == 'pro':
         user.credits = (user.credits or 0) + cost
+        record_credit_change(user, cost, reason)
 
 
-def charge_image(user):
+def charge_image(user, reason="Image generation"):
     """Record a successful image generation (free: bump counter, pro: spend credits)."""
     if user.plan == 'free':
         user.monthly_images_used = (user.monthly_images_used or 0) + 1
@@ -106,3 +113,4 @@ def charge_image(user):
         user.credits = (user.credits or 0) - IMAGE_COST
         if user.credits < 0:
             user.credits = 0
+        record_credit_change(user, -IMAGE_COST, reason)

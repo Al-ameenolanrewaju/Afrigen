@@ -34,17 +34,20 @@ class GroqAdapter(ProviderAdapter):
     def is_enabled(self):
         return bool(os.environ.get('GROQ_API_KEY'))
 
-    def _get_client(self):
+    def _get_client(self, api_key=None):
+        if api_key:
+            from groq import Groq
+            return Groq(api_key=api_key)
         if not self._client:
             from groq import Groq
             self._client = Groq(api_key=os.environ.get('GROQ_API_KEY'))
         return self._client
 
-    def _get_model(self):
+    def _get_model(self, client=None, use_cache=True):
         configured_model = os.environ.get('GROQ_MODEL')
         if configured_model:
             return configured_model
-        if self._available_model:
+        if use_cache and self._available_model:
             return self._available_model
 
         preferred_models = (
@@ -52,18 +55,24 @@ class GroqAdapter(ProviderAdapter):
             'llama-3.3-70b-versatile',
             'llama-3.1-8b-instant',
         )
-        models = self._get_client().models.list().data
+        models = (client or self._get_client()).models.list().data
         available = {model.id for model in models}
-        self._available_model = next(
+        selected_model = next(
             (model for model in preferred_models if model in available),
             next(iter(available), None),
         )
-        if not self._available_model:
+        if not selected_model:
             raise RuntimeError('Groq returned no available chat models')
-        return self._available_model
+        if use_cache:
+            self._available_model = selected_model
+        return selected_model
 
-    def generate(self, messages: List[Dict[str, str]], **kwargs) -> str:
-        model = kwargs.get('model') or self._get_model()
+    def generate(self, messages: List[Dict[str, str]], api_key=None, **kwargs) -> str:
+        client = self._get_client(api_key)
+        model = kwargs.get('model') or self._get_model(
+            client,
+            use_cache=not bool(api_key),
+        )
         max_tokens = kwargs.get('max_tokens')
         temperature = kwargs.get('temperature', 0.7)
 
@@ -77,7 +86,7 @@ class GroqAdapter(ProviderAdapter):
         if kwargs.get('response_format'):
             args["response_format"] = kwargs['response_format']
 
-        response = self._get_client().chat.completions.create(**args)
+        response = client.chat.completions.create(**args)
         choice = response.choices[0]
         content = choice.message.content or ""
 
@@ -133,6 +142,64 @@ class OpenRouterAdapter(ProviderAdapter):
         return content
 
 
+class OpenAIAdapter(ProviderAdapter):
+    @property
+    def is_enabled(self):
+        # OpenAI is enabled per call only when a user supplies a key.
+        return True
+
+    def generate(self, messages: List[Dict[str, str]], api_key=None, **kwargs) -> str:
+        if not api_key:
+            raise ValueError("OpenAIAdapter requires a user-supplied API key")
+
+        from openai import OpenAI
+
+        client = OpenAI(api_key=api_key)
+        response = client.chat.completions.create(
+            model=kwargs.get('model', 'gpt-4o-mini'),
+            messages=messages,
+            temperature=kwargs.get('temperature', 0.7),
+            max_tokens=kwargs.get('max_tokens'),
+        )
+        return response.choices[0].message.content or ""
+
+
+class AnthropicAdapter(ProviderAdapter):
+    @property
+    def is_enabled(self):
+        # Anthropic is enabled per call only when a user supplies a key.
+        return True
+
+    def generate(self, messages: List[Dict[str, str]], api_key=None, **kwargs) -> str:
+        if not api_key:
+            raise ValueError("AnthropicAdapter requires a user-supplied API key")
+
+        from anthropic import Anthropic
+
+        system_messages = [
+            message["content"]
+            for message in messages
+            if message.get("role") == "system"
+        ]
+        chat_messages = [
+            message
+            for message in messages
+            if message.get("role") != "system"
+        ]
+
+        client = Anthropic(api_key=api_key)
+        request_args = {
+            "model": kwargs.get('model', 'claude-sonnet-4-5'),
+            "max_tokens": kwargs.get('max_tokens', 1024),
+            "messages": chat_messages,
+        }
+        if system_messages:
+            request_args["system"] = "\n\n".join(system_messages)
+
+        response = client.messages.create(**request_args)
+        return response.content[0].text if response.content else ""
+
+
 class GeminiAdapter(ProviderAdapter):
     def __init__(self):
         super().__init__()
@@ -165,9 +232,19 @@ class GeminiAdapter(ProviderAdapter):
                 self._genai_module = genai
         self._initialized = True
 
-    def generate(self, messages: List[Dict[str, str]], **kwargs) -> str:
-        self._initialize()
-        if self._use_new_sdk:
+    def generate(self, messages: List[Dict[str, str]], api_key=None, **kwargs) -> str:
+        if api_key:
+            from google import genai as google_genai
+            client = google_genai.Client(api_key=api_key)
+            types = google_genai.types
+            use_new_sdk = True
+        else:
+            self._initialize()
+            client = self._client
+            types = self._types
+            use_new_sdk = self._use_new_sdk
+
+        if use_new_sdk:
             system_instruction = None
             prompt_parts = []
             for msg in messages:
@@ -192,13 +269,16 @@ class GeminiAdapter(ProviderAdapter):
             if system_instruction is not None:
                 config_kwargs["system_instruction"] = system_instruction
 
-            response = self._client.models.generate_content(
+            response = client.models.generate_content(
                 model=model_name,
                 contents=prompt_text,
-                config=self._types.GenerateContentConfig(**config_kwargs),
+                config=types.GenerateContentConfig(**config_kwargs),
             )
 
-            res_text = getattr(response, "text", str(response))
+            try:
+                res_text = response.text
+            except (ValueError, AttributeError) as exc:
+                raise RuntimeError("Gemini blocked or returned no usable content") from exc
             if hasattr(response, "candidates") and response.candidates:
                 finish_reason = getattr(response.candidates[0].finish_reason, "name", "") or response.candidates[
                     0].finish_reason
@@ -249,7 +329,10 @@ class GeminiAdapter(ProviderAdapter):
             generation_config=generation_config
         )
 
-        res_text = getattr(response, "text", "")
+        try:
+            res_text = response.text
+        except (ValueError, AttributeError) as exc:
+            raise RuntimeError("Gemini blocked or returned no usable content") from exc
         if response.candidates and hasattr(response.candidates[0], "finish_reason"):
             reason = response.candidates[0].finish_reason
             finish_reason = getattr(reason, "name", "") or reason
@@ -266,7 +349,9 @@ class ProviderManager:
         self.adapters = {
             "Groq": GroqAdapter(),
             "Gemini": GeminiAdapter(),
-            "OpenRouter": OpenRouterAdapter()
+            "OpenRouter": OpenRouterAdapter(),
+            "OpenAI": OpenAIAdapter(),
+            "Anthropic": AnthropicAdapter(),
         }
 
         self.task_mappings = {
@@ -293,6 +378,7 @@ class ProviderManager:
 
     def _update_health(self, provider_name: str, success: bool, latency: float, error_msg: str = None):
         health = self._get_health(provider_name)
+        previous_status = health.status
         if success:
             health.success_count += 1
             if health.status in ("offline", "degraded"):
@@ -308,6 +394,19 @@ class ProviderManager:
             health.last_error_at = datetime.now(timezone.utc)
         health.avg_latency_ms = int((health.avg_latency_ms + (latency * 1000)) / 2) if health.avg_latency_ms else int(
             latency * 1000)
+        try:
+            from services.alerts import alert_once, clear_alert
+            alert_type = f"provider:{provider_name}"
+            if health.status == "offline":
+                alert_once(
+                    alert_type,
+                    f"AI provider offline: {provider_name}",
+                    health.last_error or "Provider transitioned to offline.",
+                )
+            elif previous_status == "offline":
+                clear_alert(alert_type)
+        except Exception as exc:
+            print(f"Provider alert error: {exc}")
         db.session.commit()
 
     def _log_request(self, task_type, provider_name, latency, fallback_triggered, success, error_msg=None):
@@ -322,14 +421,48 @@ class ProviderManager:
         db.session.add(log)
         db.session.commit()
 
-    def generate_text(self, task_type: str, messages: List[Dict[str, str]], **kwargs) -> str:
+    def generate_text(
+        self,
+        task_type: str,
+        messages: List[Dict[str, str]],
+        user=None,
+        **kwargs
+    ) -> str:
         # Enforce higher token thresholds for prompt refinement and assistant tasks
         if task_type in ["Prompt Refinement", "AI Assistant"]:
             kwargs["max_tokens"] = max(kwargs.get("max_tokens", 0), 1000)
         else:
             kwargs["max_tokens"] = kwargs.get("max_tokens", 800)
 
-        primary_provider_name = self.task_mappings.get(task_type, self.task_mappings["Default"])
+        primary_provider_name = self.task_mappings.get(
+            task_type,
+            self.task_mappings["Default"],
+        )
+
+        user_keys = {}
+        if user is not None:
+            from utils.encryption import decrypt_token
+
+            for credential in user.service_credentials:
+                if credential.service_type != "ai" or not credential.encrypted_key:
+                    continue
+                decrypted_key = decrypt_token(credential.encrypted_key)
+                if decrypted_key:
+                    user_keys[credential.provider.lower()] = decrypted_key
+
+        preferred_provider = (getattr(user, "default_ai_provider", None) or "").lower()
+        provider_aliases = {
+            "groq": "Groq",
+            "gemini": "Gemini",
+            "openai": "OpenAI",
+            "anthropic": "Anthropic",
+        }
+        preferred_provider_name = provider_aliases.get(preferred_provider)
+        if preferred_provider_name and (
+            preferred_provider in ("groq", "gemini")
+            or preferred_provider in user_keys
+        ):
+            primary_provider_name = preferred_provider_name
 
         attempt_sequence = [primary_provider_name]
         for p in self.fallback_chain:
@@ -356,13 +489,17 @@ class ProviderManager:
                 and last_error_at
                 and datetime.now(timezone.utc) - last_error_at < offline_cooldown
             )
-            if is_recently_offline and provider_name != primary_provider_name:
+            if is_recently_offline:
                 skipped_providers.append(f"{provider_name} (offline)")
                 continue
 
             start_time = time.time()
             try:
-                result = adapter.generate(messages, **kwargs)
+                result = adapter.generate(
+                    messages,
+                    api_key=user_keys.get(provider_name.lower()),
+                    **kwargs,
+                )
                 latency = time.time() - start_time
 
                 self._update_health(provider_name, success=True, latency=latency)

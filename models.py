@@ -69,7 +69,10 @@ class User(UserMixin, db.Model):
     # Cleared once the link is established.
     telegram_link_code = db.Column(db.String(20), nullable=True)
 
-    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    created_at = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(timezone.utc),
+    )
     country = db.Column(db.String(100), nullable=True)
     signup_source = db.Column(db.String(100), nullable=True, default='direct')
     
@@ -82,6 +85,43 @@ class User(UserMixin, db.Model):
 
     def __repr__(self):
         return f"<User {self.username}>"
+
+
+class CreditLedger(db.Model):
+    __tablename__ = "credit_ledger"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    delta = db.Column(db.Integer, nullable=False)
+    reason = db.Column(db.Text, nullable=False)
+    created_at = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(timezone.utc),
+    )
+
+    user = db.relationship("User", backref=db.backref("credit_ledger", cascade="all, delete-orphan"))
+
+
+class PricingConfig(db.Model):
+    __tablename__ = "pricing_config"
+
+    id = db.Column(db.Integer, primary_key=True)
+    key = db.Column(db.String(100), unique=True, nullable=False)
+    value = db.Column(db.Float, nullable=False)
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+
+class AlertState(db.Model):
+    __tablename__ = "alert_states"
+
+    alert_type = db.Column(db.String(100), primary_key=True)
+    active = db.Column(db.Boolean, nullable=False, default=False)
+    last_alerted_at = db.Column(db.DateTime, nullable=True)
+    updated_at = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
 
 class Brand(db.Model):
     __tablename__ = "brands"
@@ -121,8 +161,8 @@ class Brand(db.Model):
     
     custom_instructions = db.Column(db.Text, nullable=True)
     
-    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
-    updated_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     user = db.relationship("User", backref=db.backref("brands", cascade="all, delete-orphan"))
 
@@ -143,8 +183,8 @@ class Project(db.Model):
     is_favorite = db.Column(db.Boolean, default=False)
     is_archived = db.Column(db.Boolean, default=False)
     
-    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
-    updated_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     user = db.relationship("User", backref=db.backref("projects", cascade="all, delete-orphan"))
 
@@ -195,8 +235,13 @@ class Generation(db.Model):
     # the cheaper AnimateDiff path, so we record the price at request time and
     # deduct exactly that amount once the video succeeds.
     credit_cost = db.Column(db.Integer, nullable=False, default=5, server_default="5")
+    fal_cost_usd = db.Column(db.Float, nullable=False, default=0.0, server_default="0")
+    refund_applied = db.Column(db.Boolean, nullable=False, default=False, server_default="0")
 
-    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    created_at = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(timezone.utc),
+    )
     fal_request_id = db.Column(db.String(200), nullable=True)
 
     fal_request_id = db.Column(db.String(200), nullable=True)
@@ -220,12 +265,21 @@ class Payment(db.Model):
     amount = db.Column(db.Integer, nullable=True)
     plan = db.Column(db.String(20), default="monthly")
 
-    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     user = db.relationship("User", backref=db.backref("payments", cascade="all, delete-orphan"))
 
     def __repr__(self):
         return f"<Payment {self.reference}>"
+
+class PaystackWebhookLog(db.Model):
+    __tablename__ = "paystack_webhook_logs"
+
+    id = db.Column(db.Integer, primary_key=True)
+    raw_body = db.Column(db.Text, nullable=False)
+    signature_verified = db.Column(db.Boolean, nullable=False, default=False)
+    outcome = db.Column(db.String(100), nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 class TelegramUser(db.Model):
@@ -247,7 +301,7 @@ class TelegramUser(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
     user = db.relationship("User", backref=db.backref("telegram_accounts", cascade="all, delete-orphan"))
 
-    joined_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    joined_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     def __repr__(self):
         return f"<TelegramUser {self.username}>"
@@ -270,7 +324,7 @@ class SavedPrompt(db.Model):
     prompt_type = db.Column(db.String(20), default="video")
     style = db.Column(db.String(20), default="cinematic")
 
-    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     user = db.relationship("User", backref=db.backref("saved_prompts", cascade="all, delete-orphan"))
 
@@ -284,7 +338,7 @@ class Subscriber(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     newsletter = db.Column(db.Boolean, default=True)
 
-    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     def __repr__(self):
         return f"<Subscriber {self.email}>"
@@ -306,7 +360,7 @@ class NewsletterIssue(db.Model):
     delivery_failures = db.Column(db.Text, nullable=True)
     send_attempted_at = db.Column(db.DateTime, nullable=True)
 
-    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     sent_at = db.Column(db.DateTime, nullable=True)
 
     def __repr__(self):
@@ -334,8 +388,8 @@ class UserContent(db.Model):
     source = db.Column(db.String(50), default="manual")
     provider_used = db.Column(db.String(100), nullable=True)
     content_metadata = db.Column(db.Text, nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
-    updated_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     published_at = db.Column(db.DateTime, nullable=True)
     published_to = db.Column(db.String(100), nullable=True)
 
@@ -470,7 +524,7 @@ class BlogPost(db.Model):
     status = db.Column(db.String(20), default="draft")       # draft | published
     auto_generated = db.Column(db.Boolean, default=False)
 
-    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     published_at = db.Column(db.DateTime, nullable=True)
 
     @property
@@ -489,7 +543,7 @@ class EmailOptOut(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     def __repr__(self):
         return f"<EmailOptOut {self.email}>"
@@ -520,7 +574,7 @@ class Referral(db.Model):
 
     is_used = db.Column(db.Boolean, default=False)
 
-    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     def __repr__(self):
         return f"<Referral {self.referral_code}>"
@@ -539,7 +593,7 @@ class DistributionRun(db.Model):
     blog_post = db.relationship("BlogPost", backref=db.backref("distribution_runs", cascade="all, delete-orphan"))
 
     status = db.Column(db.String(20), default="running")  # running | completed | failed
-    started_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    started_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     finished_at = db.Column(db.DateTime, nullable=True)
 
     # Summary counts (denormalized for fast display)
@@ -572,7 +626,7 @@ class DistributionResult(db.Model):
     post_url = db.Column(db.String(500), nullable=True)   # live link to the posted content
     extra = db.Column(db.Text, nullable=True)              # JSON blob for platform-specific data
 
-    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     def __repr__(self):
         return f"<DistributionResult {self.platform} ok={self.ok}>"
@@ -588,7 +642,7 @@ class FacebookPostHistory(db.Model):
     post_text = db.Column(db.Text, nullable=False)
     facebook_post_id = db.Column(db.String(200), nullable=False)
     image_used = db.Column(db.String(500), nullable=True)
-    timestamp = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    timestamp = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     def __repr__(self):
         return f"<FacebookPostHistory {self.id} {self.content_type}>"
@@ -609,7 +663,7 @@ class ProviderLog(db.Model):
     estimated_cost = db.Column(db.Float, default=0.0)
     status = db.Column(db.String(20), default="success") # success, error
     error_message = db.Column(db.Text, nullable=True)
-    timestamp = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    timestamp = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     def __repr__(self):
         return f"<ProviderLog {self.task_type} via {self.provider_used}>"
@@ -631,8 +685,8 @@ class Campaign(db.Model):
     status = db.Column(db.String(50), default="planning") # planning, generating, completed, failed
     progress = db.Column(db.Integer, default=0)
     
-    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
-    updated_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     user = db.relationship("User", backref=db.backref("campaigns", cascade="all, delete-orphan"))
     project = db.relationship("Project", backref=db.backref("campaigns", cascade="all, delete-orphan"))
@@ -671,8 +725,8 @@ class Workflow(db.Model):
     
     status = db.Column(db.String(50), default="pending") # pending, running, completed, failed
     
-    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
-    updated_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     campaign = db.relationship("Campaign", backref=db.backref("workflow", uselist=False, cascade="all, delete-orphan"))
 
@@ -698,8 +752,8 @@ class WorkflowTask(db.Model):
     error_msg = db.Column(db.Text, nullable=True)
     retry_count = db.Column(db.Integer, default=0)
     
-    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
-    updated_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     workflow = db.relationship("Workflow", backref=db.backref("tasks", cascade="all, delete-orphan"))
 
@@ -723,7 +777,7 @@ class CampaignAsset(db.Model):
     provider_used = db.Column(db.String(100), nullable=True)
     generation_time = db.Column(db.Float, nullable=True)
     
-    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     campaign = db.relationship("Campaign", backref=db.backref("assets", cascade="all, delete-orphan"))
     task = db.relationship("CampaignTask", primaryjoin="CampaignAsset.task_id == CampaignTask.id", foreign_keys=[task_id], backref=db.backref("generated_asset", cascade="all, delete-orphan"))
@@ -740,8 +794,8 @@ class CampaignAnalytics(db.Model):
     
     metrics = db.Column(db.Text, nullable=True) # JSON storing likes, shares, clicks, etc.
     
-    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
-    updated_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     campaign = db.relationship("Campaign", backref=db.backref("analytics", uselist=False, cascade="all, delete-orphan"))
 

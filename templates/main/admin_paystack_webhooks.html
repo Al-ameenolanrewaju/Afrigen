@@ -1,0 +1,11 @@
+{% extends "admin_base.html" %}
+{% block title %}Paystack Webhooks{% endblock %}
+{% block content %}
+<div class="admin-chart-container">
+    <h5 class="admin-chart-title mb-3">Paystack Webhook Events</h5>
+    <div class="d-flex gap-2 mb-3"><a class="btn-admin" href="{{ url_for('main.admin_paystack_webhooks') }}">All</a><a class="btn-admin" href="{{ url_for('main.admin_paystack_webhooks', verified='true') }}">Verified</a><a class="btn-admin" href="{{ url_for('main.admin_paystack_webhooks', verified='false') }}">Rejected</a></div>
+    <div class="table-responsive"><table class="admin-table"><thead><tr><th>Date</th><th>Verified</th><th>Outcome</th></tr></thead><tbody>
+    {% for log in webhook_logs %}<tr><td>{{ admin_local_datetime(log.created_at).strftime('%b %d, %Y %H:%M') }}</td><td>{{ 'Yes' if log.signature_verified else 'No' }}</td><td>{{ log.outcome }}</td></tr>{% else %}<tr><td colspan="3">No webhook logs.</td></tr>{% endfor %}
+    </tbody></table></div>
+</div>
+{% endblock %}

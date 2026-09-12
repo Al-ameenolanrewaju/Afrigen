@@ -556,7 +556,7 @@ Return ONLY valid JSON, no markdown fences, no commentary."""
 # Bulk generation using Content Engine
 # ---------------------------------------------------------------------------
 
-ACTIVE_PLATFORMS = ["telegram", "linkedin", "devto", "pinterest"]
+ACTIVE_PLATFORMS = ["telegram", "linkedin", "devto"]
 
 # We keep pinterest_pin as it is since it doesn't have a new writer yet (per instructions, we focused on Facebook, LinkedIn, Telegram, Newsletter, Dev.to).
 # I'll keep the old generators accessible.
@@ -565,7 +565,6 @@ _GENERATORS = {
     "telegram": telegram_prompt,
     "linkedin": linkedin_post,
     "devto": devto_article,
-    "pinterest": pinterest_pin,
     # --- disabled (not in ACTIVE_PLATFORMS) ---
     "facebook": facebook_post,
     "instagram": instagram_caption,

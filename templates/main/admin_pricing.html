@@ -1,0 +1,16 @@
+{% extends "admin_base.html" %}
+{% block title %}Pricing Configuration{% endblock %}
+{% block content %}
+<div class="admin-chart-container">
+    <h5 class="admin-chart-title mb-3">Editable Credit Pricing</h5>
+    <form method="post" class="row g-3">
+        {% for key, value in pricing.items() %}<div class="col-md-6"><label class="text-white">{{ key.replace('_', ' ')|title }}</label><input class="form-control" type="number" step="0.001" min="0" name="{{ key }}" value="{{ value }}" required></div>{% endfor %}
+        <div class="col-12"><button class="btn-admin" type="submit">Save pricing</button></div>
+    </form>
+    <hr class="border-secondary">
+    <h6 class="text-white">Estimated Fal cost per credit</h6>
+    <div class="d-flex justify-content-between"><span>Cheap video</span><strong>${{ "{:,.4f}".format(fal_cost_per_credit.cheap_video) }}</strong></div>
+    <div class="d-flex justify-content-between"><span>Kling text-to-video</span><strong>${{ "{:,.4f}".format(fal_cost_per_credit.kling_video) }}</strong></div>
+    <div class="d-flex justify-content-between"><span>Kling image-to-video</span><strong>${{ "{:,.4f}".format(fal_cost_per_credit.image_to_video) }}</strong></div>
+</div>
+{% endblock %}

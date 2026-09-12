@@ -14,6 +14,8 @@ from services.video import (
     merge_audio_into_video,
     add_text_overlay,
     text_to_video_cost,
+    estimate_fal_video_cost,
+    estimate_fal_image_to_video_cost,
     _build_t2v_request,
     generate_image as generate_ai_image   # aliased to avoid conflict with route name
 )
@@ -30,6 +32,35 @@ import re
 from datetime import date, datetime, timezone
 from functools import wraps
 from werkzeug.utils import secure_filename
+from zoneinfo import ZoneInfo
+
+ADMIN_TIMEZONE = ZoneInfo(os.environ.get("APP_TIMEZONE", "Africa/Lagos"))
+
+def _admin_local_datetime(value):
+    if not value:
+        return None
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return value.astimezone(ADMIN_TIMEZONE)
+
+
+def _admin_resend_datetime(value):
+    if not value:
+        return None
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
+def _admin_provider_error(value):
+    if not value:
+        return "None"
+    message = str(value).lower()
+    if "quota" in message or "rate limit" in message or "429" in message:
+        return "Quota exceeded"
+    if "401" in message or "403" in message or "unauthorized" in message:
+        return "Provider authentication failed"
+    return "Provider request failed"
 
 
 
@@ -39,7 +70,7 @@ def get_country_from_ip(ip):
         response = req.get(f'https://ipapi.co/{ip}/json/', timeout=3)
         data = response.json()
         return data.get('country_name', 'Unknown')
-    except:
+    except Exception:
         return 'Unknown'
 
 def get_real_ip():
@@ -61,7 +92,9 @@ def image_to_video_cost(duration="5"):
     duration = str(duration or "5")
     if duration not in {"5", "10"}:
         duration = "5"
-    return 15 if duration == "5" else 28
+    from services.pricing import get_pricing
+    base_cost = get_pricing("image_to_video_cost")
+    return int(base_cost if duration == "5" else base_cost * 1.87)
 
 # ---------- Admin authorization ----------
 def _normalize_admin_list(raw_value):
@@ -257,7 +290,11 @@ def generate():
 
     try:
         refined = _usable_refinement(prompt, refine_prompt(
-            prompt, effective_style, model_name=model_name, duration=duration
+            prompt,
+            effective_style,
+            model_name=model_name,
+            duration=duration,
+            user=current_user,
         ))
     except Exception as e:
         print("REFINE ERROR; sending original prompt to Fal:", str(e))
@@ -270,7 +307,7 @@ def generate():
         # Lock user row to make credit check and deduction perfectly atomic.
         # This blocks concurrent /generate requests for this user, preventing
         # them from bypassing limits by firing parallel API calls.
-        locked_user = User.query.with_for_update().get(current_user.id)
+        locked_user = db.session.get(User, current_user.id, with_for_update=True)
 
         ok, error, _ = video_gate(locked_user, effective_style, extended=extended, duration=duration)
         if not ok:
@@ -303,7 +340,8 @@ def generate():
             wants_voiceover=wants_voiceover,
             status="processing",
             credit_cost=video_cost,
-            fal_request_id=result["request_id"]
+            fal_request_id=result["request_id"],
+            fal_cost_usd=estimate_fal_video_cost(model_name, duration)
         )
         db.session.add(generation)
 
@@ -537,7 +575,7 @@ def refine_prompt_free():
     if not prompt:
         return jsonify({"error": "No prompt provided"}), 400
     try:
-        refined = refine_prompt(prompt, 'cinematic')
+        refined = refine_prompt(prompt, 'cinematic', user=current_user)
         return jsonify({"refined": refined})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -553,7 +591,7 @@ def refine_image_prompt_free():
     if not prompt:
         return jsonify({"error": "No prompt provided"}), 400
     try:
-        refined = refine_image_prompt(prompt, style)
+        refined = refine_image_prompt(prompt, style, user=current_user)
         return jsonify({"refined": refined})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -601,7 +639,10 @@ def generate_from_image():
         image_file.save(filepath)
 
         image_url = url_for('static', filename=f'uploads/{filename}', _external=True)
-        refined = _usable_refinement(prompt, refine_image_prompt(prompt, "cinematic"))
+        refined = _usable_refinement(
+            prompt,
+            refine_image_prompt(prompt, "cinematic", user=current_user),
+        )
         video_url = generate_video_from_image(
             image_url, refined, duration=duration, aspect_ratio=aspect_ratio,
             allow_fal=(current_user.plan == 'pro'),
@@ -622,12 +663,19 @@ def generate_from_image():
             generation_type="image",
             status="completed" if video_url else "failed",
             credit_cost=video_cost,
+            fal_cost_usd=estimate_fal_image_to_video_cost(duration),
         )
         db.session.add(generation)
 
         # Only deduct credits if video generation succeeded
         if video_url:
+            from services.credits import record_credit_change
             locked_user.credits = max(0, (locked_user.credits or 0) - video_cost)
+            record_credit_change(
+                locked_user,
+                -video_cost,
+                'Image-to-video generation',
+            )
 
         db.session.commit()
 
@@ -665,7 +713,10 @@ def generate_image():
         return redirect(url_for('main.dashboard'))
 
     try:
-        refined = _usable_refinement(prompt, refine_image_prompt(prompt, style))
+        refined = _usable_refinement(
+            prompt,
+            refine_image_prompt(prompt, style, user=current_user),
+        )
         provider = "fal" if current_user.plan == "pro" else "huggingface"
         result = generate_ai_image(
             refined, style, aspect_ratio, provider=provider,
@@ -768,7 +819,13 @@ def generate_video_from_retry(generation):
         return redirect(url_for('main.history'))
     try:
         model_name, _ = _build_t2v_request(generation.original_prompt, style, '16:9', extended, duration=duration)
-        refined = refine_prompt(generation.original_prompt, style, model_name=model_name, duration=duration)
+        refined = refine_prompt(
+            generation.original_prompt,
+            style,
+            model_name=model_name,
+            duration=duration,
+            user=current_user,
+        )
         result = generate_video_async(
             refined, style, '16:9',
             webhook_url=url_for('main.fal_webhook', _external=True),
@@ -852,12 +909,52 @@ def history():
 @main.route('/admin')
 @admin_required
 def admin():
-    from sqlalchemy import func
+    from sqlalchemy import func, or_, and_
     from datetime import datetime, timedelta
     from collections import Counter
+    import json
 
-    users = User.query.order_by(User.created_at.desc()).all()
-    generations = Generation.query.order_by(Generation.created_at.desc()).all()
+    user_search = request.args.get('user_search', '').strip()
+    generation_search = request.args.get('generation_search', '').strip()
+    users_page_number = request.args.get('users_page', 1, type=int)
+    generations_page_number = request.args.get('generations_page', 1, type=int)
+
+    users_query = User.query
+    if user_search:
+        users_query = users_query.filter(
+            User.email.ilike(f'%{user_search}%')
+        )
+    users = users_query.order_by(User.created_at.desc()).paginate(
+        page=max(users_page_number, 1),
+        per_page=50,
+        error_out=False,
+    )
+
+    generations_query = Generation.query
+    if generation_search:
+        generation_pattern = f'%{generation_search}%'
+        generations_query = generations_query.filter(
+            or_(
+                Generation.status.ilike(generation_pattern),
+                Generation.generation_type.ilike(generation_pattern),
+            )
+        )
+    generations = generations_query.order_by(
+        Generation.created_at.desc()
+    ).paginate(
+        page=max(generations_page_number, 1),
+        per_page=50,
+        error_out=False,
+    )
+    stuck_generations = Generation.query.filter(
+        or_(
+            Generation.status == 'failed',
+            and_(
+                Generation.status == 'processing',
+                Generation.created_at < datetime.now(timezone.utc) - timedelta(minutes=15),
+            ),
+        )
+    ).order_by(Generation.created_at.desc()).limit(100).all()
     telegram_users = TelegramUser.query.order_by(TelegramUser.joined_at.desc()).all()
 
     total_users = User.query.count()
@@ -884,8 +981,11 @@ def admin():
     signups_7days = []
     for i in range(6, -1, -1):
         day = date.today() - timedelta(days=i)
+        local_start = datetime.combine(day, datetime.min.time(), ADMIN_TIMEZONE)
+        local_end = local_start + timedelta(days=1)
         count = User.query.filter(
-            func.date(User.created_at) == day
+            User.created_at >= local_start.astimezone(timezone.utc),
+            User.created_at < local_end.astimezone(timezone.utc),
         ).count()
         signups_7days.append({"day": day.strftime('%a'), "count": count})
 
@@ -906,16 +1006,52 @@ def admin():
     ).limit(5).all()
 
     # Country breakdown
-    country_counts = Counter(
-        u.country for u in users if u.country and u.country != 'Unknown'
-    )
-    top_countries = country_counts.most_common(5)
+    top_countries = db.session.query(
+        User.country,
+        func.count(User.id).label('user_count'),
+    ).filter(
+        User.country.isnot(None),
+        User.country != 'Unknown',
+    ).group_by(
+        User.country
+    ).order_by(
+        func.count(User.id).desc()
+    ).limit(5).all()
 
     # Source breakdown
-    source_counts = Counter(
-        u.signup_source for u in users if u.signup_source
+    source_breakdown = dict(
+        db.session.query(
+            User.signup_source,
+            func.count(User.id).label('user_count'),
+        ).filter(
+            User.signup_source.isnot(None),
+        ).group_by(
+            User.signup_source
+        ).order_by(
+            func.count(User.id).desc()
+        ).all()
     )
-    source_breakdown = dict(source_counts)
+
+    from models import Referral
+    referral_codes_total = Referral.query.count()
+    referral_codes_used = Referral.query.filter_by(is_used=True).count()
+    referral_conversion_rate = round((referral_codes_used / referral_codes_total * 100) if referral_codes_total else 0, 1)
+    top_referrers = db.session.query(
+        User, func.count(Referral.id).label('referral_count')
+    ).join(Referral, Referral.referrer_id == User.id).filter(
+        Referral.is_used.is_(True)
+    ).group_by(User.id).order_by(func.count(Referral.id).desc()).limit(5).all()
+    referral_signups_7days = []
+    for i in range(6, -1, -1):
+        day = date.today() - timedelta(days=i)
+        local_start = datetime.combine(day, datetime.min.time(), ADMIN_TIMEZONE)
+        local_end = local_start + timedelta(days=1)
+        count = db.session.query(Referral).join(User, Referral.referred_id == User.id).filter(
+            Referral.is_used.is_(True),
+            User.created_at >= local_start.astimezone(timezone.utc),
+            User.created_at < local_end.astimezone(timezone.utc),
+        ).count()
+        referral_signups_7days.append({"day": day.strftime('%a'), "count": count})
 
     # Automation metrics and reporting
     from services.automation import get_workflows, get_logs
@@ -944,7 +1080,7 @@ def admin():
         Campaign, func.count(CampaignAsset.id).label('asset_count')
     ).join(CampaignAsset).group_by(Campaign.id).order_by(func.count(CampaignAsset.id).desc()).limit(5).all()
 
-    from models import ProviderHealth, Payment, DistributionRun, BlogPost, NewsletterIssue, ConnectedAccount
+    from models import ProviderHealth, Payment, ProviderLog, DistributionRun, BlogPost, NewsletterIssue, ConnectedAccount
     
     # Provider Health
     provider_health = ProviderHealth.query.all()
@@ -954,6 +1090,28 @@ def admin():
     # Payments
     recent_payments = Payment.query.order_by(Payment.created_at.desc()).limit(10).all()
     total_revenue = sum(p.amount for p in Payment.query.filter(Payment.amount != None).all())
+
+    local_now = datetime.now(ADMIN_TIMEZONE)
+    month_start = local_now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    month_start_utc = month_start.astimezone(timezone.utc)
+    next_month = (month_start.replace(day=28) + timedelta(days=4)).replace(day=1)
+    next_month_utc = next_month.astimezone(timezone.utc)
+    monthly_revenue = db.session.query(func.coalesce(func.sum(Payment.amount), 0)).filter(
+        Payment.created_at >= month_start_utc,
+        Payment.created_at < next_month_utc,
+    ).scalar() or 0
+    monthly_fal_spend = db.session.query(func.coalesce(func.sum(Generation.fal_cost_usd), 0)).filter(
+        Generation.created_at >= month_start_utc,
+        Generation.created_at < next_month_utc,
+    ).scalar() or 0
+    monthly_provider_request_count = ProviderLog.query.filter(
+        ProviderLog.timestamp >= month_start_utc,
+        ProviderLog.timestamp < next_month_utc,
+    ).count()
+    monthly_provider_cost = db.session.query(func.coalesce(func.sum(ProviderLog.estimated_cost), 0)).filter(
+        ProviderLog.timestamp >= month_start_utc,
+        ProviderLog.timestamp < next_month_utc,
+    ).scalar() or 0
     
     # Distribution Runs
     recent_distributions = DistributionRun.query.order_by(DistributionRun.started_at.desc()).limit(10).all()
@@ -966,10 +1124,33 @@ def admin():
     total_connected_accounts = ConnectedAccount.query.count()
     recent_connected_accounts = ConnectedAccount.query.order_by(ConnectedAccount.connected_at.desc()).limit(10).all()
 
+    from models import Brand, PublishingLog, CampaignAnalytics, Subscriber, EmailOptOut, PublishingPreference, UserContent
+    total_brands = Brand.query.count()
+    recent_publishing_logs = PublishingLog.query.order_by(PublishingLog.published_at.desc()).limit(20).all()
+    top_campaigns = []
+    for analytics in CampaignAnalytics.query.all():
+        try:
+            metrics = json.loads(analytics.metrics or '{}')
+        except (TypeError, ValueError):
+            metrics = {}
+        engagement = sum(int(metrics.get(key, 0) or 0) for key in ('likes', 'shares', 'clicks'))
+        top_campaigns.append((analytics.campaign, engagement, metrics))
+    top_campaigns.sort(key=lambda item: item[1], reverse=True)
+    top_campaigns = top_campaigns[:5]
+    total_subscribers = Subscriber.query.count()
+    total_email_optouts = EmailOptOut.query.count()
+    auto_publish_by_provider = db.session.query(
+        PublishingPreference.provider,
+        func.count(PublishingPreference.id),
+    ).filter(PublishingPreference.auto_publish.is_(True)).group_by(PublishingPreference.provider).order_by(
+        func.count(PublishingPreference.id).desc()
+    ).all()
+
     return render_template(
         'main/admin.html',
         users=users,
         generations=generations,
+        stuck_generations=stuck_generations,
         telegram_users=telegram_users,
         total_users=total_users,
         total_generations=total_generations,
@@ -983,10 +1164,18 @@ def admin():
         image_generations=image_generations,
         success_rate=success_rate,
         signups_7days=signups_7days,
+        admin_local_datetime=_admin_local_datetime,
+        admin_resend_datetime=_admin_resend_datetime,
+        admin_provider_error=_admin_provider_error,
         generations_7days=generations_7days,
         top_users=top_users,
         top_countries=top_countries,
         source_breakdown=source_breakdown,
+        referral_codes_total=referral_codes_total,
+        referral_codes_used=referral_codes_used,
+        referral_conversion_rate=referral_conversion_rate,
+        top_referrers=top_referrers,
+        referral_signups_7days=referral_signups_7days,
         total_automation_workflows=total_automation_workflows,
         total_automation_runs=total_automation_runs,
         automation_success_rate=automation_success_rate,
@@ -999,12 +1188,85 @@ def admin():
         external_provider_status=external_provider_status,
         recent_payments=recent_payments,
         total_revenue=total_revenue,
+        monthly_revenue=monthly_revenue,
+        monthly_fal_spend=monthly_fal_spend,
+        monthly_provider_request_count=monthly_provider_request_count,
+        monthly_provider_cost=monthly_provider_cost,
         recent_distributions=recent_distributions,
         recent_blogs=recent_blogs,
         recent_newsletters=recent_newsletters,
         total_connected_accounts=total_connected_accounts,
         recent_connected_accounts=recent_connected_accounts
+        ,total_brands=total_brands
+        ,recent_publishing_logs=recent_publishing_logs
+        ,top_campaigns=top_campaigns
+        ,total_subscribers=total_subscribers
+        ,total_email_optouts=total_email_optouts
+        ,auto_publish_by_provider=auto_publish_by_provider
+        ,recent_user_content=UserContent.query.order_by(UserContent.created_at.desc()).limit(10).all()
     )
+
+
+@main.route('/admin/generation/<int:generation_id>/force-refund', methods=['POST'])
+@admin_required
+def admin_force_refund(generation_id):
+    generation = db.session.get(Generation, generation_id)
+    if not generation:
+        abort(404)
+    if generation.generation_type == 'image' or not generation.fal_request_id:
+        flash(f'Generation #{generation.id} has no eligible Fal video charge to refund.', 'warning')
+        return redirect(url_for('main.admin', _anchor='generation-queue'))
+    if not generation.refund_applied:
+        user = db.session.get(User, generation.user_id)
+        if user:
+            refund_video(user, generation.credit_cost)
+        generation.refund_applied = True
+        generation.status = 'failed'
+        db.session.commit()
+        flash(f'Generation #{generation.id} refunded.', 'success')
+    else:
+        flash(f'Generation #{generation.id} was already refunded.', 'info')
+    return redirect(url_for('main.admin', _anchor='generation-queue'))
+
+
+@main.route('/admin/generation/<int:generation_id>/force-retry', methods=['POST'])
+@admin_required
+def admin_force_retry(generation_id):
+    generation = db.session.get(Generation, generation_id)
+    if not generation:
+        abort(404)
+    owner = db.session.get(User, generation.user_id)
+    if not owner or generation.generation_type == 'image':
+        flash('Only failed video generations can be retried from this queue.', 'warning')
+        return redirect(url_for('main.admin', _anchor='generation-queue'))
+    ok, error, _ = video_gate(owner, 'cinematic', duration='5')
+    if not ok:
+        flash(error, 'danger')
+        return redirect(url_for('main.admin', _anchor='generation-queue'))
+    request_id = uuid.uuid4().hex
+    try:
+        model_name, _ = _build_t2v_request(generation.original_prompt, 'cinematic', '16:9', False, duration='5')
+        result = generate_video_async(
+            generation.original_prompt, 'cinematic', '16:9',
+            webhook_url=url_for('main.fal_webhook', _external=True),
+            duration='5', request_id=request_id,
+            original_prompt=generation.original_prompt,
+            allow_fal=(owner.plan == 'pro'),
+        )
+        if not result.get('success'):
+            raise RuntimeError(result.get('error', 'Retry submission failed'))
+        generation.status = 'processing'
+        generation.fal_request_id = result['request_id']
+        generation.credit_cost = text_to_video_cost('cinematic', duration='5')
+        generation.fal_cost_usd = estimate_fal_video_cost(model_name, '5')
+        generation.refund_applied = False
+        charge_video(owner, generation.credit_cost)
+        db.session.commit()
+        flash(f'Generation #{generation.id} retry submitted.', 'success')
+    except Exception as exc:
+        db.session.rollback()
+        flash(f'Retry failed: {exc}', 'danger')
+    return redirect(url_for('main.admin', _anchor='generation-queue'))
 
 
 @main.route('/admin/upgrade/<int:user_id>')
@@ -1013,7 +1275,11 @@ def upgrade_user(user_id):
     user = db.session.get(User, user_id)
     if user:
         user.plan = 'pro'
+        previous_credits = user.credits or 0
         user.credits = 100
+        from models import CreditLedger
+        if previous_credits != 100:
+            db.session.add(CreditLedger(user_id=user.id, delta=100 - previous_credits, reason='Admin upgrade credit adjustment'))
         db.session.commit()
         try:
             from services.email import send_pro_upgrade_email
@@ -1024,13 +1290,134 @@ def upgrade_user(user_id):
     return redirect(url_for('main.admin'))
 
 
+@main.route('/admin/credits', methods=['GET', 'POST'])
+@admin_required
+def admin_credits():
+    from models import CreditLedger
+    lookup_user = None
+    ledger_entries = []
+    lookup_id = request.values.get('user_id', type=int)
+    if lookup_id:
+        lookup_user = db.session.get(User, lookup_id)
+        if lookup_user:
+            ledger_entries = CreditLedger.query.filter_by(user_id=lookup_user.id).order_by(
+                CreditLedger.created_at.desc()
+            ).all()
+
+    if request.method == 'POST':
+        user_id = request.form.get('user_id', type=int)
+        delta = request.form.get('delta', type=int)
+        reason = (request.form.get('reason') or '').strip()
+        user = db.session.get(User, user_id) if user_id else None
+        if not user or not delta or not reason:
+            flash('User, non-zero credit adjustment, and reason are required.', 'danger')
+        elif user.plan == 'free' and delta < 0:
+            flash('Free users do not have spendable credits to adjust.', 'warning')
+        elif (user.credits or 0) + delta < 0:
+            flash('Adjustment cannot make the credit balance negative.', 'danger')
+        else:
+            user.credits = (user.credits or 0) + delta
+            db.session.add(CreditLedger(user_id=user.id, delta=delta, reason=reason))
+            db.session.commit()
+            flash(f'Adjusted {user.username} by {delta} credits.', 'success')
+        return redirect(url_for('main.admin_credits', user_id=user_id))
+
+    return render_template('main/admin_credits.html', lookup_user=lookup_user, ledger_entries=ledger_entries)
+
+
+@main.route('/admin/pricing', methods=['GET', 'POST'])
+@admin_required
+def admin_pricing():
+    from models import PricingConfig
+    from services.pricing import DEFAULT_PRICING
+    from services.video import estimate_fal_image_to_video_cost, estimate_fal_video_cost
+    if request.method == 'POST':
+        for key in DEFAULT_PRICING:
+            value = request.form.get(key, type=float)
+            if value is None or value < 0:
+                flash(f'Invalid value for {key}.', 'danger')
+                return redirect(url_for('main.admin_pricing'))
+            row = PricingConfig.query.filter_by(key=key).first()
+            if not row:
+                row = PricingConfig(key=key, value=value)
+                db.session.add(row)
+            else:
+                row.value = value
+        db.session.commit()
+        flash('Pricing configuration updated.', 'success')
+    pricing = {}
+    for key, default in DEFAULT_PRICING.items():
+        row = PricingConfig.query.filter_by(key=key).first()
+        pricing[key] = row.value if row else default
+    fal_cost_per_credit = {
+        'cheap_video': estimate_fal_video_cost('fal-ai/ltx-video') / pricing['cheap_video_cost'],
+        'kling_video': estimate_fal_video_cost('fal-ai/kling-video/v1/standard/text-to-video', '5') / pricing['kling_video_cost'],
+        'image_to_video': estimate_fal_image_to_video_cost('5') / pricing['image_to_video_cost'],
+    }
+    return render_template('main/admin_pricing.html', pricing=pricing, fal_cost_per_credit=fal_cost_per_credit)
+
+
+def _admin_csv(filename, headers, rows):
+    from flask import Response, stream_with_context
+    import csv
+    import io
+
+    def generate_rows():
+        buffer = io.StringIO()
+        writer = csv.writer(buffer)
+        writer.writerow(headers)
+        yield buffer.getvalue()
+        for row in rows:
+            buffer.seek(0)
+            buffer.truncate(0)
+            writer.writerow(row)
+            yield buffer.getvalue()
+
+    return Response(
+        stream_with_context(generate_rows()),
+        mimetype='text/csv',
+        headers={'Content-Disposition': f'attachment; filename="{filename}"'},
+    )
+
+
+@main.route('/admin/export/users.csv')
+@admin_required
+def export_users_csv():
+    return _admin_csv('users.csv', ['id', 'username', 'email', 'plan', 'credits', 'created_at'], (
+        (user.id, user.username, user.email, user.plan, user.credits, user.created_at.isoformat() if user.created_at else '')
+        for user in User.query.order_by(User.id).yield_per(500)
+    ))
+
+
+@main.route('/admin/export/payments.csv')
+@admin_required
+def export_payments_csv():
+    return _admin_csv('payments.csv', ['id', 'user_id', 'reference', 'amount_kobo', 'plan', 'created_at'], (
+        (payment.id, payment.user_id, payment.reference, payment.amount, payment.plan, payment.created_at.isoformat() if payment.created_at else '')
+        for payment in Payment.query.order_by(Payment.id).yield_per(500)
+    ))
+
+
+@main.route('/admin/export/generations.csv')
+@admin_required
+def export_generations_csv():
+    return _admin_csv('generations.csv', ['id', 'user_id', 'type', 'status', 'credit_cost', 'fal_cost_usd', 'created_at'], (
+        (generation.id, generation.user_id, generation.generation_type, generation.status, generation.credit_cost, generation.fal_cost_usd, generation.created_at.isoformat() if generation.created_at else '')
+        for generation in Generation.query.order_by(Generation.id).yield_per(500)
+    ))
+
+
 @main.route('/admin/downgrade/<int:user_id>')
 @admin_required
 def downgrade_user(user_id):
     user = db.session.get(User, user_id)
     if user:
         user.plan = 'free'
+        previous_credits = user.credits or 0
         user.credits = 10
+        from models import CreditLedger
+        if previous_credits != 10:
+            db.session.add(CreditLedger(user_id=user.id, delta=10 - previous_credits, reason='Admin downgrade credit adjustment'))
         db.session.commit()
         flash(f'{user.username} downgraded to Free!', 'warning')
     return redirect(url_for('main.admin'))
@@ -1042,7 +1429,11 @@ def ban_user(user_id):
     user = db.session.get(User, user_id)
     if user:
         user.plan = 'banned'
+        previous_credits = user.credits or 0
         user.credits = 0
+        from models import CreditLedger
+        if previous_credits:
+            db.session.add(CreditLedger(user_id=user.id, delta=-previous_credits, reason='Admin ban credit removal'))
         db.session.commit()
         flash(f'{user.username} has been banned!', 'warning')
     return redirect(url_for('main.admin'))
@@ -1166,7 +1557,10 @@ def payment_callback():
     # Tier is derived from the verified amount, not the (spoofable) metadata.
     is_annual = amount == PRO_ANNUAL_KOBO
     current_user.plan = 'pro'
-    current_user.credits = (current_user.credits or 0) + (1200 if is_annual else 100)
+    grant = 1200 if is_annual else 100
+    current_user.credits = (current_user.credits or 0) + grant
+    from models import CreditLedger
+    db.session.add(CreditLedger(user_id=current_user.id, delta=grant, reason=f'Paystack {"annual" if is_annual else "monthly"} grant'))
     db.session.add(Payment(
         user_id=current_user.id,
         reference=reference,
@@ -1764,6 +2158,7 @@ def admin_newsletter():
         draft=draft,
         last_sent=last_sent,
         audience=audience_size(),
+        admin_resend_datetime=_admin_resend_datetime,
     )
 
 
@@ -1970,57 +2365,92 @@ def payment_webhook():
     import hmac
     import hashlib
 
-    paystack_secret = os.environ.get('PAYSTACK_SECRET_KEY')
-    signature = request.headers.get('x-paystack-signature')
+    paystack_secret = os.environ.get('PAYSTACK_SECRET_KEY') or ''
+    signature = (request.headers.get('x-paystack-signature') or '').strip()
     body = request.get_data()
+    raw_body = body.decode('utf-8', errors='replace')
+    from services.alerts import alert_once, clear_alert
+    from services.webhook_tasks import enqueue_webhook_task, write_paystack_log
+
+    def queue_log(outcome, verified):
+        enqueue_webhook_task(
+            lambda: write_paystack_log(raw_body, verified, outcome)
+        )
 
     expected = hmac.new(
-        paystack_secret.encode('utf-8'),
+        paystack_secret.encode('utf-8') if paystack_secret else b'',
         body,
         hashlib.sha512
     ).hexdigest()
 
-    if signature != expected:
+    if not hmac.compare_digest(signature, expected):
+        queue_log('signature_failed', False)
+        enqueue_webhook_task(
+            lambda: alert_once(
+                'paystack-signature',
+                'Paystack webhook signature failure',
+                'A Paystack webhook was rejected because its signature did not verify.',
+            )
+        )
         return '', 400
 
-    data = request.get_json()
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        queue_log('invalid_payload', True)
+        return '', 400
 
-    if data.get('event') == 'charge.success':
-        charge = data.get('data', {})
-        reference = charge.get('reference')
-        user_id = (charge.get('metadata') or {}).get('user_id')
-        amount = charge.get('amount')
-        user = User.query.get(user_id) if user_id else None
+    enqueue_webhook_task(lambda: clear_alert('paystack-signature'))
+    outcome = 'ignored'
+    try:
+        if data.get('event') == 'charge.success':
+            charge = data.get('data', {})
+            reference = charge.get('reference')
+            user_id = (charge.get('metadata') or {}).get('user_id')
+            amount = charge.get('amount')
+            user = User.query.get(user_id) if user_id else None
 
-        # Grant exactly once per reference (shared with payment_callback), and
-        # derive the tier from the amount Paystack actually charged.
-        if (
-            user
-            and reference
-            and amount in (PRO_MONTHLY_KOBO, PRO_ANNUAL_KOBO)
-            and not Payment.query.filter_by(reference=reference).first()
-        ):
-            is_annual = amount == PRO_ANNUAL_KOBO
-            user.plan = 'pro'
-            user.credits = (user.credits or 0) + (1200 if is_annual else 100)
-            db.session.add(Payment(
-                user_id=user.id,
-                reference=reference,
-                amount=amount,
-                plan='annual' if is_annual else 'monthly'
-            ))
-            try:
-                db.session.commit()
-            except IntegrityError:
-                # payment_callback recorded it first; nothing more to do.
-                db.session.rollback()
-                return '', 200
-            try:
-                from services.email import send_pro_upgrade_email
-                send_pro_upgrade_email(user.email, user.username)
-            except Exception as e:
-                print(f"Email error: {e}")
+            if (
+                user
+                and reference
+                and amount in (PRO_MONTHLY_KOBO, PRO_ANNUAL_KOBO)
+                and not Payment.query.filter_by(reference=reference).first()
+            ):
+                is_annual = amount == PRO_ANNUAL_KOBO
+                user.plan = 'pro'
+                grant = 1200 if is_annual else 100
+                user.credits = (user.credits or 0) + grant
+                from models import CreditLedger
+                db.session.add(CreditLedger(
+                    user_id=user.id,
+                    delta=grant,
+                    reason=f'Paystack webhook {"annual" if is_annual else "monthly"} grant',
+                ))
+                db.session.add(Payment(
+                    user_id=user.id,
+                    reference=reference,
+                    amount=amount,
+                    plan='annual' if is_annual else 'monthly'
+                ))
+                try:
+                    db.session.commit()
+                except IntegrityError:
+                    db.session.rollback()
+                    outcome = 'duplicate_payment'
+                else:
+                    outcome = 'payment_applied'
+                    try:
+                        from services.email import send_pro_upgrade_email
+                        send_pro_upgrade_email(user.email, user.username)
+                    except Exception as e:
+                        print(f"Email error: {e}")
+    except Exception as exc:
+        db.session.rollback()
+        print(f"Paystack webhook processing error: {exc}")
+        outcome = 'processing_error'
+        queue_log(outcome, True)
+        return '', 500
 
+    queue_log(outcome, True)
     return '', 200
 
 @main.route('/fal/webhook', methods=['POST'])
@@ -2044,6 +2474,7 @@ def fal_webhook():
         user = db.session.get(User, generation.user_id)
         if user:
             refund_video(user, generation.credit_cost)
+        generation.refund_applied = True
         db.session.commit()
         print(f"GENERATION webhook_request_id={request_id} status=failed")
         return '', 200
@@ -2138,9 +2569,22 @@ def fal_webhook():
         user = db.session.get(User, generation.user_id)
         if user:
             refund_video(user, generation.credit_cost)
+        generation.refund_applied = True
         db.session.commit()
 
     return '', 200
+
+
+@main.route('/admin/paystack-webhooks')
+@admin_required
+def admin_paystack_webhooks():
+    from models import PaystackWebhookLog
+    verified = request.args.get('verified')
+    query = PaystackWebhookLog.query
+    if verified in {'true', 'false'}:
+        query = query.filter_by(signature_verified=(verified == 'true'))
+    webhook_logs = query.order_by(PaystackWebhookLog.created_at.desc()).limit(200).all()
+    return render_template('main/admin_paystack_webhooks.html', webhook_logs=webhook_logs)
 
 @main.route('/download/video/<int:generation_id>')
 @login_required

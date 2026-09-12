@@ -76,6 +76,68 @@
     </div>
 </div>
 
+<!-- Signup Sources and Top Countries -->
+<div class="row g-4 mb-4">
+    <div class="col-md-6">
+        <div class="admin-chart-container h-100 mb-0">
+            <h5 class="admin-chart-title mb-3">Signup Sources</h5>
+            {% for source, count in source_breakdown.items() %}
+                {% set percentage = (count / total_users * 100) if total_users else 0 %}
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span>{{ source|title }}</span>
+                    <span>
+                        <strong>{{ count }}</strong>
+                        <span class="admin-stat-sub">
+                            ({{ "{:.1f}".format(percentage) }}%)
+                        </span>
+                    </span>
+                </div>
+            {% else %}
+                <div class="admin-stat-sub">No signup source data yet.</div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="admin-chart-container h-100 mb-0">
+            <h5 class="admin-chart-title mb-3">Top Countries</h5>
+            {% for country, count in top_countries %}
+                {% set percentage = (count / total_users * 100) if total_users else 0 %}
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span>{{ country }}</span>
+                    <span>
+                        <strong>{{ count }}</strong>
+                        <span class="admin-stat-sub">
+                            ({{ "{:.1f}".format(percentage) }}%)
+                        </span>
+                    </span>
+                </div>
+            {% else %}
+                <div class="admin-stat-sub">No country data yet.</div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<div id="referrals" class="row g-4 mb-4">
+    <div class="col-md-6">
+        <div class="admin-chart-container h-100 mb-0">
+            <h5 class="admin-chart-title mb-3">Referral Conversion</h5>
+            <div class="d-flex justify-content-between"><span>Codes generated</span><strong>{{ referral_codes_total }}</strong></div>
+            <div class="d-flex justify-content-between"><span>Codes used</span><strong>{{ referral_codes_used }}</strong></div>
+            <div class="d-flex justify-content-between"><span>Conversion rate</span><strong>{{ referral_conversion_rate }}%</strong></div>
+            <hr class="border-secondary">
+            {% for user, count in top_referrers %}<div class="d-flex justify-content-between"><span>{{ user.username }}</span><strong>{{ count }}</strong></div>{% else %}<span class="admin-stat-sub">No converted referrals yet.</span>{% endfor %}
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="admin-chart-container h-100 mb-0">
+            <h5 class="admin-chart-title mb-3">Referral Signups, Last 7 Days</h5>
+            {% for item in referral_signups_7days %}<div class="d-flex justify-content-between"><span>{{ item.day }}</span><strong>{{ item.count }}</strong></div>{% endfor %}
+        </div>
+    </div>
+</div>
+
 <!-- Chart Section -->
 <div id="charts" class="admin-chart-container">
     <div class="admin-chart-header">
@@ -100,6 +162,17 @@
         <div class="admin-chart-container" style="margin-bottom: 0;">
             <div class="admin-chart-header mb-3">
                 <h5 class="admin-chart-title">All Users</h5>
+                <form method="get" class="d-flex gap-2">
+                    <input
+                        type="search"
+                        name="user_search"
+                        value="{{ request.args.get('user_search', '') }}"
+                        placeholder="Search email"
+                        class="form-control"
+                    >
+                    <button type="submit" class="btn-admin">Search</button>
+                </form>
+                <a href="{{ url_for('main.admin_credits') }}" class="btn-admin" style="text-decoration: none;">Credit ledger</a>
             </div>
             <div class="table-responsive">
                 <table class="admin-table">
@@ -113,8 +186,7 @@
                             <th>Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        {% for user in users %}
+                        {% for user in users.items %}
                         <tr>
                             <td>
                                 <div class="fw-bold" style="color: white;">{{ user.username }}</div>
@@ -127,7 +199,7 @@
                                 </span>
                             </td>
                             <td>{{ user.credits }}</td>
-                            <td>{{ user.created_at.strftime('%b %d, %Y') }}</td>
+                            <td>{{ admin_resend_datetime(user.created_at).strftime('%b %d, %Y') }}</td>
                             <td>
                                 <div class="d-flex gap-2">
                                     {% if user.email != 'oadedamola07@gmail.com' %}
@@ -152,6 +224,27 @@
                         {% endfor %}
                     </tbody>
                 </table>
+            </div>
+            <div class="d-flex justify-content-between mt-3">
+                {% if users.has_prev %}
+                <a class="btn-admin" href="{{ url_for(
+                    'main.admin',
+                    users_page=users.prev_num,
+                    generations_page=generations.page,
+                    user_search=request.args.get('user_search', ''),
+                    generation_search=request.args.get('generation_search', '')
+                ) }}">Previous</a>
+                {% endif %}
+                <span>Page {{ users.page }} of {{ users.pages or 1 }}</span>
+                {% if users.has_next %}
+                <a class="btn-admin" href="{{ url_for(
+                    'main.admin',
+                    users_page=users.next_num,
+                    generations_page=generations.page,
+                    user_search=request.args.get('user_search', ''),
+                    generation_search=request.args.get('generation_search', '')
+                ) }}">Next</a>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -213,6 +306,16 @@
     <div id="generations" class="col-12">
         <div class="admin-chart-container mb-0">
             <h5 class="admin-chart-title mb-3">Recent Generations</h5>
+            <form method="get" class="d-flex gap-2 mb-3">
+                <input
+                    type="search"
+                    name="generation_search"
+                    value="{{ request.args.get('generation_search', '') }}"
+                    placeholder="Search status or type"
+                    class="form-control"
+                >
+                <button type="submit" class="btn-admin">Search</button>
+            </form>
             <div class="table-responsive">
                 <table class="admin-table">
                     <thead>
@@ -225,7 +328,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for gen in generations %}
+                        {% for gen in generations.items %}
                         <tr>
                             <td>{{ gen.user.username }}</td>
                             <td style="max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ gen.original_prompt }}</td>
@@ -234,7 +337,7 @@
                                     {{ gen.status }}
                                 </span>
                             </td>
-                            <td>{{ gen.created_at.strftime('%b %d, %Y') }}</td>
+                            <td>{{ admin_resend_datetime(gen.created_at).strftime('%b %d, %Y') }}</td>
                             <td>
                                 {% if gen.video_url %}
                                 <a href="{{ gen.video_url }}" target="_blank" class="btn-admin" style="text-decoration: none;">Watch</a>
@@ -243,6 +346,57 @@
                                 {% endif %}
                             </td>
                         </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="d-flex justify-content-between mt-3">
+                {% if generations.has_prev %}
+                <a class="btn-admin" href="{{ url_for(
+                    'main.admin',
+                    users_page=users.page,
+                    generations_page=generations.prev_num,
+                    user_search=request.args.get('user_search', ''),
+                    generation_search=request.args.get('generation_search', '')
+                ) }}">Previous</a>
+                {% endif %}
+                <span>Page {{ generations.page }} of {{ generations.pages or 1 }}</span>
+                {% if generations.has_next %}
+                <a class="btn-admin" href="{{ url_for(
+                    'main.admin',
+                    users_page=users.page,
+                    generations_page=generations.next_num,
+                    user_search=request.args.get('user_search', ''),
+                    generation_search=request.args.get('generation_search', '')
+                ) }}">Next</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div id="generation-queue" class="col-12">
+        <div class="admin-chart-container mb-0">
+            <h5 class="admin-chart-title mb-3">Stuck & Failed Generation Queue</h5>
+            <div class="table-responsive">
+                <table class="admin-table">
+                    <thead><tr><th>ID</th><th>User</th><th>Status</th><th>Created</th><th>Refund</th><th>Actions</th></tr></thead>
+                    <tbody>
+                        {% for gen in stuck_generations %}
+                        <tr>
+                            <td>#{{ gen.id }}</td>
+                            <td>{{ gen.user.username }}</td>
+                            <td>{{ gen.status }}</td>
+                            <td>{{ admin_resend_datetime(gen.created_at).strftime('%b %d, %Y %H:%M') }}</td>
+                            <td>{{ 'Yes' if gen.refund_applied else 'No' }}</td>
+                            <td class="d-flex gap-2">
+                                {% if not gen.refund_applied and gen.generation_type != 'image' and gen.fal_request_id %}
+                                <form method="post" action="{{ url_for('main.admin_force_refund', generation_id=gen.id) }}"><button class="btn-admin" type="submit">Force refund</button></form>
+                                {% endif %}
+                                {% if gen.generation_type != 'image' %}<form method="post" action="{{ url_for('main.admin_force_retry', generation_id=gen.id) }}"><button class="btn-admin" type="submit">Force retry</button></form>{% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="6" class="text-center">No stuck or failed generations</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -261,6 +415,9 @@
                             <th>Provider</th>
                             <th>Status</th>
                             <th>Avg Latency</th>
+                            <th>Successes</th>
+                            <th>Failures</th>
+                            <th>Last Error</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -273,9 +430,12 @@
                                 </span>
                             </td>
                             <td>{{ health.avg_latency_ms }} ms</td>
+                            <td>{{ health.success_count }}</td>
+                            <td>{{ health.failure_count }}</td>
+                            <td style="max-width: 240px;">{{ admin_provider_error(health.last_error) }}</td>
                         </tr>
                         {% else %}
-                        <tr><td colspan="3" class="text-center">No provider health data</td></tr>
+                        <tr><td colspan="6" class="text-center">No provider health data</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -322,7 +482,9 @@
         <div class="admin-chart-container h-100 mb-0">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h5 class="admin-chart-title mb-0">Recent Payments</h5>
-                <span class="admin-badge admin-badge-green">Revenue: ₦{{ total_revenue or 0 }}</span>
+                <span class="admin-badge admin-badge-green">
+                    Revenue: ₦{{ "{:,.0f}".format((total_revenue or 0) / 100) }}
+                </span>
             </div>
             <div class="table-responsive">
                 <table class="admin-table">
@@ -338,7 +500,7 @@
                         {% for payment in recent_payments %}
                         <tr>
                             <td style="color: white;">{{ payment.user.username }}</td>
-                            <td>₦{{ payment.amount }}</td>
+                            <td>₦{{ "{:,.0f}".format((payment.amount or 0) / 100) }}</td>
                             <td><span class="admin-badge admin-badge-orange">{{ payment.plan.upper() }}</span></td>
                             <td>{{ payment.created_at.strftime('%b %d') }}</td>
                         </tr>
@@ -347,6 +509,24 @@
                         {% endfor %}
                     </tbody>
                 </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="costs" class="col-md-6">
+        <div class="admin-chart-container h-100 mb-0">
+            <h5 class="admin-chart-title mb-3">Monthly Revenue & AI Spend</h5>
+            <div class="d-flex justify-content-between mb-2">
+                <span>Revenue</span>
+                <strong>₦{{ "{:,.0f}".format((monthly_revenue or 0) / 100) }}</strong>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+                <span>Estimated Fal spend</span>
+                <strong>${{ "{:,.3f}".format(monthly_fal_spend or 0) }}</strong>
+            </div>
+            <div class="d-flex justify-content-between">
+                <span>AI provider requests / cost</span>
+                <strong>{{ monthly_provider_request_count }} / ${{ "{:,.3f}".format(monthly_provider_cost or 0) }}</strong>
             </div>
         </div>
     </div>
@@ -436,7 +616,7 @@
     <!-- Content Hub: Blogs & Newsletters -->
     <div id="content-blogs" class="col-md-6">
         <div class="admin-chart-container h-100 mb-0">
-            <h5 class="admin-chart-title mb-3">Recent Blog Posts</h5>
+            <h5 class="admin-chart-title mb-3">Recent Blog Posts (Legacy Content Hub)</h5>
             <div class="table-responsive">
                 <table class="admin-table">
                     <thead>
@@ -467,6 +647,23 @@
             </div>
         </div>
     </div>
+
+    <div id="publishing-history" class="col-12">
+        <div class="admin-chart-container mb-0">
+            <h5 class="admin-chart-title mb-3">Publishing History (Connected Accounts)</h5>
+            <div class="table-responsive"><table class="admin-table"><thead><tr><th>User</th><th>Provider</th><th>Status</th><th>Published</th><th>URL</th></tr></thead><tbody>
+            {% for log in recent_publishing_logs %}<tr><td>{{ log.user.username }}</td><td>{{ log.provider }}</td><td>{{ log.status }}</td><td>{{ admin_resend_datetime(log.published_at).strftime('%b %d, %Y') }}</td><td>{% if log.published_url %}<a href="{{ log.published_url }}" target="_blank" rel="noopener">Open</a>{% else %}N/A{% endif %}</td></tr>{% else %}<tr><td colspan="5">No connected-account publishing logs.</td></tr>{% endfor %}
+            </tbody></table></div>
+        </div>
+    </div>
+
+    <div class="col-md-6"><div class="admin-chart-container h-100 mb-0"><h5 class="admin-chart-title mb-3">Brands Registered</h5><h2 class="admin-stat-value">{{ total_brands }}</h2></div></div>
+    <div class="col-md-6"><div class="admin-chart-container h-100 mb-0"><h5 class="admin-chart-title mb-3">Waitlist & Opt-outs</h5><div class="d-flex justify-content-between"><span>Subscribers</span><strong>{{ total_subscribers }}</strong></div><div class="d-flex justify-content-between"><span>Email opt-outs</span><strong>{{ total_email_optouts }}</strong></div></div></div>
+
+    <div class="col-md-6"><div class="admin-chart-container h-100 mb-0"><h5 class="admin-chart-title mb-3">Top Campaign Engagement</h5>{% for campaign, engagement, metrics in top_campaigns %}<div class="d-flex justify-content-between"><span>{{ campaign.title or campaign.goal }}</span><strong>{{ engagement }}</strong></div>{% else %}<span class="admin-stat-sub">No campaign analytics yet.</span>{% endfor %}</div></div>
+    <div class="col-md-6"><div class="admin-chart-container h-100 mb-0"><h5 class="admin-chart-title mb-3">Auto-publish Adoption</h5>{% for provider, count in auto_publish_by_provider %}<div class="d-flex justify-content-between"><span>{{ provider }}</span><strong>{{ count }}</strong></div>{% else %}<span class="admin-stat-sub">No auto-publish preferences yet.</span>{% endfor %}</div></div>
+
+    <div id="user-content" class="col-12"><div class="admin-chart-container mb-0"><h5 class="admin-chart-title mb-3">Recent Customer Content (UserContent)</h5><div class="table-responsive"><table class="admin-table"><thead><tr><th>User</th><th>Type</th><th>Title</th><th>Status</th><th>Created</th></tr></thead><tbody>{% for content in recent_user_content %}<tr><td>{{ content.user.username }}</td><td>{{ content.content_type }}</td><td>{{ content.title or 'Untitled' }}</td><td>{{ content.status }}</td><td>{{ admin_resend_datetime(content.created_at).strftime('%b %d, %Y') }}</td></tr>{% else %}<tr><td colspan="5">No customer content yet.</td></tr>{% endfor %}</tbody></table></div></div></div>
 
     <div class="col-md-6">
         <div class="admin-chart-container h-100 mb-0">

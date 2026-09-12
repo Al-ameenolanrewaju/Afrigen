@@ -259,7 +259,7 @@ def verify_reset_token(token, expiration=3600):
     try:
         email = serializer.loads(token, salt='password-reset', max_age=expiration)
         return email
-    except:
+    except Exception:
         return None
 
 

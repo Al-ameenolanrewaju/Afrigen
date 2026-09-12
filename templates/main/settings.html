@@ -124,8 +124,12 @@
                                 <label for="default_ai_provider" class="form-label text-muted small text-uppercase fw-bold">Default AI Engine</label>
                                 <select class="form-select bg-dark border-secondary text-white" id="default_ai_provider" name="default_ai_provider">
                                     <option value="gemini" {% if current_user.default_ai_provider == 'gemini' %}selected{% endif %}>Google Gemini (Recommended)</option>
+                                    {% if service_creds.get('openai') %}
                                     <option value="openai" {% if current_user.default_ai_provider == 'openai' %}selected{% endif %}>OpenAI GPT-4</option>
+                                    {% endif %}
+                                    {% if service_creds.get('anthropic') %}
                                     <option value="anthropic" {% if current_user.default_ai_provider == 'anthropic' %}selected{% endif %}>Anthropic Claude</option>
+                                    {% endif %}
                                     <option value="groq" {% if current_user.default_ai_provider == 'groq' %}selected{% endif %}>Groq (Fastest)</option>
                                 </select>
                                 <div class="form-text text-muted mt-2">Select the default AI provider used for generation across the platform.</div>

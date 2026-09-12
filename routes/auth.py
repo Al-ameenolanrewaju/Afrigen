@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for,flash, session
 from flask_login import login_user, logout_user, current_user, login_required
 from werkzeug.security import generate_password_hash, check_password_hash
-from models import db, User, Referral
+from models import db, User, Referral, CreditLedger
 from services.email import generate_reset_token, verify_reset_token, send_reset_password_email
 from services.email import send_welcome_email
 from extensions import limiter
@@ -14,17 +14,9 @@ logger = logging.getLogger(__name__)
 
 
 def verify_user_password(stored_password, provided_password):
-    """Accept both modern werkzeug hashes and legacy plaintext passwords.
-
-    Old records created before the password hashing change can still contain a
-    raw string, which would otherwise cause check_password_hash() to raise a
-    ValueError and 500 the login route.
-    """
+    """Verify a password against its stored Werkzeug hash."""
     if not stored_password:
         return False
-
-    if stored_password == provided_password:
-        return True
 
     try:
         return check_password_hash(stored_password, provided_password)
@@ -109,6 +101,7 @@ def register():
                 if referrer:
                     if referrer.plan == 'pro':
                         referrer.credits += 10  # Equivalent value for pro users, or whatever is appropriate
+                        db.session.add(CreditLedger(user_id=referrer.id, delta=10, reason='Referral reward'))
                 
                 referral.referred_id = new_user.id
                 referral.is_used = True
@@ -230,6 +223,7 @@ def google_callback():
                     if referrer:
                         if referrer.plan == 'pro':
                             referrer.credits += 10
+                            db.session.add(CreditLedger(user_id=referrer.id, delta=10, reason='Referral reward'))
                             
                     referral.referred_id = user.id
                     referral.is_used = True

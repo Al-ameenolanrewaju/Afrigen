@@ -15,7 +15,7 @@ Each post's `body` is trusted HTML matching the site's design system (gold
 """
 import os
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from xml.etree import ElementTree
 
 import requests
@@ -386,7 +386,7 @@ def publish_post(post):
     """Approve a draft: mark published and stamp published_at."""
     from models import db
     post.status = "published"
-    post.published_at = datetime.utcnow()
+    post.published_at = datetime.now(timezone.utc)
     db.session.commit()
     return post
 
@@ -411,7 +411,7 @@ def seed_blog_posts():
         try:
             published_at = datetime.strptime(sp["date"], "%B %d, %Y")
         except (ValueError, KeyError):
-            published_at = datetime.utcnow()
+            published_at = datetime.now(timezone.utc)
         db.session.add(BlogPost(
             slug=sp["slug"],
             title=sp["title"],

@@ -26,10 +26,10 @@
             <p style="color: #888; margin-bottom: 6px;">Current Draft</p>
             {% if draft and draft.status == 'approved' %}
             <h3 style="color: #27AE60; font-weight: 800; margin: 0;"><i class="fa-solid fa-circle-check"></i> Approved</h3>
-            <small style="color: #555;">auto-sends Monday 9am</small>
+            <small style="color: #555;">approved issue sends Monday 9am</small>
             {% elif draft %}
             <h3 style="color: #F5A623; font-weight: 800; margin: 0;">Draft</h3>
-            <small style="color: #555;">auto-sends Monday 9am</small>
+            <small style="color: #555;">approval required for Monday send</small>
             {% else %}
             <h3 style="color: #888; font-weight: 800; margin: 0;">None</h3>
             <small style="color: #555;">generate one below</small>
@@ -40,7 +40,7 @@
         <div class="card p-3 text-center">
             <p style="color: #888; margin-bottom: 6px;">Last Sent</p>
             <h3 id="lastSentDate" style="color: #555; font-weight: 800; margin: 0; font-size: 1.2rem;">
-                {{ last_sent.sent_at.strftime('%b %d, %Y') if last_sent else '—' }}
+                {{ admin_resend_datetime(last_sent.sent_at).strftime('%b %d, %Y') if last_sent else '—' }}
             </h3>
             <small id="lastSentRecipients" style="color: #555;">
                 {% if last_sent %}
@@ -82,8 +82,8 @@
         <span id="status" class="align-self-center ms-2" style="color: #888;"></span>
     </div>
     <p class="mt-2 mb-0" style="color: #555; font-size: 13px;">
-        Monday's automatic send uses the current draft. Approval is optional and
-        can be used to mark the final version before delivery.
+        Monday's automatic send only sends an approved issue. Use Send now for
+        an immediate manual delivery.
     </p>
 </div>
 
@@ -167,7 +167,7 @@ document.getElementById('sendBtn').addEventListener('click', async () => {
     if (data.sent > 0) {
         const sentDate = data.sent_at ? new Date(data.sent_at) : new Date();
         document.getElementById('lastSentDate').textContent = sentDate.toLocaleDateString('en-US', {
-            month: 'short', day: '2-digit', year: 'numeric'
+            month: 'short', day: '2-digit', year: 'numeric', timeZone: 'UTC'
         });
         document.getElementById('lastSentRecipients').textContent = `to ${data.sent} recipients`;
     }
