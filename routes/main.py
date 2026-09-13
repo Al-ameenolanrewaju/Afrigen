@@ -957,6 +957,7 @@ def history():
 @admin_required
 def admin():
     from sqlalchemy import func, or_, and_
+    from sqlalchemy.orm import joinedload
     from datetime import datetime, timedelta
     from collections import Counter
     import json
@@ -977,7 +978,7 @@ def admin():
         error_out=False,
     )
 
-    generations_query = Generation.query
+    generations_query = Generation.query.options(joinedload(Generation.user))
     if generation_search:
         generation_pattern = f'%{generation_search}%'
         generations_query = generations_query.filter(
@@ -993,7 +994,7 @@ def admin():
         per_page=50,
         error_out=False,
     )
-    stuck_generations = Generation.query.filter(
+    stuck_generations = Generation.query.options(joinedload(Generation.user)).filter(
         or_(
             Generation.status == 'failed',
             and_(
@@ -1135,7 +1136,7 @@ def admin():
     external_provider_status = get_provider_status()
     
     # Payments
-    recent_payments = Payment.query.order_by(Payment.created_at.desc()).limit(10).all()
+    recent_payments = Payment.query.options(joinedload(Payment.user)).order_by(Payment.created_at.desc()).limit(10).all()
     total_revenue = sum(p.amount for p in Payment.query.filter(Payment.amount != None).all())
 
     local_now = datetime.now(ADMIN_TIMEZONE)
@@ -1161,7 +1162,7 @@ def admin():
     ).scalar() or 0
     
     # Distribution Runs
-    recent_distributions = DistributionRun.query.order_by(DistributionRun.started_at.desc()).limit(10).all()
+    recent_distributions = DistributionRun.query.options(joinedload(DistributionRun.blog_post)).order_by(DistributionRun.started_at.desc()).limit(10).all()
     
     # Content Hub (Blogs & Newsletters)
     recent_blogs = BlogPost.query.order_by(BlogPost.created_at.desc()).limit(10).all()
@@ -1169,13 +1170,13 @@ def admin():
     
     # Connected Accounts
     total_connected_accounts = ConnectedAccount.query.count()
-    recent_connected_accounts = ConnectedAccount.query.order_by(ConnectedAccount.connected_at.desc()).limit(10).all()
+    recent_connected_accounts = ConnectedAccount.query.options(joinedload(ConnectedAccount.user)).order_by(ConnectedAccount.connected_at.desc()).limit(10).all()
 
     from models import Brand, PublishingLog, CampaignAnalytics, Subscriber, EmailOptOut, PublishingPreference, UserContent
     total_brands = Brand.query.count()
-    recent_publishing_logs = PublishingLog.query.order_by(PublishingLog.published_at.desc()).limit(20).all()
+    recent_publishing_logs = PublishingLog.query.options(joinedload(PublishingLog.user)).order_by(PublishingLog.published_at.desc()).limit(20).all()
     top_campaigns = []
-    for analytics in CampaignAnalytics.query.all():
+    for analytics in CampaignAnalytics.query.options(joinedload(CampaignAnalytics.campaign)).all():
         try:
             metrics = json.loads(analytics.metrics or '{}')
         except (TypeError, ValueError):
@@ -1250,7 +1251,7 @@ def admin():
         ,total_subscribers=total_subscribers
         ,total_email_optouts=total_email_optouts
         ,auto_publish_by_provider=auto_publish_by_provider
-        ,recent_user_content=UserContent.query.order_by(UserContent.created_at.desc()).limit(10).all()
+        ,recent_user_content=UserContent.query.options(joinedload(UserContent.user)).order_by(UserContent.created_at.desc()).limit(10).all()
     )
 
 
