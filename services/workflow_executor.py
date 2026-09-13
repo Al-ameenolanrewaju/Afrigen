@@ -78,28 +78,47 @@ class WorkflowExecutor:
         while retry_count < self.MAX_RETRIES and not success:
             try:
                 if task.task_type == AssetType.IMAGE.value:
+                    owner = db.session.get(User, campaign.user_id, with_for_update=True)
+                    if not owner:
+                        raise ValueError('Image generation requires a valid user.')
+                    from services.credits import image_gate, charge_image
+                    ok, error = image_gate(owner)
+                    if not ok:
+                        raise ValueError(error)
                     refined = refine_image_prompt(prompt)
-                    provider = 'fal' if campaign.user_id and db.session.get(User, campaign.user_id).plan == 'pro' else 'huggingface'
+                    provider = 'fal' if owner.plan == 'pro' else 'huggingface'
                     res = generate_image(
                         refined, provider=provider,
-                        allow_fal=bool(campaign.user_id and db.session.get(User, campaign.user_id).plan == 'pro'),
+                        allow_fal=owner.plan == 'pro',
                     )
                     if isinstance(res, dict) and res.get("success") is False:
                         raise Exception(res.get("error"))
-                    file_url = res.get("url") if isinstance(res, dict) else res
+                    file_url = (
+                        (res.get("image_url") or res.get("url"))
+                        if isinstance(res, dict) else res
+                    )
                     result_text = refined
                     provider_used = "Fal (Image)"
+                    charge_image(owner, reason='Campaign image generation')
                 elif task.task_type == AssetType.VIDEO.value:
-                    owner = db.session.get(User, campaign.user_id)
-                    if owner and owner.plan != 'pro':
-                        raise ValueError('Video generation is a Pro feature.')
+                    owner = db.session.get(User, campaign.user_id, with_for_update=True)
+                    if not owner:
+                        raise ValueError('Video generation requires a valid user.')
+                    from services.credits import video_gate, charge_video
+                    ok, error, video_cost = video_gate(owner, 'cinematic', duration='5')
+                    if not ok:
+                        raise ValueError(error)
                     refined = refine_prompt(prompt)
-                    res = generate_video(refined, allow_fal=bool(owner and owner.plan == 'pro'))
+                    res = generate_video(refined, allow_fal=owner.plan == 'pro')
                     if isinstance(res, dict) and res.get("success") is False:
                         raise Exception(res.get("error"))
-                    file_url = res.get("url") if isinstance(res, dict) else res
+                    file_url = (
+                        (res.get("video_url") or res.get("url"))
+                        if isinstance(res, dict) else res
+                    )
                     result_text = refined
                     provider_used = "Fal (Video)"
+                    charge_video(owner, video_cost, reason='Campaign video generation')
                 elif task.task_type == AssetType.VOICE.value:
                     res = generate_voiceover(prompt)
                     file_url = res

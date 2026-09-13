@@ -1,4 +1,3 @@
-import os
 import json
 import time
 import uuid
@@ -13,69 +12,141 @@ import services.claude as claude_service
 import content_engine.utils as content_engine_utils
 from app import app
 
-# Using a flat file datastore for Sprint 8 to bypass Supabase schema issues locally.
-# In production, this would map directly to the Workflow and WorkflowLog SQLAlchemy models.
-DATA_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'data', 'automations.json')
-ASSET_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'data', 'automation_assets.json')
-
 MAX_RETRIES = 3
 RETRY_DELAY_SECONDS = 2
 
-def _ensure_file():
-    if not os.path.exists(os.path.dirname(DATA_FILE)):
-        os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True)
-    if not os.path.exists(DATA_FILE):
-        with open(DATA_FILE, 'w') as f:
-            json.dump({"workflows": [], "logs": []}, f)
+def _decode_json(value, default):
+    if not value:
+        return default
+    try:
+        return json.loads(value)
+    except (TypeError, ValueError):
+        return default
 
-def get_workflows():
-    _ensure_file()
-    with open(DATA_FILE, 'r') as f:
-        data = json.load(f)
-    return data.get("workflows", [])
 
-def get_logs():
-    _ensure_file()
-    with open(DATA_FILE, 'r') as f:
-        data = json.load(f)
-    # Return latest logs first
-    return sorted(data.get("logs", []), key=lambda x: x.get('started_at', ''), reverse=True)
+def _workflow_to_dict(workflow):
+    nodes = []
+    for task in sorted(workflow.tasks, key=lambda item: item.node_index):
+        node = _decode_json(task.node_config, {})
+        if not node:
+            node = {"type": task.task_type}
+        node.setdefault("type", task.task_type)
+        node.setdefault("id", task.internal_id)
+        node.setdefault("status", task.status)
+        nodes.append(node)
+
+    result = {
+        "id": workflow.legacy_id,
+        "name": workflow.name,
+        "trigger": workflow.trigger,
+        "nodes": nodes,
+        "user_id": workflow.user_id,
+        "brand_id": workflow.brand_id,
+        "campaign_id": workflow.campaign_id,
+        "status": workflow.status,
+        "created_at": workflow.created_at.isoformat() if workflow.created_at else None,
+    }
+    _ensure_campaign_brand_on_workflow(result)
+    return result
+
+
+def _asset_to_dict(asset):
+    return {
+        "id": asset.legacy_id,
+        "workflow_id": asset.workflow.legacy_id if asset.workflow else None,
+        "run_id": asset.run.legacy_id if asset.run else None,
+        "node_id": asset.node_id,
+        "asset_type": asset.asset_type,
+        "type": asset.asset_type,
+        "title": asset.title,
+        "content": asset.content,
+        "file_url": asset.file_url,
+        "url": asset.file_url,
+        "thumbnail_url": asset.thumbnail_url,
+        "provider_used": asset.provider_used,
+        "created_at": asset.created_at.isoformat() if asset.created_at else None,
+        "generation_time": asset.generation_time,
+        "metadata": _decode_json(asset.meta_data, {}),
+        "storage": "database",
+    }
+
+
+def _run_to_dict(run):
+    return {
+        "id": run.legacy_id,
+        "workflow_id": run.workflow.legacy_id if run.workflow else None,
+        "workflow_name": run.workflow_name,
+        "started_at": run.started_at.isoformat() if run.started_at else None,
+        "status": run.status,
+        "nodes_executed": _decode_json(run.nodes_executed, []),
+        "credits_used": run.credits_used or 0,
+        "assets": [_asset_to_dict(asset) for asset in run.assets],
+        "error": run.error,
+        "completed_at": run.completed_at.isoformat() if run.completed_at else None,
+    }
+
+
+def get_workflows(user_id=None):
+    from models import Workflow
+    query = Workflow.query
+    if user_id is not None:
+        query = query.filter_by(user_id=user_id)
+    return [_workflow_to_dict(row) for row in query.order_by(Workflow.created_at.asc()).all()]
+
+
+def get_logs(user_id=None):
+    from models import Workflow, WorkflowRun
+    query = WorkflowRun.query.join(Workflow)
+    if user_id is not None:
+        query = query.filter(Workflow.user_id == user_id)
+    runs = query.order_by(WorkflowRun.started_at.desc()).all()
+    return [_run_to_dict(row) for row in runs]
+
 
 def save_workflow(workflow_data):
-    _ensure_file()
-    with open(DATA_FILE, 'r') as f:
-        data = json.load(f)
-        
-    if 'id' not in workflow_data or not workflow_data['id']:
-        workflow_data['id'] = "wf_" + str(uuid.uuid4())[:8]
-        workflow_data['created_at'] = datetime.datetime.now(datetime.timezone.utc).isoformat()
-        
+    from models import db, Workflow, WorkflowTask
+
+    workflow_id = workflow_data.get('id') or f"wf_{uuid.uuid4().hex[:8]}"
+    workflow = Workflow.query.filter_by(legacy_id=workflow_id).first()
+    if workflow is None:
+        workflow = Workflow(legacy_id=workflow_id)
+        db.session.add(workflow)
+
     _ensure_campaign_brand_on_workflow(workflow_data)
-    workflows = data.get("workflows", [])
-    
-    # Update if exists
-    idx = next((i for i, w in enumerate(workflows) if w['id'] == workflow_data['id']), None)
-    if idx is not None:
-        workflows[idx] = workflow_data
-    else:
-        workflows.append(workflow_data)
-        
-    data["workflows"] = workflows
-    with open(DATA_FILE, 'w') as f:
-        json.dump(data, f, indent=4)
-    return workflow_data
+    workflow.user_id = workflow_data.get('user_id')
+    workflow.brand_id = workflow_data.get('brand_id') or None
+    workflow.campaign_id = workflow_data.get('campaign_id') or None
+    workflow.name = workflow_data.get('name') or "Untitled workflow"
+    workflow.trigger = workflow_data.get('trigger') or "manual"
+    workflow.status = workflow_data.get('status') or "pending"
+    if workflow_data.get('created_at'):
+        try:
+            workflow.created_at = datetime.datetime.fromisoformat(workflow_data['created_at'].replace('Z', '+00:00'))
+        except (AttributeError, ValueError):
+            pass
+    db.session.flush()
+
+    WorkflowTask.query.filter_by(workflow_id=workflow.id).delete()
+    for index, node in enumerate(workflow_data.get('nodes', [])):
+        db.session.add(WorkflowTask(
+            workflow_id=workflow.id,
+            task_type=_normalize_node_type(node.get('type')),
+            status=node.get('status') or 'pending',
+            node_index=index,
+            node_config=json.dumps(node),
+            dependencies=json.dumps(node.get('dependencies', [])),
+            internal_id=node.get('id') or f"node_{index}",
+        ))
+    db.session.commit()
+    return _workflow_to_dict(workflow)
+
 
 def delete_workflow(workflow_id):
-    _ensure_file()
-    with open(DATA_FILE, 'r') as f:
-        data = json.load(f)
-    
-    workflows = data.get("workflows", [])
-    data["workflows"] = [w for w in workflows if w.get('id') != workflow_id]
-    
-    with open(DATA_FILE, 'w') as f:
-        json.dump(data, f, indent=4)
-    
+    from models import db, Workflow
+    workflow = Workflow.query.filter_by(legacy_id=workflow_id).first()
+    if workflow:
+        db.session.delete(workflow)
+        db.session.commit()
     return True
 
 
@@ -93,7 +164,10 @@ def _ensure_campaign_brand_on_workflow(workflow_data):
                     'goal': campaign.goal,
                 })
         if not workflow_data.get('brand'):
-            brand = Brand.query.filter_by(user_id=workflow_data.get('user_id')).first()
+            brand_query = Brand.query.filter_by(user_id=workflow_data.get('user_id'))
+            if workflow_data.get('brand_id'):
+                brand_query = brand_query.filter_by(id=workflow_data['brand_id'])
+            brand = brand_query.first()
             if brand:
                 workflow_data['brand'] = {
                     'name': brand.name,
@@ -108,34 +182,24 @@ def _ensure_campaign_brand_on_workflow(workflow_data):
 
 
 def save_log(log_data):
-    _ensure_file()
-    with open(DATA_FILE, 'r') as f:
-        data = json.load(f)
-    logs = data.get("logs", [])
-    logs.append(log_data)
-    data["logs"] = logs
-    with open(DATA_FILE, 'w') as f:
-        json.dump(data, f, indent=4)
-
-
-def _ensure_asset_store():
-    if not os.path.exists(os.path.dirname(ASSET_FILE)):
-        os.makedirs(os.path.dirname(ASSET_FILE), exist_ok=True)
-    if not os.path.exists(ASSET_FILE):
-        with open(ASSET_FILE, 'w') as f:
-            json.dump([], f)
-
-
-def _load_assets_from_file() -> List[Dict[str, Any]]:
-    _ensure_asset_store()
-    with open(ASSET_FILE, 'r') as f:
-        return json.load(f)
-
-
-def _write_assets_to_file(assets: List[Dict[str, Any]]):
-    _ensure_asset_store()
-    with open(ASSET_FILE, 'w') as f:
-        json.dump(assets, f, indent=4)
+    from models import db, Workflow, WorkflowRun
+    workflow = Workflow.query.filter_by(legacy_id=log_data['workflow_id']).first()
+    if not workflow:
+        raise ValueError(f"Workflow {log_data['workflow_id']} not found")
+    run = WorkflowRun.query.filter_by(legacy_id=log_data['id']).first()
+    if run is None:
+        run = WorkflowRun(legacy_id=log_data['id'], workflow_id=workflow.id)
+        db.session.add(run)
+    run.workflow_id = workflow.id
+    run.workflow_name = log_data.get('workflow_name')
+    run.status = log_data.get('status') or 'failed'
+    run.started_at = datetime.datetime.fromisoformat(log_data['started_at'].replace('Z', '+00:00'))
+    run.completed_at = datetime.datetime.fromisoformat(log_data['completed_at'].replace('Z', '+00:00')) if log_data.get('completed_at') else None
+    run.credits_used = log_data.get('credits_used') or 0
+    run.nodes_executed = json.dumps(log_data.get('nodes_executed', []))
+    run.error = log_data.get('error')
+    db.session.commit()
+    return run
 
 
 def _persist_user_content(user_id: int, workflow_id: str, run_id: str, node: Dict[str, Any], provider: str, asset_payload: Dict[str, Any], prompt: str, result: Any):
@@ -237,7 +301,6 @@ def _persist_asset(workflow_id: str, run_id: str, node_index: int, node: Dict[st
         "metadata": metadata,
     }
 
-    persisted_to_db = False
     try:
         from models import db, Campaign, CampaignAsset
         if db.session is not None:
@@ -251,11 +314,6 @@ def _persist_asset(workflow_id: str, run_id: str, node_index: int, node: Dict[st
                 if campaign_id is not None:
                     campaign = db.session.get(Campaign, campaign_id)
                     print(f"[automation] campaign lookup by id returned {campaign}")
-                if not campaign and isinstance(workflow, dict):
-                    user_id = workflow.get('user_id')
-                    if user_id is not None:
-                        campaign = db.session.query(Campaign).filter_by(user_id=user_id).order_by(Campaign.id.desc()).first()
-                        print(f"[automation] campaign lookup by user_id returned {campaign}")
 
                 if campaign is not None:
                     asset_obj = CampaignAsset(
@@ -273,64 +331,59 @@ def _persist_asset(workflow_id: str, run_id: str, node_index: int, node: Dict[st
                     db.session.commit()
                     asset_record["database_id"] = asset_obj.id
                     asset_record["campaign_id"] = campaign.id
-                    asset_record["storage"] = "database"
-                    persisted_to_db = True
                     print(f"[automation] campaign asset persisted id={asset_obj.id} campaign_id={campaign.id}")
                 else:
-                    print(f"[automation] no matching campaign found for workflow campaign_id={campaign_id} user_id={workflow.get('user_id') if isinstance(workflow, dict) else None}")
+                    print(f"[automation] no matching campaign found for workflow campaign_id={campaign_id}")
             except Exception as exc:
                 db.session.rollback()
                 print(f"[automation] asset persist failed: {exc}")
     except Exception as exc:
         print(f"[automation] asset persist setup failed: {exc}")
 
-    assets = _load_assets_from_file()
-    assets.append(asset_record)
-    _write_assets_to_file(assets)
-
-    if not persisted_to_db:
-        asset_record["storage"] = "file"
+    try:
+        from models import db, Workflow, WorkflowRun, WorkflowAsset
+        workflow_row = Workflow.query.filter_by(legacy_id=workflow_id).first()
+        run_row = WorkflowRun.query.filter_by(legacy_id=run_id).first()
+        if not workflow_row or not run_row:
+            raise ValueError("Workflow and run must be persisted before assets")
+        asset_row = WorkflowAsset(
+            legacy_id=asset_record["id"],
+            workflow_id=workflow_row.id,
+            run_id=run_row.id,
+            node_id=asset_record["node_id"],
+            asset_type=asset_record["asset_type"],
+            title=asset_record["title"],
+            content=asset_record["content"],
+            file_url=asset_record["file_url"],
+            thumbnail_url=asset_record["thumbnail_url"],
+            provider_used=asset_record["provider_used"],
+            generation_time=asset_record["generation_time"],
+            meta_data=json.dumps(asset_record["metadata"], sort_keys=True),
+            created_at=datetime.datetime.fromisoformat(asset_record["created_at"].replace("Z", "+00:00")),
+        )
+        db.session.add(asset_row)
+        db.session.commit()
+        asset_record["storage"] = "database"
+    except Exception as exc:
+        db.session.rollback()
+        print(f"[automation] workflow asset persist failed: {exc}")
+        return None
 
     return asset_record
 
 
 def get_assets_for_run(run_id: str):
-    assets = _load_assets_from_file()
-    matching = [asset for asset in assets if asset.get("run_id") == run_id]
-    if matching:
-        return matching
-
-    try:
-        from models import db, CampaignAsset
-        rows = db.session.query(CampaignAsset).filter(CampaignAsset.meta_data.contains(f'"run_id": "{run_id}"')).all()
-        return [
-            {
-                "id": row.id,
-                "workflow_id": None,
-                "run_id": run_id,
-                "asset_type": row.asset_type,
-                "title": row.title,
-                "content": row.content,
-                "file_url": row.file_url,
-                "thumbnail_url": row.thumbnail_url,
-                "provider_used": row.provider_used,
-                "created_at": row.created_at.isoformat() if row.created_at else None,
-                "generation_time": row.generation_time,
-                "metadata": json.loads(row.meta_data or "{}"),
-                "storage": "database",
-            }
-            for row in rows
-        ]
-    except Exception:
+    from models import WorkflowAsset, WorkflowRun
+    run = WorkflowRun.query.filter_by(legacy_id=run_id).first()
+    if not run:
         return []
+    return [_asset_to_dict(asset) for asset in run.assets]
 
 
 def get_workflow_run(run_id: str):
-    logs = get_logs()
-    for log in logs:
-        if log.get("id") == run_id:
-            return log
-    return None
+    from models import WorkflowRun
+    run = WorkflowRun.query.filter_by(legacy_id=run_id).first()
+    return _run_to_dict(run) if run else None
 
 
 def _normalize_node_type(node_type):
@@ -518,21 +571,37 @@ def _run_node(node, workflow_id: str, run_id: str, node_index: int, user_id: int
                     result = newsletter_service.generate_weekly_digest()
                 elif node_type == 'generate_image':
                     from models import db, User
-                    owner = db.session.get(User, user_id) if user_id else None
+                    owner = db.session.get(User, user_id, with_for_update=True) if user_id else None
+                    if not owner:
+                        raise ValueError('Image generation requires a valid user.')
+                    from services.credits import image_gate, charge_image
+                    ok, error = image_gate(owner)
+                    if not ok:
+                        raise ValueError(error)
                     provider = 'fal' if owner and owner.plan == 'pro' else 'huggingface'
                     result = video_service.generate_image(
                         prompt, style=node.get('style', 'african'), provider=provider,
                         allow_fal=bool(owner and owner.plan == 'pro'),
                     )
+                    if isinstance(result, dict) and result.get('success') is False:
+                        raise ValueError(result.get('error') or 'Image generation failed.')
+                    charge_image(owner, reason='Automation image generation')
                 elif node_type == 'generate_video':
                     from models import db, User
-                    owner = db.session.get(User, user_id) if user_id else None
-                    if owner and owner.plan != 'pro':
-                        raise ValueError('Video generation is a Pro feature.')
+                    owner = db.session.get(User, user_id, with_for_update=True) if user_id else None
+                    if not owner:
+                        raise ValueError('Video generation requires a valid user.')
+                    from services.credits import video_gate, charge_video
+                    style = node.get('style', 'cinematic')
+                    ok, error, video_cost = video_gate(owner, style, duration='5')
+                    if not ok:
+                        raise ValueError(error)
                     result = video_service.generate_video(
-                        prompt, style=node.get('style', 'cinematic'),
-                        allow_fal=bool(owner and owner.plan == 'pro'),
+                        prompt, style=style, allow_fal=owner.plan == 'pro',
                     )
+                    if isinstance(result, dict) and result.get('success') is False:
+                        raise ValueError(result.get('error') or 'Video generation failed.')
+                    charge_video(owner, video_cost, reason='Automation video generation')
                 elif node_type == 'publish_social':
                     result = _publish_automation_asset(
                         user_id=user_id,
@@ -621,12 +690,13 @@ def execute_workflow_sync(workflow_id, user_id: int | None = None):
 
     nodes = workflow.get('nodes', [])
     log_id = "log_" + str(uuid.uuid4())[:8]
+    started_at = datetime.datetime.now(datetime.timezone.utc)
 
     log = {
         "id": log_id,
         "workflow_id": workflow_id,
         "workflow_name": workflow.get('name', 'Unknown'),
-        "started_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "started_at": started_at.isoformat(),
         "status": "running",
         "nodes_executed": [],
         "credits_used": 0,
@@ -634,6 +704,21 @@ def execute_workflow_sync(workflow_id, user_id: int | None = None):
     }
 
     try:
+        from models import db, Workflow, WorkflowRun, WorkflowTask
+        workflow_row = Workflow.query.filter_by(legacy_id=workflow_id).first()
+        if not workflow_row:
+            raise ValueError(f"Workflow {workflow_id} not found")
+        db.session.add(WorkflowRun(
+            legacy_id=log_id,
+            workflow_id=workflow_row.id,
+            workflow_name=log["workflow_name"],
+            status="running",
+            started_at=started_at,
+            credits_used=0,
+            nodes_executed="[]",
+        ))
+        db.session.commit()
+
         runtime_context = {}
         for index, node in enumerate(nodes):
             node_record = _run_node(node, workflow_id=workflow_id, run_id=log_id, node_index=index, user_id=user_id, workflow=workflow, runtime_context=runtime_context)
@@ -642,12 +727,25 @@ def execute_workflow_sync(workflow_id, user_id: int | None = None):
             log['credits_used'] += node_record.get('credits_consumed', 0)
             if node_record.get('asset'):
                 log['assets'].append(node_record['asset'])
+            task = WorkflowTask.query.filter_by(
+                workflow_id=workflow_row.id, node_index=index
+            ).first()
+            if task:
+                task.status = 'completed' if node_record.get('success') else 'failed'
+                task.result_data = json.dumps(node_record)
+            db.session.commit()
 
-        log['status'] = "completed"
+        log['status'] = "failed" if any(
+            not node_record.get('success') for node_record in log['nodes_executed']
+        ) else "completed"
+        workflow_row.status = log['status']
+        db.session.commit()
 
     except Exception as e:
         log['status'] = "failed"
         log['error'] = str(e)
+        workflow_row.status = "failed"
+        db.session.commit()
 
     log['completed_at'] = datetime.datetime.now(datetime.timezone.utc).isoformat()
     save_log(log)

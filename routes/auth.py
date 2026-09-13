@@ -27,15 +27,6 @@ def verify_user_password(stored_password, provided_password):
 @auth.route('/register', methods=['GET', 'POST'])
 @limiter.limit("10 per hour")
 def register():
-    # Capture UTM source from GET params and store in session
-    if request.method == 'GET':
-        utm_source = request.args.get('utm_source', '')
-        ref_code = request.args.get('ref', '')
-        if utm_source:
-            session['signup_source'] = utm_source
-        if ref_code:
-            session['ref_code'] = ref_code
-
     if request.method == 'POST':
         username = request.form.get('username')
         email = request.form.get('email')

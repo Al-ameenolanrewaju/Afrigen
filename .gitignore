@@ -13,3 +13,4 @@ static/uploads/
 app.log
 logs/
 credentials/
+data/

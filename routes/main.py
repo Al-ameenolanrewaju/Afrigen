@@ -68,14 +68,61 @@ def get_country_from_ip(ip):
     try:
         import requests as req
         response = req.get(f'https://ipapi.co/{ip}/json/', timeout=3)
+        response.raise_for_status()
         data = response.json()
-        return data.get('country_name', 'Unknown')
-    except Exception:
-        return 'Unknown'
+        country = data.get('country_name')
+        if country:
+            return country
+        current_app.logger.warning(
+            "Primary country lookup returned no country for %s: status=%s response=%s",
+            ip, response.status_code, data
+        )
+    except req.HTTPError as exc:
+        current_app.logger.warning(
+            "Primary country lookup returned HTTP error for %s: status=%s response=%s",
+            ip, exc.response.status_code, exc.response.text[:500]
+        )
+    except req.RequestException as exc:
+        current_app.logger.warning(
+            "Primary country lookup connection failed for %s: error=%s",
+            ip, exc
+        )
+    except (ValueError, TypeError) as exc:
+        current_app.logger.warning(
+            "Primary country response was invalid for %s: %s", ip, exc
+        )
+
+    try:
+        response = req.get(
+            f'http://ip-api.com/json/{ip}?fields=status,message,country',
+            timeout=3
+        )
+        response.raise_for_status()
+        data = response.json()
+        if data.get('status') == 'success' and data.get('country'):
+            return data['country']
+        current_app.logger.warning(
+            "Fallback country lookup returned no country for %s: status=%s response=%s",
+            ip, response.status_code, data
+        )
+    except req.HTTPError as exc:
+        current_app.logger.warning(
+            "Fallback country lookup returned HTTP error for %s: status=%s response=%s",
+            ip, exc.response.status_code, exc.response.text[:500]
+        )
+    except req.RequestException as exc:
+        current_app.logger.warning(
+            "Fallback country lookup connection failed for %s: error=%s",
+            ip, exc
+        )
+    except (ValueError, TypeError) as exc:
+        current_app.logger.warning(
+            "Fallback country response was invalid for %s: %s", ip, exc
+        )
+
+    return 'Unknown'
 
 def get_real_ip():
-    if request.headers.get('X-Forwarded-For'):
-        return request.headers.get('X-Forwarded-For').split(',')[0].strip()
     return request.remote_addr
 def generate_referral_code():
     return secrets.token_urlsafe(8)
@@ -2640,6 +2687,60 @@ def create():
 def brands():
     return render_template('main/brands.html')
 
+
+@main.route('/api/brands', methods=['GET', 'POST'])
+@login_required
+def api_brands():
+    from models import Brand, db
+
+    if request.method == 'GET':
+        brands = Brand.query.filter_by(user_id=current_user.id).order_by(Brand.name.asc()).all()
+        return jsonify({"brands": [
+            {
+                "id": brand.id,
+                "name": brand.name,
+                "industry": brand.industry,
+                "voice": brand.voice,
+                "colors": brand.primary_color,
+                "audience": brand.target_audience,
+                "instructions": brand.custom_instructions,
+                "primary_color": brand.primary_color,
+                "secondary_color": brand.secondary_color,
+                "accent_color": brand.accent_color,
+                "typography": brand.typography,
+            }
+            for brand in brands
+        ]})
+
+    data = request.get_json(silent=True) or {}
+    name = (data.get('name') or '').strip()
+    if not name:
+        return jsonify({"ok": False, "error": "Brand name is required."}), 400
+    brand = Brand(
+        user_id=current_user.id,
+        name=name,
+        industry=data.get('industry'),
+        voice=data.get('voice'),
+        primary_color=data.get('colors') or data.get('primary_color'),
+        target_audience=data.get('audience') or data.get('target_audience'),
+        custom_instructions=data.get('instructions') or data.get('custom_instructions'),
+    )
+    db.session.add(brand)
+    db.session.commit()
+    return jsonify({"ok": True, "brand": {"id": brand.id, "name": brand.name}}), 201
+
+
+@main.route('/api/brands/<int:brand_id>', methods=['DELETE'])
+@login_required
+def api_brand_delete(brand_id):
+    from models import Brand, db
+    brand = Brand.query.filter_by(id=brand_id, user_id=current_user.id).first()
+    if not brand:
+        return jsonify({"ok": False, "error": "Brand not found."}), 404
+    db.session.delete(brand)
+    db.session.commit()
+    return jsonify({"ok": True})
+
 @main.route('/campaigns')
 @login_required
 def campaigns():
@@ -2653,33 +2754,21 @@ def automations():
 @main.route('/automations/<log_id>')
 @login_required
 def automation_run_details(log_id):
-    from services.automation import get_logs, _load_assets_from_file
-    
-    logs = get_logs()
-    run = next((l for l in logs if l.get('id') == log_id), None)
+    from services.automation import get_workflow_run, get_assets_for_run
+
+    run = get_workflow_run(log_id)
+    if run and run.get('workflow_id'):
+        from models import Workflow
+        workflow = Workflow.query.filter_by(
+            legacy_id=run['workflow_id'], user_id=current_user.id
+        ).first()
+        if not workflow:
+            run = None
     if not run:
         flash('Run details not found.', 'danger')
         return redirect(url_for('main.automations'))
-        
-    all_assets = _load_assets_from_file()
-    # Also fetch from DB if there are campaign assets tied to this run
-    from models import CampaignAsset, db
-    
-    # We find database assets by checking if the meta_data contains the run_id
-    db_assets = db.session.query(CampaignAsset).filter(CampaignAsset.meta_data.contains(f'"run_id": "{log_id}"')).all()
-    
-    assets = [a for a in all_assets if a.get('run_id') == log_id]
-    
-    for a in db_assets:
-        assets.append({
-            "id": a.id,
-            "asset_type": a.asset_type,
-            "title": a.title,
-            "content": a.content,
-            "file_url": a.file_url,
-            "thumbnail_url": a.thumbnail_url,
-            "provider_used": a.provider_used
-        })
+
+    assets = get_assets_for_run(log_id)
     
     return render_template('main/automation_run_details.html', run=run, assets=assets)
 
@@ -2894,14 +2983,27 @@ def profile():
 @login_required
 def build_automation():
     from models import Brand, Campaign
-    brand = Brand.query.filter_by(user_id=current_user.id).first()
+    brand_id = request.args.get('brand_id') or None
+    if brand_id:
+        try:
+            brand_id = int(brand_id)
+        except (TypeError, ValueError):
+            return jsonify({"ok": False, "error": "Invalid brand ID."}), 400
+    brand = None
+    if brand_id:
+        brand = Brand.query.filter_by(id=brand_id, user_id=current_user.id).first()
+        if not brand:
+            return jsonify({"ok": False, "error": "Selected brand was not found."}), 400
     campaigns = Campaign.query.filter_by(user_id=current_user.id).order_by(Campaign.created_at.desc()).all()
-    return render_template('main/automation_builder.html', brand=brand, campaigns=campaigns)
+    brands = Brand.query.filter_by(user_id=current_user.id).order_by(Brand.name.asc()).all()
+    return render_template('main/automation_builder.html', brand=brand, brands=brands, campaigns=campaigns)
 
 @main.route('/campaign/build')
 @login_required
 def build_campaign():
-    return render_template('main/campaign_builder.html')
+    from models import Brand
+    brands = Brand.query.filter_by(user_id=current_user.id).order_by(Brand.name.asc()).all()
+    return render_template('main/campaign_builder.html', brands=brands)
 
 @main.route('/campaign/<campaign_id>')
 @login_required
@@ -2951,8 +3053,8 @@ def copilot_chat():
 @login_required
 def api_automations_list():
     from services.automation import get_workflows, get_logs
-    workflows = get_workflows()
-    logs = get_logs()
+    workflows = get_workflows(user_id=current_user.id)
+    logs = get_logs(user_id=current_user.id)
     return jsonify({"workflows": workflows, "logs": logs})
 
 @main.route('/api/automations/run/<workflow_id>', methods=['POST'])
@@ -2960,7 +3062,7 @@ def api_automations_list():
 def api_automations_run(workflow_id):
     from services.automation import trigger_workflow_async, get_workflows
 
-    workflows = get_workflows()
+    workflows = get_workflows(user_id=current_user.id)
     if not any(workflow.get('id') == workflow_id for workflow in workflows):
         return jsonify({"ok": False, "error": "Workflow not found"}), 404
 
@@ -2986,12 +3088,24 @@ def api_automations_save():
 
     # Attach campaign and brand context when provided
     from models import Brand, Campaign
-    brand = Brand.query.filter_by(user_id=current_user.id).first()
+    brand_id = data.get('brand_id') or None
+    if brand_id:
+        try:
+            brand_id = int(brand_id)
+        except (TypeError, ValueError):
+            return jsonify({"ok": False, "error": "Invalid brand ID."}), 400
+    brand = None
+    if brand_id:
+        brand = Brand.query.filter_by(id=brand_id, user_id=current_user.id).first()
+        if not brand:
+            return jsonify({"ok": False, "error": "Selected brand was not found."}), 400
     campaign_id = data.get('campaign_id') or None
     if campaign_id:
         campaign = Campaign.query.filter_by(id=campaign_id, user_id=current_user.id).first()
         if not campaign:
             return jsonify({"ok": False, "error": "Selected campaign was not found."}), 400
+        if brand_id and campaign.brand_id not in (None, brand_id):
+            return jsonify({"ok": False, "error": "Campaign and brand do not match."}), 400
 
     workflow_data = {
         "id": data.get("id") or None,
@@ -3000,6 +3114,7 @@ def api_automations_save():
         "nodes": data.get("nodes", []),
         "created_at": data.get("created_at"),
         "user_id": current_user.id,
+        "brand_id": brand_id,
         "campaign_id": campaign_id,
         "brand": {
             "name": brand.name if brand else None,
@@ -3017,7 +3132,7 @@ def api_automations_save():
 @login_required
 def api_campaign_plan():
     from flask import jsonify
-    from models import Campaign, db
+    from models import Brand, Campaign, db
     from services.workflow_planner import workflow_planner
 
     data = request.get_json(silent=True) or {}
@@ -3027,8 +3142,13 @@ def api_campaign_plan():
         return jsonify({"ok": False, "error": "Goal is required"}), 400
 
 
+    brand_id = data.get('brand_id') or None
+    if brand_id and not Brand.query.filter_by(id=brand_id, user_id=current_user.id).first():
+        return jsonify({"ok": False, "error": "Selected brand was not found."}), 400
+
     campaign = Campaign(
         user_id=current_user.id,
+        brand_id=brand_id,
         title=name,
         goal=business_goal,
         business_goal=business_goal,

@@ -108,7 +108,7 @@
                             </div>
                             <div class="card-footer p-3 border-top" style="border-color: #30363D !important; background: transparent; display: flex; justify-content: space-between;">
                                 <button class="btn btn-sm btn-outline-secondary text-white" onclick="event.stopPropagation(); window.BrandContext.setActiveBrand('${b.id}'); window.location.reload();">Set Active</button>
-                                <button class="btn btn-sm text-danger" onclick="event.stopPropagation(); Swal.fire({title: 'Delete brand?', icon: 'warning', showCancelButton: true, background: '#161B22', color: '#F0F6FC', confirmButtonColor: '#F5A623'}).then((r) => { if(r.isConfirmed){ window.BrandContext.deleteBrand('${b.id}'); renderGrid(); } });"><i class="fa-solid fa-trash"></i></button>
+                                <button class="btn btn-sm text-danger" onclick="event.stopPropagation(); Swal.fire({title: 'Delete brand?', icon: 'warning', showCancelButton: true, background: '#161B22', color: '#F0F6FC', confirmButtonColor: '#F5A623'}).then((r) => { if(r.isConfirmed){ window.BrandContext.deleteBrand('${b.id}').then(renderGrid).catch(console.error); } });"><i class="fa-solid fa-trash"></i></button>
                             </div>
                         </div>
                     `;
@@ -118,6 +118,7 @@
         }
         
         renderGrid();
+        document.addEventListener('brand-context-loaded', renderGrid);
         
         document.getElementById('brandForm').addEventListener('submit', (e) => {
             e.preventDefault();
@@ -129,9 +130,10 @@
                 audience: document.getElementById('b_audience').value,
                 instructions: document.getElementById('b_instructions').value
             };
-            window.BrandContext.saveBrand(brandData);
-            document.querySelector('.btn-close').click(); // close modal
-            renderGrid();
+            window.BrandContext.saveBrand(brandData).then(() => {
+                document.querySelector('.btn-close').click();
+                renderGrid();
+            }).catch(console.error);
         });
     });
 </script>

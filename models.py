@@ -674,6 +674,7 @@ class Campaign(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    brand_id = db.Column(db.Integer, db.ForeignKey("brands.id"), nullable=True)
     project_id = db.Column(db.Integer, db.ForeignKey("projects.id"), nullable=True)
     
     title = db.Column(db.String(255), nullable=True)
@@ -689,6 +690,7 @@ class Campaign(db.Model):
     updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     user = db.relationship("User", backref=db.backref("campaigns", cascade="all, delete-orphan"))
+    brand = db.relationship("Brand", backref=db.backref("campaigns", cascade="all, delete-orphan"))
     project = db.relationship("Project", backref=db.backref("campaigns", cascade="all, delete-orphan"))
 
     def __repr__(self):
@@ -721,17 +723,24 @@ class Workflow(db.Model):
     __tablename__ = "workflows"
 
     id = db.Column(db.Integer, primary_key=True)
-    campaign_id = db.Column(db.Integer, db.ForeignKey("campaigns.id"), nullable=False, unique=True)
+    legacy_id = db.Column(db.String(100), unique=True, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    brand_id = db.Column(db.Integer, db.ForeignKey("brands.id"), nullable=True)
+    campaign_id = db.Column(db.Integer, db.ForeignKey("campaigns.id"), nullable=True)
+    name = db.Column(db.String(255), nullable=False, default="Untitled workflow")
+    trigger = db.Column(db.String(50), nullable=False, default="manual")
     
     status = db.Column(db.String(50), default="pending") # pending, running, completed, failed
     
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
-    campaign = db.relationship("Campaign", backref=db.backref("workflow", uselist=False, cascade="all, delete-orphan"))
+    user = db.relationship("User", backref=db.backref("workflows", cascade="all, delete-orphan"))
+    brand = db.relationship("Brand", backref=db.backref("workflows", cascade="all, delete-orphan"))
+    campaign = db.relationship("Campaign", backref=db.backref("workflows", cascade="all, delete-orphan"))
 
     def __repr__(self):
-        return f"<Workflow {self.id} for Campaign {self.campaign_id}>"
+        return f"<Workflow {self.legacy_id}>"
 
 
 class WorkflowTask(db.Model):
@@ -742,6 +751,8 @@ class WorkflowTask(db.Model):
     
     task_type = db.Column(db.String(50), nullable=False) # e.g. campaign_strategy, blog_article, facebook_post
     status = db.Column(db.String(50), default="pending") # pending, in_progress, completed, failed
+    node_index = db.Column(db.Integer, nullable=False, default=0)
+    node_config = db.Column(db.Text, nullable=True) # JSON node input/configuration
     
     # Store dependencies as a JSON list of internal task string IDs (e.g., ["strategy", "blog"])
     # We will map these string IDs to the actual DB rows upon insertion.
@@ -759,6 +770,45 @@ class WorkflowTask(db.Model):
 
     def __repr__(self):
         return f"<WorkflowTask {self.task_type} (Status: {self.status})>"
+
+
+class WorkflowRun(db.Model):
+    __tablename__ = "workflow_runs"
+
+    id = db.Column(db.Integer, primary_key=True)
+    legacy_id = db.Column(db.String(100), unique=True, nullable=False)
+    workflow_id = db.Column(db.Integer, db.ForeignKey("workflows.id"), nullable=False)
+    workflow_name = db.Column(db.String(255), nullable=True)
+    status = db.Column(db.String(50), nullable=False, default="running")
+    started_at = db.Column(db.DateTime, nullable=True)
+    completed_at = db.Column(db.DateTime, nullable=True)
+    credits_used = db.Column(db.Integer, nullable=False, default=0)
+    nodes_executed = db.Column(db.Text, nullable=True)
+    error = db.Column(db.Text, nullable=True)
+
+    workflow = db.relationship("Workflow", backref=db.backref("runs", cascade="all, delete-orphan"))
+
+
+class WorkflowAsset(db.Model):
+    __tablename__ = "workflow_assets"
+
+    id = db.Column(db.Integer, primary_key=True)
+    legacy_id = db.Column(db.String(100), unique=True, nullable=False)
+    workflow_id = db.Column(db.Integer, db.ForeignKey("workflows.id"), nullable=False)
+    run_id = db.Column(db.Integer, db.ForeignKey("workflow_runs.id"), nullable=False)
+    node_id = db.Column(db.String(100), nullable=True)
+    asset_type = db.Column(db.String(50), nullable=False)
+    title = db.Column(db.String(255), nullable=True)
+    content = db.Column(db.Text, nullable=False, default="")
+    file_url = db.Column(db.String(500), nullable=True)
+    thumbnail_url = db.Column(db.String(500), nullable=True)
+    provider_used = db.Column(db.String(100), nullable=True)
+    generation_time = db.Column(db.Float, nullable=True)
+    meta_data = db.Column("metadata", db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    workflow = db.relationship("Workflow", backref=db.backref("workflow_assets", cascade="all, delete-orphan"))
+    run = db.relationship("WorkflowRun", backref=db.backref("assets", cascade="all, delete-orphan"))
 
 
 class CampaignAsset(db.Model):

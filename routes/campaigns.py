@@ -13,9 +13,20 @@ def create_campaign():
     if not data or 'business_goal' not in data:
         return jsonify({"error": "business_goal is required"}), 400
 
+    brand_id = data.get('brand_id') or None
+    if brand_id:
+        try:
+            brand_id = int(brand_id)
+        except (TypeError, ValueError):
+            return jsonify({"error": "Invalid brand ID."}), 400
+    if brand_id:
+        brand = Brand.query.filter_by(id=brand_id, user_id=current_user.id).first()
+        if not brand:
+            return jsonify({"error": "Selected brand was not found."}), 400
 
     campaign = Campaign(
         user_id=current_user.id,
+        brand_id=brand_id,
         title=data.get('title', 'New Campaign'),
         goal=data['business_goal'],
         business_goal=data['business_goal'],
@@ -55,6 +66,7 @@ def list_campaigns():
             "id": c.id,
             "title": c.title,
             "business_goal": c.business_goal,
+            "brand_id": c.brand_id,
             "status": c.status,
             "progress": c.progress,
             "created_at": c.created_at.isoformat() if c.created_at else None
@@ -130,6 +142,7 @@ def get_campaign(campaign_id):
             "target_audience": campaign.target_audience,
             "tone": campaign.tone,
             "industry": campaign.industry,
+            "brand_id": campaign.brand_id,
             "status": campaign.status,
             "progress": campaign.progress,
             "completed_tasks": completed_tasks_count,

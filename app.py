@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from flask import Flask, render_template, redirect, url_for, request, jsonify, Response, send_from_directory
+from flask import Flask, render_template, redirect, url_for, request, session, jsonify, Response, send_from_directory
 from flask_migrate import Migrate
 from flask_login import LoginManager
 from flask_mail import Mail, Message
@@ -53,6 +53,17 @@ is_production = (
 )
 app.config.from_object(ProductionConfig if is_production else DevelopmentConfig)
 limiter.init_app(app)
+
+
+@app.before_request
+def capture_signup_tracking():
+    utm_source = request.args.get('utm_source')
+    ref_code = request.args.get('ref')
+    if utm_source and 'signup_source' not in session:
+        session['signup_source'] = utm_source
+    if ref_code and 'ref_code' not in session:
+        session['ref_code'] = ref_code
+
 
 mail = Mail(app)
 oauth = OAuth(app)

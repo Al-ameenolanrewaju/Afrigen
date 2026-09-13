@@ -9,7 +9,7 @@ class BrandContextMiddleware {
     constructor() {
         this.storageKey = 'afrigen_brands';
         this.activeBrandKey = 'afrigen_active_brand_id';
-        this.brands = JSON.parse(localStorage.getItem(this.storageKey)) || [];
+        this.brands = [];
         this.activeBrandId = localStorage.getItem(this.activeBrandKey) || '';
     }
 
@@ -19,31 +19,42 @@ class BrandContextMiddleware {
 
     getActiveBrand() {
         if (!this.activeBrandId) return null;
-        return this.brands.find(b => b.id === this.activeBrandId) || null;
+        return this.brands.find(b => String(b.id) === String(this.activeBrandId)) || null;
     }
 
     setActiveBrand(id) {
-        this.activeBrandId = id;
-        localStorage.setItem(this.activeBrandKey, id);
+        this.activeBrandId = String(id || '');
+        localStorage.setItem(this.activeBrandKey, this.activeBrandId);
         this.updateSwitchers();
     }
 
-    saveBrand(brandData) {
-        if (!brandData.id) brandData.id = 'brand_' + Date.now();
-        const existingIdx = this.brands.findIndex(b => b.id === brandData.id);
-        if (existingIdx >= 0) {
-            this.brands[existingIdx] = brandData;
-        } else {
-            this.brands.push(brandData);
-        }
-        localStorage.setItem(this.storageKey, JSON.stringify(this.brands));
+    async load() {
+        const response = await fetch('/api/brands');
+        if (!response.ok) throw new Error('Unable to load brands');
+        const data = await response.json();
+        this.brands = data.brands || [];
+        if (this.activeBrandId && !this.getActiveBrand()) this.activeBrandId = '';
+        this.updateSwitchers();
+        document.dispatchEvent(new CustomEvent('brand-context-loaded'));
+    }
+
+    async saveBrand(brandData) {
+        const response = await fetch('/api/brands', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(brandData)
+        });
+        if (!response.ok) throw new Error('Unable to save brand');
+        const data = await response.json();
+        this.brands.push({...brandData, ...data.brand});
         this.updateSwitchers();
     }
 
-    deleteBrand(id) {
-        this.brands = this.brands.filter(b => b.id !== id);
-        localStorage.setItem(this.storageKey, JSON.stringify(this.brands));
-        if (this.activeBrandId === id) this.setActiveBrand('');
+    async deleteBrand(id) {
+        const response = await fetch(`/api/brands/${id}`, {method: 'DELETE'});
+        if (!response.ok) throw new Error('Unable to delete brand');
+        this.brands = this.brands.filter(b => String(b.id) !== String(id));
+        if (String(this.activeBrandId) === String(id)) this.setActiveBrand('');
         this.updateSwitchers();
     }
 
@@ -105,5 +116,5 @@ class BrandContextMiddleware {
 window.BrandContext = new BrandContextMiddleware();
 
 document.addEventListener('DOMContentLoaded', () => {
-    window.BrandContext.updateSwitchers();
+    window.BrandContext.load().catch(error => console.error(error));
 });
