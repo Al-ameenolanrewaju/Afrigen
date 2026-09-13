@@ -120,10 +120,14 @@ def fail_stuck_generations():
     with app.app_context():
         try:
             cutoff = datetime.now(timezone.utc) - timedelta(minutes=15)
+            # Query without row lock: we don't need with_for_update() here since:
+            # 1. The status change to 'failed' is idempotent
+            # 2. Multiple concurrent runs won't cause data corruption (both set status='failed')
+            # 3. Using with_for_update() fails on read-only database replicas
             stuck = Generation.query.filter(
                 Generation.status == 'processing',
                 Generation.created_at < cutoff,
-            ).with_for_update().all()
+            ).all()
             if not stuck:
                 return
             for gen in stuck:
