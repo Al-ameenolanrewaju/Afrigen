@@ -204,6 +204,21 @@
         // Optionally render tasks in a progress UI, but for now we'll just let the assets tab show the results.
     }
 
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>'"]/g, character => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+        }[character]));
+    }
+
+    function safeMediaUrl(value) {
+        try {
+            const url = new URL(value, window.location.origin);
+            return ['http:', 'https:'].includes(url.protocol) ? url.href : '';
+        } catch (error) {
+            return '';
+        }
+    }
+
     function renderAssets(assets) {
         const container = document.getElementById('deliverables-container');
         container.innerHTML = '';
@@ -227,14 +242,15 @@
             else icon = 'fa-pen text-primary';
             
             let resultHtml = '';
+            const mediaUrl = safeMediaUrl(a.file_url);
             // Treat anything that isn't video/image as text content if it has text
-            if (a.asset_type === 'image' && a.file_url) {
-                resultHtml = `<div class="mt-3 text-center"><img src="${a.file_url}" style="max-width: 100%; border-radius: 8px; border: 1px solid #30363D;"></div>`;
-            } else if (a.asset_type === 'video' && a.file_url) {
-                resultHtml = `<div class="mt-3 text-center"><video controls src="${a.file_url}" style="max-width: 100%; border-radius: 8px; border: 1px solid #30363D;"></video></div>`;
+            if (a.asset_type === 'image' && mediaUrl) {
+                resultHtml = `<div class="mt-3 text-center"><img src="${escapeHtml(mediaUrl)}" style="max-width: 100%; border-radius: 8px; border: 1px solid #30363D;"></div>`;
+            } else if (a.asset_type === 'video' && mediaUrl) {
+                resultHtml = `<div class="mt-3 text-center"><video controls src="${escapeHtml(mediaUrl)}" style="max-width: 100%; border-radius: 8px; border: 1px solid #30363D;"></video></div>`;
             } else {
                 // Formatting text content
-                let contentText = (a.content || '').replace(/\\n/g, '<br>');
+                let contentText = escapeHtml(a.content || '').replace(/\\n/g, '<br>');
                 resultHtml = `<div class="mt-3 p-3 rounded" style="background: #0D1117; border: 1px solid #30363D; color: #C9D1D9; max-height: 400px; overflow-y: auto;">${contentText}</div>`;
             }
             
@@ -245,8 +261,8 @@
                             <div class="d-flex align-items-center gap-3">
                                 <i class="fa-solid ${icon} fs-4"></i>
                                 <div>
-                                    <h6 style="color: #F0F6FC; margin: 0;">${a.title}</h6>
-                                    <small style="color: #8B949E; text-transform: capitalize;">${a.asset_type}</small>
+                                    <h6 style="color: #F0F6FC; margin: 0;">${escapeHtml(a.title)}</h6>
+                                    <small style="color: #8B949E; text-transform: capitalize;">${escapeHtml(a.asset_type)}</small>
                                 </div>
                             </div>
                             <span class="status-badge status-completed"><i class="fa-solid fa-check me-1"></i> Ready</span>

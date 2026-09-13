@@ -69,6 +69,12 @@ def publish_user_content(content_id, user_id, destination="website"):
         item.content_metadata = json.dumps(metadata, sort_keys=True)
         db.session.commit()
         return item
+
+    if destination == "facebook":
+        return {
+            "ok": False,
+            "error": "Facebook integration has been discontinued."
+        }
         
     # 1. Check Connected Account
     account = ConnectedAccount.query.filter_by(user_id=user_id, provider=destination, status="connected").first()
@@ -81,6 +87,15 @@ def publish_user_content(content_id, user_id, destination="website"):
         return {"ok": False, "error": f"Publishing {item.content_type} to {destination} is disabled in preferences."}
 
     # 3. Add to Queue
+    existing_queue_item = PublishingRetryQueue.query.filter(
+        PublishingRetryQueue.user_id == user_id,
+        PublishingRetryQueue.content_id == content_id,
+        PublishingRetryQueue.provider == destination,
+        PublishingRetryQueue.status.in_(["pending", "processing", "success"]),
+    ).first()
+    if existing_queue_item:
+        return {"ok": False, "error": f"Content is already queued or published to {destination}."}
+
     queue_item = PublishingRetryQueue(
         user_id=user_id,
         content_id=content_id,

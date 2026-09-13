@@ -328,11 +328,17 @@
         }
     });
 
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>'"]/g, character => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+        }[character]));
+    }
+
     function addMessage(role, text, actions=[]) {
         const msgDiv = document.createElement('div');
         msgDiv.className = `msg msg-${role}`;
         
-        let html = `<div class="msg-bubble">${text.replace(/\n/g, '<br>')}</div>`;
+        let html = `<div class="msg-bubble">${escapeHtml(text).replace(/\n/g, '<br>')}</div>`;
         
         if (actions && actions.length > 0) {
             html += `<div class="action-group">`;
@@ -345,8 +351,8 @@
                 
                 // Escape payload to pass securely to onclick
                 const payloadStr = encodeURIComponent(JSON.stringify(act.payload));
-                html += `<button class="btn-ai-action" onclick="executeAction('${act.type}', '${payloadStr}')">
-                            <i class="fa-solid ${icon}"></i> ${act.label}
+                html += `<button class="btn-ai-action" onclick="executeAction('${escapeHtml(act.type)}', '${payloadStr}')">
+                            <i class="fa-solid ${escapeHtml(icon)}"></i> ${escapeHtml(act.label)}
                          </button>`;
             });
             html += `</div>`;
@@ -408,7 +414,7 @@
             const div = document.createElement('div');
             div.className = `history-item ${conv.id === currentId ? 'active' : ''}`;
             div.innerHTML = `
-                <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80%;">${conv.title}</div>
+                <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80%;">${escapeHtml(conv.title)}</div>
                 <i class="fa-solid fa-trash" style="font-size: 12px; opacity: 0.5; cursor: pointer;" onclick="deleteConv('${conv.id}', event)"></i>
             `;
             div.onclick = (e) => {

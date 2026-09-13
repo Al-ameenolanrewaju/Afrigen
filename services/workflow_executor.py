@@ -207,10 +207,27 @@ class WorkflowExecutor:
         """
         base_context = (
             f"Campaign Goal: {campaign.business_goal}\n"
-            f"Target Audience: {campaign.target_audience}\n"
-            f"Tone: {campaign.tone}\n"
-            f"Industry: {campaign.industry}\n\n"
+            f"Target Audience: {campaign.target_audience or (campaign.brand.target_audience if campaign.brand else None)}\n"
+            f"Tone: {campaign.tone or (campaign.brand.tone if campaign.brand else None)}\n"
+            f"Industry: {campaign.industry or (campaign.brand.industry if campaign.brand else None)}\n"
         )
+
+        if campaign.brand:
+            base_context += (
+                f"Brand: {campaign.brand.name}\n"
+                f"Brand Voice: {campaign.brand.voice or ''}\n"
+                f"Brand Mission: {campaign.brand.mission or ''}\n"
+            )
+            if task.task_type in {AssetType.IMAGE.value, AssetType.VIDEO.value}:
+                base_context += (
+                    f"Brand Colors: {campaign.brand.primary_color or ''}, "
+                    f"{campaign.brand.secondary_color or ''}, "
+                    f"{campaign.brand.accent_color or ''}\n"
+                    f"Brand Typography: {campaign.brand.typography or ''}\n"
+                )
+            base_context += "\n"
+        else:
+            base_context += "\n"
         
         instruction = f"Please generate content for: {task.name}."
         

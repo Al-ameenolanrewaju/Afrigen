@@ -49,6 +49,9 @@
 
 <script>
     document.addEventListener("DOMContentLoaded", async () => {
+        const escapeHtml = (value) => String(value ?? '').replace(/[&<>'"]/g, character => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+        }[character]));
         try {
             const res = await fetch("{{ url_for('main.api_automations_list') }}");
             const data = await res.json();
@@ -73,8 +76,8 @@
                                         </div>
                                         <span class="badge bg-success">Active</span>
                                     </div>
-                                    <h5 style="color: #F0F6FC; font-weight: 600;">${wf.name}</h5>
-                                    <p style="color: #8B949E; font-size: 13px; margin-bottom: 24px;">Trigger: ${wf.trigger} <br> Nodes: ${(wf.nodes || []).length}</p>
+                                    <h5 style="color: #F0F6FC; font-weight: 600;">${escapeHtml(wf.name)}</h5>
+                                    <p style="color: #8B949E; font-size: 13px; margin-bottom: 24px;">Trigger: ${escapeHtml(wf.trigger)} <br> Nodes: ${(wf.nodes || []).length}</p>
                                     
                                     <div class="d-flex gap-2">
                                         <button class="btn btn-sm btn-outline-warning w-100" onclick="runWorkflow('${wf.id}')">
@@ -103,7 +106,7 @@
                     
                     tbody.innerHTML += `
                         <tr>
-                            <td style="color: #C9D1D9;">${log.workflow_name}</td>
+                            <td style="color: #C9D1D9;">${escapeHtml(log.workflow_name)}</td>
                             <td style="color: #8B949E;">${date}</td>
                             <td>${statusBadge}</td>
                             <td style="color: #C9D1D9;">${log.asset_count || 0}</td>

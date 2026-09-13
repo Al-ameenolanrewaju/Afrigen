@@ -3,6 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <script>
+        (function () {
+            const token = document.querySelector('meta[name="csrf-token"]').content;
+            const originalFetch = window.fetch.bind(window);
+            window.fetch = function (input, init) {
+                init = init || {};
+                const url = typeof input === 'string' ? input : input.url;
+                const sameOrigin = !url || url.startsWith('/') || url.startsWith(window.location.origin);
+                const method = (init.method || (typeof input !== 'string' && input.method) || 'GET').toUpperCase();
+                if (sameOrigin && !['GET', 'HEAD', 'OPTIONS', 'TRACE'].includes(method)) {
+                    const headers = new Headers(init.headers || (typeof input !== 'string' ? input.headers : undefined));
+                    headers.set('X-CSRFToken', token);
+                    init.headers = headers;
+                }
+                return originalFetch(input, init);
+            };
+            document.addEventListener('submit', function (event) {
+                const form = event.target;
+                if (form.method.toUpperCase() === 'GET' || form.querySelector('input[name="csrf_token"]')) return;
+                const field = document.createElement('input');
+                field.type = 'hidden';
+                field.name = 'csrf_token';
+                field.value = token;
+                form.appendChild(field);
+            }, true);
+        })();
+    </script>
     <title>{% block title %}Afrigen Admin{% endblock %} | Afrigen</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">

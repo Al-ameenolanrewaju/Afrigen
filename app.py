@@ -18,7 +18,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 
 from models import db, User, Generation, TelegramUser, SavedPrompt, Referral
 from config import DevelopmentConfig, ProductionConfig
-from extensions import limiter
+from extensions import csrf, limiter
 from routes.main import main
 from routes.auth import auth
 from routes.api import api
@@ -52,7 +52,10 @@ is_production = (
     or os.environ.get("FLASK_ENV") == "production"
 )
 app.config.from_object(ProductionConfig if is_production else DevelopmentConfig)
+if is_production and not app.config.get("SECRET_KEY"):
+    raise RuntimeError("SECRET_KEY must be configured in production.")
 limiter.init_app(app)
+csrf.init_app(app)
 
 
 @app.before_request

@@ -103,17 +103,20 @@ def get_logs(user_id=None):
     return [_run_to_dict(row) for row in runs]
 
 
-def save_workflow(workflow_data):
+def save_workflow(workflow_data, user_id=None):
     from models import db, Workflow, WorkflowTask
 
     workflow_id = workflow_data.get('id') or f"wf_{uuid.uuid4().hex[:8]}"
     workflow = Workflow.query.filter_by(legacy_id=workflow_id).first()
+    owner_id = user_id if user_id is not None else workflow_data.get('user_id')
+    if workflow and workflow.user_id != owner_id:
+        raise PermissionError("Workflow does not belong to this user.")
     if workflow is None:
         workflow = Workflow(legacy_id=workflow_id)
         db.session.add(workflow)
 
     _ensure_campaign_brand_on_workflow(workflow_data)
-    workflow.user_id = workflow_data.get('user_id')
+    workflow.user_id = owner_id
     workflow.brand_id = workflow_data.get('brand_id') or None
     workflow.campaign_id = workflow_data.get('campaign_id') or None
     workflow.name = workflow_data.get('name') or "Untitled workflow"
@@ -141,9 +144,12 @@ def save_workflow(workflow_data):
     return _workflow_to_dict(workflow)
 
 
-def delete_workflow(workflow_id):
+def delete_workflow(workflow_id, user_id=None):
     from models import db, Workflow
-    workflow = Workflow.query.filter_by(legacy_id=workflow_id).first()
+    query = Workflow.query.filter_by(legacy_id=workflow_id)
+    if user_id is not None:
+        query = query.filter_by(user_id=user_id)
+    workflow = query.first()
     if workflow:
         db.session.delete(workflow)
         db.session.commit()

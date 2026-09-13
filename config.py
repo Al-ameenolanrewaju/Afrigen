@@ -6,11 +6,14 @@ load_dotenv()
 class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY") or "fallback-secret-key"
     DEBUG = os.environ.get("DEBUG", "False") == "True"
+    MAX_CONTENT_LENGTH = 10 * 1024 * 1024
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_pre_ping": True,
         "pool_recycle": 1800,
+        "pool_size": 10,
+        "max_overflow": 20,
     }
 
     # Groq API
@@ -56,6 +59,7 @@ class DevelopmentConfig(Config):
 
 class ProductionConfig(Config):
     DEBUG = False
+    SECRET_KEY = os.environ.get("SECRET_KEY")
 
 class TestingConfig(Config):
     TESTING = True

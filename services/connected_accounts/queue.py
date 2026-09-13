@@ -1,6 +1,7 @@
 import threading
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from sqlalchemy import and_, or_
 from models import db, PublishingRetryQueue, PublishingLog
 from services.connected_accounts.provider_registry import get_adapter
 from services.connected_accounts.health import ProviderHealthService
@@ -15,24 +16,35 @@ def process_queue():
     # Find pending or processing items whose next_attempt is passed or None
     now = datetime.now(timezone.utc)
     items = PublishingRetryQueue.query.filter(
-        PublishingRetryQueue.status.in_(["pending", "failed"]),
-        (PublishingRetryQueue.next_attempt == None) | (PublishingRetryQueue.next_attempt <= now),
-        PublishingRetryQueue.retry_count < 5
+        or_(
+            and_(
+                PublishingRetryQueue.status.in_(["pending", "failed"]),
+                or_(
+                    PublishingRetryQueue.next_attempt == None,
+                    PublishingRetryQueue.next_attempt <= now,
+                ),
+            ),
+            and_(
+                PublishingRetryQueue.status == "processing",
+                PublishingRetryQueue.updated_at < now - timedelta(minutes=15),
+            ),
+        ),
+        PublishingRetryQueue.retry_count < 5,
     ).all()
     
     if not items:
         return
         
     for item in items:
+        if item.status == "processing":
+            item.status = "failed"
+
         if item.provider == "facebook":
-            from models import User
-            from routes.main import is_admin_user
-            user = User.query.get(item.user_id)
-            if user and is_admin_user(user):
-                item.status = "failed"
-                item.retry_count = 5
-                db.session.commit()
-                continue
+            item.status = "failed"
+            item.retry_count = 5
+            item.next_attempt = None
+            db.session.commit()
+            continue
 
         # Skip if provider is down
         if not ProviderHealthService.is_provider_healthy(item.provider):
@@ -74,13 +86,18 @@ def process_queue():
             else:
                 item.status = "failed"
                 item.retry_count += 1
-                item.next_attempt = datetime.now(timezone.utc) # Add delay logic here
+                item.next_attempt = datetime.now(timezone.utc) + timedelta(
+                    minutes=min(60, 2 ** item.retry_count)
+                )
                 ProviderHealthService.record_failure(item.provider, result.get("error", "Unknown error"))
                 
             db.session.commit()
         except Exception as e:
             item.status = "failed"
             item.retry_count += 1
+            item.next_attempt = datetime.now(timezone.utc) + timedelta(
+                minutes=min(60, 2 ** item.retry_count)
+            )
             ProviderHealthService.record_failure(item.provider, str(e))
             db.session.commit()
 

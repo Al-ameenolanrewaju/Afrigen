@@ -50,7 +50,12 @@ def publish_to_tiktok(
                 "Content-Range": f"bytes 0-{file_size-1}/{file_size}",
                 "Content-Type": "video/mp4"
             }
-            upload_resp = requests.put(upload_url, headers=headers, data=f)
+            upload_resp = requests.put(
+                upload_url,
+                headers=headers,
+                data=f,
+                timeout=120,
+            )
             
         if upload_resp.status_code in (200, 201):
             return {

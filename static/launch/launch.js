@@ -72,25 +72,33 @@ form.addEventListener('submit', async (e) => {
     if (!response.ok) throw new Error(`Subscribe request failed: ${response.status}`);
 
     const data = await response.json();
-    const message = data.already
+    result.replaceChildren();
+    const alert = document.createElement('div');
+    alert.className = 'alert alert-success mb-0';
+    const message = document.createElement('strong');
+    message.textContent = data.already
       ? `You're already on the list, ${nameInput.value}! We'll be in touch soon.`
       : `Thank you, ${nameInput.value}! You're on the launch list.`;
-
-    result.innerHTML = `
-      <div class="alert alert-success mb-0">
-        <strong>✨ ${message}</strong>
-        <div class="mt-2">
-          <a href="${data.link}" target="_blank" class="btn btn-afrigen btn-sm">Join Launch Event →</a>
-        </div>
-      </div>`;
+    const actions = document.createElement('div');
+    actions.className = 'mt-2';
+    const launchLink = document.createElement('a');
+    launchLink.href = data.link;
+    launchLink.target = '_blank';
+    launchLink.rel = 'noopener noreferrer';
+    launchLink.className = 'btn btn-afrigen btn-sm';
+    launchLink.textContent = 'Join Launch Event ->';
+    actions.appendChild(launchLink);
+    alert.append(message, actions);
+    result.appendChild(alert);
     form.reset();
     loadSubscriberCount();
   } catch (error) {
     console.error('Subscription failed:', error);
-    result.innerHTML = `
-      <div class="alert alert-danger mb-0">
-        ⚠️ Something went wrong. Please try again shortly.
-      </div>`;
+    result.replaceChildren();
+    const alert = document.createElement('div');
+    alert.className = 'alert alert-danger mb-0';
+    alert.textContent = 'Something went wrong. Please try again shortly.';
+    result.appendChild(alert);
   } finally {
     submitBtn.disabled = false;
     submitBtn.innerText = 'Join the Waitlist 🚀';

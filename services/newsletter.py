@@ -127,12 +127,16 @@ def collect_recipients():
     seen = set()
     recipients = []
     # Registered accounts first (so their username is used as the name on dupes).
-    for email, name in db.session.query(User.email, User.username).all():
+    for email, name in db.session.query(User.email, User.username).filter(
+        User.marketing_emails.is_(True)
+    ).all():
         key = (email or "").lower()
         if key and key not in seen and key not in opted_out:
             seen.add(key)
             recipients.append((email, name))
-    for email, name in db.session.query(Subscriber.email, Subscriber.name).all():
+    for email, name in db.session.query(Subscriber.email, Subscriber.name).filter(
+        Subscriber.newsletter.is_(True)
+    ).all():
         key = (email or "").lower()
         if key and key not in seen and key not in opted_out:
             seen.add(key)

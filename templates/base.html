@@ -38,6 +38,34 @@ content="Generate campaigns, blogs, social media content, videos, and visuals wi
 
 <!-- Canonical URL -->
 <link rel="canonical" href="{% block canonical %}https://afrigen.com.ng{{ request.path }}{% endblock %}">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <script>
+        (function () {
+            const token = document.querySelector('meta[name="csrf-token"]').content;
+            const originalFetch = window.fetch.bind(window);
+            window.fetch = function (input, init) {
+                init = init || {};
+                const url = typeof input === 'string' ? input : input.url;
+                const sameOrigin = !url || url.startsWith('/') || url.startsWith(window.location.origin);
+                const method = (init.method || (typeof input !== 'string' && input.method) || 'GET').toUpperCase();
+                if (sameOrigin && !['GET', 'HEAD', 'OPTIONS', 'TRACE'].includes(method)) {
+                    const headers = new Headers(init.headers || (typeof input !== 'string' ? input.headers : undefined));
+                    headers.set('X-CSRFToken', token);
+                    init.headers = headers;
+                }
+                return originalFetch(input, init);
+            };
+            document.addEventListener('submit', function (event) {
+                const form = event.target;
+                if (form.method.toUpperCase() === 'GET' || form.querySelector('input[name="csrf_token"]')) return;
+                const field = document.createElement('input');
+                field.type = 'hidden';
+                field.name = 'csrf_token';
+                field.value = token;
+                form.appendChild(field);
+            }, true);
+        })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">

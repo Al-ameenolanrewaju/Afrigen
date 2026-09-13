@@ -3,7 +3,7 @@ from flask import (
     jsonify, abort, session, current_app
 )
 from flask_login import login_required, current_user
-from extensions import limiter
+from extensions import csrf, limiter
 from models import db, Generation, User, TelegramUser, SavedPrompt, Referral, Payment
 from sqlalchemy.exc import IntegrityError
 from services.claude import refine_prompt, refine_image_prompt, extract_on_screen_text
@@ -29,6 +29,10 @@ import os
 import secrets
 import threading
 import time
+import hashlib
+import hmac
+import ipaddress
+import socket
 import uuid
 import re
 from datetime import date, datetime, timezone
@@ -126,6 +130,43 @@ def get_country_from_ip(ip):
 
 def get_real_ip():
     return request.remote_addr
+
+
+def _fal_webhook_token(client_request_id):
+    secret = current_app.config.get('SECRET_KEY', '').encode('utf-8')
+    return hmac.new(secret, client_request_id.encode('utf-8'), hashlib.sha256).hexdigest()
+
+
+def _is_safe_media_url(value):
+    from urllib.parse import urlparse
+
+    parsed = urlparse(value or '')
+    if parsed.scheme != 'https' or not parsed.hostname or parsed.username or parsed.password:
+        return False
+    hostname = parsed.hostname.rstrip('.').lower()
+    if hostname in {'localhost', 'metadata.google.internal'}:
+        return False
+    try:
+        address = ipaddress.ip_address(hostname)
+        return not (address.is_private or address.is_loopback or address.is_link_local or address.is_reserved)
+    except ValueError:
+        pass
+    try:
+        addresses = {
+            info[4][0]
+            for info in socket.getaddrinfo(hostname, parsed.port or 443, type=socket.SOCK_STREAM)
+        }
+        return all(
+            not (ipaddress.ip_address(address).is_private
+                 or ipaddress.ip_address(address).is_loopback
+                 or ipaddress.ip_address(address).is_link_local
+                 or ipaddress.ip_address(address).is_reserved)
+            for address in addresses
+        )
+    except (OSError, ValueError):
+        return False
+
+
 def generate_referral_code():
     return secrets.token_urlsafe(8)
 
@@ -382,7 +423,12 @@ def generate():
 
         style = effective_style
 
-        webhook_url = url_for('main.fal_webhook', _external=True)
+        webhook_url = url_for(
+            'main.fal_webhook',
+            _external=True,
+            client_request_id=request_id,
+            token=_fal_webhook_token(request_id),
+        )
         video_cost = text_to_video_cost(style, extended=extended, duration=duration)
         print(f"GENERATION request_id={request_id} status=refined original_prompt={prompt!r} refined_prompt={refined!r}")
         result = generate_video_async(
@@ -447,7 +493,6 @@ def connected_accounts():
     
     # Official providers
     supported_providers = [
-        {"id": "facebook", "name": "Facebook Pages", "icon": "bi-facebook"},
         {"id": "linkedin", "name": "LinkedIn", "icon": "bi-linkedin"},
         {"id": "telegram", "name": "Telegram", "icon": "bi-telegram"},
         {"id": "tiktok", "name": "TikTok", "icon": "bi-tiktok"},
@@ -456,22 +501,28 @@ def connected_accounts():
         {"id": "medium", "name": "Medium", "icon": "bi-medium"},
         {"id": "devto", "name": "Dev.to", "icon": "bi-code-square"},
     ]
-    if is_admin_user(current_user):
-        supported_providers = [
-            provider for provider in supported_providers
-            if provider["id"] != "facebook"
-        ]
+    discontinued_accounts = [
+        account for account in accounts
+        if account.provider == "facebook" and account.status == "connected"
+    ]
     
     coming_soon = []
     
     return render_template("main/connected_accounts.html", 
                            supported_providers=supported_providers, 
                            coming_soon=coming_soon, 
-                           connected_map=connected_map)
+                           connected_map=connected_map,
+                           discontinued_accounts=discontinued_accounts)
 
 @main.route('/connected-accounts/<provider>/connect', methods=['GET', 'POST'])
 @login_required
 def connect_provider(provider):
+    if provider == "facebook":
+        return jsonify({
+            "ok": False,
+            "error": "Facebook integration has been discontinued."
+        }), 410
+
     from services.connected_accounts.provider_registry import get_adapter
     
     try:
@@ -503,6 +554,10 @@ def connect_provider(provider):
 @main.route('/connected-accounts/<provider>/callback', methods=['GET'])
 @login_required
 def provider_callback(provider):
+    if provider == "facebook":
+        flash("Facebook integration has been discontinued.", "warning")
+        return redirect(url_for("main.connected_accounts"))
+
     from services.connected_accounts.provider_registry import get_adapter
     from models import ConnectedAccount
     from utils.encryption import encrypt_token
@@ -556,6 +611,10 @@ def provider_callback(provider):
 @main.route('/connected-accounts/<provider>/connect/token', methods=['POST'])
 @login_required
 def connect_provider_token(provider):
+    if provider == "facebook":
+        flash("Facebook integration has been discontinued.", "warning")
+        return redirect(url_for("main.connected_accounts"))
+
     from services.connected_accounts.provider_registry import get_adapter
     from models import ConnectedAccount
     from utils.encryption import encrypt_token
@@ -697,6 +756,16 @@ def generate_from_image():
         return redirect(url_for('main.dashboard'))
 
     try:
+        from PIL import Image
+        image_file.stream.seek(0, os.SEEK_END)
+        if image_file.stream.tell() > current_app.config['MAX_CONTENT_LENGTH']:
+            flash('Image is too large. Maximum size is 10 MB.', 'danger')
+            return redirect(url_for('main.dashboard'))
+        image_file.stream.seek(0)
+        with Image.open(image_file.stream) as uploaded_image:
+            uploaded_image.verify()
+        image_file.stream.seek(0)
+
         # Preserve original extension
         ext = image_file.filename.rsplit('.', 1)[1].lower()
         filename = f"temp_{os.urandom(8).hex()}.{ext}"
@@ -772,8 +841,11 @@ def generate_image():
         flash('Please enter an image idea!', 'danger')
         return redirect(url_for('main.dashboard'))
 
+    # Lock the row through generation so concurrent requests cannot pass the
+    # balance/free-image check against the same starting state.
+    locked_user = db.session.get(User, current_user.id, with_for_update=True)
     # Plan / credit gate (shared with the Telegram bot via services.credits).
-    ok, error = image_gate(current_user)
+    ok, error = image_gate(locked_user)
     if not ok:
         flash(error, 'danger')
         return redirect(url_for('main.dashboard'))
@@ -781,12 +853,12 @@ def generate_image():
     try:
         refined = _usable_refinement(
             prompt,
-            refine_image_prompt(prompt, style, user=current_user),
+            refine_image_prompt(prompt, style, user=locked_user),
         )
         provider = "fal" if current_user.plan == "pro" else "huggingface"
         result = generate_ai_image(
             refined, style, aspect_ratio, provider=provider,
-            allow_fal=(current_user.plan == 'pro'),
+            allow_fal=(locked_user.plan == 'pro'),
         )
 
         if not result["success"]:
@@ -813,7 +885,7 @@ def generate_image():
         db.session.add(generation)
 
         if image:
-            charge_image(current_user)
+            charge_image(locked_user)
 
         db.session.commit()
 
@@ -894,7 +966,12 @@ def generate_video_from_retry(generation):
         )
         result = generate_video_async(
             refined, style, '16:9',
-            webhook_url=url_for('main.fal_webhook', _external=True),
+            webhook_url=url_for(
+                'main.fal_webhook',
+                _external=True,
+                client_request_id=request_id,
+                token=_fal_webhook_token(request_id),
+            ),
             extended=extended, duration=duration, request_id=request_id,
             original_prompt=generation.original_prompt,
             allow_fal=(current_user.plan == 'pro'),
@@ -1022,7 +1099,9 @@ def admin():
             ),
         )
     ).order_by(Generation.created_at.desc()).limit(100).all()
-    telegram_users = TelegramUser.query.order_by(TelegramUser.joined_at.desc()).all()
+    telegram_users = TelegramUser.query.order_by(
+        TelegramUser.joined_at.desc()
+    ).limit(50).all()
 
     total_users = User.query.count()
     total_generations = Generation.query.count()
@@ -1156,7 +1235,9 @@ def admin():
     
     # Payments
     recent_payments = Payment.query.options(joinedload(Payment.user)).order_by(Payment.created_at.desc()).limit(10).all()
-    total_revenue = sum(p.amount for p in Payment.query.filter(Payment.amount != None).all())
+    total_revenue = db.session.query(
+        func.coalesce(func.sum(Payment.amount), 0)
+    ).scalar()
 
     local_now = datetime.now(ADMIN_TIMEZONE)
     month_start = local_now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
@@ -1195,7 +1276,13 @@ def admin():
     total_brands = Brand.query.count()
     recent_publishing_logs = PublishingLog.query.options(joinedload(PublishingLog.user)).order_by(PublishingLog.published_at.desc()).limit(20).all()
     top_campaigns = []
-    for analytics in CampaignAnalytics.query.options(joinedload(CampaignAnalytics.campaign)).all():
+    for analytics in (
+        CampaignAnalytics.query
+        .options(joinedload(CampaignAnalytics.campaign))
+        .order_by(CampaignAnalytics.updated_at.desc())
+        .limit(200)
+        .all()
+    ):
         try:
             metrics = json.loads(analytics.metrics or '{}')
         except (TypeError, ValueError):
@@ -1547,7 +1634,7 @@ def initialize_payment():
     }
     response = http_requests.post(
         "https://api.paystack.co/transaction/initialize",
-        headers=headers, json=data
+        headers=headers, json=data, timeout=10
     )
     result = response.json()
     if result['status']:
@@ -1573,7 +1660,7 @@ def initialize_payment_annual():
     }
     response = http_requests.post(
         "https://api.paystack.co/transaction/initialize",
-        headers=headers, json=data
+        headers=headers, json=data, timeout=10
     )
     result = response.json()
     if result['status']:
@@ -1594,7 +1681,7 @@ def payment_callback():
     headers = {"Authorization": f"Bearer {os.environ.get('PAYSTACK_SECRET_KEY')}"}
     response = http_requests.get(
         f"https://api.paystack.co/transaction/verify/{reference}",
-        headers=headers
+        headers=headers, timeout=10
     )
     result = response.json()
     data = result.get('data', {}) if result.get('status') else {}
@@ -2393,6 +2480,7 @@ def _trigger_distribution_async(blog_url: str):
 
 
 @main.route('/cron/newsletter/generate', methods=['POST', 'GET'])
+@csrf.exempt
 def cron_newsletter_generate():
     if not _cron_authorized():
         abort(403)
@@ -2402,6 +2490,7 @@ def cron_newsletter_generate():
 
 
 @main.route('/cron/newsletter/weekly', methods=['POST', 'GET'])
+@csrf.exempt
 def cron_newsletter_weekly():
     if not _cron_authorized():
         abort(403)
@@ -2428,6 +2517,7 @@ def submit_to_indexnow(urls):
     )
 
 @main.route('/payment/webhook', methods=['POST'])
+@csrf.exempt
 def payment_webhook():
     import hmac
     import hashlib
@@ -2521,6 +2611,7 @@ def payment_webhook():
     return '', 200
 
 @main.route('/fal/webhook', methods=['POST'])
+@csrf.exempt
 def fal_webhook():
     data = request.get_json()
     print(f"FAL WEBHOOK RECEIVED webhook_request_id={data.get('request_id') if data else None} status={data.get('status') if data else None}")
@@ -2528,6 +2619,14 @@ def fal_webhook():
     request_id = data.get('request_id')
     if not request_id:
         return '', 400
+
+    client_request_id = request.args.get('client_request_id', '')
+    supplied_token = request.args.get('token', '')
+    if not client_request_id or not hmac.compare_digest(
+        supplied_token,
+        _fal_webhook_token(client_request_id),
+    ):
+        return '', 403
 
     generation = Generation.query.filter_by(fal_request_id=request_id).with_for_update().first()
     if not generation:
@@ -2804,8 +2903,7 @@ def publishing_accounts():
     accounts = ConnectedAccount.query.filter_by(
         user_id=current_user.id, status='connected'
     ).order_by(ConnectedAccount.provider).all()
-    if is_admin_user(current_user):
-        accounts = [account for account in accounts if account.provider != 'facebook']
+    accounts = [account for account in accounts if account.provider != 'facebook']
     return jsonify({
         'accounts': [
             {'provider': account.provider, 'name': account.account_name or account.provider.title()}
@@ -2823,8 +2921,13 @@ def publish_generated_content():
     media_url = (data.get('media_url') or '').strip()
     if not provider or not media_url:
         return jsonify({'ok': False, 'error': 'A provider and media URL are required.'}), 400
-    if provider == 'facebook' and is_admin_user(current_user):
-        return jsonify({'ok': False, 'error': 'Facebook publishing is disabled for admin accounts.'}), 403
+    if not _is_safe_media_url(media_url):
+        return jsonify({'ok': False, 'error': 'The media URL is not allowed.'}), 400
+    if provider == 'facebook':
+        return jsonify({
+            'ok': False,
+            'error': 'Facebook integration has been discontinued.'
+        }), 410
 
     account = ConnectedAccount.query.filter_by(
         user_id=current_user.id, provider=provider, status='connected'
@@ -2980,9 +3083,20 @@ def profile():
                 flash('Invalid image format. Allowed: png, jpg, jpeg, webp.', 'danger')
                 return redirect(url_for('main.profile'))
 
+            from PIL import Image
+            profile_picture_file.stream.seek(0, os.SEEK_END)
+            if profile_picture_file.stream.tell() > current_app.config['MAX_CONTENT_LENGTH']:
+                flash('Profile image is too large. Maximum size is 10 MB.', 'danger')
+                return redirect(url_for('main.profile'))
+            profile_picture_file.stream.seek(0)
+            with Image.open(profile_picture_file.stream) as uploaded_image:
+                uploaded_image.verify()
+            profile_picture_file.stream.seek(0)
+
             upload_folder = os.path.join('static', 'profile_pictures')
             os.makedirs(upload_folder, exist_ok=True)
-            filename = secure_filename(profile_picture_file.filename)
+            extension = profile_picture_file.filename.rsplit('.', 1)[1].lower()
+            filename = f"profile_{current_user.id}_{uuid.uuid4().hex}.{extension}"
             filepath = os.path.join(upload_folder, filename)
             profile_picture_file.save(filepath)
             current_user.profile_picture = url_for('static', filename=f'profile_pictures/{filename}', _external=False)
@@ -3094,7 +3208,7 @@ def api_automations_run(workflow_id):
 @login_required
 def api_automations_delete(workflow_id):
     from services.automation import delete_workflow
-    delete_workflow(workflow_id)
+    delete_workflow(workflow_id, user_id=current_user.id)
     return jsonify({"ok": True})
 
 @main.route('/api/automations/save', methods=['POST'])
@@ -3145,7 +3259,10 @@ def api_automations_save():
         } if brand else None,
     }
 
-    saved = save_workflow(workflow_data)
+    try:
+        saved = save_workflow(workflow_data, user_id=current_user.id)
+    except PermissionError:
+        return jsonify({"ok": False, "error": "Workflow not found"}), 404
     return jsonify({"ok": True, "workflow": saved})
 
 @main.route('/api/campaigns/plan', methods=['POST'])

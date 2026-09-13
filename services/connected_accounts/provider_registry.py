@@ -2,6 +2,7 @@ from typing import Type, Dict
 from .base import BaseProviderAdapter
 
 _registry: Dict[str, Type[BaseProviderAdapter]] = {}
+DISABLED_PROVIDERS = {"facebook"}
 
 def register_provider(name: str, adapter_cls: Type[BaseProviderAdapter]):
     """Register a provider adapter."""
@@ -9,6 +10,9 @@ def register_provider(name: str, adapter_cls: Type[BaseProviderAdapter]):
 
 def get_adapter(name: str) -> BaseProviderAdapter:
     """Get an instantiated adapter for the given provider."""
+    if name in DISABLED_PROVIDERS:
+        raise ValueError(f"Provider {name} has been discontinued.")
+
     adapter_cls = _registry.get(name)
     if not adapter_cls:
         raise ValueError(f"Provider {name} is not registered or not supported.")
@@ -28,6 +32,8 @@ if os.path.exists(adapters_dir):
     for filename in os.listdir(adapters_dir):
         if filename.endswith(".py") and filename != "__init__.py":
             provider_name = filename[:-3]
+            if provider_name in DISABLED_PROVIDERS:
+                continue
             try:
                 module = importlib.import_module(f".adapters.{provider_name}", package="services.connected_accounts")
                 class_name = f"{provider_name.capitalize()}Adapter"

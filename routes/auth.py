@@ -1,6 +1,8 @@
 from flask import Blueprint, render_template, request, redirect, url_for,flash, session
 from flask_login import login_user, logout_user, current_user, login_required
 from werkzeug.security import generate_password_hash, check_password_hash
+from email_validator import EmailNotValidError, validate_email
+import dns.resolver
 from models import db, User, Referral, CreditLedger
 from services.email import generate_reset_token, verify_reset_token, send_reset_password_email
 from services.email import send_welcome_email
@@ -11,6 +13,48 @@ from routes.main import get_country_from_ip, get_real_ip
 
 auth = Blueprint('auth', __name__)
 logger = logging.getLogger(__name__)
+
+
+def _email_domain_accepts_mail(email):
+    """Return False only when DNS confirms the domain has no mail route."""
+    domain = email.rsplit('@', 1)[1]
+    resolver = dns.resolver.Resolver()
+    resolver.timeout = 2.0
+    resolver.lifetime = 3.0
+
+    try:
+        mx_records = resolver.resolve(domain, 'MX')
+        if any(str(record.exchange).rstrip('.') for record in mx_records):
+            return True
+    except dns.resolver.NXDOMAIN:
+        return False
+    except dns.resolver.NoAnswer:
+        pass
+    except (dns.resolver.LifetimeTimeout, dns.resolver.NoNameservers) as exc:
+        logger.warning("Email domain lookup failed for %s: %s", domain, exc)
+        return True
+    except Exception as exc:
+        logger.warning("Unexpected email domain lookup error for %s: %s", domain, exc)
+        return True
+
+    for record_type in ('A', 'AAAA'):
+        try:
+            if resolver.resolve(domain, record_type):
+                return True
+        except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer):
+            continue
+        except (dns.resolver.LifetimeTimeout, dns.resolver.NoNameservers) as exc:
+            logger.warning("Email domain fallback lookup failed for %s: %s", domain, exc)
+            return True
+        except Exception as exc:
+            logger.warning(
+                "Unexpected email domain fallback error for %s: %s",
+                domain,
+                exc,
+            )
+            return True
+
+    return False
 
 
 def verify_user_password(stored_password, provided_password):
@@ -33,6 +77,20 @@ def register():
         password = request.form.get('password')
         ref_code = session.get('ref_code') or request.args.get('ref')
         signup_source = session.get('signup_source', 'direct')
+
+        try:
+            validated_email = validate_email(
+                email or '',
+                check_deliverability=False,
+            )
+            email = validated_email.normalized
+        except EmailNotValidError:
+            flash('Please enter a valid email address.', 'danger')
+            return redirect(url_for('auth.register'))
+
+        if not _email_domain_accepts_mail(email):
+            flash("This email domain doesn't appear to accept mail.", 'danger')
+            return redirect(url_for('auth.register'))
 
         # Detect source from referrer header if no UTM
         if signup_source == 'direct' and request.referrer:

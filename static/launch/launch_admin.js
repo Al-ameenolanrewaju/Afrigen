@@ -47,13 +47,22 @@ function renderLaunchList(data){
         return;
     }
 
-    list.innerHTML = latest.map(sub => `
-        <div class="launch-item">
-            <span class="launch-name">${sub.name}</span>
-            <span class="launch-meta">${sub.date ? new Date(sub.date).toLocaleString() : ''}</span>
-            <span class="launch-badge">${sub.newsletter ? '✨ Newsletter' : 'Launch'}</span>
-        </div>
-    `).join('');
+    list.replaceChildren();
+    latest.forEach(sub => {
+        const item = document.createElement('div');
+        item.className = 'launch-item';
+        const name = document.createElement('span');
+        name.className = 'launch-name';
+        name.textContent = sub.name || '';
+        const date = document.createElement('span');
+        date.className = 'launch-meta';
+        date.textContent = sub.date ? new Date(sub.date).toLocaleString() : '';
+        const badge = document.createElement('span');
+        badge.className = 'launch-badge';
+        badge.textContent = sub.newsletter ? 'Newsletter' : 'Launch';
+        item.append(name, date, badge);
+        list.appendChild(item);
+    });
 }
 
 function renderTable(data){
@@ -61,13 +70,18 @@ function renderTable(data){
     tbody.innerHTML = '';
 
     data.forEach(sub => {
-        tbody.innerHTML += `
-        <tr>
-            <td>${sub.name}</td>
-            <td>${sub.email}</td>
-            <td>${sub.newsletter ? 'Yes' : 'No'}</td>
-            <td>${sub.date ? new Date(sub.date).toLocaleString() : ''}</td>
-        </tr>`;
+        const row = document.createElement('tr');
+        [
+            sub.name || '',
+            sub.email || '',
+            sub.newsletter ? 'Yes' : 'No',
+            sub.date ? new Date(sub.date).toLocaleString() : '',
+        ].forEach(value => {
+            const cell = document.createElement('td');
+            cell.textContent = value;
+            row.appendChild(cell);
+        });
+        tbody.appendChild(row);
     });
 }
 

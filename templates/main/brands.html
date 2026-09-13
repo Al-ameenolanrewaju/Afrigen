@@ -79,6 +79,9 @@
 
 <script>
     document.addEventListener("DOMContentLoaded", () => {
+        const escapeHtml = (value) => String(value ?? '').replace(/[&<>'"]/g, character => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+        }[character]));
         const grid = document.getElementById('brands-grid');
         const empty = document.getElementById('empty-brands');
         
@@ -103,8 +106,8 @@
                                     </div>
                                     ${isActive ? '<span class="badge bg-warning text-dark">Active</span>' : ''}
                                 </div>
-                                <h5 style="color: #F0F6FC; font-weight: 600; margin-bottom: 4px;">${b.name}</h5>
-                                <p style="color: #8B949E; font-size: 14px; margin-bottom: 0;">${b.industry || 'No industry set'}</p>
+                                <h5 style="color: #F0F6FC; font-weight: 600; margin-bottom: 4px;">${escapeHtml(b.name)}</h5>
+                                <p style="color: #8B949E; font-size: 14px; margin-bottom: 0;">${escapeHtml(b.industry || 'No industry set')}</p>
                             </div>
                             <div class="card-footer p-3 border-top" style="border-color: #30363D !important; background: transparent; display: flex; justify-content: space-between;">
                                 <button class="btn btn-sm btn-outline-secondary text-white" onclick="event.stopPropagation(); window.BrandContext.setActiveBrand('${b.id}'); window.location.reload();">Set Active</button>
