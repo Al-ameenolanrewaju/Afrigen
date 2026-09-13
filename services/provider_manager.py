@@ -428,11 +428,16 @@ class ProviderManager:
         user=None,
         **kwargs
     ) -> str:
-        # Enforce higher token thresholds for prompt refinement and assistant tasks
-        if task_type in ["Prompt Refinement", "AI Assistant"]:
-            kwargs["max_tokens"] = max(kwargs.get("max_tokens", 0), 1000)
+        # Enforce token thresholds only for unspecified calls
+        # Respect explicit max_tokens from caller (e.g., image prompt refinement uses 500)
+        if "max_tokens" not in kwargs or kwargs["max_tokens"] == 0:
+            if task_type in ["Prompt Refinement", "AI Assistant"]:
+                kwargs["max_tokens"] = 1000
+            else:
+                kwargs["max_tokens"] = 800
         else:
-            kwargs["max_tokens"] = kwargs.get("max_tokens", 800)
+            # Caller explicitly set max_tokens; respect it
+            pass
 
         primary_provider_name = self.task_mappings.get(
             task_type,

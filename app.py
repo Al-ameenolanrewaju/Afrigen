@@ -1,4 +1,5 @@
 import os
+import sys
 import asyncio
 import json
 import logging
@@ -17,7 +18,7 @@ from authlib.integrations.flask_client import OAuth
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from models import db, User, Generation, TelegramUser, SavedPrompt, Referral
-from config import DevelopmentConfig, ProductionConfig
+from config import DevelopmentConfig, ProductionConfig, TestingConfig
 from extensions import csrf, limiter
 from routes.main import main
 from routes.auth import auth
@@ -51,7 +52,12 @@ is_production = (
     os.environ.get("RENDER", "").lower() == "true"
     or os.environ.get("FLASK_ENV") == "production"
 )
-app.config.from_object(ProductionConfig if is_production else DevelopmentConfig)
+pytest_mode = (
+    "pytest" in sys.modules
+    or any("pytest" in arg.lower() for arg in sys.argv)
+    or os.environ.get("PYTEST_CURRENT_TEST") is not None
+)
+app.config.from_object(TestingConfig if pytest_mode else (ProductionConfig if is_production else DevelopmentConfig))
 if is_production and not app.config.get("SECRET_KEY"):
     raise RuntimeError("SECRET_KEY must be configured in production.")
 limiter.init_app(app)

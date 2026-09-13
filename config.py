@@ -9,12 +9,14 @@ class Config:
     MAX_CONTENT_LENGTH = 10 * 1024 * 1024
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_ENGINE_OPTIONS = {
-        "pool_pre_ping": True,
-        "pool_recycle": 1800,
-        "pool_size": 10,
-        "max_overflow": 20,
-    }
+    SQLALCHEMY_ENGINE_OPTIONS = {}
+    if not (SQLALCHEMY_DATABASE_URI or "").startswith("sqlite"):
+        SQLALCHEMY_ENGINE_OPTIONS.update({
+            "pool_pre_ping": True,
+            "pool_recycle": 1800,
+            "pool_size": 10,
+            "max_overflow": 20,
+        })
 
     # Groq API
     GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
@@ -64,4 +66,5 @@ class ProductionConfig(Config):
 class TestingConfig(Config):
     TESTING = True
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
+    SQLALCHEMY_ENGINE_OPTIONS = {}
 

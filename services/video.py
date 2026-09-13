@@ -497,31 +497,43 @@ def _generate_image_huggingface(prompt, aspect_ratio):
     }
     width, height = dimensions.get(aspect_ratio, dimensions["1:1"])
 
-    try:
-        client_args = {"model": model, "token": token, "timeout": 180}
-        if provider and provider != "auto":
-            client_args["provider"] = provider
-        image = InferenceClient(**client_args).text_to_image(
-            prompt,
-            width=width,
-            height=height,
-            num_inference_steps=4,
-        )
-        from io import BytesIO
-        image_buffer = BytesIO()
-        image.save(image_buffer, format="PNG")
-        return {
-            "success": True,
-            "image_bytes": image_buffer.getvalue(),
-            "content_type": "image/png",
-        }
-    except Exception as error:
-        print(f"HUGGING FACE IMAGE ERROR: {error}")
-        error_text = str(error).lower()
-        if "401" in error_text or "unauthorized" in error_text or "invalid token" in error_text:
-            return {"success": False, "error": "Invalid Hugging Face API token."}
-        if "403" in error_text or "permission" in error_text:
-            return {"success": False, "error": "The Hugging Face token cannot use this image model."}
-        if "model" in error_text and ("not found" in error_text or "unsupported" in error_text):
-            return {"success": False, "error": f"The Hugging Face image model is unavailable: {model}."}
-        return {"success": False, "error": "Hugging Face image generation is temporarily unavailable. Please try again."}
+    last_error = None
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            print(f"Hugging Face image attempt {attempt}/{MAX_RETRIES} - model: {model}")
+            client_args = {"model": model, "token": token, "timeout": 180}
+            if provider and provider != "auto":
+                client_args["provider"] = provider
+            image = InferenceClient(**client_args).text_to_image(
+                prompt,
+                width=width,
+                height=height,
+                num_inference_steps=4,
+            )
+            from io import BytesIO
+            image_buffer = BytesIO()
+            image.save(image_buffer, format="PNG")
+            return {
+                "success": True,
+                "image_bytes": image_buffer.getvalue(),
+                "content_type": "image/png",
+            }
+        except Exception as error:
+            last_error = str(error)
+            print(f"HUGGING FACE IMAGE ERROR on attempt {attempt}: {last_error}")
+            error_text = last_error.lower()
+            
+            # Non-retryable errors
+            if "401" in error_text or "unauthorized" in error_text or "invalid token" in error_text:
+                return {"success": False, "error": "Invalid Hugging Face API token."}
+            if "403" in error_text or "permission" in error_text:
+                return {"success": False, "error": "The Hugging Face token cannot use this image model."}
+            if "model" in error_text and ("not found" in error_text or "unsupported" in error_text):
+                return {"success": False, "error": f"The Hugging Face image model is unavailable: {model}."}
+            
+            # Retryable errors (network, DNS, timeout, rate limit)
+            if attempt < MAX_RETRIES:
+                print(f"Retrying in {RETRY_DELAY} seconds...")
+                time.sleep(RETRY_DELAY)
+    
+    return {"success": False, "error": "Hugging Face image generation is temporarily unavailable. Please try again."}
