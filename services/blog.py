@@ -15,10 +15,18 @@ Each post's `body` is trusted HTML matching the site's design system (gold
 """
 import os
 import re
+import threading
+import time
 from datetime import datetime, timezone
 from xml.etree import ElementTree
 
 import requests
+
+
+_PUBLIC_POSTS_CACHE = None
+_PUBLIC_POSTS_CACHE_AT = 0.0
+_PUBLIC_POSTS_CACHE_LOCK = threading.Lock()
+_PUBLIC_POSTS_CACHE_TTL = 60
 
 
 # Original hand-written posts. Seeded once into the DB as published; the DB is
@@ -300,13 +308,34 @@ def unique_slug(title):
 
 def get_all_posts():
     """Published posts only, newest first. Used by the public /blog index."""
-    from models import BlogPost
-    return (
-        BlogPost.query
-        .filter_by(status="published")
-        .order_by(BlogPost.published_at.desc().nullslast(), BlogPost.created_at.desc())
-        .all()
-    )
+    global _PUBLIC_POSTS_CACHE, _PUBLIC_POSTS_CACHE_AT
+    now = time.monotonic()
+    if (_PUBLIC_POSTS_CACHE is not None
+            and now - _PUBLIC_POSTS_CACHE_AT < _PUBLIC_POSTS_CACHE_TTL):
+        return _PUBLIC_POSTS_CACHE
+
+    from models import BlogPost, db
+    with _PUBLIC_POSTS_CACHE_LOCK:
+        now = time.monotonic()
+        if (_PUBLIC_POSTS_CACHE is None
+                or now - _PUBLIC_POSTS_CACHE_AT >= _PUBLIC_POSTS_CACHE_TTL):
+            _PUBLIC_POSTS_CACHE = (
+                db.session.query(BlogPost)
+                .options(db.load_only(
+                    BlogPost.slug,
+                    BlogPost.title,
+                    BlogPost.description,
+                    BlogPost.tag,
+                    BlogPost.read_time,
+                    BlogPost.created_at,
+                    BlogPost.published_at,
+                ))
+                .filter_by(status="published")
+                .order_by(BlogPost.published_at.desc().nullslast(), BlogPost.created_at.desc())
+                .all()
+            )
+            _PUBLIC_POSTS_CACHE_AT = now
+    return _PUBLIC_POSTS_CACHE
 
 
 def get_post(slug):

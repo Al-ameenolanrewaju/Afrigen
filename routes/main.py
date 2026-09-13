@@ -27,6 +27,8 @@ from services.credits import (
 from services.audio import generate_voiceover, generate_video_script
 import os
 import secrets
+import threading
+import time
 import uuid
 import re
 from datetime import date, datetime, timezone
@@ -130,6 +132,11 @@ def generate_referral_code():
 
 main = Blueprint("main", __name__)
 
+_PUBLIC_STATS_CACHE = None
+_PUBLIC_STATS_CACHE_AT = 0.0
+_PUBLIC_STATS_CACHE_LOCK = threading.Lock()
+_PUBLIC_STATS_CACHE_TTL = 60
+
 PRO_MONTHLY_KOBO = 1_000_000   # ₦10,000
 PRO_ANNUAL_KOBO = 11_000_000   # ₦110,000
 
@@ -221,9 +228,21 @@ def _usable_refinement(original_prompt, refined_prompt):
 
 @main.route("/")
 def index():
-    from models import Generation, User
-    total_users = User.query.count()
-    total_generations = Generation.query.filter_by(status='completed').count()
+    global _PUBLIC_STATS_CACHE, _PUBLIC_STATS_CACHE_AT
+    now = time.monotonic()
+    if (_PUBLIC_STATS_CACHE is None
+            or now - _PUBLIC_STATS_CACHE_AT >= _PUBLIC_STATS_CACHE_TTL):
+        with _PUBLIC_STATS_CACHE_LOCK:
+            now = time.monotonic()
+            if (_PUBLIC_STATS_CACHE is None
+                    or now - _PUBLIC_STATS_CACHE_AT >= _PUBLIC_STATS_CACHE_TTL):
+                _PUBLIC_STATS_CACHE = (
+                    User.query.count(),
+                    Generation.query.filter_by(status='completed').count(),
+                )
+                _PUBLIC_STATS_CACHE_AT = now
+
+    total_users, total_generations = _PUBLIC_STATS_CACHE
     return render_template("main/index.html",
         total_users=total_users,
         total_generations=total_generations
