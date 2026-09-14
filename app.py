@@ -391,7 +391,7 @@ async def setup_telegram():
             refined = provider_manager.generate_text(
                 task_type="Prompt Refinement",
                 messages=messages,
-                max_tokens=500
+                max_tokens=2048
             )
 
             keyboard = [

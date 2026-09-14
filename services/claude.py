@@ -199,7 +199,7 @@ def refine_prompt(
                 {"role": "user", "content": user_message}
             ],
             user=user,
-            max_tokens=500
+            max_tokens=2048
         )
     except Exception as exc:
         print("VIDEO PROMPT REFINEMENT ERROR:", str(exc))
@@ -219,7 +219,7 @@ def refine_prompt(
                     )}
                 ],
                 user=user,
-                max_tokens=500
+                max_tokens=2048
             )
         except Exception as exc:
             print("VIDEO PROMPT RETRY ERROR:", str(exc))
@@ -315,7 +315,7 @@ def refine_image_prompt(user_prompt, style="realistic", user=None):
                 {"role": "user", "content": user_message}
             ],
             user=user,
-            max_tokens=500
+            max_tokens=2048
         )
     except Exception as exc:
         print("IMAGE PROMPT REFINEMENT ERROR:", str(exc))
@@ -335,7 +335,7 @@ def refine_image_prompt(user_prompt, style="realistic", user=None):
                     )}
                 ],
                 user=user,
-                max_tokens=500
+                max_tokens=2048
             )
         except Exception as exc:
             print("IMAGE PROMPT RETRY ERROR:", str(exc))

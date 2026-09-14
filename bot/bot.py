@@ -138,7 +138,7 @@ def refine_prompt(user_prompt, style="cinematic"):
         )}
     ]
     with flask_app.app_context():
-        return provider_manager.generate_text("Prompt Refinement", messages, max_tokens=300)
+        return provider_manager.generate_text("Prompt Refinement", messages, max_tokens=2048)
 
 
 def refine_image_prompt(user_prompt, style="realistic"):
@@ -158,7 +158,7 @@ def refine_image_prompt(user_prompt, style="realistic"):
         )}
     ]
     with flask_app.app_context():
-        return provider_manager.generate_text("Prompt Refinement", messages, max_tokens=300)
+        return provider_manager.generate_text("Prompt Refinement", messages, max_tokens=2048)
 
 
 def extract_on_screen_text(text):
