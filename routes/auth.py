@@ -3,9 +3,11 @@ from flask_login import login_user, logout_user, current_user, login_required
 from werkzeug.security import generate_password_hash, check_password_hash
 from email_validator import EmailNotValidError, validate_email
 import dns.resolver
+from datetime import datetime, timezone
 from models import db, User, Referral, CreditLedger
 from services.email import generate_reset_token, verify_reset_token, send_reset_password_email
 from services.email import send_welcome_email
+from services.newsletter import upsert_subscriber_from_user
 from extensions import limiter
 import logging
 import os
@@ -133,10 +135,13 @@ def register():
             password=hashed_password,
             credits=5,
             country=country,
-            signup_source=signup_source
+            signup_source=signup_source,
+            marketing_emails=True,
+            signup_at=datetime.now(timezone.utc),
         )
         db.session.add(new_user)
         db.session.flush()
+        upsert_subscriber_from_user(new_user)
 
         # Handle referral
         if ref_code:
@@ -256,10 +261,13 @@ def google_callback():
                 password=generate_password_hash(os.urandom(24).hex()),
                 credits=5,
                 country=country,
-                signup_source=session.get('signup_source', 'google')
+                signup_source=session.get('signup_source', 'google'),
+                marketing_emails=True,
+                signup_at=datetime.now(timezone.utc),
             )
             db.session.add(user)
             db.session.flush()
+            upsert_subscriber_from_user(user)
 
             # Honor a referral code if the user arrived via a referral link
             ref_code = session.get('ref_code')

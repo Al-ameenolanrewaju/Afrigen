@@ -84,9 +84,18 @@ TELEGRAM_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 telegram_app = None
 
 db.init_app(app)
+from services.newsletter import sync_all_users_to_subscribers
 from services.webhook_tasks import start_webhook_worker
-start_webhook_worker(app)
 migrate = Migrate(app, db)
+
+with app.app_context():
+    try:
+        if db.inspect(db.engine).has_table('users'):
+            sync_all_users_to_subscribers()
+    except Exception:
+        pass
+
+start_webhook_worker(app)
 login_manager = LoginManager(app)
 login_manager.login_view = "auth.login"
 

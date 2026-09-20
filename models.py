@@ -73,6 +73,11 @@ class User(UserMixin, db.Model):
         db.DateTime,
         default=lambda: datetime.now(timezone.utc),
     )
+    signup_at = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
     country = db.Column(db.String(100), nullable=True)
     signup_source = db.Column(db.String(100), nullable=True, default='direct')
     
@@ -339,6 +344,11 @@ class Subscriber(db.Model):
     newsletter = db.Column(db.Boolean, default=True)
 
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
 
     def __repr__(self):
         return f"<Subscriber {self.email}>"

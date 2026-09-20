@@ -1293,6 +1293,17 @@ def admin():
     top_campaigns = top_campaigns[:5]
     total_subscribers = Subscriber.query.count()
     total_email_optouts = EmailOptOut.query.count()
+    marketing_user_emails = {
+        (email or '').strip().lower()
+        for email, in db.session.query(User.email).filter(User.marketing_emails.is_(True), User.email.isnot(None)).all()
+        if (email or '').strip()
+    }
+    subscriber_emails = {
+        (email or '').strip().lower()
+        for email, in db.session.query(Subscriber.email).all()
+        if (email or '').strip()
+    }
+    missing_subscribers_count = len(marketing_user_emails - subscriber_emails)
     auto_publish_by_provider = db.session.query(
         PublishingPreference.provider,
         func.count(PublishingPreference.id),
@@ -1356,6 +1367,7 @@ def admin():
         ,top_campaigns=top_campaigns
         ,total_subscribers=total_subscribers
         ,total_email_optouts=total_email_optouts
+        ,missing_subscribers_count=missing_subscribers_count
         ,auto_publish_by_provider=auto_publish_by_provider
         ,recent_user_content=UserContent.query.options(joinedload(UserContent.user)).order_by(UserContent.created_at.desc()).limit(10).all()
     )
@@ -1534,11 +1546,21 @@ def _admin_csv(filename, headers, rows):
     )
 
 
+@main.route('/admin/backfill-subscribers', methods=['POST'])
+@admin_required
+def admin_backfill_subscribers():
+    from services.newsletter import sync_all_users_to_subscribers
+
+    count = sync_all_users_to_subscribers()
+    flash(f'Backfilled {count} missing email subscribers.', 'success')
+    return redirect(url_for('main.admin'))
+
+
 @main.route('/admin/export/users.csv')
 @admin_required
 def export_users_csv():
-    return _admin_csv('users.csv', ['id', 'username', 'email', 'plan', 'credits', 'created_at'], (
-        (user.id, user.username, user.email, user.plan, user.credits, user.created_at.isoformat() if user.created_at else '')
+    return _admin_csv('users.csv', ['id', 'username', 'email', 'plan', 'credits', 'signup_at', 'created_at'], (
+        (user.id, user.username, user.email, user.plan, user.credits, (user.signup_at or user.created_at).isoformat() if (user.signup_at or user.created_at) else '', user.created_at.isoformat() if user.created_at else '')
         for user in User.query.order_by(User.id).yield_per(500)
     ))
 
@@ -2990,14 +3012,17 @@ def publish_generated_content():
 @login_required
 def settings():
     from models import ServiceCredential, ConnectedAccount, db
+    from services.newsletter import sync_user_email_preferences
     from utils.encryption import encrypt_token, decrypt_token
     import json
 
     if request.method == 'POST':
         section = request.form.get('section')
-
-        # Legacy save logic for account/notifications if you have one
-        pass
+        if section == 'notifications':
+            sync_user_email_preferences(current_user, request.form)
+            db.session.commit()
+            flash('Notification preferences saved.', 'success')
+            return redirect(url_for('main.settings'))
 
     # Load service credentials for UI
     creds = ServiceCredential.query.filter_by(user_id=current_user.id).all()

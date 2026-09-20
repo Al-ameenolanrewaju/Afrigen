@@ -144,6 +144,71 @@ def collect_recipients():
     return recipients
 
 
+def upsert_subscriber_from_user(user):
+    """Keep the newsletter subscriber table in sync with a registered user."""
+    if user is None:
+        return None
+
+    email = (getattr(user, 'email', '') or '').strip().lower()
+    if not email:
+        return None
+
+    subscriber = Subscriber.query.filter_by(email=email).first()
+    if subscriber is None:
+        subscriber = Subscriber(
+            name=(getattr(user, 'username', '') or email.split('@', 1)[0]).strip() or email,
+            email=email,
+            newsletter=bool(getattr(user, 'marketing_emails', False)),
+        )
+        db.session.add(subscriber)
+    else:
+        subscriber.name = (getattr(user, 'username', '') or subscriber.name or email.split('@', 1)[0]).strip() or email
+        subscriber.email = email
+        subscriber.newsletter = bool(getattr(user, 'marketing_emails', False))
+
+    if subscriber.created_at is None:
+        subscriber.created_at = datetime.now(timezone.utc)
+    subscriber.updated_at = datetime.now(timezone.utc)
+    db.session.commit()
+    return subscriber
+
+
+def sync_user_email_preferences(user, form_data=None):
+    """Persist user notification settings and keep the subscriber row aligned."""
+    if user is None:
+        return None
+
+    if form_data is not None:
+        user.email_notifications = bool(form_data.get('email_notifications') in ('on', 'true', '1', True))
+        user.marketing_emails = bool(form_data.get('marketing_emails') in ('on', 'true', '1', True))
+        user.product_updates = bool(form_data.get('product_updates') in ('on', 'true', '1', True))
+
+    if user.marketing_emails:
+        return upsert_subscriber_from_user(user)
+
+    subscriber = Subscriber.query.filter_by(email=(user.email or '').strip().lower()).first()
+    if subscriber:
+        subscriber.newsletter = False
+        subscriber.updated_at = datetime.now(timezone.utc)
+        db.session.commit()
+    return subscriber
+
+
+def sync_all_users_to_subscribers():
+    """Backfill any users who are opted into marketing emails but missing from the subscriber table."""
+    users = User.query.filter(User.marketing_emails.is_(True)).all()
+    created = 0
+    for user in users:
+        email = (user.email or '').strip().lower()
+        if not email:
+            continue
+        if Subscriber.query.filter_by(email=email).first():
+            continue
+        upsert_subscriber_from_user(user)
+        created += 1
+    return created
+
+
 def audience_size():
     return len(collect_recipients())
 

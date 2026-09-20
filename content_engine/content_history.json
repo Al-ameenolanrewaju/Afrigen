@@ -3,11 +3,15 @@
         "PRODUCT_UPDATE",
         "AI_NEWS",
         "EDUCATIONAL_CONTENT",
-        "COMMUNITY_DISCUSSION"
+        "COMMUNITY_DISCUSSION",
+        "USER_SHOWCASE",
+        "FOUNDER_THOUGHT"
     ],
     "topics": [
         "Afrigen is building AI tools that help African creators turn ideas into professional visual content.",
-        "African storytelling is entering a new era where creators can produce more with fewer resources."
+        "African storytelling is entering a new era where creators can produce more with fewer resources.",
+        "Small businesses need better ways to create marketing content. AI is changing how brands tell their stories.",
+        "Every great video starts with an idea. Afrigen helps creators transform those ideas into visuals."
     ],
-    "last_run": "2026-09-03T09:00:03.488160+00:00"
+    "last_run": "2026-09-13T09:00:01.309265+00:00"
 }

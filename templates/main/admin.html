@@ -173,6 +173,10 @@
                     <button type="submit" class="btn-admin">Search</button>
                 </form>
                 <a href="{{ url_for('main.admin_credits') }}" class="btn-admin" style="text-decoration: none;">Credit ledger</a>
+                <form method="post" action="{{ url_for('main.admin_backfill_subscribers') }}" style="display:inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn-admin" style="text-decoration: none;">Backfill subscribers</button>
+                </form>
             </div>
             <div class="table-responsive">
                 <table class="admin-table">
@@ -199,7 +203,7 @@
                                 </span>
                             </td>
                             <td>{{ user.credits }}</td>
-                            <td>{{ admin_resend_datetime(user.created_at).strftime('%b %d, %Y') }}</td>
+                            <td>{{ admin_resend_datetime(user.signup_at or user.created_at).strftime('%b %d, %Y') }}</td>
                             <td>
                                 <div class="d-flex gap-2">
                                     {% if user.email != 'oadedamola07@gmail.com' %}
@@ -658,7 +662,7 @@
     </div>
 
     <div class="col-md-6"><div class="admin-chart-container h-100 mb-0"><h5 class="admin-chart-title mb-3">Brands Registered</h5><h2 class="admin-stat-value">{{ total_brands }}</h2></div></div>
-    <div class="col-md-6"><div class="admin-chart-container h-100 mb-0"><h5 class="admin-chart-title mb-3">Waitlist & Opt-outs</h5><div class="d-flex justify-content-between"><span>Subscribers</span><strong>{{ total_subscribers }}</strong></div><div class="d-flex justify-content-between"><span>Email opt-outs</span><strong>{{ total_email_optouts }}</strong></div></div></div>
+    <div class="col-md-6"><div class="admin-chart-container h-100 mb-0"><h5 class="admin-chart-title mb-3">Waitlist & Opt-outs</h5><div class="d-flex justify-content-between"><span>Subscribers</span><strong>{{ total_subscribers }}</strong></div><div class="d-flex justify-content-between"><span>Missing email subscribers</span><strong>{{ missing_subscribers_count }}</strong></div><div class="d-flex justify-content-between"><span>Email opt-outs</span><strong>{{ total_email_optouts }}</strong></div></div></div>
 
     <div class="col-md-6"><div class="admin-chart-container h-100 mb-0"><h5 class="admin-chart-title mb-3">Top Campaign Engagement</h5>{% for campaign, engagement, metrics in top_campaigns %}<div class="d-flex justify-content-between"><span>{{ campaign.title or campaign.goal }}</span><strong>{{ engagement }}</strong></div>{% else %}<span class="admin-stat-sub">No campaign analytics yet.</span>{% endfor %}</div></div>
     <div class="col-md-6"><div class="admin-chart-container h-100 mb-0"><h5 class="admin-chart-title mb-3">Auto-publish Adoption</h5>{% for provider, count in auto_publish_by_provider %}<div class="d-flex justify-content-between"><span>{{ provider }}</span><strong>{{ count }}</strong></div>{% else %}<span class="admin-stat-sub">No auto-publish preferences yet.</span>{% endfor %}</div></div>
