@@ -84,6 +84,36 @@ TELEGRAM_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 telegram_app = None
 
 db.init_app(app)
+
+
+def ensure_user_signup_at_column():
+    """Repair production databases that are missing the historical signup_at column.
+
+    This column was added to the ORM after the initial users table schema was
+    created in some environments. A missing column triggers SQLAlchemy's
+    User.query.count() path to explode on the home page even though the app is
+    otherwise healthy.
+    """
+    try:
+        with app.app_context():
+            inspector = db.inspect(db.engine)
+            if not inspector.has_table('users'):
+                return
+            columns = {col['name'] for col in inspector.get_columns('users')}
+            if 'signup_at' in columns:
+                return
+            if db.engine.dialect.name != 'postgresql':
+                return
+            with db.engine.begin() as conn:
+                conn.execute(db.text("ALTER TABLE users ADD COLUMN signup_at TIMESTAMPTZ"))
+                conn.execute(db.text("UPDATE users SET signup_at = created_at WHERE signup_at IS NULL"))
+                conn.execute(db.text("ALTER TABLE users ALTER COLUMN signup_at SET DEFAULT NOW()"))
+    except Exception as exc:
+        logging.getLogger('app').warning("Could not repair missing users.signup_at column: %s", exc)
+
+
+ensure_user_signup_at_column()
+
 from services.newsletter import sync_all_users_to_subscribers
 from services.webhook_tasks import start_webhook_worker
 migrate = Migrate(app, db)
