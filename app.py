@@ -86,33 +86,45 @@ telegram_app = None
 db.init_app(app)
 
 
-def ensure_user_signup_at_column():
-    """Repair production databases that are missing the historical signup_at column.
+def ensure_legacy_schema_columns():
+    """Repair missing columns added after older DB schemas were created.
 
-    This column was added to the ORM after the initial users table schema was
-    created in some environments. A missing column triggers SQLAlchemy's
-    User.query.count() path to explode on the home page even though the app is
-    otherwise healthy.
+    Some production databases were created from older migrations before newer
+    timestamp columns were backfilled. This startup check keeps the ORM and the
+    live schema in sync without crashing admin and homepage queries.
     """
     try:
         with app.app_context():
             inspector = db.inspect(db.engine)
-            if not inspector.has_table('users'):
-                return
-            columns = {col['name'] for col in inspector.get_columns('users')}
-            if 'signup_at' in columns:
-                return
             if db.engine.dialect.name != 'postgresql':
                 return
-            with db.engine.begin() as conn:
-                conn.execute(db.text("ALTER TABLE users ADD COLUMN signup_at TIMESTAMPTZ"))
-                conn.execute(db.text("UPDATE users SET signup_at = created_at WHERE signup_at IS NULL"))
-                conn.execute(db.text("ALTER TABLE users ALTER COLUMN signup_at SET DEFAULT NOW()"))
+
+            repairs = {
+                'users': [
+                    ('signup_at', 'TIMESTAMPTZ', "UPDATE users SET signup_at = created_at WHERE signup_at IS NULL")
+                ],
+                'subscribers': [
+                    ('updated_at', 'TIMESTAMPTZ', "UPDATE subscribers SET updated_at = created_at WHERE updated_at IS NULL")
+                ],
+            }
+
+            for table_name, column_specs in repairs.items():
+                if not inspector.has_table(table_name):
+                    continue
+                columns = {col['name'] for col in inspector.get_columns(table_name)}
+                for column_name, sql_type, backfill_sql in column_specs:
+                    if column_name in columns:
+                        continue
+                    with db.engine.begin() as conn:
+                        conn.execute(db.text(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {sql_type}"))
+                        if backfill_sql:
+                            conn.execute(db.text(backfill_sql))
+                        conn.execute(db.text(f"ALTER TABLE {table_name} ALTER COLUMN {column_name} SET DEFAULT NOW()"))
     except Exception as exc:
-        logging.getLogger('app').warning("Could not repair missing users.signup_at column: %s", exc)
+        logging.getLogger('app').warning("Could not repair legacy DB schema columns: %s", exc)
 
 
-ensure_user_signup_at_column()
+ensure_legacy_schema_columns()
 
 from services.newsletter import sync_all_users_to_subscribers
 from services.webhook_tasks import start_webhook_worker
