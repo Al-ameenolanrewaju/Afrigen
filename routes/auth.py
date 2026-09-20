@@ -1,3 +1,5 @@
+import re
+
 from flask import Blueprint, render_template, request, redirect, url_for,flash, session
 from flask_login import login_user, logout_user, current_user, login_required
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -70,15 +72,32 @@ def verify_user_password(stored_password, provided_password):
         return False
 
 
+def sanitize_name(value, *, max_length=80):
+    text = str(value or "").replace("\x00", "").strip()
+    text = re.sub(r"(?is)<script.*?>.*?</script>", "", text)
+    text = re.sub(r"(?is)<.*?>", "", text)
+    return text[:max_length]
+
+
 @auth.route('/register', methods=['GET', 'POST'])
 @limiter.limit("10 per hour")
 def register():
     if request.method == 'POST':
-        username = request.form.get('username')
-        email = request.form.get('email')
+        username = sanitize_name(request.form.get('username'))
+        email = (request.form.get('email') or '').strip().lower()
         password = request.form.get('password')
         ref_code = session.get('ref_code') or request.args.get('ref')
         signup_source = session.get('signup_source', 'direct')
+
+        if not username or len(username) < 2:
+            flash('Please enter a valid username.', 'danger')
+            return redirect(url_for('auth.register'))
+        if len(username) > 80:
+            flash('Username is too long.', 'danger')
+            return redirect(url_for('auth.register'))
+        if len(password or '') < 6:
+            flash('Password must be at least 6 characters long.', 'danger')
+            return redirect(url_for('auth.register'))
 
         try:
             validated_email = validate_email(

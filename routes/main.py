@@ -2207,10 +2207,11 @@ def launch_subscribe():
         abort(404)
     from models import Subscriber
     from services.email import send_launch_confirmation
+    import re
 
     data = request.get_json(silent=True) or request.form
-    name = (data.get('name') or '').strip()
-    email = (data.get('email') or '').strip().lower()
+    name = re.sub(r"(?is)<.*?>", "", str(data.get('name') or '')).replace("\x00", "").strip()
+    email = re.sub(r"(?is)<.*?>", "", str(data.get('email') or '')).replace("\x00", "").strip().lower()
     newsletter = bool(data.get('newsletter'))
 
     if not name or not email:

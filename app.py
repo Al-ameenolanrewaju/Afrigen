@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 import asyncio
 import json
@@ -62,6 +63,35 @@ if is_production and not app.config.get("SECRET_KEY"):
     raise RuntimeError("SECRET_KEY must be configured in production.")
 limiter.init_app(app)
 csrf.init_app(app)
+
+
+def sanitize_text(value, *, max_length=500):
+    if value is None:
+        return ""
+    text = str(value).replace("\x00", "").strip()
+    text = re.sub(r"(?is)<script.*?>.*?</script>", "", text)
+    text = re.sub(r"(?is)<.*?>", "", text)
+    return text[:max_length]
+
+
+@app.after_request
+def add_security_headers(response):
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://fonts.googleapis.com; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; "
+        "img-src 'self' data: https: blob:; "
+        "font-src 'self' https://fonts.gstatic.com data:; "
+        "connect-src 'self' https:; "
+        "frame-ancestors 'none'; "
+        "base-uri 'self'; "
+        "object-src 'none'"
+    )
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "geolocation=(), camera=(), microphone=()"
+    return response
 
 
 @app.before_request
