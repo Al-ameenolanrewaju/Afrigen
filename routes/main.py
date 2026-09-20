@@ -1291,7 +1291,8 @@ def admin():
         top_campaigns.append((analytics.campaign, engagement, metrics))
     top_campaigns.sort(key=lambda item: item[1], reverse=True)
     top_campaigns = top_campaigns[:5]
-    total_subscribers = Subscriber.query.count()
+    from services.newsletter import get_newsletter_audience_count
+    total_subscribers = get_newsletter_audience_count()
     total_email_optouts = EmailOptOut.query.count()
     marketing_user_emails = {
         (email or '').strip().lower()

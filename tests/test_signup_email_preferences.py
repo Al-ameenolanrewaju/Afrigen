@@ -1,6 +1,11 @@
 from app import app
 from models import db, User, Subscriber
-from services.newsletter import upsert_subscriber_from_user, sync_user_email_preferences, sync_all_users_to_subscribers
+from services.newsletter import (
+    upsert_subscriber_from_user,
+    sync_user_email_preferences,
+    sync_all_users_to_subscribers,
+    get_newsletter_audience_count,
+)
 
 
 def setup_function():
@@ -70,3 +75,22 @@ def test_sync_all_users_to_subscribers_backfills_missing_users():
         subscriber = Subscriber.query.filter_by(email='charlie@example.com').first()
         assert subscriber is not None
         assert subscriber.newsletter is True
+
+
+def test_get_newsletter_audience_count_counts_registered_users_and_waitlist_without_duplicates():
+    with app.app_context():
+        user = User(
+            username='dana',
+            email='dana@example.com',
+            password='hash',
+            credits=5,
+            marketing_emails=True,
+        )
+        db.session.add(user)
+        db.session.add(Subscriber(name='Waitlist Person', email='waitlist@example.com', newsletter=True))
+        db.session.add(Subscriber(name='Duplicate User', email='dana@example.com', newsletter=True))
+        db.session.commit()
+
+        count = get_newsletter_audience_count()
+
+        assert count == 2

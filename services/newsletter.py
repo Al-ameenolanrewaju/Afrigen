@@ -213,6 +213,11 @@ def audience_size():
     return len(collect_recipients())
 
 
+def get_newsletter_audience_count():
+    """Return the real deduplicated newsletter audience, including opted-in users and waitlist subscribers."""
+    return len(collect_recipients())
+
+
 # ---------- Draft lifecycle ----------
 
 # Statuses that count as "the current, not-yet-sent draft".
