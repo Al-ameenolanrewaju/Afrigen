@@ -513,10 +513,21 @@ def _generate_image_huggingface(prompt, aspect_ratio):
             from io import BytesIO
             image_buffer = BytesIO()
             image.save(image_buffer, format="PNG")
+            image_bytes = image_buffer.getvalue()
+            temp_path = None
+            try:
+                with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as temp_file:
+                    temp_path = temp_file.name
+                    temp_file.write(image_bytes)
+                image_url = fal_client.upload_file(temp_path)
+            finally:
+                if temp_path and os.path.exists(temp_path):
+                    os.remove(temp_path)
+            if not image_url:
+                raise RuntimeError("Fal did not return a hosted image URL.")
             return {
                 "success": True,
-                "image_bytes": image_buffer.getvalue(),
-                "content_type": "image/png",
+                "image_url": image_url,
             }
         except Exception as error:
             last_error = str(error)

@@ -200,7 +200,6 @@ def register():
 
 
 @auth.route('/login', methods=['GET', 'POST'])
-@limiter.limit("10 per hour")
 def login():
     if request.method == 'POST':
         email = request.form.get('email')

@@ -35,6 +35,7 @@ import ipaddress
 import socket
 import uuid
 import re
+import tempfile
 from datetime import date, datetime, timezone
 from functools import wraps
 from werkzeug.utils import secure_filename
@@ -709,23 +710,20 @@ def disconnect_provider(provider):
     return redirect(url_for('main.connected_accounts'))
 
 @main.route('/refine-prompt', methods=['POST'])
-@login_required
-@limiter.limit("20 per hour")
 def refine_prompt_free():
     data = request.get_json() or {}
     prompt = data.get('prompt')
     if not prompt:
         return jsonify({"error": "No prompt provided"}), 400
     try:
-        refined = refine_prompt(prompt, 'cinematic', user=current_user)
+        user = current_user if current_user.is_authenticated else None
+        refined = refine_prompt(prompt, 'cinematic', user=user)
         return jsonify({"refined": refined})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
 @main.route('/refine-image-prompt', methods=['POST'])
-@login_required
-@limiter.limit("20 per hour")
 def refine_image_prompt_free():
     data = request.get_json() or {}
     prompt = data.get('prompt')
@@ -733,7 +731,8 @@ def refine_image_prompt_free():
     if not prompt:
         return jsonify({"error": "No prompt provided"}), 400
     try:
-        refined = refine_image_prompt(prompt, style, user=current_user)
+        user = current_user if current_user.is_authenticated else None
+        refined = refine_image_prompt(prompt, style, user=user)
         return jsonify({"refined": refined})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -783,14 +782,16 @@ def generate_from_image():
             uploaded_image.verify()
         image_file.stream.seek(0)
 
-        # Preserve original extension while sanitizing the stored filename.
         ext = image_file.filename.rsplit('.', 1)[1].lower() if '.' in image_file.filename else 'png'
-        filename = _safe_upload_filename(f"temp_{os.urandom(8).hex()}.{ext}", prefix="temp")
-        filepath = os.path.join("static", "uploads", filename)
-        os.makedirs(os.path.join("static", "uploads"), exist_ok=True)
+        filepath = None
+        with tempfile.NamedTemporaryFile(suffix=f'.{ext}', delete=False) as temp_file:
+            filepath = temp_file.name
         image_file.save(filepath)
+        import fal_client
+        image_url = fal_client.upload_file(filepath)
+        if not image_url:
+            raise RuntimeError('Fal did not return a hosted reference image URL.')
 
-        image_url = url_for('static', filename=f'uploads/{filename}', _external=True)
         refined = _usable_refinement(
             prompt,
             refine_image_prompt(prompt, "cinematic", user=current_user),
@@ -882,14 +883,6 @@ def generate_image():
             raise Exception(result["error"])
 
         image = result.get("image_url")
-        if result.get("image_bytes"):
-            extension = "jpg" if "jpeg" in result.get("content_type", "") else "png"
-            filename = _safe_upload_filename(f"free_image_{uuid.uuid4().hex}.{extension}", prefix="free_image")
-            upload_dir = os.path.join("static", "uploads")
-            os.makedirs(upload_dir, exist_ok=True)
-            with open(os.path.join(upload_dir, filename), "wb") as image_file:
-                image_file.write(result["image_bytes"])
-            image = url_for("static", filename=f"uploads/{filename}", _external=True)
 
         generation = Generation(
             user_id=current_user.id,
@@ -3137,13 +3130,26 @@ def profile():
                 uploaded_image.verify()
             profile_picture_file.stream.seek(0)
 
-            upload_folder = os.path.join('static', 'profile_pictures')
-            os.makedirs(upload_folder, exist_ok=True)
             extension = profile_picture_file.filename.rsplit('.', 1)[1].lower() if '.' in profile_picture_file.filename else 'png'
-            filename = _safe_upload_filename(f"profile_{current_user.id}_{uuid.uuid4().hex}.{extension}", prefix=f"profile_{current_user.id}")
-            filepath = os.path.join(upload_folder, filename)
-            profile_picture_file.save(filepath)
-            current_user.profile_picture = url_for('static', filename=f'profile_pictures/{filename}', _external=False)
+            temp_path = None
+            try:
+                with tempfile.NamedTemporaryFile(
+                    suffix=f'.{extension}', delete=False
+                ) as temp_file:
+                    temp_path = temp_file.name
+                profile_picture_file.save(temp_path)
+                import fal_client
+                profile_picture_url = fal_client.upload_file(temp_path)
+                if not profile_picture_url:
+                    raise RuntimeError('Fal did not return a profile image URL.')
+                current_user.profile_picture = profile_picture_url
+            except Exception:
+                current_app.logger.exception('Profile picture upload failed')
+                flash('Profile picture upload failed. Please try again.', 'danger')
+                return redirect(url_for('main.profile'))
+            finally:
+                if temp_path and os.path.exists(temp_path):
+                    os.remove(temp_path)
 
         try:
             db.session.commit()
