@@ -245,8 +245,25 @@ def admin_required(func):
 # ---------- File validation for image uploads ----------
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp'}
 
+
 def allowed_file(filename):
+    if not filename:
+        return False
+    if not isinstance(filename, str):
+        return False
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def _safe_upload_filename(filename, prefix="upload"):
+    if not filename:
+        filename = f"{prefix}.png"
+    safe_name = secure_filename(filename)
+    if not safe_name or safe_name == ".":
+        safe_name = f"{prefix}.png"
+    name, ext = os.path.splitext(safe_name)
+    if not ext:
+        ext = ".png"
+    return f"{prefix}_{uuid.uuid4().hex}{ext.lower()}"
 
 
 def _usable_refinement(original_prompt, refined_prompt):
@@ -766,9 +783,9 @@ def generate_from_image():
             uploaded_image.verify()
         image_file.stream.seek(0)
 
-        # Preserve original extension
-        ext = image_file.filename.rsplit('.', 1)[1].lower()
-        filename = f"temp_{os.urandom(8).hex()}.{ext}"
+        # Preserve original extension while sanitizing the stored filename.
+        ext = image_file.filename.rsplit('.', 1)[1].lower() if '.' in image_file.filename else 'png'
+        filename = _safe_upload_filename(f"temp_{os.urandom(8).hex()}.{ext}", prefix="temp")
         filepath = os.path.join("static", "uploads", filename)
         os.makedirs(os.path.join("static", "uploads"), exist_ok=True)
         image_file.save(filepath)
@@ -867,7 +884,7 @@ def generate_image():
         image = result.get("image_url")
         if result.get("image_bytes"):
             extension = "jpg" if "jpeg" in result.get("content_type", "") else "png"
-            filename = f"free_image_{uuid.uuid4().hex}.{extension}"
+            filename = _safe_upload_filename(f"free_image_{uuid.uuid4().hex}.{extension}", prefix="free_image")
             upload_dir = os.path.join("static", "uploads")
             os.makedirs(upload_dir, exist_ok=True)
             with open(os.path.join(upload_dir, filename), "wb") as image_file:
@@ -3122,8 +3139,8 @@ def profile():
 
             upload_folder = os.path.join('static', 'profile_pictures')
             os.makedirs(upload_folder, exist_ok=True)
-            extension = profile_picture_file.filename.rsplit('.', 1)[1].lower()
-            filename = f"profile_{current_user.id}_{uuid.uuid4().hex}.{extension}"
+            extension = profile_picture_file.filename.rsplit('.', 1)[1].lower() if '.' in profile_picture_file.filename else 'png'
+            filename = _safe_upload_filename(f"profile_{current_user.id}_{uuid.uuid4().hex}.{extension}", prefix=f"profile_{current_user.id}")
             filepath = os.path.join(upload_folder, filename)
             profile_picture_file.save(filepath)
             current_user.profile_picture = url_for('static', filename=f'profile_pictures/{filename}', _external=False)
