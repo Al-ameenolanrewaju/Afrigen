@@ -120,23 +120,19 @@ def _split_subject(text, fallback_subject):
 # ---------- Recipients ----------
 
 def collect_recipients():
-    """Every email we can reach — registered users + waitlist — de-duped
+    """Every email we can reach — every registered user + waitlist — de-duped
     (case-insensitive), excluding anyone who unsubscribed."""
     opted_out = {e.lower() for (e,) in db.session.query(EmailOptOut.email).all()}
 
     seen = set()
     recipients = []
     # Registered accounts first (so their username is used as the name on dupes).
-    for email, name in db.session.query(User.email, User.username).filter(
-        User.marketing_emails.is_(True)
-    ).all():
+    for email, name in db.session.query(User.email, User.username).all():
         key = (email or "").lower()
         if key and key not in seen and key not in opted_out:
             seen.add(key)
             recipients.append((email, name))
-    for email, name in db.session.query(Subscriber.email, Subscriber.name).filter(
-        Subscriber.newsletter.is_(True)
-    ).all():
+    for email, name in db.session.query(Subscriber.email, Subscriber.name).all():
         key = (email or "").lower()
         if key and key not in seen and key not in opted_out:
             seen.add(key)
@@ -195,8 +191,8 @@ def sync_user_email_preferences(user, form_data=None):
 
 
 def sync_all_users_to_subscribers():
-    """Backfill any users who are opted into marketing emails but missing from the subscriber table."""
-    users = User.query.filter(User.marketing_emails.is_(True)).all()
+    """Backfill all registered users into the subscriber table so the newsletter audience is complete."""
+    users = User.query.all()
     created = 0
     for user in users:
         email = (user.email or '').strip().lower()

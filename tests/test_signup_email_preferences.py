@@ -64,7 +64,7 @@ def test_sync_all_users_to_subscribers_backfills_missing_users():
             email='charlie@example.com',
             password='hash',
             credits=5,
-            marketing_emails=True,
+            marketing_emails=False,
         )
         db.session.add(user)
         db.session.commit()
@@ -74,7 +74,7 @@ def test_sync_all_users_to_subscribers_backfills_missing_users():
         assert created == 1
         subscriber = Subscriber.query.filter_by(email='charlie@example.com').first()
         assert subscriber is not None
-        assert subscriber.newsletter is True
+        assert subscriber.newsletter is False
 
 
 def test_get_newsletter_audience_count_counts_registered_users_and_waitlist_without_duplicates():
@@ -84,7 +84,7 @@ def test_get_newsletter_audience_count_counts_registered_users_and_waitlist_with
             email='dana@example.com',
             password='hash',
             credits=5,
-            marketing_emails=True,
+            marketing_emails=False,
         )
         db.session.add(user)
         db.session.add(Subscriber(name='Waitlist Person', email='waitlist@example.com', newsletter=True))
