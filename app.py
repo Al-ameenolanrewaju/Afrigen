@@ -112,6 +112,9 @@ scheduler.start()
 
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 telegram_app = None
+telegram_loop = None
+import threading
+telegram_thread_lock = threading.Lock()
 
 db.init_app(app)
 
@@ -359,24 +362,34 @@ def webhook():
     if request.method == 'POST':
         update_data = request.get_json()
 
+        global telegram_loop, telegram_app
+        with telegram_thread_lock:
+            if telegram_loop is None:
+                def _telegram_thread_runner():
+                    global telegram_loop
+                    telegram_loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(telegram_loop)
+                    async def _init():
+                        await setup_telegram()
+                        await telegram_app.start()
+                    telegram_loop.run_until_complete(_init())
+                    telegram_loop.run_forever()
+
+                t = threading.Thread(target=_telegram_thread_runner, daemon=True)
+                t.start()
+                import time
+                while telegram_app is None or telegram_loop is None:
+                    time.sleep(0.01)
+
         async def process():
-            global telegram_app
-            if telegram_app is None:
-                await setup_telegram()
             from telegram import Update
-            update = Update.de_json(update_data, telegram_app.bot)
-            await telegram_app.process_update(update)
+            try:
+                update = Update.de_json(update_data, telegram_app.bot)
+                await telegram_app.process_update(update)
+            except Exception as e:
+                print(f"Error processing webhook update: {e}")
 
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-
-        if loop.is_running():
-            asyncio.ensure_future(process(), loop=loop)
-        else:
-            loop.run_until_complete(process())
+        asyncio.run_coroutine_threadsafe(process(), telegram_loop)
 
         return 'OK', 200
 
