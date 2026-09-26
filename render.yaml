@@ -1,18 +1,18 @@
 services:
   - type: web
-    name: afrigen
+    name: afrigen-web
     env: python
     buildCommand: pip install -r requirements.txt
-    # 1 worker keeps the in-process APScheduler jobs (newsletter/blog) single-
-    # instance; 8 threads give real concurrency since generation is I/O-bound
-    # (waiting on fal/Groq). 180s timeout covers slow synchronous image calls.
     startCommand: gunicorn app:app --workers 1 --threads 8 --timeout 180
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
 
-  # NOTE: the daily blog-draft generator is NOT a separate (paid) cron service.
-  # It runs in-process on the web service above via an APScheduler task in app.py
-  # (generate_daily_blog_draft, 7am daily) — exactly like the weekly newsletter.
-  # That web service already has GROQ_API_KEY and DATABASE_URL in its env, so
-  # there is nothing extra to configure and no extra cost.
+  - type: worker
+    name: afrigen-bot
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python bot/bot.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0

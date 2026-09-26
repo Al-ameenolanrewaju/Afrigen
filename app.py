@@ -116,6 +116,36 @@ telegram_loop = None
 import threading
 telegram_thread_lock = threading.Lock()
 
+
+def start_telegram_worker_if_needed():
+    """Start Telegram bot polling in-process for production deployments.
+
+    The app should not depend on a first webhook hit to initialize the bot;
+    when the web dyno boots, it should start its bot worker automatically as
+    long as a TELEGRAM_BOT_TOKEN is configured.
+    """
+    global telegram_app, telegram_loop
+    if not TELEGRAM_TOKEN:
+        return
+    if telegram_app is not None:
+        return
+
+    def _telegram_thread_runner():
+        global telegram_loop
+        telegram_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(telegram_loop)
+
+        async def _init():
+            await setup_telegram()
+            await telegram_app.start()
+
+        telegram_loop.run_until_complete(_init())
+        telegram_loop.run_forever()
+
+    t = threading.Thread(target=_telegram_thread_runner, daemon=True, name='telegram-bot-worker')
+    t.start()
+
+
 db.init_app(app)
 
 
@@ -365,18 +395,7 @@ def webhook():
         global telegram_loop, telegram_app
         with telegram_thread_lock:
             if telegram_loop is None:
-                def _telegram_thread_runner():
-                    global telegram_loop
-                    telegram_loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(telegram_loop)
-                    async def _init():
-                        await setup_telegram()
-                        await telegram_app.start()
-                    telegram_loop.run_until_complete(_init())
-                    telegram_loop.run_forever()
-
-                t = threading.Thread(target=_telegram_thread_runner, daemon=True)
-                t.start()
+                start_telegram_worker_if_needed()
                 import time
                 while telegram_app is None or telegram_loop is None:
                     time.sleep(0.01)
@@ -392,6 +411,9 @@ def webhook():
         asyncio.run_coroutine_threadsafe(process(), telegram_loop)
 
         return 'OK', 200
+
+
+start_telegram_worker_if_needed()
 
 
 async def setup_telegram():

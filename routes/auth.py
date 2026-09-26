@@ -217,7 +217,7 @@ def login():
                 user.password = generate_password_hash(password)
                 db.session.commit()
 
-            login_user(user)
+            login_user(user, remember=True)
             logger.info(f"User logged in: {email}")
             flash('Welcome back!', 'success')
             return redirect(url_for('main.dashboard'))
@@ -315,7 +315,7 @@ def google_callback():
             except Exception as e:
                 print(f"Email error: {e}")
 
-        login_user(user)
+        login_user(user, remember=True)
         flash('Logged in with Google! 🎉', 'success')
         return redirect(url_for('main.dashboard'))
 

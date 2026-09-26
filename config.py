@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -7,6 +8,9 @@ class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY") or "fallback-secret-key"
     DEBUG = os.environ.get("DEBUG", "False") == "True"
     MAX_CONTENT_LENGTH = 10 * 1024 * 1024
+    SESSION_PERMANENT = True
+    PERMANENT_SESSION_LIFETIME = timedelta(days=30)
+    REMEMBER_COOKIE_DURATION = timedelta(days=30)
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
     SESSION_COOKIE_SECURE = False

@@ -94,3 +94,9 @@ def test_get_newsletter_audience_count_counts_registered_users_and_waitlist_with
         count = get_newsletter_audience_count()
 
         assert count == 2
+
+
+def test_app_keeps_user_sessions_persistent():
+    assert app.config.get('SESSION_PERMANENT') is True
+    assert app.config.get('PERMANENT_SESSION_LIFETIME').days >= 7
+    assert app.config.get('REMEMBER_COOKIE_DURATION').days >= 7
