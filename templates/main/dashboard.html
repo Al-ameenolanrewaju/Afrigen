@@ -456,12 +456,16 @@
             <div class="col-md-6">
                 <div class="creation-card h-100 d-flex flex-column">
                     <div class="creation-preview">
-                        {% if gen.generation_type == 'image' %}
-                        <span class="badge-type"><i class="fa-solid fa-image"></i> Image</span>
-                        {% elif gen.generation_type == 'text' %}
+                        {% if gen.fal_request_id and gen.generation_type == 'image' %}
+                        <span class="badge-type"><i class="fa-solid fa-wand-magic-sparkles"></i> Image to Video</span>
+                        {% elif gen.video_url or gen.generation_type != 'image' %}
                         <span class="badge-type"><i class="fa-solid fa-clapperboard"></i> Video</span>
                         {% else %}
-                        <span class="badge-type"><i class="fa-solid fa-clapperboard"></i> Video</span>
+                        <span class="badge-type"><i class="fa-solid fa-image"></i> Image</span>
+                        {% endif %}
+
+                        {% if gen.status == 'processing' %}
+                        <span class="badge-type"><i class="fa-solid fa-circle-notch fa-spin"></i> Animating...</span>
                         {% endif %}
 
                         {% if gen.video_url %}
@@ -498,10 +502,19 @@
                                     title="Duplicate Prompt"
                                     onclick="duplicatePrompt(this.getAttribute('data-prompt'))" data-prompt="{{ gen.original_prompt }}"><i
                                         class="fa-regular fa-copy"></i></button>
-                                {% if gen.video_url or gen.image_url %}
+                                {% if gen.video_url %}
                                 <a href="{{ url_for('main.download_video', generation_id=gen.id) }}"
                                     class="btn btn-sm btn-link text-decoration-none" style="color: #8B949E;"
                                     title="Download"><i class="fa-solid fa-download"></i></a>
+                                {% elif gen.image_url %}
+                                <a href="{{ url_for('main.download_image_file', generation_id=gen.id) }}"
+                                    class="btn btn-sm btn-link text-decoration-none" style="color: #8B949E;"
+                                    title="Download"><i class="fa-solid fa-download"></i></a>
+                                {% endif %}
+                                {% if gen.video_url %}
+                                <a href="{{ gen.video_url }}" target="_blank" rel="noopener"
+                                    class="btn btn-sm btn-link text-decoration-none" style="color: #F5A623;"
+                                    title="Open generated video">Watch</a>
                                 {% endif %}
                             </div>
                         </div>
@@ -716,6 +729,34 @@
         } catch (error) {
             console.error('Video generation request failed:', error);
             alert("Error: " + error);
+            document.getElementById('generation-overlay').style.display = 'none';
+            if (submitButton) submitButton.disabled = false;
+        }
+    });
+
+    document.getElementById('form_animate')?.addEventListener('submit', async function (event) {
+        event.preventDefault();
+        const submitButton = document.getElementById('masterSubmitBtn');
+        if (submitButton) submitButton.disabled = true;
+
+        try {
+            const response = await fetch(this.action, {
+                method: 'POST',
+                body: new FormData(this),
+            });
+            let data;
+            try {
+                data = await response.json();
+            } catch {
+                throw new Error(`Animation request failed (${response.status}). Please try again.`);
+            }
+            if (!response.ok || data.success === false) {
+                throw new Error(data.error || `Animation request failed (${response.status})`);
+            }
+            window.location.href = "{{ url_for('main.dashboard') }}";
+        } catch (error) {
+            console.error('Image-to-video request failed:', error);
+            alert(`Image-to-video failed: ${error.message || error}`);
             document.getElementById('generation-overlay').style.display = 'none';
             if (submitButton) submitButton.disabled = false;
         }

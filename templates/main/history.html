@@ -109,9 +109,9 @@
                     <!-- Type + Status badges -->
                     <div class="d-flex gap-2 mb-2 flex-wrap">
                         <span class="badge" style="background: #21262D; color: #F5A623;">
-                            {% if gen.generation_type == 'image' %}<i class="fa-solid fa-image"></i> Image
-                            {% elif gen.generation_type == 'text' %}<i class="fa-solid fa-clapperboard"></i> Text to Video
-                            {% else %}<i class="fa-solid fa-clapperboard"></i> Video{% endif %}
+                            {% if gen.fal_request_id and gen.generation_type == 'image' %}<i class="fa-solid fa-wand-magic-sparkles"></i> Image to Video
+                            {% elif gen.video_url or gen.generation_type != 'image' %}<i class="fa-solid fa-clapperboard"></i> Video
+                            {% else %}<i class="fa-solid fa-image"></i> Image{% endif %}
                         </span>
                         <span class="badge {% if gen.status == 'completed' %}bg-success{% elif gen.status == 'failed' %}bg-danger{% else %}bg-warning{% endif %}" style="color: white;">
                             {{ gen.status.upper() }}

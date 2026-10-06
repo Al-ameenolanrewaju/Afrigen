@@ -6,11 +6,16 @@ from flask_login import login_required, current_user
 from extensions import csrf, limiter
 from models import db, Generation, User, TelegramUser, SavedPrompt, Referral, Payment
 from sqlalchemy.exc import IntegrityError
-from services.claude import refine_prompt, refine_image_prompt, extract_on_screen_text
+from services.claude import (
+    refine_prompt,
+    refine_image_prompt,
+    extract_on_screen_text,
+    is_clarification_response,
+)
 from services.video import (
     generate_video,
     generate_video_async,
-    generate_video_from_image,
+    generate_video_from_image_async,
     merge_audio_into_video,
     add_text_overlay,
     text_to_video_cost,
@@ -271,6 +276,8 @@ def _usable_refinement(original_prompt, refined_prompt):
     """Keep the user's complete prompt when an AI refiner returns a fragment."""
     original_prompt = (original_prompt or '').strip()
     refined_prompt = (refined_prompt or '').strip()
+    if is_clarification_response(refined_prompt):
+        return original_prompt
     original_words = {
         word.lower() for word in re.findall(r"[a-zA-Z0-9]+", original_prompt)
         if len(word) > 3
@@ -752,14 +759,12 @@ def generate_from_image():
         ok = False
         error = f"You need at least {video_cost} credits for image-to-video!"
     if not ok:
-        flash(error, 'danger')
-        return redirect(url_for('main.dashboard'))
+        return jsonify({"success": False, "error": error}), 403
 
     prompt = request.form.get('prompt')
     image_file = request.files.get('image')
     if not prompt or not image_file:
-        flash('Please provide both image and prompt!', 'danger')
-        return redirect(url_for('main.dashboard'))
+        return jsonify({"success": False, "error": "Please provide both an image and a prompt."}), 400
 
     # Honour the form's aspect-ratio dropdown instead of forcing 16:9.
     aspect_ratio = request.form.get('aspect_ratio', '16:9')
@@ -768,15 +773,16 @@ def generate_from_image():
 
     # Validate file extension
     if not allowed_file(image_file.filename):
-        flash('Invalid image format. Allowed: png, jpg, jpeg, webp.', 'danger')
-        return redirect(url_for('main.dashboard'))
+        return jsonify({
+            "success": False,
+            "error": "Invalid image format. Allowed: png, jpg, jpeg, webp.",
+        }), 400
 
     try:
         from PIL import Image
         image_file.stream.seek(0, os.SEEK_END)
         if image_file.stream.tell() > current_app.config['MAX_CONTENT_LENGTH']:
-            flash('Image is too large. Maximum size is 10 MB.', 'danger')
-            return redirect(url_for('main.dashboard'))
+            return jsonify({"success": False, "error": "Image is too large. Maximum size is 10 MB."}), 413
         image_file.stream.seek(0)
         with Image.open(image_file.stream) as uploaded_image:
             uploaded_image.verify()
@@ -794,56 +800,72 @@ def generate_from_image():
 
         refined = _usable_refinement(
             prompt,
-            refine_image_prompt(prompt, "cinematic", user=current_user),
+            refine_prompt(
+                prompt,
+                "cinematic",
+                model_name="fal-ai/kling-video/v3/pro/image-to-video",
+                duration=duration,
+                user=current_user,
+            ),
         )
-        video_url = generate_video_from_image(
-            image_url, refined, duration=duration, aspect_ratio=aspect_ratio,
-            allow_fal=(current_user.plan == 'pro'),
+        request_id = uuid.uuid4().hex
+        webhook_url = url_for(
+            'main.fal_webhook',
+            _external=True,
+            client_request_id=request_id,
+            token=_fal_webhook_token(request_id),
         )
-
-        # Video models render text badly, so burn any words the user asked to
-        # show on screen onto the finished clip (best-effort; falls back to the
-        # raw video on failure).
-        if video_url:
-            video_url = add_text_overlay(video_url, extract_on_screen_text(prompt))
+        result = generate_video_from_image_async(
+            image_url,
+            refined,
+            webhook_url=webhook_url,
+            duration=duration,
+            aspect_ratio=aspect_ratio,
+            allow_fal=(locked_user.plan == 'pro'),
+        )
+        if not result["success"]:
+            raise RuntimeError(result["error"])
 
         generation = Generation(
             user_id=current_user.id,
             original_prompt=prompt,
             refined_prompt=refined,
-            video_url=video_url,
+            video_url=None,
             image_url=image_url,
             generation_type="image",
-            status="completed" if video_url else "failed",
+            status="processing",
             credit_cost=video_cost,
             fal_cost_usd=estimate_fal_image_to_video_cost(duration),
+            fal_request_id=result["request_id"],
         )
         db.session.add(generation)
 
-        # Only deduct credits if video generation succeeded
-        if video_url:
-            from services.credits import record_credit_change
-            locked_user.credits = max(0, (locked_user.credits or 0) - video_cost)
-            record_credit_change(
-                locked_user,
-                -video_cost,
-                'Image-to-video generation',
-            )
+        from services.credits import record_credit_change
+        locked_user.credits = max(0, (locked_user.credits or 0) - video_cost)
+        record_credit_change(
+            locked_user,
+            -video_cost,
+            'Image-to-video generation',
+        )
 
         db.session.commit()
 
         return jsonify(
-            {"success": True, "type": "video", "video_url": video_url, "refined": refined, "original": prompt,
-             "style": "cinematic", "generation_id": generation.id, "share_url": share_url_for(generation.id)})
+            {"success": True, "type": "processing", "message": "Your image is being animated.",
+             "generation_id": generation.id, "refined": refined, "original": prompt,
+             "style": "cinematic", "share_url": share_url_for(generation.id)})
 
     except Exception as e:
         db.session.rollback()
-        print("IMAGE-TO-VIDEO ERROR:", str(e))
-        return jsonify({"success": False, "error": "Image-to-video failed. Please try again."})
+        current_app.logger.exception("Image-to-video submission failed for user_id=%s", current_user.id)
+        return jsonify({"success": False, "error": "Image-to-video failed. Please try again."}), 500
     finally:
         # Clean up temp file
         if 'filepath' in locals() and os.path.exists(filepath):
-            os.remove(filepath)
+            try:
+                os.remove(filepath)
+            except OSError:
+                current_app.logger.warning("Could not remove temporary image upload %s", filepath)
 
 
 @main.route('/generate-image', methods=['POST'])
@@ -2673,7 +2695,15 @@ def fal_webhook():
         generation.status = 'failed'
         user = db.session.get(User, generation.user_id)
         if user:
-            refund_video(user, generation.credit_cost)
+            refund_video(
+                user,
+                generation.credit_cost,
+                reason=(
+                    "Image-to-video generation refund"
+                    if generation.generation_type == "image"
+                    else "Video generation refund"
+                ),
+            )
         generation.refund_applied = True
         db.session.commit()
         print(f"GENERATION webhook_request_id={request_id} status=failed")
@@ -2697,7 +2727,16 @@ def fal_webhook():
             if user.plan == 'free':
                 user.monthly_videos_used = (user.monthly_videos_used or 0) + 1
             elif user.plan == 'pro':
-                charge_video(user, generation.credit_cost)
+                if generation.generation_type == "image":
+                    user.credits = max(0, (user.credits or 0) - generation.credit_cost)
+                    from services.credits import record_credit_change
+                    record_credit_change(
+                        user,
+                        -generation.credit_cost,
+                        "Image-to-video generation",
+                    )
+                else:
+                    charge_video(user, generation.credit_cost)
 
         generation.video_url = video_url
         generation.status = 'completed'
@@ -3394,4 +3433,3 @@ def api_campaign_plan():
         'strategy': strategy,
         'deliverables': deliverables
     })
-

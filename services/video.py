@@ -275,6 +275,49 @@ def generate_video_from_image(image_url, prompt, duration="5", aspect_ratio="16:
     return None
 
 
+def generate_video_from_image_async(
+    image_url,
+    prompt,
+    webhook_url,
+    duration="5",
+    aspect_ratio="16:9",
+    allow_fal=False,
+):
+    if not allow_fal:
+        return {"success": False, "error": "Image-to-video is a Pro feature."}
+
+    duration = str(duration)
+    if duration not in ("5", "10"):
+        duration = "5"
+    if aspect_ratio not in ("16:9", "9:16", "1:1"):
+        aspect_ratio = "16:9"
+    prompt_text = prompt.strip() if isinstance(prompt, str) else ""
+    if not prompt_text:
+        return {"success": False, "error": "The refined prompt was empty. Please try again."}
+
+    model = "fal-ai/kling-video/v3/pro/image-to-video"
+    try:
+        handler = fal_client.submit(
+            model,
+            arguments={
+                "prompt": prompt_text,
+                "image_url": str(image_url),
+                "duration": duration,
+                "aspect_ratio": aspect_ratio,
+            },
+            webhook_url=webhook_url,
+        )
+        request_id = getattr(handler, "request_id", None)
+        if not request_id:
+            return {
+                "success": False,
+                "error": "Fal accepted the request without returning a request ID.",
+            }
+        return {"success": True, "request_id": request_id}
+    except Exception as exc:
+        return {"success": False, "error": f"Fal image-to-video submission failed: {exc}"}
+
+
 def add_text_overlay(video_url, text):
     """Burn `text` onto the finished video as a bold, legible caption.
 

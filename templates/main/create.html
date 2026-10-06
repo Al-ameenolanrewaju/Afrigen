@@ -580,6 +580,34 @@
         }
     });
 
+    document.getElementById('form_animate')?.addEventListener('submit', async function (event) {
+        event.preventDefault();
+        const submitButton = document.getElementById('masterSubmitBtn');
+        if (submitButton) submitButton.disabled = true;
+
+        try {
+            const response = await fetch(this.action, {
+                method: 'POST',
+                body: new FormData(this),
+            });
+            let data;
+            try {
+                data = await response.json();
+            } catch {
+                throw new Error(`Animation request failed (${response.status}). Please try again.`);
+            }
+            if (!response.ok || data.success === false) {
+                throw new Error(data.error || `Animation request failed (${response.status})`);
+            }
+            window.location.href = "{{ url_for('main.dashboard') }}";
+        } catch (error) {
+            console.error('Image-to-video request failed:', error);
+            alert(`Image-to-video failed: ${error.message || error}`);
+            document.getElementById('generation-overlay').style.display = 'none';
+            if (submitButton) submitButton.disabled = false;
+        }
+    });
+
     const createAnimateImageInput = document.getElementById('create_animate_image_input');
     const createAnimateImagePreview = document.getElementById('create_animate_image_preview');
     const createAnimateImagePreviewImg = document.getElementById('create_animate_image_preview_img');

@@ -58,9 +58,33 @@ VIDEO_FIDELITY_RULES = """
     - Do not add unrelated subjects or change the scene the user described."""
 
 
+def is_clarification_response(text):
+    """Identify an AI reply asking the user for context instead of refining a prompt."""
+    normalized = (text or "").lower().replace("\u2018", "'").replace("\u2019", "'")
+    return any(
+        phrase in normalized
+        for phrase in (
+            "i'm sorry",
+            "i am sorry",
+            "could you please",
+            "can you please",
+            "would you please",
+            "please provide more details",
+            "please provide more detail",
+            "need more details",
+            "need more detail",
+            "can you describe",
+        )
+    )
+
+
 def _refinement_is_usable(original_prompt, refined_prompt):
     refined_prompt = (refined_prompt or "").strip()
-    if "Rewrite the following idea" in refined_prompt or "Return ONLY" in refined_prompt:
+    if (
+        "Rewrite the following idea" in refined_prompt
+        or "Return ONLY" in refined_prompt
+        or is_clarification_response(refined_prompt)
+    ):
         return False
     original_words = {
         word.lower() for word in re.findall(r"[a-zA-Z0-9]+", original_prompt or "")
