@@ -188,9 +188,10 @@ class TiktokAdapter(BaseProviderAdapter):
             if video_size <= 0:
                 return {"ok": False, "error": "TikTok video download was empty."}
 
-            # TikTok requires files under 5 MB to be uploaded whole. Larger
-            # videos use sequential chunks no larger than 64 MB.
-            chunk_size = video_size if video_size < 5 * 1024 * 1024 else 10 * 1024 * 1024
+            # TikTok requires files under 5 MB to be uploaded whole.
+            # For larger files, chunk_size must be >= 5MB and <= video_size.
+            # We cap it at 10MB to upload in chunks for very large files.
+            chunk_size = min(video_size, 10 * 1024 * 1024)
             total_chunk_count = math.ceil(video_size / chunk_size)
             init_response = requests.post(
                 "https://open.tiktokapis.com/v2/post/publish/video/init/",
