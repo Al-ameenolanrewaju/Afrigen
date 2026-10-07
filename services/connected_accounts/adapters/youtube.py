@@ -13,6 +13,9 @@ from datetime import datetime, timezone, timedelta
 
 class YoutubeAdapter(BaseProviderAdapter):
     def _get_redirect_uri(self):
+        configured_uri = os.environ.get("YOUTUBE_REDIRECT_URI")
+        if configured_uri:
+            return configured_uri.strip()
         return request.url_root.rstrip("/") + "/connected-accounts/youtube/callback"
 
     @classmethod
