@@ -43,8 +43,8 @@
                     playsinline
                     preload="metadata"
                     style="border-radius: 8px; background: #000;"
+                    src="{{ url_for('static', filename='uploads/dashboard_video.mp4') }}"
                 >
-                    <source src="{{ url_for('static', filename='uploads/dashboard_video.mp4') }}" type="video/mp4">
                     Your browser does not support video playback.
                 </video>
             </div>
@@ -97,8 +97,8 @@
                         playsinline
                         preload="metadata"
                         style="border-radius: 8px; background: #000;"
+                        src="{{ gen.video_url }}"
                     >
-                        <source src="{{ gen.video_url }}" type="video/mp4">
                         Your browser does not support video playback.
                     </video>
                     {% elif gen.image_url and gen.generation_type == 'image' %}
