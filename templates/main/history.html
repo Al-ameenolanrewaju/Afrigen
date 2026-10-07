@@ -37,7 +37,13 @@
         <div class="row">
             <!-- Preview -->
             <div class="col-md-4 mb-3 mb-md-0">
-                <video width="100%" controls preload="metadata" style="border-radius: 8px;">
+                <video
+                    width="100%"
+                    controls
+                    playsinline
+                    preload="metadata"
+                    style="border-radius: 8px; background: #000;"
+                >
                     <source src="{{ url_for('static', filename='uploads/dashboard_video.mp4') }}" type="video/mp4">
                     Your browser does not support video playback.
                 </video>
@@ -85,7 +91,13 @@
                 <!-- Preview -->
                 <div class="col-md-4 mb-3 mb-md-0">
                     {% if gen.video_url %}
-                    <video width="100%" controls preload="metadata" style="border-radius: 8px;">
+                    <video
+                        width="100%"
+                        controls
+                        playsinline
+                        preload="metadata"
+                        style="border-radius: 8px; background: #000;"
+                    >
                         <source src="{{ gen.video_url }}" type="video/mp4">
                         Your browser does not support video playback.
                     </video>
