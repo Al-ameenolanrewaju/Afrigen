@@ -37,8 +37,9 @@
         <div class="row">
             <!-- Preview -->
             <div class="col-md-4 mb-3 mb-md-0">
-                <video width="100%" controls style="border-radius: 8px;">
+                <video width="100%" controls preload="metadata" style="border-radius: 8px;">
                     <source src="{{ url_for('static', filename='uploads/dashboard_video.mp4') }}" type="video/mp4">
+                    Your browser does not support video playback.
                 </video>
             </div>
 
@@ -68,11 +69,10 @@
                     </p>
                 </div>
 
-                <!-- Action Buttons -->
-                <div class="d-flex gap-2 flex-wrap mt-3">
-                    <button type="button" class="btn btn-afrigen btn-sm watch-video-btn" data-video-url="{{ url_for('static', filename='uploads/dashboard_video.mp4') }}"><i class="fa-solid fa-clapperboard"></i> Watch</button>
-                    <a href="{{ url_for('static', filename='uploads/dashboard_video.mp4') }}" download class="btn btn-outline-warning btn-sm"><i class="fa-solid fa-download"></i> Download</a>
-                </div>
+<!-- Action Buttons -->
+<div class="d-flex gap-2 flex-wrap mt-3">
+    <a href="{{ url_for('static', filename='uploads/dashboard_video.mp4') }}" download class="btn btn-outline-warning btn-sm"><i class="fa-solid fa-download"></i> Download</a>
+</div>
             </div>
         </div>
     </div>
@@ -85,8 +85,9 @@
                 <!-- Preview -->
                 <div class="col-md-4 mb-3 mb-md-0">
                     {% if gen.video_url %}
-                    <video width="100%" controls style="border-radius: 8px;">
+                    <video width="100%" controls preload="metadata" style="border-radius: 8px;">
                         <source src="{{ gen.video_url }}" type="video/mp4">
+                        Your browser does not support video playback.
                     </video>
                     {% elif gen.image_url and gen.generation_type == 'image' %}
                     <img src="{{ gen.image_url }}" width="100%"
@@ -148,15 +149,13 @@
                     </div>
                     {% endif %}
 
-                    <!-- Action Buttons -->
+<!-- Action Buttons -->
 <div class="d-flex gap-2 flex-wrap">
     {% if gen.video_url %}
-    <button type="button" class="btn btn-afrigen btn-sm watch-video-btn" data-video-url="{{ gen.video_url }}"><i class="fa-solid fa-clapperboard"></i> Watch</button>
     <a href="{{ url_for('main.download_video_file', generation_id=gen.id) }}" class="btn btn-outline-warning btn-sm"><i class="fa-solid fa-download"></i> Download</a>
     {% endif %}
 
     {% if gen.image_url and gen.generation_type == 'image' and not gen.video_url %}
-    <button type="button" class="btn btn-afrigen btn-sm watch-video-btn" data-image-url="{{ gen.image_url }}"><i class="fa-solid fa-image"></i> View</button>
     <a href="{{ url_for('main.download_image_file', generation_id=gen.id) }}" class="btn btn-outline-warning btn-sm"><i class="fa-solid fa-download"></i> Download</a>
     {% endif %}
 
@@ -223,57 +222,6 @@ setTimeout(function() {
 }, 15000);
 </script>
 {% endif %}
-
-<!-- Media Preview Modal -->
-<div class="modal fade" id="mediaPreviewModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content" style="background: #161B22; border: 1px solid #30363D;">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title" style="color: #F0F6FC;"><i class="fa-solid fa-play text-warning"></i> Preview</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body text-center pt-2 pb-4" id="mediaPreviewContainer">
-                <!-- Video or Image injected here -->
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const previewModal = new bootstrap.Modal(document.getElementById('mediaPreviewModal'));
-    const modalContainer = document.getElementById('mediaPreviewContainer');
-
-    document.querySelectorAll('.watch-video-btn').forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            const videoUrl = this.getAttribute('data-video-url');
-            const imageUrl = this.getAttribute('data-image-url');
-
-            modalContainer.innerHTML = ''; // clear previous
-
-            if (videoUrl) {
-                modalContainer.innerHTML = `
-                    <video controls autoplay playsinline style="width: 100%; max-height: 70vh; border-radius: 8px;" src="${videoUrl}">
-                        Your browser does not support the video tag.
-                    </video>
-                `;
-            } else if (imageUrl) {
-                modalContainer.innerHTML = `
-                    <img src="${imageUrl}" style="width: 100%; max-height: 70vh; object-fit: contain; border-radius: 8px;">
-                `;
-            }
-            
-            previewModal.show();
-        });
-    });
-
-    // Stop video when modal is closed
-    document.getElementById('mediaPreviewModal').addEventListener('hidden.bs.modal', function () {
-        modalContainer.innerHTML = '';
-    });
-});
-</script>
 
 {% include "main/_social_publish_modal.html" %}
 
