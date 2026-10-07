@@ -16,7 +16,10 @@ class YoutubeAdapter(BaseProviderAdapter):
         configured_uri = os.environ.get("YOUTUBE_REDIRECT_URI")
         if configured_uri:
             return configured_uri.strip()
-        return request.url_root.rstrip("/") + "/connected-accounts/youtube/callback"
+        
+        # Fallback: forcefully strip www. from the url_root to avoid mismatch
+        url = request.url_root.rstrip("/") + "/connected-accounts/youtube/callback"
+        return url.replace("://www.", "://")
 
     @classmethod
     def get_auth_methods(cls) -> list[str]:
