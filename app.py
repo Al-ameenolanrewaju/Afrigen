@@ -81,6 +81,7 @@ def add_security_headers(response):
         "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://fonts.googleapis.com; "
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
         "img-src 'self' data: https: blob:; "
+        "media-src 'self' https: blob: data:; "
         "font-src 'self' https://fonts.gstatic.com data: https://cdnjs.cloudflare.com; "
         "connect-src 'self' https:; "
         "frame-ancestors 'self'; "
