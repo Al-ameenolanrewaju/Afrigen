@@ -1,8 +1,5 @@
 import sys
 import os
-sys.path.insert(0, '/home/Gaminghubcompany/Afrigen')
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -25,105 +22,33 @@ from models import db, User, TelegramUser, Generation
 from services.video import generate_image, generate_video, add_text_overlay
 from services.credits import video_gate, image_gate, charge_video, charge_image
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
 TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 
-# Minimal Flask app so the bot can use the same SQLAlchemy models (and therefore
-# the same credit/limit rules) as the website. We do NOT import app.py here — it
-# starts a scheduler, registers blueprints, etc. We only need the DB.
 flask_app = Flask(__name__)
 flask_app.config.from_object(Config)
-# SQLAlchemy 2.x only accepts the "postgresql://" scheme; some hosts still hand
-# out "postgres://" (which the old raw psycopg2 path tolerated). Normalize it.
 _db_uri = flask_app.config.get("SQLALCHEMY_DATABASE_URI") or ""
 if _db_uri.startswith("postgres://"):
     flask_app.config["SQLALCHEMY_DATABASE_URI"] = _db_uri.replace("postgres://", "postgresql://", 1)
 db.init_app(flask_app)
 
-# Where the website lives, used in link instructions.
 SITE_URL = os.environ.get("SITE_URL", "afrigen.com.ng")
 
 STYLE_PROMPTS = {
-    "cinematic": """You are an expert cinematic video prompt engineer.
-    Transform the idea into a detailed cinematic prompt with:
-    - 4K quality, golden hour lighting
-    - Professional camera angles
-    - African cultural elements where relevant
-    - Mood and atmosphere
-    - Technical quality indicators
-    Keep under 200 words. Return ONLY the prompt.""",
-    "anime": """You are an expert anime video prompt engineer.
-    Transform the idea into a detailed anime style prompt with:
-    - Japanese anime aesthetic
-    - Vibrant colors and dynamic movement
-    - Anime art style details
-    - African characters with anime styling
-    Keep under 200 words. Return ONLY the prompt.""",
-    "realistic": """You are an expert realistic video prompt engineer.
-    Transform the idea into a hyper-realistic prompt with:
-    - Photorealistic details
-    - Natural lighting and shadows
-    - Real world African settings
-    - Ultra high definition quality
-    Keep under 200 words. Return ONLY the prompt.""",
-    "african": """You are an expert African content video prompt engineer.
-    Transform the idea into a rich African aesthetic prompt with:
-    - Traditional African clothing and accessories
-    - African landscapes and settings
-    - Rich cultural elements (Yoruba, Igbo, Hausa etc.)
-    - Vibrant African colors and patterns
-    Keep under 200 words. Return ONLY the prompt.""",
-    "social": """You are an expert social media video prompt engineer.
-    Transform the idea into a social media optimized prompt with:
-    - Eye-catching visuals
-    - Fast paced and dynamic
-    - Perfect for TikTok/Instagram/Facebook
-    - African content creators style
-    Keep under 200 words. Return ONLY the prompt."""
+    "cinematic": "You are an expert cinematic video prompt engineer.\nTransform the idea into a detailed cinematic prompt with:\n- 4K quality, golden hour lighting\n- Professional camera angles\n- African cultural elements where relevant\n- Mood and atmosphere\n- Technical quality indicators\nKeep under 200 words. Return ONLY the prompt.",
+    "anime": "You are an expert anime video prompt engineer.\nTransform the idea into a detailed anime style prompt with:\n- Japanese anime aesthetic\n- Vibrant colors and dynamic movement\n- Anime art style details\n- African characters with anime styling\nKeep under 200 words. Return ONLY the prompt.",
+    "realistic": "You are an expert realistic video prompt engineer.\nTransform the idea into a hyper-realistic prompt with:\n- Photorealistic details\n- Natural lighting and shadows\n- Real world African settings\n- Ultra high definition quality\nKeep under 200 words. Return ONLY the prompt.",
+    "african": "You are an expert African content video prompt engineer.\nTransform the idea into a rich African aesthetic prompt with:\n- Traditional African clothing and accessories\n- African landscapes and settings\n- Rich cultural elements (Yoruba, Igbo, Hausa etc.)\n- Vibrant African colors and patterns\nKeep under 200 words. Return ONLY the prompt.",
+    "social": "You are an expert social media video prompt engineer.\nTransform the idea into a social media optimized prompt with:\n- Eye-catching visuals\n- Fast paced and dynamic\n- Perfect for TikTok/Instagram/Facebook\n- African content creators style\nKeep under 200 words. Return ONLY the prompt."
 }
 
 IMAGE_STYLE_PROMPTS = {
-    "realistic": """You are an expert image prompt engineer.
-    Transform the idea into a detailed realistic image prompt with:
-    - Photorealistic details
-    - Lighting description
-    - Camera settings
-    - African cultural elements where relevant
-    Keep under 150 words. Return ONLY the prompt.""",
-    "artistic": """You are an expert artistic image prompt engineer.
-    Transform the idea into a detailed artistic prompt with:
-    - Art style details
-    - Color palette
-    - African artistic elements
-    Keep under 150 words. Return ONLY the prompt.""",
-    "cinematic": """You are an expert cinematic image prompt engineer.
-    Transform the idea into a cinematic still image prompt with:
-    - Movie still quality
-    - Dramatic lighting
-    - African cinematic aesthetic
-    Keep under 150 words. Return ONLY the prompt.""",
-    "african": """You are an expert African art prompt engineer.
-    Transform the idea into a rich African aesthetic image prompt with:
-    - Traditional African patterns and clothing
-    - African landscapes and settings
-    - Cultural elements
-    Keep under 150 words. Return ONLY the prompt.""",
-    "anime": """You are an expert anime image prompt engineer.
-    Transform the idea into a detailed anime style prompt with:
-    - Japanese anime aesthetic
-    - Vibrant colors
-    - African characters in anime style
-    Keep under 150 words. Return ONLY the prompt.""",
-    "social": """You are an expert social media image prompt engineer.
-    Transform the idea into a social media optimized image with:
-    - Eye-catching composition
-    - Vibrant colors
-    - Perfect for Instagram/TikTok thumbnails
-    Keep under 150 words. Return ONLY the prompt."""
+    "realistic": "You are an expert image prompt engineer.\nTransform the idea into a detailed realistic image prompt with:\n- Photorealistic details\n- Lighting description\n- Camera settings\n- African cultural elements where relevant\nKeep under 150 words. Return ONLY the prompt.",
+    "artistic": "You are an expert artistic image prompt engineer.\nTransform the idea into a detailed artistic prompt with:\n- Art style details\n- Color palette\n- African artistic elements\nKeep under 150 words. Return ONLY the prompt.",
+    "cinematic": "You are an expert cinematic image prompt engineer.\nTransform the idea into a cinematic still image prompt with:\n- Movie still quality\n- Dramatic lighting\n- African cinematic aesthetic\nKeep under 150 words. Return ONLY the prompt.",
+    "african": "You are an expert African art prompt engineer.\nTransform the idea into a rich African aesthetic image prompt with:\n- Traditional African patterns and clothing\n- African landscapes and settings\n- Cultural elements\nKeep under 150 words. Return ONLY the prompt.",
+    "anime": "You are an expert anime image prompt engineer.\nTransform the idea into a detailed anime style prompt with:\n- Japanese anime aesthetic\n- Vibrant colors\n- African characters in anime style\nKeep under 150 words. Return ONLY the prompt.",
+    "social": "You are an expert social media image prompt engineer.\nTransform the idea into a social media optimized image with:\n- Eye-catching composition\n- Vibrant colors\n- Perfect for Instagram/TikTok thumbnails\nKeep under 150 words. Return ONLY the prompt."
 }
-
 
 def refine_prompt(user_prompt, style="cinematic"):
     from services.provider_manager import provider_manager
@@ -145,7 +70,6 @@ def refine_prompt(user_prompt, style="cinematic"):
     with flask_app.app_context():
         return provider_manager.generate_text("Prompt Refinement", messages, max_tokens=2048)
 
-
 def refine_image_prompt(user_prompt, style="realistic"):
     from services.provider_manager import provider_manager
     text_rules = (
@@ -165,23 +89,15 @@ def refine_image_prompt(user_prompt, style="realistic"):
     with flask_app.app_context():
         return provider_manager.generate_text("Prompt Refinement", messages, max_tokens=2048)
 
-
 def extract_on_screen_text(text):
-    """Pull any double-quoted words from the idea so they can be burned onto the
-    video as a caption. Lightweight (regex) so the bot doesn't need the Claude
-    API key; returns "" when there's nothing quoted (overlay is then skipped)."""
     if not text:
         return ""
     matches = re.findall(r'"([^"]+)"', text)
     joined = " ".join(m.strip() for m in matches if m.strip())
     return joined[:80]
 
-
-# ---------- Account linking helpers (all run inside flask_app.app_context()) ----------
-
 def _get_telegram_user(telegram_id):
     return TelegramUser.query.filter_by(telegram_id=str(telegram_id)).first()
-
 
 def _get_linked_user(telegram_id):
     tgu = _get_telegram_user(telegram_id)
@@ -189,9 +105,7 @@ def _get_linked_user(telegram_id):
         return db.session.get(User, tgu.user_id)
     return None
 
-
 def _account_summary(user):
-    """Short human-readable line about the user's remaining allowance."""
     if user.plan == 'pro':
         return f"⭐ Pro plan • {user.credits or 0} credits left"
     if user.plan == 'free':
@@ -200,10 +114,8 @@ def _account_summary(user):
         return f"🆓 Free plan • Video generation requires Pro • {images_left} images left"
     return "Account restricted"
 
-
 def _is_banned(user):
     return user.plan == 'banned' or bool(getattr(user, 'is_banned', False))
-
 
 def _link_instructions():
     return (
@@ -214,7 +126,6 @@ def _link_instructions():
         "Your free credits and limits are shared with the website."
     )
 
-
 def _main_menu():
     keyboard = [
         [InlineKeyboardButton("🎬 Make Video", callback_data="menu_video"),
@@ -224,37 +135,119 @@ def _main_menu():
     ]
     return InlineKeyboardMarkup(keyboard)
 
+# ----- ASYNC DB HELPERS -----
+
+async def _async_start_db(tg_id, username, first_name, payload, chat_id, chat_title, chat_type):
+    def _do():
+        with flask_app.app_context():
+            existing = _get_telegram_user(tg_id)
+            if payload and chat_type in ("group", "supergroup"):
+                account = User.query.filter_by(telegram_link_code=payload).first()
+                if account:
+                    if not existing:
+                        existing = TelegramUser(telegram_id=str(tg_id))
+                        db.session.add(existing)
+                    existing.user_id = account.id
+                    existing.chat_id = str(chat_id)
+                    existing.chat_title = chat_title or "Telegram group"
+                    account.telegram_link_code = None
+                    db.session.commit()
+                    return True, "Afrigen is connected to this group."
+            if not existing:
+                db.session.add(TelegramUser(telegram_id=str(tg_id), username=username, first_name=first_name))
+                db.session.commit()
+            linked = _get_linked_user(tg_id) is not None
+            return False, linked
+    return await asyncio.to_thread(_do)
+
+async def _async_link_account(tg_id, username, first_name, code):
+    def _do():
+        with flask_app.app_context():
+            account = User.query.filter_by(telegram_link_code=code).first()
+            if not account:
+                return False, None, None
+            tgu = _get_telegram_user(tg_id)
+            if not tgu:
+                tgu = TelegramUser(telegram_id=str(tg_id), username=username, first_name=first_name)
+                db.session.add(tgu)
+            tgu.user_id = account.id
+            account.telegram_link_code = None
+            db.session.commit()
+            return True, _account_summary(account), account.username
+    return await asyncio.to_thread(_do)
+
+async def _async_get_credits(tg_id):
+    def _do():
+        with flask_app.app_context():
+            account = _get_linked_user(tg_id)
+            return _account_summary(account) if account else None
+    return await asyncio.to_thread(_do)
+
+async def _async_get_gate_status(tg_id, mode, style):
+    def _do():
+        with flask_app.app_context():
+            account = _get_linked_user(tg_id)
+            if not account:
+                return False, _link_instructions(), 0, None, False, "free"
+            if _is_banned(account):
+                return False, "❌ Your account is restricted.", 0, None, False, account.plan
+            extended = (account.plan == 'pro')
+            if mode == 'image':
+                ok, err = image_gate(account)
+                cost = 0
+            else:
+                ok, err, cost = video_gate(account, style, extended=extended)
+            return ok, err, cost, account.id, extended, account.plan
+    return await asyncio.to_thread(_do)
+
+async def _async_record_failed(mode, account_id, user_prompt, refined, cost):
+    def _do():
+        with flask_app.app_context():
+            db.session.add(Generation(
+                user_id=account_id, original_prompt=user_prompt, refined_prompt=refined,
+                generation_type="image" if mode == 'image' else "text",
+                status="failed", credit_cost=cost or 5
+            ))
+            db.session.commit()
+    await asyncio.to_thread(_do)
+
+async def _async_charge_and_record(mode, account_id, tg_id, user_prompt, refined, media_url, cost):
+    def _do():
+        with flask_app.app_context():
+            account = db.session.get(User, account_id)
+            if mode == 'image':
+                charge_image(account)
+                gen = Generation(
+                    user_id=account_id, original_prompt=user_prompt, refined_prompt=refined,
+                    image_url=media_url, generation_type="image", status="completed"
+                )
+            else:
+                charge_video(account, cost)
+                gen = Generation(
+                    user_id=account_id, original_prompt=user_prompt, refined_prompt=refined,
+                    video_url=media_url, generation_type="text", status="completed", credit_cost=cost
+                )
+            db.session.add(gen)
+            tgu = _get_telegram_user(tg_id)
+            if tgu:
+                tgu.prompts_refined = (tgu.prompts_refined or 0) + 1
+            db.session.commit()
+            return _account_summary(account)
+    return await asyncio.to_thread(_do)
 
 # ---------- Commands ----------
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
+    chat = update.effective_chat
+    payload = context.args[0].upper() if context.args else ""
+    
     try:
-        with flask_app.app_context():
-            existing = _get_telegram_user(user.id)
-            chat = update.effective_chat
-            payload = context.args[0].upper() if context.args else ""
-            if payload and chat and chat.type in ("group", "supergroup"):
-                account = User.query.filter_by(telegram_link_code=payload).first()
-                if account:
-                    if not existing:
-                        existing = TelegramUser(telegram_id=str(user.id))
-                        db.session.add(existing)
-                    existing.user_id = account.id
-                    existing.chat_id = str(chat.id)
-                    existing.chat_title = chat.title or "Telegram group"
-                    account.telegram_link_code = None
-                    db.session.commit()
-                    await update.message.reply_text("Afrigen is connected to this group.")
-                    return
-            if not existing:
-                db.session.add(TelegramUser(
-                    telegram_id=str(user.id),
-                    username=user.username,
-                    first_name=user.first_name,
-                ))
-                db.session.commit()
-            linked = _get_linked_user(user.id) is not None
+        is_group_msg, result = await _async_start_db(user.id, user.username, user.first_name, payload, chat.id if chat else None, chat.title if chat else None, chat.type if chat else None)
+        if is_group_msg:
+            await update.message.reply_text(result)
+            return
+        linked = result
     except Exception as e:
         logger.error(f"DB error in start: {e}")
         linked = False
@@ -271,7 +264,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"{status_line}",
         reply_markup=_main_menu()
     )
-
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
@@ -290,7 +282,6 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="Markdown"
     )
 
-
 async def styles_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton("🎬 Cinematic", callback_data="style_cinematic")],
@@ -299,48 +290,22 @@ async def styles_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("👑 African", callback_data="style_african")],
         [InlineKeyboardButton("📱 Social Media", callback_data="style_social")],
     ]
-    await update.message.reply_text(
-        "🎨 Choose your style:",
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
-
+    await update.message.reply_text("🎨 Choose your style:", reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def link_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     args = context.args
     if not args:
-        await update.message.reply_text(
-            "Usage: /link <code>\n\n" + _link_instructions(),
-            parse_mode="Markdown"
-        )
+        await update.message.reply_text("Usage: /link <code>\n\n" + _link_instructions(), parse_mode="Markdown")
         return
 
     code = args[0].strip().upper()
     try:
-        with flask_app.app_context():
-            account = User.query.filter_by(telegram_link_code=code).first()
-            if not account:
-                await update.message.reply_text(
-                    "❌ That code is invalid or already used.\n\n"
-                    f"Grab a fresh one from your Dashboard → Connect Telegram at {SITE_URL}."
-                )
-                return
-
-            tgu = _get_telegram_user(user.id)
-            if not tgu:
-                tgu = TelegramUser(
-                    telegram_id=str(user.id),
-                    username=user.username,
-                    first_name=user.first_name,
-                )
-                db.session.add(tgu)
-            tgu.user_id = account.id
-            account.telegram_link_code = None  # single-use code
-            db.session.commit()
-
-            summary = _account_summary(account)
-            account_name = account.username
-
+        success, summary, account_name = await _async_link_account(user.id, user.username, user.first_name, code)
+        if not success:
+            await update.message.reply_text(f"❌ That code is invalid or already used.\n\nGrab a fresh one from your Dashboard → Connect Telegram at {SITE_URL}.")
+            return
+            
         await update.message.reply_text(
             f"✅ Linked to your Afrigen account ({account_name})!\n\n"
             f"{summary}\n\n"
@@ -352,23 +317,17 @@ async def link_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.error(f"Link error: {e}")
         await update.message.reply_text("❌ Something went wrong linking your account. Please try again.")
 
-
 async def credits_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     try:
-        with flask_app.app_context():
-            account = _get_linked_user(user.id)
-            summary = _account_summary(account) if account else None
+        summary = await _async_get_credits(user.id)
     except Exception as e:
         logger.error(f"Credits error: {e}")
         await update.message.reply_text("❌ Error fetching your stats!")
         return
 
     if not summary:
-        await update.message.reply_text(
-            "📊 You haven't linked an account yet.\n\n" + _link_instructions(),
-            parse_mode="Markdown"
-        )
+        await update.message.reply_text("📊 You haven't linked an account yet.\n\n" + _link_instructions(), parse_mode="Markdown")
         return
 
     await update.message.reply_text(
@@ -377,7 +336,6 @@ async def credits_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Africa Creates, AI Generates 🇳🇬",
         parse_mode="Markdown"
     )
-
 
 # ---------- Menu / style callbacks ----------
 
@@ -390,35 +348,19 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
     try:
         if data == "menu_video":
             context.user_data['mode'] = 'video'
-            await query.edit_message_text(
-                "🎬 Video mode on!\n\n"
-                "Send your idea and I'll generate a video.\n\n"
-                "Example: 'A Nigerian king walking through Lagos at sunset'"
-            )
+            await query.edit_message_text("🎬 Video mode on!\n\nSend your idea and I'll generate a video.\n\nExample: 'A Nigerian king walking through Lagos at sunset'")
             return
-
         elif data == "menu_image":
             context.user_data['mode'] = 'image'
-            await query.edit_message_text(
-                "🖼️ Photo mode on!\n\n"
-                "Send your idea and I'll generate a photo.\n\n"
-                "Example: 'A Yoruba queen in traditional attire'"
-            )
+            await query.edit_message_text("🖼️ Photo mode on!\n\nSend your idea and I'll generate a photo.\n\nExample: 'A Yoruba queen in traditional attire'")
             return
-
         elif data == "menu_help":
             await query.edit_message_text(
                 "❓ Afrigen Bot Help\n\n"
-                "Commands:\n"
-                "/start - Main menu\n"
-                "/link <code> - Connect your account\n"
-                "/styles - Choose style\n"
-                "/credits - Check plan & credits\n\n"
-                "Tap Make Video or Make Photo, then send your idea!\n\n"
-                "Africa Creates, AI Generates 🌍"
+                "Commands:\n/start - Main menu\n/link <code> - Connect your account\n/styles - Choose style\n/credits - Check plan & credits\n\n"
+                "Tap Make Video or Make Photo, then send your idea!\n\nAfrica Creates, AI Generates 🌍"
             )
             return
-
         elif data == "menu_styles":
             keyboard = [
                 [InlineKeyboardButton("🎬 Cinematic", callback_data="style_cinematic")],
@@ -427,27 +369,13 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
                 [InlineKeyboardButton("👑 African", callback_data="style_african")],
                 [InlineKeyboardButton("📱 Social Media", callback_data="style_social")],
             ]
-            await query.edit_message_text(
-                "🎨 Choose your style:",
-                reply_markup=InlineKeyboardMarkup(keyboard)
-            )
+            await query.edit_message_text("🎨 Choose your style:", reply_markup=InlineKeyboardMarkup(keyboard))
             return
 
         style = data.replace("style_", "")
         context.user_data['style'] = style
-
-        style_names = {
-            "cinematic": "🎬 Cinematic",
-            "anime": "🎌 Anime",
-            "realistic": "🌍 Realistic",
-            "african": "👑 African",
-            "social": "📱 Social Media"
-        }
-
-        await query.edit_message_text(
-            f"✅ Style set to: {style_names.get(style, style)}\n\n"
-            "Now send your idea and I'll generate it!"
-        )
+        style_names = {"cinematic": "🎬 Cinematic", "anime": "🎌 Anime", "realistic": "🌍 Realistic", "african": "👑 African", "social": "📱 Social Media"}
+        await query.edit_message_text(f"✅ Style set to: {style_names.get(style, style)}\n\nNow send your idea and I'll generate it!")
     except Exception as e:
         from telegram.error import BadRequest
         if isinstance(e, BadRequest) and "Message is not modified" in str(e):
@@ -455,49 +383,10 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
         else:
             logger.exception(f"Error editing message in callback: {e}")
 
-
 # ---------- Core generation ----------
 
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    tg = update.effective_user
-    user_prompt = update.message.text
-    style = context.user_data.get('style', 'cinematic')
-    mode = context.user_data.get('mode', 'video')
-
-    # 1) Require a linked account, then gate against the shared plan/credit rules.
-    extended = False
-    try:
-        with flask_app.app_context():
-            account = _get_linked_user(tg.id)
-            if account is None:
-                await update.message.reply_text(_link_instructions(), parse_mode="Markdown")
-                return
-            if _is_banned(account):
-                await update.message.reply_text("❌ Your account is restricted.")
-                return
-
-            if mode == 'image':
-                ok, error = image_gate(account)
-                cost = 0
-            else:
-                # Pro users get the premium 10s Kling clip (same as the website);
-                # everyone else gets the short clip. The gate prices accordingly.
-                extended = (account.plan == 'pro')
-                ok, error, cost = video_gate(account, style, extended=extended)
-
-            if not ok:
-                await update.message.reply_text(f"❌ {error}")
-                return
-
-            account_id = account.id
-    except Exception as e:
-        logger.error(f"Gate error: {e}")
-        await update.message.reply_text("❌ Something went wrong. Please try again.")
-        return
-
+async def _generation_task(context: ContextTypes.DEFAULT_TYPE, chat_id: int, user_prompt: str, style: str, mode: str, account_id: int, tg_id: int, extended: bool, cost: int, plan: str):
     # 2) Refine the idea.
-    await update.message.chat.send_action("typing")
-    await update.message.reply_text("⏳ Refining your idea with AI...")
     try:
         if mode == 'image':
             refined = await asyncio.to_thread(refine_image_prompt, user_prompt, style)
@@ -505,49 +394,38 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             refined = await asyncio.to_thread(refine_prompt, user_prompt, style)
     except Exception as e:
         logger.error(f"Refine error: {e}")
-        await update.message.reply_text("❌ Couldn't refine your idea right now. Please try again.")
+        await context.bot.send_message(chat_id, "❌ Couldn't refine your idea right now. Please try again.")
         return
 
-    # 3) Generate the media (blocking fal call off the event loop).
-    if mode == 'image':
-        await update.message.chat.send_action("upload_photo")
-        await update.message.reply_text("🎨 Generating your photo... give me a moment.")
-        provider = "fal" if account.plan == "pro" else "huggingface"
-        result = await asyncio.to_thread(generate_image, refined, style, "1:1", provider)
-        success = bool(result.get("success"))
-        media_url = result.get("image_url")
-        gen_error = result.get("error")
-    else:
-        await update.message.chat.send_action("upload_video")
-        wait_note = "this can take 2-5 minutes" if extended else "this can take 1-3 minutes"
-        await update.message.reply_text(f"🎬 Generating your video... {wait_note}.")
-        result = await asyncio.to_thread(
-            generate_video, refined, style, "16:9", extended, account.plan == 'pro'
-        )
-        success = bool(result.get("success"))
-        media_url = result.get("video_url")
-        gen_error = result.get("error")
+    # 3) Generate the media
+    try:
+        if mode == 'image':
+            await context.bot.send_message(chat_id, "🎨 Generating your photo... give me a moment.")
+            provider = "fal" if plan == "pro" else "huggingface"
+            result = await asyncio.to_thread(generate_image, refined, style, "1:1", provider)
+        else:
+            wait_note = "this can take 2-5 minutes" if extended else "this can take 1-3 minutes"
+            await context.bot.send_message(chat_id, f"🎬 Generating your video... {wait_note}.")
+            result = await asyncio.to_thread(generate_video, refined, style, "16:9", extended, plan == 'pro')
+    except Exception as e:
+        logger.error(f"Generate error: {e}")
+        result = {"success": False, "error": str(e)}
 
-    # 4) Failure: record it, charge nothing.
+    success = bool(result.get("success"))
+    media_url = result.get("image_url") if mode == 'image' else result.get("video_url")
+    gen_error = result.get("error")
+
+    # 4) Failure
     if not success or not media_url:
         try:
-            with flask_app.app_context():
-                db.session.add(Generation(
-                    user_id=account_id,
-                    original_prompt=user_prompt,
-                    refined_prompt=refined,
-                    generation_type="image" if mode == 'image' else "text",
-                    status="failed",
-                    credit_cost=cost or 5,
-                ))
-                db.session.commit()
+            await _async_record_failed(mode, account_id, user_prompt, refined, cost)
         except Exception as e:
             logger.error(f"Failed-generation log error: {e}")
         logger.error(f"Generation failed for account {account_id}: {gen_error}")
-        await update.message.reply_text("❌ Generation failed. Please try again later.")
+        await context.bot.send_message(chat_id, f"❌ Generation failed: {gen_error}\nPlease try again later.")
         return
 
-    # 5) Burn any quoted on-screen words onto videos (best-effort).
+    # 5) Overlay
     if mode == 'video':
         on_screen = extract_on_screen_text(user_prompt)
         if on_screen:
@@ -556,61 +434,47 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             except Exception as e:
                 logger.error(f"Overlay error: {e}")
 
-    # 6) Charge on success + record the generation, then read remaining allowance.
-    summary = ""
+    # 6) Charge on success
     try:
-        with flask_app.app_context():
-            account = db.session.get(User, account_id)
-            if mode == 'image':
-                charge_image(account)
-                gen = Generation(
-                    user_id=account_id,
-                    original_prompt=user_prompt,
-                    refined_prompt=refined,
-                    image_url=media_url,
-                    generation_type="image",
-                    status="completed",
-                )
-            else:
-                charge_video(account, cost)
-                gen = Generation(
-                    user_id=account_id,
-                    original_prompt=user_prompt,
-                    refined_prompt=refined,
-                    video_url=media_url,
-                    generation_type="text",
-                    status="completed",
-                    credit_cost=cost,
-                )
-            db.session.add(gen)
-
-            tgu = _get_telegram_user(tg.id)
-            if tgu:
-                tgu.prompts_refined = (tgu.prompts_refined or 0) + 1
-            db.session.commit()
-            summary = _account_summary(account)
+        summary = await _async_charge_and_record(mode, account_id, tg_id, user_prompt, refined, media_url, cost)
     except Exception as e:
         logger.error(f"Charge/record error: {e}")
+        summary = ""
 
-    # 7) Deliver the media.
-    caption = (
-        "✨ Made with Afrigen\n"
-        f"{summary}\n\n"
-        "Africa Creates, AI Generates 🌍"
-    )
+    # 7) Deliver
+    caption = f"✨ Made with Afrigen\n{summary}\n\nAfrica Creates, AI Generates 🌍"
     try:
         if mode == 'image':
-            await update.message.reply_photo(media_url, caption=caption, reply_markup=_main_menu())
+            await context.bot.send_photo(chat_id, media_url, caption=caption, reply_markup=_main_menu())
         else:
-            await update.message.reply_video(media_url, caption=caption, reply_markup=_main_menu())
+            await context.bot.send_video(chat_id, media_url, caption=caption, reply_markup=_main_menu())
     except Exception as e:
-        # If Telegram can't fetch/host the media, at least hand over the link.
         logger.error(f"Send media error: {e}")
-        await update.message.reply_text(
-            f"✅ Done! Here's your {'photo' if mode == 'image' else 'video'}:\n{media_url}",
-            reply_markup=_main_menu()
-        )
+        await context.bot.send_message(chat_id, f"✅ Done! Here's your {'photo' if mode == 'image' else 'video'}:\n{media_url}", reply_markup=_main_menu())
 
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    tg = update.effective_user
+    chat_id = update.effective_chat.id
+    user_prompt = update.message.text
+    style = context.user_data.get('style', 'cinematic')
+    mode = context.user_data.get('mode', 'video')
+
+    # 1) Check account and gates
+    try:
+        ok, error, cost, account_id, extended, plan = await _async_get_gate_status(tg.id, mode, style)
+        if not ok:
+            await update.message.reply_text(error, parse_mode="Markdown" if "🔗" in error else None)
+            return
+    except Exception as e:
+        logger.error(f"Gate error: {e}")
+        await update.message.reply_text("❌ Something went wrong. Please try again.")
+        return
+
+    await update.message.chat.send_action("typing")
+    # Spin up background task
+    context.application.create_task(
+        _generation_task(context, chat_id, user_prompt, style, mode, account_id, tg.id, extended, cost, plan)
+    )
 
 async def post_init(application: Application):
     try:
@@ -638,13 +502,9 @@ def run_bot():
 
     try:
         print("🚀 Starting bot...")
-        print("TOKEN:", bool(TOKEN))
-
-        # Lightweight health-check server so the host (Railway/Render) sees a
-        # live port.
+        
         from flask import Flask as HealthFlask
         health_app = HealthFlask("afrigen_health")
-
         @health_app.route('/')
         def health():
             return "Afrigen Bot is running! 🤖", 200
@@ -673,8 +533,7 @@ def run_bot():
         print("❌ STARTUP ERROR:")
         traceback.print_exc()
         import time
-        time.sleep(30)  # keep the process alive so the host shows the error
-
+        time.sleep(30)
 
 if __name__ == "__main__":
     run_bot()
