@@ -599,7 +599,18 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 
+async def post_init(application: Application):
+    try:
+        await application.bot.delete_webhook(drop_pending_updates=True)
+        logger.info("Cleared any leftover webhooks")
+    except Exception as e:
+        logger.exception("Failed to delete webhook")
+
 def run_bot():
+    if not TOKEN:
+        logger.error("TELEGRAM_BOT_TOKEN is missing or empty. Cannot start bot.")
+        sys.exit(1)
+
     try:
         print("🚀 Starting bot...")
         print("TOKEN:", bool(TOKEN))
@@ -615,11 +626,11 @@ def run_bot():
 
         PORT = int(os.environ.get("PORT", 10000))
         threading.Thread(
-            target=lambda: health_app.run(host='0.0.0.0', port=PORT),
+            target=lambda: health_app.run(host='0.0.0.0', port=PORT, use_reloader=False),
             daemon=True
         ).start()
 
-        app = Application.builder().token(TOKEN).build()
+        app = Application.builder().token(TOKEN).post_init(post_init).build()
         app.add_handler(CommandHandler("start", start))
         app.add_handler(CommandHandler("help", help_command))
         app.add_handler(CommandHandler("link", link_command))
