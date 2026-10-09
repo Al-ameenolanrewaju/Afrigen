@@ -383,69 +383,77 @@ async def credits_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
+    logger.info(f"Callback query received: {query.data} from {update.effective_user.id}")
     await query.answer()
     data = query.data
 
-    if data == "menu_video":
-        context.user_data['mode'] = 'video'
+    try:
+        if data == "menu_video":
+            context.user_data['mode'] = 'video'
+            await query.edit_message_text(
+                "🎬 Video mode on!\n\n"
+                "Send your idea and I'll generate a video.\n\n"
+                "Example: 'A Nigerian king walking through Lagos at sunset'"
+            )
+            return
+
+        elif data == "menu_image":
+            context.user_data['mode'] = 'image'
+            await query.edit_message_text(
+                "🖼️ Photo mode on!\n\n"
+                "Send your idea and I'll generate a photo.\n\n"
+                "Example: 'A Yoruba queen in traditional attire'"
+            )
+            return
+
+        elif data == "menu_help":
+            await query.edit_message_text(
+                "❓ Afrigen Bot Help\n\n"
+                "Commands:\n"
+                "/start - Main menu\n"
+                "/link <code> - Connect your account\n"
+                "/styles - Choose style\n"
+                "/credits - Check plan & credits\n\n"
+                "Tap Make Video or Make Photo, then send your idea!\n\n"
+                "Africa Creates, AI Generates 🌍"
+            )
+            return
+
+        elif data == "menu_styles":
+            keyboard = [
+                [InlineKeyboardButton("🎬 Cinematic", callback_data="style_cinematic")],
+                [InlineKeyboardButton("🎌 Anime", callback_data="style_anime")],
+                [InlineKeyboardButton("🌍 Realistic", callback_data="style_realistic")],
+                [InlineKeyboardButton("👑 African", callback_data="style_african")],
+                [InlineKeyboardButton("📱 Social Media", callback_data="style_social")],
+            ]
+            await query.edit_message_text(
+                "🎨 Choose your style:",
+                reply_markup=InlineKeyboardMarkup(keyboard)
+            )
+            return
+
+        style = data.replace("style_", "")
+        context.user_data['style'] = style
+
+        style_names = {
+            "cinematic": "🎬 Cinematic",
+            "anime": "🎌 Anime",
+            "realistic": "🌍 Realistic",
+            "african": "👑 African",
+            "social": "📱 Social Media"
+        }
+
         await query.edit_message_text(
-            "🎬 Video mode on!\n\n"
-            "Send your idea and I'll generate a video.\n\n"
-            "Example: 'A Nigerian king walking through Lagos at sunset'"
+            f"✅ Style set to: {style_names.get(style, style)}\n\n"
+            "Now send your idea and I'll generate it!"
         )
-        return
-
-    elif data == "menu_image":
-        context.user_data['mode'] = 'image'
-        await query.edit_message_text(
-            "🖼️ Photo mode on!\n\n"
-            "Send your idea and I'll generate a photo.\n\n"
-            "Example: 'A Yoruba queen in traditional attire'"
-        )
-        return
-
-    elif data == "menu_help":
-        await query.edit_message_text(
-            "❓ Afrigen Bot Help\n\n"
-            "Commands:\n"
-            "/start - Main menu\n"
-            "/link <code> - Connect your account\n"
-            "/styles - Choose style\n"
-            "/credits - Check plan & credits\n\n"
-            "Tap Make Video or Make Photo, then send your idea!\n\n"
-            "Africa Creates, AI Generates 🌍"
-        )
-        return
-
-    elif data == "menu_styles":
-        keyboard = [
-            [InlineKeyboardButton("🎬 Cinematic", callback_data="style_cinematic")],
-            [InlineKeyboardButton("🎌 Anime", callback_data="style_anime")],
-            [InlineKeyboardButton("🌍 Realistic", callback_data="style_realistic")],
-            [InlineKeyboardButton("👑 African", callback_data="style_african")],
-            [InlineKeyboardButton("📱 Social Media", callback_data="style_social")],
-        ]
-        await query.edit_message_text(
-            "🎨 Choose your style:",
-            reply_markup=InlineKeyboardMarkup(keyboard)
-        )
-        return
-
-    style = data.replace("style_", "")
-    context.user_data['style'] = style
-
-    style_names = {
-        "cinematic": "🎬 Cinematic",
-        "anime": "🎌 Anime",
-        "realistic": "🌍 Realistic",
-        "african": "👑 African",
-        "social": "📱 Social Media"
-    }
-
-    await query.edit_message_text(
-        f"✅ Style set to: {style_names.get(style, style)}\n\n"
-        "Now send your idea and I'll generate it!"
-    )
+    except Exception as e:
+        from telegram.error import BadRequest
+        if isinstance(e, BadRequest) and "Message is not modified" in str(e):
+            pass
+        else:
+            logger.exception(f"Error editing message in callback: {e}")
 
 
 # ---------- Core generation ----------
@@ -492,9 +500,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("⏳ Refining your idea with AI...")
     try:
         if mode == 'image':
-            refined = refine_image_prompt(user_prompt, style)
+            refined = await asyncio.to_thread(refine_image_prompt, user_prompt, style)
         else:
-            refined = refine_prompt(user_prompt, style)
+            refined = await asyncio.to_thread(refine_prompt, user_prompt, style)
     except Exception as e:
         logger.error(f"Refine error: {e}")
         await update.message.reply_text("❌ Couldn't refine your idea right now. Please try again.")
@@ -611,12 +619,17 @@ async def post_init(application: Application):
     except Exception as e:
         logger.exception("Failed to delete webhook")
 
-async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
     from telegram.error import Conflict
     if isinstance(context.error, Conflict):
         logger.warning("Telegram Conflict error ignored (expected during zero-downtime deployments).")
     else:
-        logger.error(f"Exception while handling an update:", exc_info=context.error)
+        logger.exception("Exception while handling an update:", exc_info=context.error)
+        if isinstance(update, Update) and update.callback_query:
+            try:
+                await update.callback_query.answer("Something went wrong, try /start again", show_alert=True)
+            except Exception:
+                pass
 
 def run_bot():
     if not TOKEN:
@@ -642,7 +655,7 @@ def run_bot():
             daemon=True
         ).start()
 
-        app = Application.builder().token(TOKEN).post_init(post_init).build()
+        app = Application.builder().token(TOKEN).concurrent_updates(True).post_init(post_init).build()
         app.add_handler(CommandHandler("start", start))
         app.add_handler(CommandHandler("help", help_command))
         app.add_handler(CommandHandler("link", link_command))
