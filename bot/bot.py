@@ -11,6 +11,11 @@ import asyncio
 import logging
 import threading
 
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+)
+logger = logging.getLogger(__name__)
+
 from flask import Flask
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
@@ -611,7 +616,7 @@ async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if isinstance(context.error, Conflict):
         logger.warning("Telegram Conflict error ignored (expected during zero-downtime deployments).")
     else:
-        logger.error(f"Exception while handling an update: {context.error}")
+        logger.error(f"Exception while handling an update:", exc_info=context.error)
 
 def run_bot():
     if not TOKEN:
