@@ -606,6 +606,13 @@ async def post_init(application: Application):
     except Exception as e:
         logger.exception("Failed to delete webhook")
 
+async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    from telegram.error import Conflict
+    if isinstance(context.error, Conflict):
+        logger.warning("Telegram Conflict error ignored (expected during zero-downtime deployments).")
+    else:
+        logger.error(f"Exception while handling an update: {context.error}")
+
 def run_bot():
     if not TOKEN:
         logger.error("TELEGRAM_BOT_TOKEN is missing or empty. Cannot start bot.")
@@ -638,6 +645,7 @@ def run_bot():
         app.add_handler(CommandHandler("credits", credits_command))
         app.add_handler(CallbackQueryHandler(handle_style_selection))
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+        app.add_error_handler(error_handler)
 
         print("🤖 Bot running with polling...")
         app.run_polling()
