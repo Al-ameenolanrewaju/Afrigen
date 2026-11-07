@@ -74,11 +74,33 @@
     <textarea id="body" class="form-control mb-2" rows="14"
               placeholder="Click 'Generate with AI + web' to draft this week's issue, or write your own HTML here.">{{ draft.body if draft else '' }}</textarea>
 
+    <!-- RESEND BATCH SELECTOR (Free Tier Friendly) -->
+    <div class="p-3 my-3 rounded" style="background: rgba(245, 166, 35, 0.08); border: 1px solid rgba(245, 166, 35, 0.25);">
+        <div class="row align-items-center g-2">
+            <div class="col-md-5">
+                <label class="form-label mb-1" for="batchSelect" style="color: #F5A623; font-weight: 600; font-size: 14px;">
+                    <i class="fa-solid fa-layer-group"></i> Send in Batches (Resend Free Tier: 100/day max)
+                </label>
+                <select id="batchSelect" class="form-select form-select-sm" style="background:#161B22; color:#fff; border-color:#30363D;">
+                    {% for b in batches %}
+                    <option value="{{ b.offset }}" data-limit="{{ b.limit }}">{{ b.label }}</option>
+                    {% endfor %}
+                    <option value="0" data-limit="0">All Subscribers ({{ audience }} people)</option>
+                </select>
+            </div>
+            <div class="col-md-7">
+                <small style="color: #8B949E; font-size: 12px; line-height: 1.4; display: block;">
+                    💡 Resend Free allows 100 emails/day. Choose <strong>Batch 1 (80 users)</strong> today, and <strong>Batch 2</strong> tomorrow to broadcast without hitting daily rate limits.
+                </small>
+            </div>
+        </div>
+    </div>
+
     <div class="d-flex flex-wrap gap-2 mt-2">
         <button id="previewBtn" class="btn btn-outline-warning btn-sm"><i class="fa-solid fa-eye"></i> Preview</button>
         <button id="saveBtn" class="btn btn-outline-warning"><i class="fa-solid fa-floppy-disk"></i> Save draft</button>
         <button id="approveBtn" class="btn btn-success"><i class="fa-solid fa-circle-check"></i> Approve for Monday send</button>
-        <button id="sendBtn" class="btn btn-afrigen"><i class="fa-solid fa-share-nodes"></i> Send now to {{ audience }} people</button>
+        <button id="sendBtn" class="btn btn-afrigen"><i class="fa-solid fa-paper-plane"></i> Send Selected Batch</button>
         <span id="status" class="align-self-center ms-2" style="color: #888;"></span>
     </div>
     <p class="mt-2 mb-0" style="color: #555; font-size: 13px;">
@@ -157,12 +179,35 @@ document.getElementById('previewBtn').addEventListener('click', () => {
     document.getElementById('previewCard').style.display = 'block';
 });
 
-document.getElementById('sendBtn').addEventListener('click', async () => {
-    const sendBtn = document.getElementById('sendBtn');
+const batchSelect = document.getElementById('batchSelect');
+const sendBtn = document.getElementById('sendBtn');
+
+function updateSendButtonLabel() {
+    if (!batchSelect || !sendBtn) return;
+    const selectedOpt = batchSelect.options[batchSelect.selectedIndex];
+    const isAll = selectedOpt.getAttribute('data-limit') === '0';
+    sendBtn.innerHTML = isAll 
+        ? `<i class="fa-solid fa-share-nodes"></i> Send now to all {{ audience }} people`
+        : `<i class="fa-solid fa-paper-plane"></i> Send ${selectedOpt.text}`;
+}
+
+if (batchSelect) {
+    batchSelect.addEventListener('change', updateSendButtonLabel);
+    updateSendButtonLabel();
+}
+
+sendBtn.addEventListener('click', async () => {
+    const selectedOpt = batchSelect ? batchSelect.options[batchSelect.selectedIndex] : null;
+    const offset = selectedOpt ? parseInt(selectedOpt.value, 10) : 0;
+    const limit = selectedOpt ? parseInt(selectedOpt.getAttribute('data-limit'), 10) : 80;
+
     sendBtn.disabled = true;
     setStatus('Sending…', '#F5A623');
     const data = await post('{{ url_for("main.admin_newsletter_send") }}', {
-        subject: subjectEl.value, body: bodyEl.value,
+        subject: subjectEl.value,
+        body: bodyEl.value,
+        offset: offset,
+        limit: limit
     });
     if (data.sent > 0) {
         const sentDate = data.sent_at ? new Date(data.sent_at) : new Date();

@@ -460,7 +460,7 @@ def generate():
             prompt=refined, style=style, aspect_ratio=aspect_ratio, webhook_url=webhook_url,
             extended=extended, duration=duration, request_id=request_id,
             original_prompt=prompt,
-            allow_fal=(locked_user.plan == 'pro'),
+            allow_fal=(locked_user.plan == 'pro' or (locked_user.free_video_allowance or 0) > 0),
         )
 
         if not result["success"]:
@@ -1468,6 +1468,23 @@ def admin_force_retry(generation_id):
     return redirect(url_for('main.admin', _anchor='generation-queue'))
 
 
+@main.route('/admin/grant-free-video/<int:user_id>', methods=['GET', 'POST'])
+@admin_required
+def grant_free_video(user_id):
+    user = db.session.get(User, user_id)
+    if not user:
+        flash('User not found.', 'danger')
+        return redirect(url_for('main.admin'))
+    count = request.values.get('count', 1, type=int)
+    if count <= 0:
+        count = 1
+    user.free_video_allowance = (getattr(user, 'free_video_allowance', 0) or 0) + count
+    db.session.add(CreditLedger(user_id=user.id, delta=0, reason=f'Admin gifted {count} free video generation(s)'))
+    db.session.commit()
+    flash(f'Granted {count} free video generation(s) to {user.username}! (Total allowance: {user.free_video_allowance})', 'success')
+    return redirect(request.referrer or url_for('main.admin'))
+
+
 @main.route('/admin/upgrade/<int:user_id>')
 @admin_required
 def upgrade_user(user_id):
@@ -2354,7 +2371,7 @@ def launch_admin_newsletter():
 @main.route('/admin/newsletter')
 @admin_required
 def admin_newsletter():
-    from services.newsletter import get_current_draft, audience_size
+    from services.newsletter import get_current_draft, audience_size, get_newsletter_batches
     from models import NewsletterIssue
 
     draft = get_current_draft()
@@ -2363,11 +2380,13 @@ def admin_newsletter():
         .order_by(NewsletterIssue.sent_at.desc())
         .first()
     )
+    batches, total_audience = get_newsletter_batches(batch_size=80)
     return render_template(
         'main/newsletter_admin.html',
         draft=draft,
         last_sent=last_sent,
-        audience=audience_size(),
+        audience=total_audience,
+        batches=batches,
         admin_resend_datetime=_admin_resend_datetime,
     )
 
@@ -2440,7 +2459,21 @@ def admin_newsletter_send():
         return jsonify({'ok': False, 'error': 'Newsletter body is empty.'}), 400
 
     try:
-        result = send_issue(draft)
+        offset = data.get('offset')
+        try:
+            offset = int(offset) if offset is not None else 0
+        except (ValueError, TypeError):
+            offset = 0
+
+        limit = data.get('limit')
+        try:
+            limit = int(limit) if limit is not None else 80
+        except (ValueError, TypeError):
+            limit = 80
+        if limit <= 0:
+            limit = None
+
+        result = send_issue(draft, limit=limit, offset=offset)
     except Exception as e:
         current_app.logger.exception("Newsletter send failed")
         return jsonify({'ok': False, 'error': str(e)}), 500
@@ -2787,6 +2820,17 @@ def fal_webhook():
                     db.session.commit()
         except Exception as e:
             print("TEXT OVERLAY ERROR:", str(e))
+
+        # Apply branding watermark for free tier users
+        if user and user.plan != 'pro':
+            try:
+                from services.video import add_watermark_to_video
+                watermarked = add_watermark_to_video(generation.video_url)
+                if watermarked and watermarked != generation.video_url:
+                    generation.video_url = watermarked
+                    db.session.commit()
+            except Exception as e:
+                print("WATERMARK ERROR:", str(e))
 
         # Email last, linking the final (merged, when available) video. Videos
         # without voiceover skip the block above, so their email still goes

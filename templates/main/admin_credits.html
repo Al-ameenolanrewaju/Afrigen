@@ -10,7 +10,10 @@
         <button class="btn-admin" type="submit">Look up</button>
     </form>
     {% if lookup_user %}
-    <p class="text-white">{{ lookup_user.username }}: {{ lookup_user.credits or 0 }} credits</p>
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <p class="text-white mb-0"><strong>{{ lookup_user.username }}</strong> ({{ lookup_user.plan.upper() }}): {{ lookup_user.credits or 0 }} credits | <strong>{{ lookup_user.free_video_allowance or 0 }} Free Video(s)</strong></p>
+        <a href="{{ url_for('main.grant_free_video', user_id=lookup_user.id, count=1) }}" class="btn-admin" style="color: #60A5FA; border-color: rgba(96, 165, 250, 0.3); text-decoration: none;">+ Gift 1 Free Video</a>
+    </div>
     <form method="post" class="row g-2 mb-4">
         <input type="hidden" name="user_id" value="{{ lookup_user.id }}">
         <div class="col-md-3"><input type="number" name="delta" class="form-control" placeholder="+/- credits" required></div>

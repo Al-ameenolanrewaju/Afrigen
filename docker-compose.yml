@@ -1,0 +1,54 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: afrigen-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: afrigen
+      POSTGRES_PASSWORD: afrigen_password
+      POSTGRES_DB: afrigen_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U afrigen -d afrigen_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: .
+    container_name: afrigen-web
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=development
+      - DATABASE_URL=postgresql://afrigen:afrigen_password@db:5432/afrigen_db
+      - SECRET_KEY=local_development_secret_key_change_in_prod
+      - ENABLE_SCHEDULER=true
+    volumes:
+      - .:/app
+    command: ["sh", "-c", "flask db upgrade && flask run --host=0.0.0.0 --port=5000 --debug"]
+
+  bot:
+    build: .
+    container_name: afrigen-bot
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql://afrigen:afrigen_password@db:5432/afrigen_db
+      - SECRET_KEY=local_development_secret_key_change_in_prod
+    volumes:
+      - .:/app
+    command: ["python", "bot/bot.py"]
+
+volumes:
+  postgres_data:
+

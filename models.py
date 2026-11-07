@@ -61,6 +61,7 @@ class User(UserMixin, db.Model):
 
     monthly_images_used = db.Column(db.Integer, default=0)
     last_image_reset = db.Column(db.Date, nullable=True)
+    free_video_allowance = db.Column(db.Integer, default=0)
 
     is_banned = db.Column(db.Boolean, default=False)
 

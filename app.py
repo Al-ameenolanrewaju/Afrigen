@@ -108,8 +108,13 @@ def capture_signup_tracking():
 mail = Mail(app)
 oauth = OAuth(app)
 scheduler = APScheduler()
-scheduler.init_app(app)
-scheduler.start()
+enable_scheduler = (
+    not pytest_mode
+    and os.environ.get("ENABLE_SCHEDULER", "true").lower() in ("1", "true", "yes")
+)
+if enable_scheduler:
+    scheduler.init_app(app)
+    scheduler.start()
 
 
 
@@ -132,7 +137,8 @@ def ensure_legacy_schema_columns():
 
             repairs = {
                 'users': [
-                    ('signup_at', 'TIMESTAMPTZ', "UPDATE users SET signup_at = created_at WHERE signup_at IS NULL")
+                    ('signup_at', 'TIMESTAMPTZ', "UPDATE users SET signup_at = created_at WHERE signup_at IS NULL"),
+                    ('free_video_allowance', 'INTEGER DEFAULT 0', "UPDATE users SET free_video_allowance = 0 WHERE free_video_allowance IS NULL")
                 ],
                 'subscribers': [
                     ('updated_at', 'TIMESTAMPTZ', "UPDATE subscribers SET updated_at = created_at WHERE updated_at IS NULL")
@@ -150,7 +156,8 @@ def ensure_legacy_schema_columns():
                         conn.execute(db.text(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {sql_type}"))
                         if backfill_sql:
                             conn.execute(db.text(backfill_sql))
-                        conn.execute(db.text(f"ALTER TABLE {table_name} ALTER COLUMN {column_name} SET DEFAULT NOW()"))
+                        if 'timestamptz' in sql_type.lower() or 'timestamp' in sql_type.lower():
+                            conn.execute(db.text(f"ALTER TABLE {table_name} ALTER COLUMN {column_name} SET DEFAULT NOW()"))
     except Exception as exc:
         logging.getLogger('app').warning("Could not repair legacy DB schema columns: %s", exc)
 

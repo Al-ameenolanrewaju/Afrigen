@@ -3,10 +3,13 @@ services:
     name: afrigen-web
     env: python
     buildCommand: pip install -r requirements.txt
+    preDeployCommand: flask db upgrade
     startCommand: gunicorn app:app --workers 1 --threads 8 --timeout 180
     envVars:
       - key: PYTHON_VERSION
-        value: 3.11.0
+        value: 3.11.10
+      - key: ENABLE_SCHEDULER
+        value: "true"
 
   - type: worker
     name: afrigen-bot
@@ -15,4 +18,4 @@ services:
     startCommand: python bot/bot.py
     envVars:
       - key: PYTHON_VERSION
-        value: 3.11.0
+        value: 3.11.10

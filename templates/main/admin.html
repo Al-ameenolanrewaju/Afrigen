@@ -202,12 +202,18 @@
                                     {{ user.plan.upper() }}
                                 </span>
                             </td>
-                            <td>{{ user.credits }}</td>
+                            <td>
+                                <div>{{ user.credits }}</div>
+                                {% if user.free_video_allowance %}
+                                <span class="badge" style="background-color: #2563EB; font-size: 11px;" title="Free Video Allowance">+{{ user.free_video_allowance }} Free Video{% if user.free_video_allowance > 1 %}s{% endif %}</span>
+                                {% endif %}
+                            </td>
                             <td>{{ admin_resend_datetime(user.signup_at or user.created_at).strftime('%b %d, %Y') }}</td>
                             <td>
                                 <div class="d-flex gap-2">
                                     {% if user.email != 'oadedamola07@gmail.com' %}
                                         {% if user.plan == 'free' %}
+                                        <a href="{{ url_for('main.grant_free_video', user_id=user.id, count=1) }}" class="btn-admin" style="color: #60A5FA; border-color: rgba(96, 165, 250, 0.3); text-decoration: none;" title="Gift 1 Free Video to {{ user.username }}">+ Video</a>
                                         <a href="{{ url_for('main.upgrade_user', user_id=user.id) }}" class="btn-admin" style="text-decoration: none;">Upgrade</a>
                                         {% elif user.plan == 'pro' %}
                                         <a href="{{ url_for('main.downgrade_user', user_id=user.id) }}" class="btn-admin" style="text-decoration: none;">Downgrade</a>

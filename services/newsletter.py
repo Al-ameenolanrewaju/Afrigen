@@ -119,9 +119,12 @@ def _split_subject(text, fallback_subject):
 
 # ---------- Recipients ----------
 
-def collect_recipients():
+def collect_recipients(limit=None, offset=0):
     """Every email we can reach — every registered user + waitlist — de-duped
-    (case-insensitive), excluding anyone who unsubscribed."""
+    (case-insensitive), excluding anyone who unsubscribed.
+
+    Supports limit and offset slicing for Resend daily quota management (e.g. 80-user batches).
+    """
     opted_out = {e.lower() for (e,) in db.session.query(EmailOptOut.email).all()}
 
     seen = set()
@@ -137,7 +140,34 @@ def collect_recipients():
         if key and key not in seen and key not in opted_out:
             seen.add(key)
             recipients.append((email, name))
+
+    if offset:
+        recipients = recipients[offset:]
+    if limit and limit > 0:
+        recipients = recipients[:limit]
+
     return recipients
+
+
+def get_newsletter_batches(batch_size=80):
+    """Split the total deduplicated newsletter audience into batches (default 80 for Resend free tier)."""
+    all_recipients = collect_recipients()
+    total = len(all_recipients)
+    if batch_size <= 0:
+        batch_size = 80
+    batches = []
+    for idx, start in enumerate(range(0, total, batch_size), 1):
+        end = min(start + batch_size, total)
+        batches.append({
+            "batch_number": idx,
+            "start": start,
+            "end": end,
+            "count": end - start,
+            "offset": start,
+            "limit": batch_size,
+            "label": f"Batch {idx}: Users {start + 1} to {end} ({end - start} subscribers)"
+        })
+    return batches, total
 
 
 def upsert_subscriber_from_user(user):
@@ -261,9 +291,9 @@ def approve_draft(issue, subject=None, body=None):
     return issue
 
 
-def send_issue(issue):
-    """Send an issue and return delivery totals and failures."""
-    recipients = collect_recipients()
+def send_issue(issue, limit=None, offset=0):
+    """Send an issue to a slice of recipients and return delivery totals and failures."""
+    recipients = collect_recipients(limit=limit, offset=offset)
     issue.send_attempted_at = datetime.now(timezone.utc)
     db.session.commit()
     result = send_newsletter(

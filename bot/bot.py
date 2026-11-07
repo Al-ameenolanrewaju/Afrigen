@@ -1,5 +1,12 @@
 import sys
 import os
+
+# Prevent Windows console UnicodeEncodeError crashes when printing emojis or African symbols
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from dotenv import load_dotenv
 load_dotenv()
@@ -193,12 +200,13 @@ async def _async_get_gate_status(tg_id, mode, style):
             if _is_banned(account):
                 return False, "❌ Your account is restricted.", 0, None, False, account.plan
             extended = (account.plan == 'pro')
+            has_free_video = (getattr(account, 'free_video_allowance', 0) or 0) > 0
             if mode == 'image':
                 ok, err = image_gate(account)
                 cost = 0
             else:
                 ok, err, cost = video_gate(account, style, extended=extended)
-            return ok, err, cost, account.id, extended, account.plan
+            return ok, err, cost, account.id, extended, account.plan, has_free_video
     return await asyncio.to_thread(_do)
 
 async def _async_record_failed(mode, account_id, user_prompt, refined, cost):
@@ -386,7 +394,7 @@ async def handle_style_selection(update: Update, context: ContextTypes.DEFAULT_T
 
 # ---------- Core generation ----------
 
-async def _generation_task(context: ContextTypes.DEFAULT_TYPE, chat_id: int, user_prompt: str, style: str, mode: str, account_id: int, tg_id: int, extended: bool, cost: int, plan: str):
+async def _generation_task(context: ContextTypes.DEFAULT_TYPE, chat_id: int, user_prompt: str, style: str, mode: str, account_id: int, tg_id: int, extended: bool, cost: int, plan: str, has_free_video: bool = False):
     # 2) Refine the idea.
     try:
         if mode == 'image':
@@ -407,7 +415,8 @@ async def _generation_task(context: ContextTypes.DEFAULT_TYPE, chat_id: int, use
         else:
             wait_note = "this can take 2-5 minutes" if extended else "this can take 1-3 minutes"
             await context.bot.send_message(chat_id, f"🎬 Generating your video... {wait_note}.")
-            result = await asyncio.to_thread(generate_video, refined, style, "16:9", extended, plan == 'pro')
+            allow_fal = (plan == 'pro' or has_free_video)
+            result = await asyncio.to_thread(generate_video, refined, style, "16:9", extended, allow_fal)
     except Exception as e:
         logger.error(f"Generate error: {e}")
         result = {"success": False, "error": str(e)}
@@ -426,7 +435,7 @@ async def _generation_task(context: ContextTypes.DEFAULT_TYPE, chat_id: int, use
         await context.bot.send_message(chat_id, f"❌ Generation failed: {gen_error}\nPlease try again later.")
         return
 
-    # 5) Overlay
+    # 5) Overlay & Watermark
     if mode == 'video':
         on_screen = extract_on_screen_text(user_prompt)
         if on_screen:
@@ -434,6 +443,14 @@ async def _generation_task(context: ContextTypes.DEFAULT_TYPE, chat_id: int, use
                 media_url = await asyncio.to_thread(add_text_overlay, media_url, on_screen)
             except Exception as e:
                 logger.error(f"Overlay error: {e}")
+
+        # Burn branding watermark for free tier users
+        if plan != 'pro':
+            try:
+                from services.video import add_watermark_to_video
+                media_url = await asyncio.to_thread(add_watermark_to_video, media_url)
+            except Exception as e:
+                logger.error(f"Watermark error: {e}")
 
     # 6) Charge on success
     try:
@@ -462,7 +479,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # 1) Check account and gates
     try:
-        ok, error, cost, account_id, extended, plan = await _async_get_gate_status(tg.id, mode, style)
+        ok, error, cost, account_id, extended, plan, has_free_video = await _async_get_gate_status(tg.id, mode, style)
         if not ok:
             await update.message.reply_text(error, parse_mode="Markdown" if "🔗" in error else None)
             return
@@ -474,8 +491,60 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.chat.send_action("typing")
     # Spin up background task
     context.application.create_task(
-        _generation_task(context, chat_id, user_prompt, style, mode, account_id, tg.id, extended, cost, plan)
+        _generation_task(context, chat_id, user_prompt, style, mode, account_id, tg.id, extended, cost, plan, has_free_video)
     )
+
+async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle Telegram voice notes and audio clips, transcribing them into prompts."""
+    import tempfile
+    tg = update.effective_user
+    chat_id = update.effective_chat.id
+    message = update.message
+
+    voice_or_audio = message.voice or message.audio
+    if not voice_or_audio:
+        return
+
+    status_msg = await message.reply_text("🎙️ Transcribing your voice idea...")
+    await update.message.chat.send_action("record_voice")
+
+    tmp_voice_path = None
+    try:
+        tg_file = await context.bot.get_file(voice_or_audio.file_id)
+        fd, tmp_voice_path = tempfile.mkstemp(suffix=".ogg")
+        os.close(fd)
+        await tg_file.download_to_drive(custom_path=tmp_voice_path)
+
+        from services.audio import transcribe_voice_note
+        prompt_text = await asyncio.to_thread(transcribe_voice_note, tmp_voice_path)
+
+        if not prompt_text or len(prompt_text.strip()) < 3:
+            await status_msg.edit_text("❌ Couldn't catch that clearly. Please try speaking closer to the microphone or send a typed message.")
+            return
+
+        style = context.user_data.get('style', 'cinematic')
+        mode = context.user_data.get('mode', 'video')
+
+        await status_msg.edit_text(f"🗣️ *Transcribed:*\n\"{prompt_text}\"\n\n🚀 Starting {mode} generation...", parse_mode="Markdown")
+
+        ok, error, cost, account_id, extended, plan, has_free_video = await _async_get_gate_status(tg.id, mode, style)
+        if not ok:
+            await update.message.reply_text(error, parse_mode="Markdown" if "🔗" in error else None)
+            return
+
+        await update.message.chat.send_action("typing")
+        context.application.create_task(
+            _generation_task(context, chat_id, prompt_text, style, mode, account_id, tg.id, extended, cost, plan, has_free_video)
+        )
+    except Exception as e:
+        logger.error(f"Voice transcription error: {e}")
+        await status_msg.edit_text(f"❌ Failed to transcribe voice note: {e}")
+    finally:
+        if tmp_voice_path and os.path.exists(tmp_voice_path):
+            try:
+                os.unlink(tmp_voice_path)
+            except OSError:
+                pass
 
 async def post_init(application: Application):
     try:
@@ -511,10 +580,13 @@ def run_bot():
             return "Afrigen Bot is running! 🤖", 200
 
         PORT = int(os.environ.get("PORT", 10000))
-        threading.Thread(
-            target=lambda: health_app.run(host='0.0.0.0', port=PORT, use_reloader=False),
-            daemon=True
-        ).start()
+        try:
+            threading.Thread(
+                target=lambda: health_app.run(host='0.0.0.0', port=PORT, use_reloader=False),
+                daemon=True
+            ).start()
+        except Exception as e:
+            logger.warning("Health server thread could not start on port %s: %s", PORT, e)
 
         app = Application.builder().token(TOKEN).concurrent_updates(True).post_init(post_init).build()
         app.add_handler(CommandHandler("start", start))
@@ -524,6 +596,7 @@ def run_bot():
         app.add_handler(CommandHandler("credits", credits_command))
         app.add_handler(CallbackQueryHandler(handle_style_selection))
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+        app.add_handler(MessageHandler(filters.VOICE | filters.AUDIO, handle_voice))
         app.add_error_handler(error_handler)
 
         print("🤖 Bot running with polling...")

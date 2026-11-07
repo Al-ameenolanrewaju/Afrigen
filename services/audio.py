@@ -47,6 +47,28 @@ def generate_voiceover(script):
             pass
 
 
+def transcribe_voice_note(audio_file_path):
+    """Transcribe a voice note into text using Groq's high-speed Whisper model.
+
+    Handles accents, dialects (including Pidgin and African English), and background noise.
+    """
+    import os
+    from groq import Groq
+
+    api_key = os.environ.get("GROQ_API_KEY")
+    if not api_key:
+        raise ValueError("GROQ_API_KEY is not configured.")
+
+    client = Groq(api_key=api_key)
+    with open(audio_file_path, "rb") as audio_file:
+        transcription = client.audio.transcriptions.create(
+            file=(os.path.basename(audio_file_path), audio_file),
+            model="whisper-large-v3",
+            response_format="text"
+        )
+    return str(transcription).strip()
+
+
 def generate_video_script(prompt, style="cinematic"):
     """Generate voiceover script from prompt"""
     from services.provider_manager import provider_manager
