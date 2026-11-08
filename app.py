@@ -17,8 +17,10 @@ from flask_mail import Mail, Message
 from flask_apscheduler import APScheduler
 from authlib.integrations.flask_client import OAuth
 from werkzeug.middleware.proxy_fix import ProxyFix
+from urllib.parse import urlparse
+from datetime import datetime, timezone
 
-from models import db, User, Generation, TelegramUser, SavedPrompt, Referral
+from models import db, User, Generation, TelegramUser, SavedPrompt, Referral, WebsiteVisit
 from config import DevelopmentConfig, ProductionConfig, TestingConfig
 from extensions import csrf, limiter
 from routes.main import main
@@ -105,6 +107,44 @@ def capture_signup_tracking():
         session['ref_code'] = ref_code
 
 
+@app.after_request
+def track_website_visit(response):
+    if (
+        request.method != 'GET'
+        or response.status_code >= 400
+        or response.mimetype != 'text/html'
+        or request.endpoint == 'static'
+        or request.path == '/admin'
+        or request.path.startswith('/admin/')
+    ):
+        return response
+
+    now = datetime.now(timezone.utc)
+    last_visit = session.get('_website_visit_at')
+    try:
+        if last_visit is not None and now.timestamp() - float(last_visit) < 30 * 60:
+            return response
+    except (TypeError, ValueError):
+        pass
+
+    utm_source = re.sub(r'[^a-zA-Z0-9._-]+', '-', request.args.get('utm_source', '').strip()).strip('-')[:120]
+    if utm_source:
+        source = utm_source.lower()
+    else:
+        referrer_host = urlparse(request.referrer or '').hostname
+        current_host = urlparse(request.host_url).hostname
+        source = referrer_host.lower()[:120] if referrer_host and referrer_host.lower() != (current_host or '').lower() else 'direct'
+
+    try:
+        db.session.add(WebsiteVisit(source=source, landing_page=request.path[:500], created_at=now))
+        db.session.commit()
+        session['_website_visit_at'] = now.timestamp()
+    except Exception:
+        db.session.rollback()
+        app.logger.exception('Could not record website visit')
+    return response
+
+
 mail = Mail(app)
 oauth = OAuth(app)
 scheduler = APScheduler()
@@ -132,13 +172,14 @@ def ensure_legacy_schema_columns():
     try:
         with app.app_context():
             inspector = db.inspect(db.engine)
+            if not inspector.has_table('website_visits'):
+                WebsiteVisit.__table__.create(bind=db.engine, checkfirst=True)
             if db.engine.dialect.name != 'postgresql':
                 return
 
             repairs = {
                 'users': [
                     ('signup_at', 'TIMESTAMPTZ', "UPDATE users SET signup_at = created_at WHERE signup_at IS NULL"),
-                    ('free_video_allowance', 'INTEGER DEFAULT 0', "UPDATE users SET free_video_allowance = 0 WHERE free_video_allowance IS NULL")
                 ],
                 'subscribers': [
                     ('updated_at', 'TIMESTAMPTZ', "UPDATE subscribers SET updated_at = created_at WHERE updated_at IS NULL")

@@ -20,7 +20,7 @@
 ## Deployment Steps
 1. Push code to the production branch.
 2. The platform will install dependencies via `requirements.txt`.
-3. Pre-deploy command: `flask db upgrade` (Ensures all Sprint 12 and Sprint 13 migrations are applied).
+3. Pre-deploy command: `flask db upgrade` (Applies all pending database migrations).
 4. Run command: `gunicorn -w 4 -b 0.0.0.0:8000 app:app` (or similar WSGI server).
 
 ## Post-Deployment Verification

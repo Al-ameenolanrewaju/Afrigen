@@ -17,10 +17,12 @@ depends_on = None
 
 
 def upgrade():
-    op.add_column(
-        'users',
-        sa.Column('free_video_allowance', sa.Integer(), nullable=False, server_default='0')
-    )
+    columns = {column['name'] for column in sa.inspect(op.get_bind()).get_columns('users')}
+    if 'free_video_allowance' not in columns:
+        op.add_column(
+            'users',
+            sa.Column('free_video_allowance', sa.Integer(), nullable=False, server_default='0')
+        )
 
 
 def downgrade():

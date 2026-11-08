@@ -76,6 +76,29 @@
     </div>
 </div>
 
+<div class="admin-chart-container mb-4">
+    <div class="admin-chart-header mb-3">
+        <div>
+            <h5 class="admin-chart-title">Website Visits</h5>
+            <div class="admin-stat-sub">One visit per browser session, with a 30-minute timeout.</div>
+        </div>
+        <div class="d-flex gap-4">
+            <div><strong>{{ website_visits_30days }}</strong><div class="admin-stat-sub">Last 30 days</div></div>
+            <div><strong>{{ website_visits_7days }}</strong><div class="admin-stat-sub">Last 7 days</div></div>
+            <div><strong>{{ website_visits_total }}</strong><div class="admin-stat-sub">All time</div></div>
+        </div>
+    </div>
+    <div class="row g-2">
+        {% for source, count in visit_source_breakdown.items() %}
+            <div class="col-6 col-md-3 d-flex justify-content-between">
+                <span>{{ source }}</span><strong>{{ count }}</strong>
+            </div>
+        {% else %}
+            <div class="col admin-stat-sub">No website visits recorded in the last 30 days.</div>
+        {% endfor %}
+    </div>
+</div>
+
 <!-- Signup Sources and Top Countries -->
 <div class="row g-4 mb-4">
     <div class="col-md-6">
@@ -457,34 +480,29 @@
     <div class="admin-chart-container h-100 mb-0">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h5 class="admin-chart-title text-white mb-0">Media Provider Status</h5>
-            <small class="text-white-50">Live check</small>
+            <button type="button" class="btn-admin" id="check-provider-status">Check now</button>
         </div>
-        {% for key in ['fal', 'huggingface'] %}
-        {% set provider = external_provider_status[key] %}
-        <div class="border-bottom border-secondary py-3">
+        <div class="border-bottom border-secondary py-3" data-provider="fal">
             <div class="d-flex justify-content-between align-items-center">
-                <strong class="text-white">{{ provider.name }}</strong>
-                <span class="admin-badge {% if provider.status == 'healthy' %}admin-badge-green{% elif provider.status == 'offline' %}admin-badge-red{% else %}admin-badge-orange{% endif %}">
-                    {{ provider.status.replace('_', ' ').upper() }}
-                </span>
+                <strong class="text-white">FAL</strong>
+                <span id="fal-provider-status-badge" class="admin-badge admin-badge-orange">NOT CHECKED</span>
             </div>
-            <small class="text-white-50 d-block mt-1">{{ provider.detail }}</small>
-            {% if key == 'fal' %}
+            <small id="fal-provider-detail" class="text-white-50 d-block mt-1">Live status has not been checked.</small>
             <div class="d-flex justify-content-between mt-2">
                 <span class="text-white-50">FAL credits remaining</span>
-                {% if provider.credits is not none %}
-                <strong style="color: #F5A623;">{{ provider.credits }}</strong>
-                {% else %}
-                <span class="text-white-50">Unavailable</span>
-                {% endif %}
+                <strong id="fal-provider-credits" style="color: #F5A623;">Unavailable</strong>
             </div>
-            <small class="text-white-50 d-block mb-1">{{ provider.credits_detail }}</small>
-            <a href="{{ provider.dashboard_url }}" target="_blank" rel="noopener" class="small text-info">Open FAL billing</a>
-            {% else %}
-            <small class="text-white-50 d-block mt-2">Model: {{ provider.model }}</small>
-            {% endif %}
+            <small id="fal-provider-credits-detail" class="text-white-50 d-block mb-1">Check status to retrieve balance information.</small>
+            <a href="https://fal.ai/dashboard/billing" target="_blank" rel="noopener" class="small text-info">Open FAL billing</a>
         </div>
-        {% endfor %}
+        <div class="py-3" data-provider="huggingface">
+            <div class="d-flex justify-content-between align-items-center">
+                <strong class="text-white">Hugging Face</strong>
+                <span id="huggingface-provider-status-badge" class="admin-badge admin-badge-orange">NOT CHECKED</span>
+            </div>
+            <small id="huggingface-provider-detail" class="text-white-50 d-block mt-1">Live status has not been checked.</small>
+            <small id="huggingface-provider-model" class="text-white-50 d-block mt-2">Model status unavailable until checked.</small>
+        </div>
     </div>
 </div>
     
@@ -713,6 +731,36 @@
 
 {% block scripts %}
 <script>
+    const providerStatusButton = document.getElementById('check-provider-status');
+    providerStatusButton?.addEventListener('click', async () => {
+        providerStatusButton.disabled = true;
+        providerStatusButton.textContent = 'Checking...';
+        try {
+            const response = await fetch('{{ url_for("main.admin_provider_status") }}', {
+                headers: { 'Accept': 'application/json' }
+            });
+            if (!response.ok) throw new Error('Status check failed');
+            const providers = await response.json();
+            for (const key of ['fal', 'huggingface']) {
+                const provider = providers[key];
+                const badge = document.getElementById(`${key}-provider-status-badge`);
+                badge.textContent = provider.status.replaceAll('_', ' ').toUpperCase();
+                badge.className = `admin-badge ${provider.status === 'healthy' ? 'admin-badge-green' : provider.status === 'offline' ? 'admin-badge-red' : 'admin-badge-orange'}`;
+                document.getElementById(`${key}-provider-detail`).textContent = provider.detail;
+            }
+            document.getElementById('fal-provider-credits').textContent = providers.fal.credits ?? 'Unavailable';
+            document.getElementById('fal-provider-credits-detail').textContent = providers.fal.credits_detail;
+            document.getElementById('huggingface-provider-model').textContent = `Model: ${providers.huggingface.model}`;
+        } catch (error) {
+            for (const key of ['fal', 'huggingface']) {
+                document.getElementById(`${key}-provider-detail`).textContent = 'Could not retrieve provider status.';
+            }
+        } finally {
+            providerStatusButton.disabled = false;
+            providerStatusButton.textContent = 'Check now';
+        }
+    });
+
     // Prepare data for Chart.js
     const signupDataRaw = {{ signups_7days | tojson | safe }};
     const genDataRaw = {{ generations_7days | tojson | safe }};

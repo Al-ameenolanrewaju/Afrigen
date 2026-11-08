@@ -4,8 +4,8 @@ from flask import (
 )
 from flask_login import login_required, current_user
 from extensions import csrf, limiter
-from models import db, Generation, User, TelegramUser, SavedPrompt, Referral, Payment
-from sqlalchemy.exc import IntegrityError
+from models import db, Generation, User, TelegramUser, SavedPrompt, Referral, Payment, CreditLedger
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from services.claude import (
     refine_prompt,
     refine_image_prompt,
@@ -809,6 +809,7 @@ def generate_from_image():
             ),
         )
         request_id = uuid.uuid4().hex
+
         webhook_url = url_for(
             'main.fal_webhook',
             _external=True,
@@ -1081,13 +1082,19 @@ def history():
     return render_template('main/history.html', generations=generations)
 
 
+@main.route('/admin/provider-status')
+@admin_required
+def admin_provider_status():
+    from services.provider_status import get_provider_status
+    return jsonify(get_provider_status())
+
+
 @main.route('/admin')
 @admin_required
 def admin():
-    from sqlalchemy import func, or_, and_
+    from sqlalchemy import func, or_, and_, case
     from sqlalchemy.orm import joinedload
     from datetime import datetime, timedelta
-    from collections import Counter
     import json
 
     user_search = request.args.get('user_search', '').strip()
@@ -1155,26 +1162,34 @@ def admin():
     ).count()
     success_rate = round((completed_generations / total_generations * 100) if total_generations > 0 else 0)
 
-    # Last 7 days signups
-    signups_7days = []
+    # Fetch each 7-day series with one aggregate query instead of seven counts.
+    signup_days = []
+    signup_columns = []
     for i in range(6, -1, -1):
         day = date.today() - timedelta(days=i)
         local_start = datetime.combine(day, datetime.min.time(), ADMIN_TIMEZONE)
         local_end = local_start + timedelta(days=1)
-        count = User.query.filter(
+        signup_days.append(day)
+        signup_columns.append(func.coalesce(func.sum(case((and_(
             User.created_at >= local_start.astimezone(timezone.utc),
             User.created_at < local_end.astimezone(timezone.utc),
-        ).count()
-        signups_7days.append({"day": day.strftime('%a'), "count": count})
+        ), 1), else_=0)), 0).label(f'day_{len(signup_days)}'))
+    signup_counts = db.session.query(*signup_columns).one()
+    signups_7days = [
+        {"day": day.strftime('%a'), "count": getattr(signup_counts, f'day_{index}')}
+        for index, day in enumerate(signup_days, start=1)
+    ]
 
-    # Last 7 days generations
-    generations_7days = []
-    for i in range(6, -1, -1):
-        day = date.today() - timedelta(days=i)
-        count = Generation.query.filter(
-            func.date(Generation.created_at) == day
-        ).count()
-        generations_7days.append({"day": day.strftime('%a'), "count": count})
+    generation_columns = [
+        func.coalesce(func.sum(case((func.date(Generation.created_at) == day, 1), else_=0)), 0)
+        .label(f'day_{index}')
+        for index, day in enumerate(signup_days, start=1)
+    ]
+    generation_counts = db.session.query(*generation_columns).one()
+    generations_7days = [
+        {"day": day.strftime('%a'), "count": getattr(generation_counts, f'day_{index}')}
+        for index, day in enumerate(signup_days, start=1)
+    ]
 
     # Top 5 most active users
     top_users = db.session.query(
@@ -1210,6 +1225,30 @@ def admin():
         ).all()
     )
 
+    from models import WebsiteVisit
+    visit_now = datetime.now(timezone.utc)
+    website_visits_total = website_visits_7days = website_visits_30days = 0
+    visit_source_breakdown = {}
+    try:
+        visit_counts = db.session.query(
+            func.count(WebsiteVisit.id).label('total'),
+            func.coalesce(func.sum(case((WebsiteVisit.created_at >= visit_now - timedelta(days=7), 1), else_=0)), 0).label('last_7_days'),
+            func.coalesce(func.sum(case((WebsiteVisit.created_at >= visit_now - timedelta(days=30), 1), else_=0)), 0).label('last_30_days'),
+        ).one()
+        website_visits_total = visit_counts.total
+        website_visits_7days = visit_counts.last_7_days
+        website_visits_30days = visit_counts.last_30_days
+        visit_source_breakdown = dict(
+            db.session.query(WebsiteVisit.source, func.count(WebsiteVisit.id))
+            .filter(WebsiteVisit.created_at >= visit_now - timedelta(days=30))
+            .group_by(WebsiteVisit.source)
+            .order_by(func.count(WebsiteVisit.id).desc())
+            .all()
+        )
+    except SQLAlchemyError:
+        db.session.rollback()
+        current_app.logger.exception('Website visit analytics are unavailable')
+
     from models import Referral
     referral_codes_total = Referral.query.count()
     referral_codes_used = Referral.query.filter_by(is_used=True).count()
@@ -1219,40 +1258,39 @@ def admin():
     ).join(Referral, Referral.referrer_id == User.id).filter(
         Referral.is_used.is_(True)
     ).group_by(User.id).order_by(func.count(Referral.id).desc()).limit(5).all()
-    referral_signups_7days = []
-    for i in range(6, -1, -1):
-        day = date.today() - timedelta(days=i)
+    referral_columns = []
+    for index, day in enumerate(signup_days, start=1):
         local_start = datetime.combine(day, datetime.min.time(), ADMIN_TIMEZONE)
         local_end = local_start + timedelta(days=1)
-        count = db.session.query(Referral).join(User, Referral.referred_id == User.id).filter(
+        referral_columns.append(func.coalesce(func.sum(case((and_(
             Referral.is_used.is_(True),
             User.created_at >= local_start.astimezone(timezone.utc),
             User.created_at < local_end.astimezone(timezone.utc),
-        ).count()
-        referral_signups_7days.append({"day": day.strftime('%a'), "count": count})
+        ), 1), else_=0)), 0).label(f'day_{index}'))
+    referral_counts = db.session.query(*referral_columns).select_from(Referral).join(
+        User, Referral.referred_id == User.id
+    ).one()
+    referral_signups_7days = [
+        {"day": day.strftime('%a'), "count": getattr(referral_counts, f'day_{index}')}
+        for index, day in enumerate(signup_days, start=1)
+    ]
 
     # Automation metrics and reporting
-    from services.automation import get_workflows, get_logs
-    from models import Campaign, CampaignAsset
+    from models import Campaign, CampaignAsset, Workflow, WorkflowRun
 
-    workflows = get_workflows()
-    workflow_logs = get_logs()
-    total_automation_workflows = len(workflows)
-    total_automation_runs = len(workflow_logs)
-    automation_success_count = sum(1 for log in workflow_logs if log.get('status') == 'completed')
-    automation_failed_count = sum(1 for log in workflow_logs if log.get('status') == 'failed')
+    total_automation_workflows = Workflow.query.count()
+    total_automation_runs = WorkflowRun.query.count()
+    automation_success_count = WorkflowRun.query.filter_by(status='completed').count()
+    automation_failed_count = WorkflowRun.query.filter_by(status='failed').count()
     automation_success_rate = round((automation_success_count / total_automation_runs * 100) if total_automation_runs else 0)
     total_campaign_assets = CampaignAsset.query.count()
     campaigns_with_assets = db.session.query(CampaignAsset.campaign_id).distinct().count()
 
-    automation_user_counts = Counter(
-        w.get('user_id') for w in workflows if w.get('user_id')
-    )
-    top_automation_users = []
-    for user_id, count in automation_user_counts.most_common(5):
-        user = db.session.get(User, user_id)
-        if user:
-            top_automation_users.append((user, count))
+    top_automation_users = db.session.query(
+        User, func.count(Workflow.id).label('workflow_count')
+    ).join(Workflow, Workflow.user_id == User.id).group_by(User.id).order_by(
+        func.count(Workflow.id).desc()
+    ).limit(5).all()
 
     top_automated_campaigns = db.session.query(
         Campaign, func.count(CampaignAsset.id).label('asset_count')
@@ -1262,8 +1300,6 @@ def admin():
     
     # Provider Health
     provider_health = ProviderHealth.query.all()
-    from services.provider_status import get_provider_status
-    external_provider_status = get_provider_status()
     
     # Payments
     recent_payments = Payment.query.options(joinedload(Payment.user)).order_by(Payment.created_at.desc()).limit(10).all()
@@ -1369,6 +1405,10 @@ def admin():
         top_users=top_users,
         top_countries=top_countries,
         source_breakdown=source_breakdown,
+        website_visits_total=website_visits_total,
+        website_visits_7days=website_visits_7days,
+        website_visits_30days=website_visits_30days,
+        visit_source_breakdown=visit_source_breakdown,
         referral_codes_total=referral_codes_total,
         referral_codes_used=referral_codes_used,
         referral_conversion_rate=referral_conversion_rate,
@@ -1380,10 +1420,8 @@ def admin():
         total_campaign_assets=total_campaign_assets,
         campaigns_with_assets=campaigns_with_assets,
         top_automation_users=top_automation_users,
-        workflow_logs=workflow_logs,
         top_automated_campaigns=top_automated_campaigns,
         provider_health=provider_health,
-        external_provider_status=external_provider_status,
         recent_payments=recent_payments,
         total_revenue=total_revenue,
         monthly_revenue=monthly_revenue,

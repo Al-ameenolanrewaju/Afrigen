@@ -108,6 +108,20 @@ class CreditLedger(db.Model):
     user = db.relationship("User", backref=db.backref("credit_ledger", cascade="all, delete-orphan"))
 
 
+class WebsiteVisit(db.Model):
+    __tablename__ = "website_visits"
+
+    id = db.Column(db.Integer, primary_key=True)
+    source = db.Column(db.String(120), nullable=False, index=True)
+    landing_page = db.Column(db.String(500), nullable=False)
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        index=True,
+    )
+
+
 class PricingConfig(db.Model):
     __tablename__ = "pricing_config"
 
