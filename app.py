@@ -345,6 +345,9 @@ if not os.path.exists('logs'):
     os.makedirs('logs')
 
 logging.basicConfig(level=logging.INFO)
+logging.getLogger("apscheduler").setLevel(logging.WARNING)
+logging.getLogger("apscheduler.executors.default").setLevel(logging.WARNING)
+logging.getLogger("werkzeug").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 file_handler = RotatingFileHandler(

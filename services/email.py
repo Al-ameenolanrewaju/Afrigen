@@ -2,11 +2,14 @@ import resend
 import os
 import json
 import html
+import logging
 
 resend.api_key = os.environ.get("RESEND_API_KEY")
 
 BASE_URL = os.environ.get("BASE_URL", "https://afrigen.com.ng")
 FROM_EMAIL = "Afrigen <hello@afrigen.com.ng>"
+PLACEHOLDER_EMAIL_DOMAINS = {"example.com", "example.net", "example.org", "example"}
+logger = logging.getLogger(__name__)
 
 
 def get_base_email_html(content):
@@ -371,14 +374,51 @@ def send_launch_confirmation(user_email, name):
 def send_newsletter(recipients, subject, body, base_url=BASE_URL, is_html=False,
                     return_details=False):
     html_body = body if is_html else (body or "").replace("\n", "<br>")
+    test_recipient = os.environ.get("NEWSLETTER_TEST_RECIPIENT", "").strip() or None
     sent = 0
     failures = []
+
+    def send_batch(payloads, original_emails):
+        try:
+            response = resend.Batch.send(payloads)
+            if isinstance(response, dict) and response.get("data"):
+                return len(response["data"]), []
+            return len(payloads), []
+        except Exception as error:
+            error_message = str(error)
+            if "invalid `to` field" in error_message.lower() and len(payloads) > 1:
+                midpoint = len(payloads) // 2
+                left_sent, left_failures = send_batch(
+                    payloads[:midpoint], original_emails[:midpoint]
+                )
+                right_sent, right_failures = send_batch(
+                    payloads[midpoint:], original_emails[midpoint:]
+                )
+                return left_sent + right_sent, left_failures + right_failures
+
+            return 0, [
+                {"email": email, "error": error_message}
+                for email in original_emails
+            ]
     
     BATCH_SIZE = 100
     for i in range(0, len(recipients), BATCH_SIZE):
         batch = recipients[i:i + BATCH_SIZE]
         payloads = []
+        original_emails = []
         for email, name in batch:
+            domain = (email or "").rsplit("@", 1)[-1].strip().lower()
+            if not test_recipient and (
+                domain in PLACEHOLDER_EMAIL_DOMAINS
+                or domain.endswith((".example", ".invalid", ".test", ".localhost"))
+            ):
+                failures.append({
+                    "email": email,
+                    "error": "Reserved example/test domain; this address is a placeholder.",
+                })
+                continue
+
+            original_emails.append(email)
             unsub_url = f"{base_url}/unsubscribe/{generate_unsub_token(email)}"
             content = f"""
             <p style="color: #E4E4E7; font-size: 15px; margin: 0 0 24px 0;">Hi <strong style="color: #FFFFFF;">{name or 'there'}</strong>,</p>
@@ -393,24 +433,29 @@ def send_newsletter(recipients, subject, body, base_url=BASE_URL, is_html=False,
             """
             payloads.append({
                 "from": FROM_EMAIL,
-                "to": email,
+                "to": test_recipient or email,
                 "subject": subject or "Afrigen Update",
                 "html": get_base_email_html(content)
             })
+
+        if not payloads:
+            continue
             
-        try:
-            response = resend.Batch.send(payloads)
-            
-            if isinstance(response, dict) and response.get('data'):
-                # Each successful individual email is returned in data
-                sent += len(response['data'])
-            else:
-                sent += len(payloads)
-                
-        except Exception as e:
-            print(f"Newsletter batch error: {e}")
-            for payload in payloads:
-                failures.append({"email": payload["to"], "error": str(e)})
+        batch_sent, batch_failures = send_batch(payloads, original_emails)
+        sent += batch_sent
+        failures.extend(batch_failures)
+
+    if failures:
+        logger.warning(
+            "Newsletter send completed: attempted=%d sent=%d failed=%d; first_error=%s",
+            len(recipients), sent, len(failures), failures[0]["error"],
+        )
+    else:
+        logger.info(
+            "Newsletter send completed: attempted=%d sent=%d failed=0%s",
+            len(recipients), sent,
+            " (test recipient override enabled)" if test_recipient else "",
+        )
 
     if return_details:
         return {
@@ -418,6 +463,7 @@ def send_newsletter(recipients, subject, body, base_url=BASE_URL, is_html=False,
             "sent": sent,
             "failed": len(failures),
             "failures": failures,
+            "test_recipient": test_recipient,
         }
     return sent
 

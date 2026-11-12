@@ -10,6 +10,7 @@
 - `FLASK_ENV=production`
 - `SECRET_KEY`: A strong secret key.
 - `DATABASE_URL`: Start with `postgresql://` (ensure the provider uses IPv4 or proper DNS resolution if applicable).
+- `NEWSLETTER_TEST_RECIPIENT` (optional): Redirect newsletter batches to your email provider's approved testing address. Leave unset to send to subscribers.
 
 ### AI Provider Keys
 - `FAL_KEY_ID` / `FAL_KEY_SECRET`

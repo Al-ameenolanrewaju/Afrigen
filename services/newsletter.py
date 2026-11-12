@@ -307,7 +307,7 @@ def send_issue(issue, limit=None, offset=0):
     issue.attempted_count = result["attempted"]
     issue.failed_count = result["failed"]
     issue.delivery_failures = json.dumps(result["failures"])
-    if result["sent"]:
+    if result["sent"] and not result.get("test_recipient"):
         issue.status = "sent"
         issue.recipients_count = result["sent"]
         issue.sent_at = datetime.now(timezone.utc)

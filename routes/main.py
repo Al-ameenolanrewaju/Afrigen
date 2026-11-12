@@ -2518,7 +2518,12 @@ def admin_newsletter_send():
     if result['sent'] == 0:
         return jsonify({
             'ok': False,
-            'error': 'No emails were delivered. Check RESEND_API_KEY and your subscriber list.',
+            'error': (
+                f"No emails were delivered. Check RESEND_API_KEY and your subscriber list. "
+                f"{result['failures'][0]['error']}"
+                if result['failures'] else
+                'No emails were delivered. Check RESEND_API_KEY and your subscriber list.'
+            ),
             'attempted': result['attempted'],
             'sent': 0,
             'failed': result['failed'],
@@ -2532,8 +2537,13 @@ def admin_newsletter_send():
         'failed': result['failed'],
         'failures': result['failures'][:10],
         'sent_at': result.get('sent_at'),
+        'test_recipient': result.get('test_recipient'),
         'message': (
-            f"Sent to {result['sent']} recipients. "
+            (
+                f"Sent {result['sent']} test emails to {result['test_recipient']}. "
+                if result.get('test_recipient') else
+                f"Sent to {result['sent']} recipients. "
+            ) +
             f"{result['failed']} failed."
         ),
     }), (200 if result['failed'] == 0 else 207)
