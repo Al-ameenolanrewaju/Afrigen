@@ -177,6 +177,11 @@ def ensure_legacy_schema_columns():
                 WebsiteVisit.__table__.create(bind=db.engine, checkfirst=True)
             if not inspector.has_table('telegram_users'):
                 TelegramUser.__table__.create(bind=db.engine, checkfirst=True)
+            from models import Notification, NewsletterCampaign
+            if not inspector.has_table('notifications'):
+                Notification.__table__.create(bind=db.engine, checkfirst=True)
+            if not inspector.has_table('newsletter_campaigns'):
+                NewsletterCampaign.__table__.create(bind=db.engine, checkfirst=True)
             if db.engine.dialect.name != 'postgresql':
                 return
 

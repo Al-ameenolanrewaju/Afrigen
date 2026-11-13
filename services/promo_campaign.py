@@ -120,7 +120,7 @@ def run_promo_campaign(offer_text: str, platforms: list = None) -> dict:
     if scripts_dir not in sys.path:
         sys.path.insert(0, scripts_dir)
 
-    target_platforms = platforms or ["telegram", "linkedin", "instagram", "devto"]
+    target_platforms = platforms or ["telegram", "linkedin", "facebook", "instagram", "devto"]
     results = {
         "offer": offer_text,
         "flyer_url": None,

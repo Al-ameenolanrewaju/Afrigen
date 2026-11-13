@@ -556,16 +556,15 @@ Return ONLY valid JSON, no markdown fences, no commentary."""
 # Bulk generation using Content Engine
 # ---------------------------------------------------------------------------
 
-ACTIVE_PLATFORMS = ["telegram", "linkedin", "devto", "instagram"]
+ACTIVE_PLATFORMS = ["telegram", "linkedin", "devto", "facebook", "instagram"]
 
 _GENERATORS = {
     "telegram": telegram_prompt,
     "linkedin": linkedin_post,
     "devto": devto_article,
+    "facebook": facebook_post,
     "instagram": instagram_caption,
     "medium": medium_article,
-    # --- disabled ---
-    "facebook": facebook_post,
 }
 
 def generate_all(post: dict) -> list[dict]:

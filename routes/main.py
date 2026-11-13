@@ -3045,18 +3045,23 @@ def admin_newsletter_campaign_delete(id):
 @main.route('/api/notifications')
 @login_required
 def api_notifications():
-    from models import Notification
-    notifs = Notification.query.filter_by(
-        user_id=current_user.id, is_read=False
-    ).order_by(Notification.created_at.desc()).limit(20).all()
-    return jsonify([{
-        'id': n.id,
-        'title': n.title,
-        'message': n.message,
-        'link': n.link,
-        'type': n.type,
-        'created_at': n.created_at.isoformat() if n.created_at else None,
-    } for n in notifs])
+    try:
+        from models import Notification
+        notifs = Notification.query.filter_by(
+            user_id=current_user.id, is_read=False
+        ).order_by(Notification.created_at.desc()).limit(20).all()
+        return jsonify([{
+            'id': n.id,
+            'title': n.title,
+            'message': n.message,
+            'link': n.link,
+            'type': n.type,
+            'created_at': n.created_at.isoformat() if n.created_at else None,
+        } for n in notifs])
+    except Exception as e:
+        db.session.rollback()
+        logger.warning("Could not fetch notifications: %s", e)
+        return jsonify([])
 
 
 @main.route('/api/notifications/<int:notif_id>/read', methods=['POST'])
