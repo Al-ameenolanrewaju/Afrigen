@@ -301,6 +301,20 @@
                     <i class="fa-solid fa-border-all"></i> Overview
                 </a>
             </li>
+        </ul>
+
+        <div class="admin-nav-section mt-3">GROWTH & CAMPAIGNS</div>
+        <ul class="admin-nav-list">
+            <li>
+                <a href="{{ url_for('main.admin_promo_campaigns') }}" class="admin-nav-item {% if request.endpoint == 'main.admin_promo_campaigns' %}active{% endif %}">
+                    <i class="fa-solid fa-bullhorn" style="color: #F5A623;"></i> AI Promo Campaigns
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('main.admin_newsletter_campaigns') }}" class="admin-nav-item {% if 'newsletter' in request.endpoint %}active{% endif %}">
+                    <i class="fa-solid fa-envelope" style="color: #60A5FA;"></i> Daily Newsletter
+                </a>
+            </li>
             <li>
                 <a href="{{ url_for('main.admin_blog') }}" class="admin-nav-item {% if 'blog' in request.endpoint %}active{% endif %}">
                     <i class="fa-solid fa-newspaper"></i> Blog CMS
@@ -308,17 +322,12 @@
             </li>
             <li>
                 <a href="{{ url_for('main.admin_distribution') }}" class="admin-nav-item {% if 'distribution' in request.endpoint %}active{% endif %}">
-                    <i class="fa-solid fa-satellite-dish"></i> Distribution
-                </a>
-            </li>
-            <li>
-                <a href="{{ url_for('main.admin_newsletter') }}" class="admin-nav-item {% if 'newsletter' in request.endpoint %}active{% endif %}">
-                    <i class="fa-solid fa-envelope"></i> Newsletter
+                    <i class="fa-solid fa-satellite-dish"></i> Social Distribution
                 </a>
             </li>
             <li>
                 <a href="{{ url_for('main.admin_pricing') }}" class="admin-nav-item {% if request.endpoint == 'main.admin_pricing' %}active{% endif %}">
-                    <i class="fa-solid fa-tags"></i> Pricing Configuration
+                    <i class="fa-solid fa-tags"></i> Pricing & Tiers
                 </a>
             </li>
         </ul>
@@ -343,11 +352,6 @@
             <li>
                 <a href="{{ url_for('main.admin') }}#connected-accounts" class="admin-nav-item" style="font-size: 13px;">
                     <i class="fa-solid fa-link"></i> Connected Accounts
-                </a>
-            </li>
-            <li>
-                <a href="{{ url_for('main.admin') }}#content-distributions" class="admin-nav-item" style="font-size: 13px;">
-                    <i class="fa-solid fa-share-nodes"></i> Content Hub
                 </a>
             </li>
         </ul>

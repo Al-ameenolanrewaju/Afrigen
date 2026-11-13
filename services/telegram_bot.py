@@ -1,5 +1,6 @@
 import os
 import re
+import html
 import json
 import logging
 import tempfile
@@ -27,7 +28,11 @@ STYLE_NAMES = {
 
 class TelegramBotService:
     def __init__(self, token=None):
-        self.token = token or os.environ.get("TELEGRAM_BOT_TOKEN")
+        self._token = token
+
+    @property
+    def token(self):
+        return self._token or os.environ.get("TELEGRAM_BOT_TOKEN")
 
     @property
     def is_configured(self):
@@ -46,10 +51,12 @@ class TelegramBotService:
                 resp = requests.post(url, data=payload, files=files, timeout=timeout)
             else:
                 resp = requests.post(url, json=payload, timeout=timeout)
-            resp.raise_for_status()
-            data = resp.json()
+            try:
+                data = resp.json()
+            except Exception:
+                data = {"ok": False, "raw_response": resp.text[:300]}
             if not data.get("ok"):
-                logger.error("Telegram API error for %s: %s", method, data.get("description"))
+                logger.error("Telegram API response error for %s (status %s): %s | %s", method, resp.status_code, data.get("description"), resp.text[:300])
             return data
         except Exception as e:
             logger.error("Telegram API HTTP error (%s): %s", method, e)
@@ -64,7 +71,13 @@ class TelegramBotService:
         }
         if reply_markup:
             payload["reply_markup"] = reply_markup
-        return self.call_api("sendMessage", payload)
+        res = self.call_api("sendMessage", payload)
+        # If HTML parsing failed, retry as plain text so the user still receives the message
+        if not res or not res.get("ok"):
+            if parse_mode == "HTML":
+                payload["parse_mode"] = None
+                res = self.call_api("sendMessage", payload)
+        return res
 
     def edit_message_text(self, chat_id, message_id, text, reply_markup=None, parse_mode="HTML"):
         payload = {
@@ -98,7 +111,11 @@ class TelegramBotService:
             payload["caption"] = caption
         if reply_markup:
             payload["reply_markup"] = reply_markup
-        return self.call_api("sendPhoto", payload, timeout=60)
+        res = self.call_api("sendPhoto", payload, timeout=60)
+        if not res or not res.get("ok"):
+            payload["parse_mode"] = None
+            res = self.call_api("sendPhoto", payload, timeout=60)
+        return res
 
     def send_video(self, chat_id, video_url, caption=None, reply_markup=None):
         payload = {
@@ -110,7 +127,11 @@ class TelegramBotService:
             payload["caption"] = caption
         if reply_markup:
             payload["reply_markup"] = reply_markup
-        return self.call_api("sendVideo", payload, timeout=120)
+        res = self.call_api("sendVideo", payload, timeout=120)
+        if not res or not res.get("ok"):
+            payload["parse_mode"] = None
+            res = self.call_api("sendVideo", payload, timeout=120)
+        return res
 
     def download_file(self, file_id, dest_path):
         res = self.call_api("getFile", {"file_id": file_id})
@@ -181,10 +202,10 @@ class TelegramBotService:
 
     def get_or_create_user(self, from_user, chat=None):
         tg_id = str(from_user.get("id"))
-        username = from_user.get("username")
-        first_name = from_user.get("first_name")
+        username = ((from_user.get("username") or "").strip()[:80]) or None
+        first_name = ((from_user.get("first_name") or "").strip()[:80]) or None
         chat_id = str(chat.get("id")) if chat else tg_id
-        chat_title = chat.get("title") if chat else None
+        chat_title = ((chat.get("title") or "").strip()[:255]) or None if chat else None
 
         try:
             tg_user = TelegramUser.query.filter_by(telegram_id=tg_id).first()
@@ -510,20 +531,54 @@ class TelegramBotService:
         if not tg_user:
             return
 
-        # 1. Verify User Account Link
+        # 1. Verify User Account Link (Auto-provision free Spark account if unlinked)
         if not tg_user.user:
+            try:
+                from werkzeug.security import generate_password_hash
+                import secrets
+                base_username = (tg_user.username or f"creator_{tg_user.telegram_id}").lower()
+                clean_username = re.sub(r'[^a-z0-9_]', '', base_username)[:25] or f"creator_{tg_user.telegram_id}"
+                unique_username = clean_username
+                idx = 1
+                while User.query.filter_by(username=unique_username).first():
+                    unique_username = f"{clean_username[:20]}_{idx}"
+                    idx += 1
+
+                unique_email = f"tg_{tg_user.telegram_id}@telegram.afrigen.com.ng"
+                existing_user = User.query.filter_by(email=unique_email).first()
+                if not existing_user:
+                    new_user = User(
+                        username=unique_username,
+                        email=unique_email,
+                        password=generate_password_hash(secrets.token_urlsafe(16)),
+                        plan="free",
+                        credits=0,
+                        free_video_allowance=1,
+                        monthly_free_videos_left=1,
+                        monthly_free_images_left=2,
+                        monthly_images_used=0,
+                    )
+                    db.session.add(new_user)
+                    db.session.flush()
+                    tg_user.user_id = new_user.id
+                    db.session.commit()
+                else:
+                    tg_user.user_id = existing_user.id
+                    db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                logger.error("Auto-provisioning user for telegram user %s failed: %s", tg_user.id, e)
+
+        user = tg_user.user
+        if not user:
             self.send_message(
                 chat_id,
-                "🔗 <b>Connect your Afrigen Account First</b>\n\n"
-                "To generate high-quality AI videos & images, link your free account:\n"
-                "1. Go to <a href='https://afrigen.com.ng/dashboard'>afrigen.com.ng</a>\n"
-                "2. Click <b>Connect Telegram</b> to copy your code\n"
-                "3. Send <code>/link &lt;code&gt;</code> here.",
+                "🔗 <b>Connect your Afrigen Account</b>\n\n"
+                "Visit <a href='https://afrigen.com.ng/dashboard'>afrigen.com.ng</a>, click <b>Connect Telegram</b> to copy your code, then send <code>/link &lt;code&gt;</code> here.",
                 reply_markup=self.main_menu_keyboard()
             )
             return
 
-        user = tg_user.user
         if user.is_banned:
             self.send_message(chat_id, "❌ Your account is currently restricted.")
             return
@@ -546,10 +601,11 @@ class TelegramBotService:
                 self.send_message(chat_id, f"❌ {err}\n\n👉 <a href='https://afrigen.com.ng/upgrade'>Upgrade Plan</a> for unlimited video generation.")
                 return
 
-        # 3. Prompt Refinement
+        # 3. Prompt Refinement (Safely HTML-escaped)
+        safe_prompt = html.escape(user_prompt or "")
         self.send_message(
             chat_id,
-            f"🎨 <b>Refining your {mode} idea...</b>\n<i>\"{user_prompt}\"</i>\nStyle: {STYLE_NAMES.get(style, style)}"
+            f"🎨 <b>Refining your {mode} idea...</b>\n<i>\"{safe_prompt}\"</i>\nStyle: {STYLE_NAMES.get(style, style)}"
         )
         self.send_chat_action(chat_id, "upload_video" if mode == "video" else "upload_photo")
 
@@ -666,23 +722,31 @@ class TelegramBotService:
         db.session.commit()
 
         # 8. Deliver media to user
+        safe_prompt_short = html.escape((user_prompt or "")[:120])
         caption = (
             f"✨ <b>Made with Afrigen</b>\n\n"
-            f"Prompt: <i>\"{user_prompt[:120]}\"</i>\n"
+            f"Prompt: <i>\"{safe_prompt_short}\"</i>\n"
             f"Remaining Credits: {user.credits or 0}\n\n"
             "Africa Creates, AI Generates 🌍"
         )
 
+        sent = False
         try:
             if mode == "image":
-                self.send_photo(chat_id, media_url, caption=caption, reply_markup=self.main_menu_keyboard())
+                res = self.send_photo(chat_id, media_url, caption=caption, reply_markup=self.main_menu_keyboard())
             else:
-                self.send_video(chat_id, media_url, caption=caption, reply_markup=self.main_menu_keyboard())
+                res = self.send_video(chat_id, media_url, caption=caption, reply_markup=self.main_menu_keyboard())
+            if res and res.get("ok"):
+                sent = True
         except Exception as e:
             logger.error("Failed to send media to Telegram: %s", e)
+
+        if not sent:
             self.send_message(
                 chat_id,
-                f"✅ <b>Your {mode} is ready!</b>\n\nDownload link:\n{media_url}",
+                f"✅ <b>Your {mode} is ready!</b>\n\n"
+                f"Prompt: <i>\"{safe_prompt_short}\"</i>\n\n"
+                f"🔗 <a href='{media_url}'>Click here to download your {mode}</a>",
                 reply_markup=self.main_menu_keyboard()
             )
 

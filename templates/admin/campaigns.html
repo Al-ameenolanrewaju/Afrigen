@@ -1,86 +1,84 @@
-{% extends "base.html" %}
-{% block title %}Promo Campaigns — Afrigen Admin{% endblock %}
+{% extends "admin_base.html" %}
+{% block title %}AI Promo Campaigns{% endblock %}
 {% block content %}
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h2 style="color:#F5A623; margin-bottom: 4px;">🚀 AI Promo Campaign Engine</h2>
-            <p style="color:#888; margin-bottom: 0;">Auto-generate flyer poster + distribute promotional campaign across all platforms.</p>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 style="color:#F5A623; margin-bottom: 4px; font-weight:700;"><i class="fa-solid fa-bullhorn me-2"></i> AI Promo Campaign Engine</h3>
+        <p style="color:#8B949E; margin-bottom: 0; font-size:14px;">Generate an eye-catching AI visual flyer and blast promotions across Telegram, LinkedIn, Instagram, and Dev.to.</p>
+    </div>
+    <a href="{{ url_for('main.admin_newsletter_campaigns') }}" class="btn-admin" style="text-decoration:none;">
+        <i class="fa-solid fa-envelope me-1"></i> Newsletter Campaigns
+    </a>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="admin-chart-container" style="margin-bottom:0;">
+            <h5 class="admin-chart-title mb-3" style="color:#F5A623;">Launch New Promotional Campaign</h5>
+            <form method="POST" action="{{ url_for('main.admin_promo_campaigns') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="mb-3">
+                    <label class="form-label" style="color:#C9D1D9; font-weight:600; font-size:14px;">Offer / Campaign Details</label>
+                    <textarea name="offer_text" rows="5" class="form-control" style="background:#0D1117; color:#F0F6FC; border:1px solid #1F2937; border-radius:8px;" placeholder="e.g. Special Weekend Deal: Subscribe to Studio tier for ₦15,000/mo and get Image-to-Video animation + 300 monthly credits! Turn any picture into a motion video at afrigen.com.ng" required></textarea>
+                    <small style="color:#8B949E; font-size:12px;">AI will craft an African visual poster and platform-tailored promotional copy.</small>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label" style="color:#C9D1D9; font-weight:600; font-size:14px; display:block;">Target Platforms</label>
+                    <div class="d-flex flex-wrap gap-3">
+                        <label class="form-check-label" style="color:#F0F6FC; font-size:14px;">
+                            <input type="checkbox" name="platforms" value="telegram" checked class="form-check-input" style="accent-color:#F5A623;"> 📢 Telegram Channel
+                        </label>
+                        <label class="form-check-label" style="color:#F0F6FC; font-size:14px;">
+                            <input type="checkbox" name="platforms" value="linkedin" checked class="form-check-input" style="accent-color:#F5A623;"> 💼 LinkedIn
+                        </label>
+                        <label class="form-check-label" style="color:#F0F6FC; font-size:14px;">
+                            <input type="checkbox" name="platforms" value="instagram" checked class="form-check-input" style="accent-color:#F5A623;"> 📸 Instagram
+                        </label>
+                        <label class="form-check-label" style="color:#F0F6FC; font-size:14px;">
+                            <input type="checkbox" name="platforms" value="devto" checked class="form-check-input" style="accent-color:#F5A623;"> 👩‍💻 Dev.to
+                        </label>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn" style="background:#F5A623; color:#0B0F19; font-weight:700; padding:10px 24px; border-radius:8px; border:none;">
+                    <i class="fa-solid fa-paper-plane me-2"></i> Generate Flyer & Blast Promo
+                </button>
+            </form>
         </div>
-        <a href="{{ url_for('main.admin_newsletter_campaigns') }}" class="btn btn-outline-secondary btn-sm" style="color:#F5A623; border-color:#F5A623;">
-            📧 Newsletter Campaigns
-        </a>
     </div>
 
-    <div class="row">
-        <div class="col-lg-7">
-            <div class="card p-4 mb-4" style="background:#0D1117; border:1px solid #30363D; border-radius:12px;">
-                <h5 style="color:#F5A623; margin-bottom:16px;">Launch New Promotion</h5>
-                <form method="POST" action="{{ url_for('main.admin_promo_campaigns') }}">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-                    <div class="mb-3">
-                        <label class="form-label" style="color:#C9D1D9; font-weight:600;">Promo Announcement / Offer Details</label>
-                        <textarea name="offer_text" rows="5" class="form-control" style="background:#161B22; color:#F0F6FC; border:1px solid #30363D; border-radius:8px;" placeholder="e.g. 50% discount on Studio tier this weekend! Create high-definition African folklore & commercial videos instantly with 300 credits." required></textarea>
-                        <small style="color:#888;">AI will craft an African visual poster and platform-tailored promotional copy.</small>
+    <div class="col-lg-5">
+        <div class="admin-chart-container" style="margin-bottom:0;">
+            <h5 class="admin-chart-title mb-3" style="color:#F5A623;">Distribution Status & Output</h5>
+            {% if result %}
+                {% if result.flyer_url %}
+                    <div class="mb-3 text-center">
+                        <img src="{{ result.flyer_url }}" alt="Generated Flyer" style="max-width:100%; border-radius:8px; border:1px solid #1F2937;">
+                        <div class="mt-2"><small style="color:#8B949E;">Generated Promotional Poster</small></div>
                     </div>
-
-                    <div class="mb-4">
-                        <label class="form-label" style="color:#C9D1D9; font-weight:600; display:block;">Target Platforms</label>
-                        <div class="d-flex flex-wrap gap-3">
-                            <label class="form-check-label" style="color:#F0F6FC;">
-                                <input type="checkbox" name="platforms" value="telegram" checked class="form-check-input" style="accent-color:#F5A623;"> 📢 Telegram Channel
-                            </label>
-                            <label class="form-check-label" style="color:#F0F6FC;">
-                                <input type="checkbox" name="platforms" value="linkedin" checked class="form-check-input" style="accent-color:#F5A623;"> 💼 LinkedIn
-                            </label>
-                            <label class="form-check-label" style="color:#F0F6FC;">
-                                <input type="checkbox" name="platforms" value="facebook" checked class="form-check-input" style="accent-color:#F5A623;"> 📘 Facebook Page
-                            </label>
-                            <label class="form-check-label" style="color:#F0F6FC;">
-                                <input type="checkbox" name="platforms" value="instagram" checked class="form-check-input" style="accent-color:#F5A623;"> 📸 Instagram
-                            </label>
-                            <label class="form-check-label" style="color:#F0F6FC;">
-                                <input type="checkbox" name="platforms" value="devto" checked class="form-check-input" style="accent-color:#F5A623;"> 👩‍💻 Dev.to
-                            </label>
-                        </div>
-                    </div>
-
-                    <button type="submit" class="btn" style="background:#F5A623; color:#0D1117; font-weight:700; padding:10px 24px; border-radius:8px;">
-                        🎨 Generate Flyer & Blast Promo
-                    </button>
-                </form>
-            </div>
-        </div>
-
-        <div class="col-lg-5">
-            <div class="card p-4" style="background:#0D1117; border:1px solid #30363D; border-radius:12px;">
-                <h5 style="color:#F5A623; margin-bottom:16px;">Campaign Status & Output</h5>
-                {% if result %}
-                    {% if result.flyer_url %}
-                        <div class="mb-3 text-center">
-                            <img src="{{ result.flyer_url }}" alt="Generated Flyer" style="max-width:100%; border-radius:8px; border:1px solid #30363D;">
-                            <div class="mt-2"><small style="color:#888;">Generated Promo Poster</small></div>
-                        </div>
-                    {% endif %}
-
-                    <h6 style="color:#C9D1D9;">Platform Distribution Results:</h6>
-                    <ul class="list-group list-group-flush" style="background:transparent;">
-                        {% for platform, pr in result.platforms.items() %}
-                        <li class="list-group-item d-flex justify-content-between align-items-center" style="background:transparent; color:#F0F6FC; border-color:#30363D;">
-                            <span class="text-capitalize">{{ platform }}</span>
-                            {% if pr.ok %}
-                                <span class="badge bg-success">Published</span>
-                            {% else %}
-                                <span class="badge bg-danger" title="{{ pr.error }}">Failed: {{ (pr.error or 'Error')[:20] }}</span>
-                            {% endif %}
-                        </li>
-                        {% endfor %}
-                    </ul>
-                {% else %}
-                    <p style="color:#888; font-size:14px;">No campaign launched in this session. Fill in the offer on the left to blast your promotion simultaneously with an AI flyer.</p>
                 {% endif %}
-            </div>
+
+                <h6 style="color:#C9D1D9; font-size:13px; font-weight:600;">Platform Delivery Results:</h6>
+                <ul class="list-group list-group-flush" style="background:transparent;">
+                    {% for platform, pr in result.platforms.items() %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center" style="background:transparent; color:#F0F6FC; border-color:#1F2937;">
+                        <span class="text-capitalize">{{ platform }}</span>
+                        {% if pr.ok %}
+                            <span class="badge bg-success">Published</span>
+                        {% else %}
+                            <span class="badge bg-danger" title="{{ pr.error }}">Failed: {{ (pr.error or 'Error')[:20] }}</span>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <div class="text-center py-4">
+                    <i class="fa-solid fa-satellite-dish" style="font-size:36px; color:#1F2937; margin-bottom:12px;"></i>
+                    <p style="color:#8B949E; font-size:13px; margin:0;">No promotion launched in this session. Compose your offer on the left to blast it with an AI flyer.</p>
+                </div>
+            {% endif %}
         </div>
     </div>
 </div>

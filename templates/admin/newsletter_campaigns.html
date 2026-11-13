@@ -1,85 +1,108 @@
-{% extends "base.html" %}
+{% extends "admin_base.html" %}
 {% block title %}Newsletter Campaigns{% endblock %}
 {% block content %}
-<div class="container mt-4">
-    <h2 style="color:#F5A623;">Newsletter Campaigns</h2>
-    <p style="color:#888;">Batch-send newsletters to all subscribers, in daily chunks.</p>
-
-    <!-- New Campaign Form -->
-    <div class="card p-4 mb-4">
-        <h5 style="color:#F5A623;">Create New Campaign</h5>
-        <form method="POST" action="{{ url_for('main.admin_newsletter_campaign_new') }}">
-            <div class="mb-3">
-                <label class="form-label" style="color:#C9D1D9;">Subject</label>
-                <input type="text" name="subject" class="form-control" style="background:#0D1117;color:#F0F6FC;border:1px solid #30363D;" required>
-            </div>
-            <div class="mb-3">
-                <label class="form-label" style="color:#C9D1D9;">HTML Body</label>
-                <textarea name="html_body" rows="8" class="form-control" style="background:#0D1117;color:#F0F6FC;border:1px solid #30363D;font-family:monospace;" required></textarea>
-            </div>
-            <button type="submit" class="btn" style="background:#F5A623;color:#0D1117;font-weight:600;">Create Campaign</button>
-        </form>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 style="color:#F5A623; margin-bottom: 4px; font-weight:700;"><i class="fa-solid fa-envelope-open-text me-2"></i> Daily Newsletter Rotation</h3>
+        <p style="color:#8B949E; margin-bottom: 0; font-size:14px;">Automated daily batch delivery (80 subscribers/day) until every user receives the campaign.</p>
     </div>
+    <a href="{{ url_for('main.admin_promo_campaigns') }}" class="btn-admin" style="text-decoration:none;">
+        <i class="fa-solid fa-bullhorn me-1"></i> AI Promo Campaigns
+    </a>
+</div>
 
-    <!-- Campaign List -->
-    <div class="card p-4">
-        <h5 style="color:#F5A623;">All Campaigns</h5>
-        {% if campaigns %}
-        <div class="table-responsive">
-            <table class="table" style="color:#F0F6FC;">
-                <thead>
-                    <tr>
-                        <th style="color:#888;">ID</th>
-                        <th style="color:#888;">Subject</th>
-                        <th style="color:#888;">Status</th>
-                        <th style="color:#888;">Progress</th>
-                        <th style="color:#888;">Created</th>
-                        <th style="color:#888;">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                {% for c in campaigns %}
-                <tr>
-                    <td>{{ c.id }}</td>
-                    <td>{{ c.subject[:60] }}{% if c.subject|length > 60 %}…{% endif %}</td>
-                    <td>
-                        <span class="badge {% if c.status == 'sending' %}bg-success{% elif c.status == 'paused' %}bg-warning{% elif c.status == 'complete' %}bg-secondary{% else %}bg-dark{% endif %}">
-                            {{ c.status }}
-                        </span>
-                    </td>
-                    <td>
-                        {% if c.total_audience > 0 %}
-                        {{ c.batch_offset }}/{{ c.total_audience }}
-                        <div class="progress" style="height:4px;background:#30363D;margin-top:4px;">
-                            <div class="progress-bar" style="width:{{ [c.batch_offset * 100 // c.total_audience, 100] | min }}%;background:#F5A623;"></div>
-                        </div>
-                        {% else %}—{% endif %}
-                    </td>
-                    <td style="color:#888;font-size:12px;">{{ c.created_at.strftime('%Y-%m-%d %H:%M') if c.created_at else '—' }}</td>
-                    <td>
-                        {% if c.status == 'draft' %}
-                        <form method="POST" action="{{ url_for('main.admin_newsletter_campaign_launch', id=c.id) }}" style="display:inline;">
-                            <button type="submit" class="btn btn-sm" style="background:#27AE60;color:#fff;border:none;">🚀 Launch</button>
-                        </form>
-                        <form method="POST" action="{{ url_for('main.admin_newsletter_campaign_delete', id=c.id) }}" style="display:inline;" onsubmit="return confirm('Delete this draft?')">
-                            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
-                        </form>
-                        {% elif c.status in ('sending', 'paused') %}
-                        <form method="POST" action="{{ url_for('main.admin_newsletter_campaign_pause', id=c.id) }}" style="display:inline;">
-                            <button type="submit" class="btn btn-sm" style="background:#F5A623;color:#0D1117;border:none;">
-                                {{ '⏸ Pause' if c.status == 'sending' else '▶ Resume' }}
-                            </button>
-                        </form>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-                </tbody>
-            </table>
+<!-- New Campaign Form -->
+<div class="admin-chart-container mb-4">
+    <h5 class="admin-chart-title mb-3" style="color:#F5A623;">Create New Newsletter Campaign</h5>
+    <form method="POST" action="{{ url_for('main.admin_newsletter_campaign_new') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="mb-3">
+            <label class="form-label" style="color:#C9D1D9; font-weight:600; font-size:14px;">Email Subject</label>
+            <input type="text" name="subject" class="form-control" style="background:#0D1117; color:#F0F6FC; border:1px solid #1F2937; border-radius:8px;" placeholder="e.g. Turn Your Ideas Into High-Definition AI Videos With Afrigen" required>
         </div>
-        {% else %}
-        <p style="color:#888;">No campaigns yet. Create one above.</p>
-        {% endif %}
+        <div class="mb-3">
+            <label class="form-label" style="color:#C9D1D9; font-weight:600; font-size:14px;">HTML Email Body</label>
+            <textarea name="html_body" rows="6" class="form-control" style="background:#0D1117; color:#F0F6FC; border:1px solid #1F2937; border-radius:8px; font-family:monospace; font-size:13px;" placeholder="<h2>Special Announcement</h2><p>Upgrade to Studio tier to unlock image-to-video capabilities...</p>" required></textarea>
+        </div>
+        <button type="submit" class="btn" style="background:#F5A623; color:#0B0F19; font-weight:700; padding:8px 20px; border-radius:8px; border:none;">
+            <i class="fa-solid fa-plus me-1"></i> Create Campaign
+        </button>
+    </form>
+</div>
+
+<!-- Campaign List -->
+<div class="admin-chart-container" style="margin-bottom:0;">
+    <h5 class="admin-chart-title mb-3" style="color:#F5A623;">All Campaigns</h5>
+    {% if campaigns %}
+    <div class="table-responsive">
+        <table class="table" style="color:#F0F6FC; vertical-align:middle;">
+            <thead>
+                <tr style="border-bottom:1px solid #1F2937;">
+                    <th style="color:#8B949E; font-size:12px;">ID</th>
+                    <th style="color:#8B949E; font-size:12px;">SUBJECT</th>
+                    <th style="color:#8B949E; font-size:12px;">STATUS</th>
+                    <th style="color:#8B949E; font-size:12px;">PROGRESS</th>
+                    <th style="color:#8B949E; font-size:12px;">CREATED</th>
+                    <th style="color:#8B949E; font-size:12px; text-align:right;">ACTIONS</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for c in campaigns %}
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                <td style="color:#8B949E;">#{{ c.id }}</td>
+                <td><strong>{{ c.subject[:55] }}{% if c.subject|length > 55 %}…{% endif %}</strong></td>
+                <td>
+                    <span class="badge {% if c.status == 'sending' %}bg-success{% elif c.status == 'paused' %}bg-warning text-dark{% elif c.status == 'complete' %}bg-secondary{% else %}bg-dark border border-secondary{% endif %}">
+                        {{ c.status|upper }}
+                    </span>
+                </td>
+                <td style="min-width:140px;">
+                    {% if c.total_audience > 0 %}
+                    <div style="font-size:12px; color:#C9D1D9;">{{ c.batch_offset }} / {{ c.total_audience }} users</div>
+                    <div class="progress" style="height:5px; background:#1F2937; margin-top:4px; border-radius:3px;">
+                        <div class="progress-bar" style="width:{{ [c.batch_offset * 100 // c.total_audience, 100] | min }}%; background:#F5A623;"></div>
+                    </div>
+                    {% else %}
+                    <span style="color:#8B949E; font-size:12px;">Not launched</span>
+                    {% endif %}
+                </td>
+                <td style="color:#8B949E; font-size:12px;">{{ c.created_at.strftime('%Y-%m-%d %H:%M') if c.created_at else '—' }}</td>
+                <td style="text-align:right;">
+                    {% if c.status == 'draft' %}
+                    <form method="POST" action="{{ url_for('main.admin_newsletter_campaign_launch', id=c.id) }}" style="display:inline;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-sm btn-success px-2 py-1" style="font-size:12px;">
+                            <i class="fa-solid fa-play me-1"></i> Launch
+                        </button>
+                    </form>
+                    <form method="POST" action="{{ url_for('main.admin_newsletter_campaign_delete', id=c.id) }}" style="display:inline;" onsubmit="return confirm('Delete this draft campaign?');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-sm btn-outline-danger px-2 py-1 ms-1" style="font-size:12px;">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </form>
+                    {% elif c.status in ('sending', 'paused') %}
+                    <form method="POST" action="{{ url_for('main.admin_newsletter_campaign_pause', id=c.id) }}" style="display:inline;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-sm {% if c.status == 'sending' %}btn-warning text-dark{% else %}btn-success{% endif %} px-2 py-1" style="font-size:12px;">
+                            <i class="fa-solid {% if c.status == 'sending' %}fa-pause{% else %}fa-play{% endif %} me-1"></i>
+                            {% if c.status == 'sending' %}Pause{% else %}Resume{% endif %}
+                        </button>
+                    </form>
+                    {% else %}
+                    <span class="badge bg-secondary">Completed</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
     </div>
+    {% else %}
+    <div class="text-center py-4">
+        <i class="fa-solid fa-envelope" style="font-size:36px; color:#1F2937; margin-bottom:12px;"></i>
+        <p style="color:#8B949E; font-size:13px; margin:0;">No newsletter campaigns created yet. Create one above to begin the 80/day rotation.</p>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}
