@@ -29,6 +29,5 @@
 - Verify `support@afrigen.com.ng` is properly displayed in the footer.
 - Test generating a small campaign to ensure the background executor works correctly in the production environment.
 
-## Railway Deployment Note (Telegram Bot)
-The `railway.json` file only defines the web start command. To run the full-featured Telegram bot on Railway, you must deploy a **second service** from the same repository with the start command `python bot/bot.py`. 
-Ensure this second service has the same environment variables configured: `TELEGRAM_BOT_TOKEN`, `DATABASE_URL`, `FAL_KEY`, `GROQ_API_KEY`, and `SITE_URL`.
+## Railway Deployment Note
+The `railway.json` file defines the web start command for the app service. Keep the deployment environment aligned with the app's required variables, and avoid adding a second bot worker unless you intentionally reintroduce a separate Telegram integration.

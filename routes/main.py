@@ -4,7 +4,7 @@ from flask import (
 )
 from flask_login import login_required, current_user
 from extensions import csrf, limiter
-from models import db, Generation, User, TelegramUser, SavedPrompt, Referral, Payment, CreditLedger
+from models import db, Generation, User, SavedPrompt, Referral, Payment, CreditLedger
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from services.claude import (
     refine_prompt,
@@ -322,65 +322,17 @@ def dashboard():
     completed_generations = Generation.query.filter_by(
         user_id=current_user.id, status='completed'
     ).count()
-    
+
     recent_generations = Generation.query.filter_by(
         user_id=current_user.id
     ).order_by(Generation.created_at.desc()).limit(4).all()
-    
-    # Telegram linking status + bot handle for the "Connect Telegram" card.
-    telegram_linked = TelegramUser.query.filter_by(user_id=current_user.id).first() is not None
-    telegram_bot_username = os.environ.get('TELEGRAM_BOT_USERNAME', '')
+
     return render_template(
         "main/dashboard.html",
         total_generations=total_generations,
         completed_generations=completed_generations,
         recent_generations=recent_generations,
-        telegram_linked=telegram_linked,
-        telegram_bot_username=telegram_bot_username,
     )
-
-
-@main.route('/telegram/connect-code', methods=['POST'])
-@login_required
-def telegram_connect_code():
-    """Issue a one-time code the user sends to the bot as `/link <code>`."""
-    code = secrets.token_hex(3).upper()  # 6 hex chars, e.g. "A3F9C1"
-    current_user.telegram_link_code = code
-    db.session.commit()
-    bot_username = (os.environ.get('TELEGRAM_BOT_USERNAME', 'AfrigenBot') or 'AfrigenBot').lstrip('@')
-    return jsonify({
-        "success": True,
-        "code": code,
-        "bot_username": bot_username,
-        "start_url": f"https://t.me/{bot_username}?start={code}",
-    })
-
-
-@main.route('/telegram/link-status')
-@login_required
-def telegram_link_status():
-    """Poll target so the dashboard can confirm a successful bind in real time."""
-    from models import ConnectedAccount
-    from utils.encryption import encrypt_token
-    import json
-    tg = TelegramUser.query.filter_by(user_id=current_user.id).first()
-    if tg and tg.chat_id:
-        account = ConnectedAccount.query.filter_by(user_id=current_user.id, provider="telegram").first()
-        if not account:
-            account = ConnectedAccount(user_id=current_user.id, provider="telegram")
-            db.session.add(account)
-        account.status = "connected"
-        account.account_name = tg.chat_title or "Telegram group"
-        account.account_identifier = str(tg.chat_id)
-        account.encrypted_access_token = encrypt_token(os.environ.get("TELEGRAM_BOT_TOKEN", ""))
-        account.metadata_json = encrypt_token(json.dumps({"chat_id": str(tg.chat_id)}))
-        db.session.commit()
-    return jsonify({
-        "success": True,
-        "linked": tg is not None,
-        "telegram_username": tg.username if tg else None,
-        "telegram_name": (tg.chat_title or tg.first_name if tg else None),
-    })
 
 
 @main.route('/connected-accounts/<provider>/status')
@@ -1138,16 +1090,12 @@ def admin():
             ),
         )
     ).order_by(Generation.created_at.desc()).limit(100).all()
-    telegram_users = TelegramUser.query.order_by(
-        TelegramUser.joined_at.desc()
-    ).limit(50).all()
 
     total_users = User.query.count()
     total_generations = Generation.query.count()
     pro_users = User.query.filter_by(plan='pro').count()
     free_users = User.query.filter_by(plan='free').count()
     banned_users = User.query.filter_by(plan='banned').count()
-    total_telegram = TelegramUser.query.count()
 
     # Generation stats
     completed_generations = Generation.query.filter_by(status='completed').count()
@@ -1385,13 +1333,11 @@ def admin():
         users=users,
         generations=generations,
         stuck_generations=stuck_generations,
-        telegram_users=telegram_users,
         total_users=total_users,
         total_generations=total_generations,
         pro_users=pro_users,
         free_users=free_users,
         banned_users=banned_users,
-        total_telegram=total_telegram,
         completed_generations=completed_generations,
         failed_generations=failed_generations,
         video_generations=video_generations,

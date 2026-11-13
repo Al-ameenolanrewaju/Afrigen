@@ -34,12 +34,6 @@ class Config:
     # ElevenLabs
     ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY")
 
-    # Telegram
-    TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
-    # Bot @username (no @), used to build the "send /link to @bot" instructions.
-    TELEGRAM_BOT_USERNAME = os.environ.get("TELEGRAM_BOT_USERNAME")
-
-
     # Paystack
     PAYSTACK_SECRET_KEY = os.environ.get("PAYSTACK_SECRET_KEY")
     PAYSTACK_PUBLIC_KEY = os.environ.get("PAYSTACK_PUBLIC_KEY")

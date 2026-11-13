@@ -20,7 +20,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from urllib.parse import urlparse
 from datetime import datetime, timezone
 
-from models import db, User, Generation, TelegramUser, SavedPrompt, Referral, WebsiteVisit
+from models import db, User, Generation, SavedPrompt, Referral, WebsiteVisit
 from config import DevelopmentConfig, ProductionConfig, TestingConfig
 from extensions import csrf, limiter
 from routes.main import main

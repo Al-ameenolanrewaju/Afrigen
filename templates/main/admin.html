@@ -282,8 +282,8 @@
         </div>
     </div>
     
-    <!-- Top Active Users & Telegram -->
-    <div class="col-md-6">
+    <!-- Top Active Users -->
+    <div class="col-md-12">
         <div class="admin-chart-container h-100 mb-0">
             <h5 class="admin-chart-title mb-3">Top 5 Most Active Users</h5>
             <div class="table-responsive">
@@ -301,32 +301,6 @@
                             <td style="color: var(--admin-accent);">{{ loop.index }}</td>
                             <td>{{ user.username }}</td>
                             <td style="color: white; font-weight: 500;">{{ count }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-md-6">
-        <div class="admin-chart-container h-100 mb-0">
-            <h5 class="admin-chart-title mb-3">Recent Telegram Users</h5>
-            <div class="table-responsive">
-                <table class="admin-table">
-                    <thead>
-                        <tr>
-                            <th>Username</th>
-                            <th>Refined</th>
-                            <th>Joined</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for tuser in telegram_users[:5] %}
-                        <tr>
-                            <td style="color: white;">@{{ tuser.username or 'No username' }}</td>
-                            <td>{{ tuser.prompts_refined }}</td>
-                            <td>{% if tuser.joined_at %}{{ tuser.joined_at.strftime('%b %d') }}{% else %}N/A{% endif %}</td>
                         </tr>
                         {% endfor %}
                     </tbody>

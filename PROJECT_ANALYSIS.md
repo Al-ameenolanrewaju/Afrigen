@@ -7,7 +7,6 @@ Afrigen V2 is an AI marketing automation platform serving African and global cre
 - **Web Layer**: Flask application (`app.py`, `routes/`).
 - **Database & State**: PostgreSQL managed via SQLAlchemy and Flask-Migrate (Alembic).
 - **Background Tasks**: APScheduler in-app cron jobs + webhook worker threads.
-- **Telegram Bot**: Python-telegram-bot worker interface (`bot/bot.py`).
 - **Media Engine**: Fal AI (Kling / AnimateDiff / LTX) + local FFmpeg rendering.
 
 ---
@@ -19,16 +18,13 @@ Afrigen V2 is an AI marketing automation platform serving African and global cre
 - Updated `video_gate`, `charge_video`, and `refund_video` in `services/credits.py` to allow free-tier users with active allowance to generate videos at 0 credits.
 - Added one-click **`+ Video`** action button and allowance badges to `/admin` and `/admin/credits`.
 
-### B. Telegram Voice Note Prompting (Groq Whisper)
+### B. Voice Note Prompting (Groq Whisper)
 - Built `transcribe_voice_note(audio_file_path)` in `services/audio.py` powered by Groq's high-speed `whisper-large-v3` API.
-- Implemented `handle_voice` in `bot/bot.py` (`filters.VOICE | filters.AUDIO`):
-  1. User records a voice note in Telegram.
-  2. Bot downloads the `.ogg` clip and transcribes dialect/accent into text prompt.
-  3. Displays transcribed prompt back to the user and begins video/photo generation automatically.
+- The transcription path is available for integrations that need prompt capture from recorded audio without the Telegram bot layer.
 
 ### C. Automatic Free Video Watermarking (Viral Engine)
 - Built `add_watermark_to_video()` in `services/video.py` using FFmpeg `drawtext`.
-- Automatically overlays a subtle `"Made with Afrigen.com.ng"` badge on videos produced by free users across both Web and Telegram Bot.
+- Automatically overlays a subtle `"Made with Afrigen.com.ng"` badge on videos produced by free users across the web and promoted delivery flows.
 - Pro users receive clean, watermark-free videos.
 - Best-effort execution: returns original URL on any FFmpeg error so watermarking never corrupts user generation.
 
