@@ -83,7 +83,7 @@ def test_telegram_webhook_link_account():
         tg_user = TelegramUser.query.filter_by(telegram_id=99999).first()
         assert tg_user is not None
         assert tg_user.user_id == user_id
-        db_user = User.query.get(user_id)
+        db_user = db.session.get(User, user_id)
         assert db_user.telegram_link_code is None
 
 

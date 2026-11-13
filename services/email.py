@@ -250,15 +250,25 @@ def send_pro_upgrade_email(user_email, username):
         print(f"Email error: {e}")
 
 
+def _get_email_secret_key():
+    try:
+        from flask import current_app
+        if current_app and current_app.config.get("SECRET_KEY"):
+            return current_app.config["SECRET_KEY"]
+    except Exception:
+        pass
+    return os.environ.get("SECRET_KEY") or "fallback-email-secret-key"
+
+
 def generate_reset_token(email):
     from itsdangerous import URLSafeTimedSerializer
-    serializer = URLSafeTimedSerializer(os.environ.get("SECRET_KEY"))
+    serializer = URLSafeTimedSerializer(_get_email_secret_key())
     return serializer.dumps(email, salt='password-reset')
 
 
 def verify_reset_token(token, expiration=3600):
     from itsdangerous import URLSafeTimedSerializer
-    serializer = URLSafeTimedSerializer(os.environ.get("SECRET_KEY"))
+    serializer = URLSafeTimedSerializer(_get_email_secret_key())
     try:
         email = serializer.loads(token, salt='password-reset', max_age=expiration)
         return email
@@ -268,13 +278,13 @@ def verify_reset_token(token, expiration=3600):
 
 def generate_unsub_token(email):
     from itsdangerous import URLSafeTimedSerializer
-    serializer = URLSafeTimedSerializer(os.environ.get("SECRET_KEY"))
+    serializer = URLSafeTimedSerializer(_get_email_secret_key())
     return serializer.dumps(email, salt='newsletter-unsub')
 
 
 def verify_unsub_token(token):
     from itsdangerous import URLSafeTimedSerializer
-    serializer = URLSafeTimedSerializer(os.environ.get("SECRET_KEY"))
+    serializer = URLSafeTimedSerializer(_get_email_secret_key())
     try:
         # No expiry: an unsubscribe link should work indefinitely.
         return serializer.loads(token, salt='newsletter-unsub')

@@ -25,6 +25,9 @@ jobs:
         pip install -r requirements-dev.txt
 
     - name: Run test suite
+      env:
+        SECRET_KEY: ci-testing-secret-key-12345
+        TELEGRAM_BOT_TOKEN: ci-mock-token
       run: |
         pytest
 
