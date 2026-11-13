@@ -10,12 +10,3 @@ services:
         value: 3.11.10
       - key: ENABLE_SCHEDULER
         value: "true"
-
-  - type: worker
-    name: afrigen-bot
-    env: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: python bot/bot.py
-    envVars:
-      - key: PYTHON_VERSION
-        value: 3.11.10

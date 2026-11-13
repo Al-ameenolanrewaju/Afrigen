@@ -20,13 +20,14 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from urllib.parse import urlparse
 from datetime import datetime, timezone
 
-from models import db, User, Generation, SavedPrompt, Referral, WebsiteVisit
+from models import db, User, Generation, SavedPrompt, Referral, WebsiteVisit, TelegramUser
 from config import DevelopmentConfig, ProductionConfig, TestingConfig
 from extensions import csrf, limiter
 from routes.main import main
 from routes.auth import auth
 from routes.api import api
 from routes.campaigns import campaigns_bp
+from routes.telegram import telegram_bp
 from services.credits import refund_video
 from constants import (
     FACEBOOK_URL, TWITTER_URL, INSTAGRAM_URL, LINKEDIN_URL, TELEGRAM_URL
@@ -372,6 +373,7 @@ app.register_blueprint(main)
 app.register_blueprint(auth, url_prefix='/auth')
 app.register_blueprint(api, url_prefix='/api/v1')
 app.register_blueprint(campaigns_bp, url_prefix='/api/campaigns')
+app.register_blueprint(telegram_bp)
 
 
 @app.context_processor

@@ -65,6 +65,10 @@ class User(UserMixin, db.Model):
 
     is_banned = db.Column(db.Boolean, default=False)
 
+    # One-time code shown on the dashboard so a user can link their Telegram
+    # account to this website account (sent to the bot as `/link <code>` or `/start <code>`).
+    telegram_link_code = db.Column(db.String(20), nullable=True)
+
     created_at = db.Column(
         db.DateTime,
         default=lambda: datetime.now(timezone.utc),
@@ -295,6 +299,31 @@ class PaystackWebhookLog(db.Model):
     signature_verified = db.Column(db.Boolean, nullable=False, default=False)
     outcome = db.Column(db.String(100), nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class TelegramUser(db.Model):
+    __tablename__ = "telegram_users"
+
+    id = db.Column(db.Integer, primary_key=True)
+    telegram_id = db.Column(db.String(50), unique=True, nullable=False, index=True)
+
+    username = db.Column(db.String(80), nullable=True)
+    first_name = db.Column(db.String(80), nullable=True)
+    chat_id = db.Column(db.String(80), nullable=True)
+    chat_title = db.Column(db.String(255), nullable=True)
+
+    mode = db.Column(db.String(20), default="video")
+    style = db.Column(db.String(50), default="cinematic")
+    prompts_refined = db.Column(db.Integer, default=0)
+
+    # Linked website account
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    user = db.relationship("User", backref=db.backref("telegram_accounts", cascade="all, delete-orphan"))
+
+    joined_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    def __repr__(self):
+        return f"<TelegramUser {self.username or self.telegram_id}>"
 
 
 class SavedPrompt(db.Model):
