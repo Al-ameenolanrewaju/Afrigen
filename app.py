@@ -175,15 +175,27 @@ def ensure_legacy_schema_columns():
             inspector = db.inspect(db.engine)
             if not inspector.has_table('website_visits'):
                 WebsiteVisit.__table__.create(bind=db.engine, checkfirst=True)
+            if not inspector.has_table('telegram_users'):
+                TelegramUser.__table__.create(bind=db.engine, checkfirst=True)
             if db.engine.dialect.name != 'postgresql':
                 return
 
             repairs = {
                 'users': [
                     ('signup_at', 'TIMESTAMPTZ', "UPDATE users SET signup_at = created_at WHERE signup_at IS NULL"),
+                    ('telegram_link_code', 'VARCHAR(20)', None),
+                    ('free_video_allowance', 'INTEGER', "UPDATE users SET free_video_allowance = 0 WHERE free_video_allowance IS NULL"),
                 ],
                 'subscribers': [
                     ('updated_at', 'TIMESTAMPTZ', "UPDATE subscribers SET updated_at = created_at WHERE updated_at IS NULL")
+                ],
+                'telegram_users': [
+                    ('mode', "VARCHAR(20) DEFAULT 'video'", "UPDATE telegram_users SET mode = 'video' WHERE mode IS NULL"),
+                    ('style', "VARCHAR(50) DEFAULT 'cinematic'", "UPDATE telegram_users SET style = 'cinematic' WHERE style IS NULL"),
+                    ('chat_id', 'VARCHAR(80)', None),
+                    ('chat_title', 'VARCHAR(255)', None),
+                    ('prompts_refined', 'INTEGER DEFAULT 0', "UPDATE telegram_users SET prompts_refined = 0 WHERE prompts_refined IS NULL"),
+                    ('user_id', 'INTEGER', None),
                 ],
             }
 

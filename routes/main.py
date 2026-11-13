@@ -327,7 +327,11 @@ def dashboard():
         user_id=current_user.id
     ).order_by(Generation.created_at.desc()).limit(4).all()
 
-    telegram_linked = TelegramUser.query.filter_by(user_id=current_user.id).first() is not None
+    try:
+        telegram_linked = TelegramUser.query.filter_by(user_id=current_user.id).first() is not None
+    except Exception:
+        db.session.rollback()
+        telegram_linked = False
     telegram_bot_username = os.environ.get('TELEGRAM_BOT_USERNAME', 'AfrigenBot').lstrip('@')
 
     return render_template(

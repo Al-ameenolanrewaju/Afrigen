@@ -181,40 +181,48 @@ class TelegramBotService:
 
     def get_or_create_user(self, from_user, chat=None):
         tg_id = str(from_user.get("id"))
-        tg_user = TelegramUser.query.filter_by(telegram_id=tg_id).first()
         username = from_user.get("username")
         first_name = from_user.get("first_name")
         chat_id = str(chat.get("id")) if chat else tg_id
         chat_title = chat.get("title") if chat else None
 
-        if not tg_user:
-            tg_user = TelegramUser(
-                telegram_id=tg_id,
-                username=username,
-                first_name=first_name,
-                chat_id=chat_id,
-                chat_title=chat_title,
-                mode="video",
-                style="cinematic"
-            )
-            db.session.add(tg_user)
-            db.session.commit()
-        else:
-            updated = False
-            if username and tg_user.username != username:
-                tg_user.username = username
-                updated = True
-            if first_name and tg_user.first_name != first_name:
-                tg_user.first_name = first_name
-                updated = True
-            if chat_id and tg_user.chat_id != chat_id:
-                tg_user.chat_id = chat_id
-                updated = True
-            if chat_title and tg_user.chat_title != chat_title:
-                tg_user.chat_title = chat_title
-                updated = True
-            if updated:
+        try:
+            tg_user = TelegramUser.query.filter_by(telegram_id=tg_id).first()
+        except Exception:
+            db.session.rollback()
+            tg_user = None
+
+        try:
+            if not tg_user:
+                tg_user = TelegramUser(
+                    telegram_id=tg_id,
+                    username=username,
+                    first_name=first_name,
+                    chat_id=chat_id,
+                    chat_title=chat_title,
+                    mode="video",
+                    style="cinematic"
+                )
+                db.session.add(tg_user)
                 db.session.commit()
+            else:
+                updated = False
+                if username and tg_user.username != username:
+                    tg_user.username = username
+                    updated = True
+                if first_name and tg_user.first_name != first_name:
+                    tg_user.first_name = first_name
+                    updated = True
+                if chat_id and tg_user.chat_id != chat_id:
+                    tg_user.chat_id = chat_id
+                    updated = True
+                if chat_title and tg_user.chat_title != chat_title:
+                    tg_user.chat_title = chat_title
+                    updated = True
+                if updated:
+                    db.session.commit()
+        except Exception:
+            db.session.rollback()
 
         return tg_user
 

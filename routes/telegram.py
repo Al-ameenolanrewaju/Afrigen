@@ -90,13 +90,17 @@ def connect_code():
 @login_required
 def link_status():
     """Check if the logged-in user has linked their Telegram account."""
-    tg = TelegramUser.query.filter_by(user_id=current_user.id).first()
+    try:
+        tg = TelegramUser.query.filter_by(user_id=current_user.id).first()
+    except Exception:
+        db.session.rollback()
+        tg = None
     return jsonify({
         "success": True,
         "linked": tg is not None,
         "telegram_username": tg.username if tg else None,
         "telegram_first_name": tg.first_name if tg else None,
-        "mode": tg.mode if tg else "video",
-        "style": tg.style if tg else "cinematic"
+        "mode": getattr(tg, 'mode', 'video') if tg else "video",
+        "style": getattr(tg, 'style', 'cinematic') if tg else "cinematic"
     })
 
