@@ -8,7 +8,7 @@ import requests
 from datetime import datetime, timezone
 from flask import current_app
 from models import db, User, TelegramUser, Generation
-from services.credits import video_gate, image_gate, charge_video, charge_image
+from services.credits import video_gate, image_gate, charge_video, charge_image, is_paid_plan
 from services.video import generate_image, generate_video, add_text_overlay, add_watermark_to_video
 from services.claude import refine_prompt, refine_image_prompt, extract_on_screen_text
 
@@ -349,12 +349,12 @@ class TelegramBotService:
             f"⭐ <b>Plan:</b> {user.plan.upper()}\n"
             f"🪙 <b>Credits:</b> {user.credits or 0}\n"
         )
-        if user.plan == 'free':
+        if not is_paid_plan(user.plan):
             info += f"🎁 <b>Free Video Allowance:</b> {free_videos} video(s)\n"
             info += f"🖼️ <b>Free Images Used:</b> {user.monthly_images_used or 0} / 2\n\n"
-            info += "👉 <a href='https://afrigen.com.ng/upgrade'>Upgrade to Pro</a> for unlimited Kling AI videos & daily credits."
+            info += "👉 <a href='https://afrigen.com.ng/upgrade'>Upgrade Plan</a> for unlimited Kling AI videos & daily credits."
         else:
-            info += "\n✅ You have full Pro access to Fal AI Kling 10s video generation."
+            info += f"\n✅ You have full {user.plan.upper()} access to Fal AI Kling 10s video generation."
 
         self.send_message(chat_id, info, reply_markup=self.main_menu_keyboard())
 
@@ -531,19 +531,19 @@ class TelegramBotService:
         mode = tg_user.mode or "video"
         style = tg_user.style or "cinematic"
         has_free_video = (getattr(user, "free_video_allowance", 0) or 0) > 0
-        extended = (user.plan == "pro")
+        extended = is_paid_plan(user.plan)
 
         # 2. Check Credit Gates
         if mode == "image":
             ok, err = image_gate(user)
             cost = 0
             if not ok:
-                self.send_message(chat_id, f"❌ {err}\n\n👉 <a href='https://afrigen.com.ng/upgrade'>Upgrade to Pro</a> for more.")
+                self.send_message(chat_id, f"❌ {err}\n\n👉 <a href='https://afrigen.com.ng/upgrade'>Upgrade Plan</a> for more.")
                 return
         else:
             ok, err, cost = video_gate(user, style, extended=extended)
             if not ok:
-                self.send_message(chat_id, f"❌ {err}\n\n👉 <a href='https://afrigen.com.ng/upgrade'>Upgrade to Pro</a> for unlimited video generation.")
+                self.send_message(chat_id, f"❌ {err}\n\n👉 <a href='https://afrigen.com.ng/upgrade'>Upgrade Plan</a> for unlimited video generation.")
                 return
 
         # 3. Prompt Refinement
@@ -569,13 +569,13 @@ class TelegramBotService:
             refined_prompt = user_prompt
 
         # 4. Generate Media
-        allow_fal = (user.plan == "pro" or has_free_video)
+        allow_fal = (is_paid_plan(user.plan) or has_free_video)
         media_url = None
         error_msg = None
 
         try:
             if mode == "image":
-                provider = "fal" if user.plan == "pro" else "huggingface"
+                provider = "fal" if is_paid_plan(user.plan) else "huggingface"
                 res = generate_image(refined_prompt, style=style, aspect_ratio="1:1", provider=provider, allow_fal=allow_fal)
                 if res and res.get("success"):
                     media_url = res.get("image_url")
@@ -630,7 +630,7 @@ class TelegramBotService:
                     logger.warning("Text overlay error: %s", e)
 
             # Apply subtle branding watermark for free tier users
-            if user.plan != "pro":
+            if not is_paid_plan(user.plan):
                 try:
                     watermarked = add_watermark_to_video(media_url)
                     if watermarked:

@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}Download Afrigen Mobile App{% endblock %}
+{% block content %}
+<div class="container py-5" style="max-width: 860px;">
+    <div class="text-center mb-5">
+        <span class="badge mb-2 px-3 py-2" style="background: rgba(245, 166, 35, 0.15); color: #F5A623; border: 1px solid rgba(245, 166, 35, 0.3); border-radius: 20px; font-weight: 600;">
+            <i class="fa-solid fa-mobile-screen-button me-1"></i> Progressive Web App (PWA)
+        </span>
+        <h1 class="display-5 fw-bold text-gradient mb-3">Install Afrigen on Your Phone</h1>
+        <p style="color: #8B949E; font-size: 17px; max-width: 600px; margin: 0 auto;">
+            Enjoy a native mobile app experience with zero app store downloads. Generate AI videos, prompts, and content directly from your home screen.
+        </p>
+    </div>
+
+    <!-- Quick Install Button (if browser supports beforeinstallprompt) -->
+    <div id="pwaInstallBanner" class="card p-4 mb-5 text-center" style="display: none; background: #161B22; border: 1px solid #F5A623; border-radius: 16px;">
+        <h4 style="color: #F0F6FC; font-weight: 700;">Ready to Install</h4>
+        <p style="color: #8B949E; margin-bottom: 20px;">Your browser supports one-click install. Tap below to add Afrigen to your device.</p>
+        <div>
+            <button id="pwaInstallBtn" class="btn btn-warning px-4 py-2" style="background: #F5A623; border: none; color: #0D1117; font-weight: 700; border-radius: 8px;">
+                <i class="fa-solid fa-download me-2"></i> Install Afrigen App
+            </button>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Android Instructions -->
+        <div class="col-md-6">
+            <div class="card h-100 p-4" style="background: #161B22; border: 1px solid #30363D; border-radius: 16px;">
+                <div class="d-flex align-items-center mb-3">
+                    <div style="width: 48px; height: 48px; border-radius: 12px; background: rgba(36, 161, 72, 0.15); display: flex; align-items: center; justify-content: center; font-size: 24px; color: #2ea44f; margin-right: 16px;">
+                        <i class="fa-brands fa-android"></i>
+                    </div>
+                    <div>
+                        <h4 style="color: #F0F6FC; margin-bottom: 2px; font-weight: 700;">Android (Chrome)</h4>
+                        <small style="color: #8B949E;">Samsung, Google Pixel, Tecno, Infinix, Xiaomi</small>
+                    </div>
+                </div>
+
+                <ol style="color: #C9D1D9; font-size: 15px; line-height: 1.8; padding-left: 20px; margin-bottom: 0;">
+                    <li>Open <strong>Chrome</strong> and go to <code style="color: #F5A623; background: #0D1117; padding: 2px 6px; border-radius: 4px;">afrigen.com.ng</code></li>
+                    <li>Tap the <strong>three dots (⋮)</strong> menu in the top-right corner.</li>
+                    <li>Tap <strong>"Install app"</strong> or <strong>"Add to Home screen"</strong>.</li>
+                    <li>Confirm by tapping <strong>"Install"</strong>. Afrigen will appear on your app drawer and home screen.</li>
+                </ol>
+            </div>
+        </div>
+
+        <!-- iOS Instructions -->
+        <div class="col-md-6">
+            <div class="card h-100 p-4" style="background: #161B22; border: 1px solid #30363D; border-radius: 16px;">
+                <div class="d-flex align-items-center mb-3">
+                    <div style="width: 48px; height: 48px; border-radius: 12px; background: rgba(245, 166, 35, 0.15); display: flex; align-items: center; justify-content: center; font-size: 24px; color: #F5A623; margin-right: 16px;">
+                        <i class="fa-brands fa-apple"></i>
+                    </div>
+                    <div>
+                        <h4 style="color: #F0F6FC; margin-bottom: 2px; font-weight: 700;">iPhone & iPad (Safari)</h4>
+                        <small style="color: #8B949E;">iOS 14.0 or newer</small>
+                    </div>
+                </div>
+
+                <ol style="color: #C9D1D9; font-size: 15px; line-height: 1.8; padding-left: 20px; margin-bottom: 0;">
+                    <li>Open <strong>Safari</strong> and navigate to <code style="color: #F5A623; background: #0D1117; padding: 2px 6px; border-radius: 4px;">afrigen.com.ng</code></li>
+                    <li>Tap the <strong>Share</strong> button <i class="fa-solid fa-arrow-up-from-bracket" style="color: #58a6ff;"></i> at the bottom of Safari.</li>
+                    <li>Scroll down and tap <strong>"Add to Home Screen"</strong> <i class="fa-regular fa-square-plus" style="color: #F5A623;"></i>.</li>
+                    <li>Tap <strong>"Add"</strong> in the top-right corner. The Afrigen icon will appear on your iPhone screen!</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <!-- Features of PWA -->
+    <div class="card p-4 mt-5" style="background: #0D1117; border: 1px solid #30363D; border-radius: 16px;">
+        <h4 style="color: #F0F6FC; font-weight: 700; margin-bottom: 20px; text-align: center;">Why Use the Afrigen Web App?</h4>
+        <div class="row g-4 text-center">
+            <div class="col-md-4">
+                <i class="fa-solid fa-bolt" style="font-size: 28px; color: #F5A623; margin-bottom: 12px;"></i>
+                <h6 style="color: #F0F6FC; font-weight: 600;">Lightning Fast</h6>
+                <p style="color: #8B949E; font-size: 14px;">Instant launch with local caching. No heavy store download sizes.</p>
+            </div>
+            <div class="col-md-4">
+                <i class="fa-solid fa-bell" style="font-size: 28px; color: #F5A623; margin-bottom: 12px;"></i>
+                <h6 style="color: #F0F6FC; font-weight: 600;">Always Updated</h6>
+                <p style="color: #8B949E; font-size: 14px;">You always have the newest AI video models without manual updates.</p>
+            </div>
+            <div class="col-md-4">
+                <i class="fa-solid fa-paper-plane" style="font-size: 28px; color: #F5A623; margin-bottom: 12px;"></i>
+                <h6 style="color: #F0F6FC; font-weight: 600;">Bot Connected</h6>
+                <p style="color: #8B949E; font-size: 14px;">Seamlessly linked with your Telegram Bot for generation on the go.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    const banner = document.getElementById('pwaInstallBanner');
+    if (banner) banner.style.display = 'block';
+});
+
+document.getElementById('pwaInstallBtn')?.addEventListener('click', async () => {
+    if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+            document.getElementById('pwaInstallBanner').style.display = 'none';
+        }
+        deferredPrompt = null;
+    }
+});
+</script>
+{% endblock %}

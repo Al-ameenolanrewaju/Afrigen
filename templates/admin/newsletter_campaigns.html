@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Newsletter Campaigns{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h2 style="color:#F5A623;">Newsletter Campaigns</h2>
+    <p style="color:#888;">Batch-send newsletters to all subscribers, in daily chunks.</p>
+
+    <!-- New Campaign Form -->
+    <div class="card p-4 mb-4">
+        <h5 style="color:#F5A623;">Create New Campaign</h5>
+        <form method="POST" action="{{ url_for('main.admin_newsletter_campaign_new') }}">
+            <div class="mb-3">
+                <label class="form-label" style="color:#C9D1D9;">Subject</label>
+                <input type="text" name="subject" class="form-control" style="background:#0D1117;color:#F0F6FC;border:1px solid #30363D;" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label" style="color:#C9D1D9;">HTML Body</label>
+                <textarea name="html_body" rows="8" class="form-control" style="background:#0D1117;color:#F0F6FC;border:1px solid #30363D;font-family:monospace;" required></textarea>
+            </div>
+            <button type="submit" class="btn" style="background:#F5A623;color:#0D1117;font-weight:600;">Create Campaign</button>
+        </form>
+    </div>
+
+    <!-- Campaign List -->
+    <div class="card p-4">
+        <h5 style="color:#F5A623;">All Campaigns</h5>
+        {% if campaigns %}
+        <div class="table-responsive">
+            <table class="table" style="color:#F0F6FC;">
+                <thead>
+                    <tr>
+                        <th style="color:#888;">ID</th>
+                        <th style="color:#888;">Subject</th>
+                        <th style="color:#888;">Status</th>
+                        <th style="color:#888;">Progress</th>
+                        <th style="color:#888;">Created</th>
+                        <th style="color:#888;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for c in campaigns %}
+                <tr>
+                    <td>{{ c.id }}</td>
+                    <td>{{ c.subject[:60] }}{% if c.subject|length > 60 %}…{% endif %}</td>
+                    <td>
+                        <span class="badge {% if c.status == 'sending' %}bg-success{% elif c.status == 'paused' %}bg-warning{% elif c.status == 'complete' %}bg-secondary{% else %}bg-dark{% endif %}">
+                            {{ c.status }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if c.total_audience > 0 %}
+                        {{ c.batch_offset }}/{{ c.total_audience }}
+                        <div class="progress" style="height:4px;background:#30363D;margin-top:4px;">
+                            <div class="progress-bar" style="width:{{ [c.batch_offset * 100 // c.total_audience, 100] | min }}%;background:#F5A623;"></div>
+                        </div>
+                        {% else %}—{% endif %}
+                    </td>
+                    <td style="color:#888;font-size:12px;">{{ c.created_at.strftime('%Y-%m-%d %H:%M') if c.created_at else '—' }}</td>
+                    <td>
+                        {% if c.status == 'draft' %}
+                        <form method="POST" action="{{ url_for('main.admin_newsletter_campaign_launch', id=c.id) }}" style="display:inline;">
+                            <button type="submit" class="btn btn-sm" style="background:#27AE60;color:#fff;border:none;">🚀 Launch</button>
+                        </form>
+                        <form method="POST" action="{{ url_for('main.admin_newsletter_campaign_delete', id=c.id) }}" style="display:inline;" onsubmit="return confirm('Delete this draft?')">
+                            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                        </form>
+                        {% elif c.status in ('sending', 'paused') %}
+                        <form method="POST" action="{{ url_for('main.admin_newsletter_campaign_pause', id=c.id) }}" style="display:inline;">
+                            <button type="submit" class="btn btn-sm" style="background:#F5A623;color:#0D1117;border:none;">
+                                {{ '⏸ Pause' if c.status == 'sending' else '▶ Resume' }}
+                            </button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p style="color:#888;">No campaigns yet. Create one above.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

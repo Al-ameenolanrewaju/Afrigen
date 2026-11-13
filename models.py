@@ -63,6 +63,10 @@ class User(UserMixin, db.Model):
     last_image_reset = db.Column(db.Date, nullable=True)
     free_video_allowance = db.Column(db.Integer, default=0)
 
+    monthly_free_images_left = db.Column(db.Integer, default=2)
+    monthly_free_videos_left = db.Column(db.Integer, default=1)
+    last_quota_reset_at = db.Column(db.DateTime, nullable=True)
+
     is_banned = db.Column(db.Boolean, default=False)
 
     # One-time code shown on the dashboard so a user can link their Telegram
@@ -875,3 +879,37 @@ class CampaignAnalytics(db.Model):
 
     def __repr__(self):
         return f"<CampaignAnalytics for Campaign {self.campaign_id}>"
+
+
+class NewsletterCampaign(db.Model):
+    __tablename__ = 'newsletter_campaigns'
+    id = db.Column(db.Integer, primary_key=True)
+    subject = db.Column(db.String(300), nullable=False)
+    html_body = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(20), default='draft')  # draft | sending | paused | complete
+    batch_size = db.Column(db.Integer, default=80)
+    batch_offset = db.Column(db.Integer, default=0)
+    total_audience = db.Column(db.Integer, default=0)
+    started_at = db.Column(db.DateTime, nullable=True)
+    completed_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    def __repr__(self):
+        return f'<NewsletterCampaign {self.id} {self.status}>'
+
+
+class Notification(db.Model):
+    __tablename__ = 'notifications'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    link = db.Column(db.String(500), nullable=True)
+    type = db.Column(db.String(50), default='info')  # info, success, warning, promo
+    is_read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    user = db.relationship('User', backref=db.backref('notifications', cascade='all, delete-orphan'))
+
+    def __repr__(self):
+        return f'<Notification {self.id} {self.type}>'

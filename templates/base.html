@@ -12,6 +12,11 @@
 
 <link rel="apple-touch-icon"
       href="{{ url_for('static', filename='favicon.png') }}">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <meta name="theme-color" content="#F5A623">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Afrigen">
     <title>{% block title %}Afrigen AI{% endblock %} | AI Marketing & Campaign Platform</title>
     <meta name="description"
 content="{% block meta_description %}Afrigen AI is an AI-powered marketing and campaign platform that helps African creators and brands generate campaigns, blogs, social content, videos, images, and voiceovers from a single idea.{% endblock %}">
@@ -195,6 +200,27 @@ content="Generate campaigns, blogs, social media content, videos, and visuals wi
     {% endif %}
     
     <div class="flex-grow-1 d-flex flex-column" style="min-width: 0;">
+        {% if not request.args.get('embedded') %}
+        <header class="d-flex align-items-center justify-content-between px-3 px-lg-4 py-2 border-bottom" style="background: #0D1117; border-color: #30363D !important; min-height: 52px;">
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge" style="background: rgba(245, 166, 35, 0.15); color: #F5A623; border: 1px solid rgba(245, 166, 35, 0.3); text-transform: uppercase; font-size: 11px;">
+                    {{ current_user.plan or 'SPARK' }}
+                </span>
+                <span class="text-muted d-none d-sm-inline" style="font-size: 13px;">
+                    Credits: <strong style="color: #F0F6FC;">{{ current_user.credits or 0 }}</strong>
+                </span>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <a href="{{ url_for('main.download_app') }}" class="btn btn-sm btn-outline-secondary d-none d-md-inline-flex align-items-center gap-1" style="color: #C9D1D9; border-color: #30363D; font-size: 12px;">
+                    <i class="fa-solid fa-mobile-screen"></i> App
+                </a>
+                <button id="notifBellBtn" class="btn btn-sm position-relative text-white" type="button" data-bs-toggle="offcanvas" data-bs-target="#notifOffcanvas" style="background: #161B22; border: 1px solid #30363D;">
+                    <i class="fa-solid fa-bell"></i>
+                    <span id="notifBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display: none; font-size: 9px;">0</span>
+                </button>
+            </div>
+        </header>
+        {% endif %}
 {% else %}
     {% include 'components/public_navbar.html' %}
 {% endif %}
@@ -299,6 +325,70 @@ content="Generate campaigns, blogs, social media content, videos, and visuals wi
             }, { threshold: 0.12 });
             els.forEach(function (el) { io.observe(el); });
         })();
+    </script>
+    <!-- In-App Notifications Drawer -->
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="notifOffcanvas" style="background: #0D1117; color: #F0F6FC; border-left: 1px solid #30363D; width: 360px;">
+        <div class="offcanvas-header border-bottom" style="border-color: #30363D !important;">
+            <h5 class="offcanvas-title" style="color: #F5A623; font-size: 16px;"><i class="fa-solid fa-bell me-2"></i> Notifications</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+        </div>
+        <div class="offcanvas-body p-0">
+            <div id="notifList" class="list-group list-group-flush" style="background: transparent;">
+                <div class="p-4 text-center text-muted" style="font-size: 14px;">No new notifications.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PWA & Notifications Script -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register("{{ url_for('static', filename='sw.js') }}").catch(function(err) {
+                    console.debug('PWA Service Worker registration skipped:', err);
+                });
+            });
+        }
+
+        async function fetchNotifications() {
+            try {
+                const res = await fetch('/api/notifications');
+                if (!res.ok) return;
+                const data = await res.json();
+                const badge = document.getElementById('notifBadge');
+                const list = document.getElementById('notifList');
+                if (!badge || !list) return;
+
+                if (Array.isArray(data) && data.length > 0) {
+                    badge.textContent = data.length;
+                    badge.style.display = 'inline-block';
+                    list.innerHTML = data.map(function(n) {
+                        return '<div class="list-group-item p-3 border-bottom" style="background: #161B22; color: #F0F6FC; border-color: #30363D !important;">' +
+                            '<div class="d-flex justify-content-between align-items-start mb-1">' +
+                                '<strong style="color: #F5A623; font-size: 14px;">' + (n.title || 'Notification') + '</strong>' +
+                                '<button class="btn btn-sm text-muted p-0 ms-2" onclick="markNotifRead(' + n.id + ')" title="Mark as read" style="line-height:1; font-size:16px;">&times;</button>' +
+                            '</div>' +
+                            '<p class="mb-1" style="font-size: 13px; color: #C9D1D9;">' + (n.message || '') + '</p>' +
+                            (n.link ? '<a href="' + n.link + '" class="btn btn-sm btn-link p-0 text-decoration-none mt-1 d-inline-block" style="color: #58a6ff; font-size: 12px;">View &rarr;</a>' : '') +
+                        '</div>';
+                    }).join('');
+                } else {
+                    badge.style.display = 'none';
+                    list.innerHTML = '<div class="p-4 text-center text-muted" style="font-size: 14px;">No new notifications.</div>';
+                }
+            } catch (e) {}
+        }
+
+        async function markNotifRead(id) {
+            try {
+                await fetch('/api/notifications/' + id + '/read', { method: 'POST' });
+                fetchNotifications();
+            } catch (e) {}
+        }
+
+        if (document.getElementById('notifBellBtn')) {
+            fetchNotifications();
+            setInterval(fetchNotifications, 60000);
+        }
     </script>
 </body>
 </html>

@@ -1,0 +1,26 @@
+{
+  "name": "Afrigen AI — Africa's AI Engine",
+  "short_name": "Afrigen",
+  "description": "Create high-definition AI videos, marketing campaigns, voiceovers, and African visuals instantly.",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0D1117",
+  "theme_color": "#F5A623",
+  "categories": ["productivity", "entertainment", "graphics"],
+  "icons": [
+    {
+      "src": "/static/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

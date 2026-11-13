@@ -384,3 +384,22 @@ def run_weekly_send():
     print(f"Weekly newsletter sent to {result['sent']} recipients "
           f"({result['failed']} failed, issue {issue.id}).")
     return result["sent"]
+
+
+# ---------- Daily Newsletter Campaign Batch Runner ----------
+
+def run_daily_newsletter_batch(app_ctx=None):
+    """Find the first 'sending' campaign and dispatch a batch of emails."""
+    from models import NewsletterCampaign
+    campaign = NewsletterCampaign.query.filter_by(status='sending').first()
+    if not campaign:
+        return
+    recipients = collect_recipients(limit=campaign.batch_size, offset=campaign.batch_offset)
+    if recipients:
+        send_newsletter(recipients, campaign.subject, campaign.html_body, is_html=True)
+    campaign.batch_offset += campaign.batch_size
+    if campaign.batch_offset >= campaign.total_audience:
+        campaign.status = 'complete'
+        campaign.completed_at = datetime.now(timezone.utc)
+    db.session.commit()
+    print(f"Newsletter campaign {campaign.id}: batch sent ({len(recipients)} recipients), offset now {campaign.batch_offset}")

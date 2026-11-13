@@ -27,7 +27,7 @@ from services.video import (
 from services.credits import (
     video_gate, image_gate, charge_video, charge_image,
     image_to_video_gate, refund_video,
-    IMAGE_COST
+    IMAGE_COST, is_paid_plan
 )
 from services.audio import generate_voiceover, generate_video_script
 import os
@@ -186,6 +186,13 @@ _PUBLIC_STATS_CACHE_TTL = 60
 
 PRO_MONTHLY_KOBO = 1_000_000   # ₦10,000
 PRO_ANNUAL_KOBO = 11_000_000   # ₦110,000
+
+CREATOR_MONTHLY_KOBO = 1_000_000   # ₦10,000
+CREATOR_ANNUAL_KOBO = 10_000_000   # ₦100,000
+STUDIO_MONTHLY_KOBO = 1_500_000    # ₦15,000
+STUDIO_ANNUAL_KOBO = 15_000_000    # ₦150,000
+DIRECTOR_MONTHLY_KOBO = 2_500_000  # ₦25,000
+DIRECTOR_ANNUAL_KOBO = 25_000_000  # ₦250,000
 
 def image_to_video_cost(duration="5"):
     """Credits for animating an image into video. Scales with
@@ -1735,6 +1742,57 @@ def initialize_payment_annual():
         return redirect(url_for('main.upgrade'))
 
 
+def _initialize_paystack_payment(amount, metadata_extra=None):
+    """Helper to initialize a Paystack payment and redirect to checkout."""
+    headers = {
+        "Authorization": f"Bearer {os.environ.get('PAYSTACK_SECRET_KEY')}",
+        "Content-Type": "application/json"
+    }
+    metadata = {"user_id": current_user.id, "username": current_user.username}
+    if metadata_extra:
+        metadata.update(metadata_extra)
+    data = {
+        "email": current_user.email,
+        "amount": amount,
+        "callback_url": url_for('main.payment_callback', _external=True),
+        "metadata": metadata
+    }
+    response = http_requests.post(
+        "https://api.paystack.co/transaction/initialize",
+        headers=headers, json=data, timeout=10
+    )
+    result = response.json()
+    if result['status']:
+        return redirect(result['data']['authorization_url'])
+    else:
+        flash('Payment initialization failed!', 'danger')
+        return redirect(url_for('main.upgrade'))
+
+
+@main.route('/payment/initialize/studio', methods=['POST'])
+@login_required
+def initialize_payment_studio():
+    return _initialize_paystack_payment(STUDIO_MONTHLY_KOBO, {"plan": "studio"})
+
+
+@main.route('/payment/initialize/studio/annual', methods=['POST'])
+@login_required
+def initialize_payment_studio_annual():
+    return _initialize_paystack_payment(STUDIO_ANNUAL_KOBO, {"plan": "studio_annual"})
+
+
+@main.route('/payment/initialize/director', methods=['POST'])
+@login_required
+def initialize_payment_director():
+    return _initialize_paystack_payment(DIRECTOR_MONTHLY_KOBO, {"plan": "director"})
+
+
+@main.route('/payment/initialize/director/annual', methods=['POST'])
+@login_required
+def initialize_payment_director_annual():
+    return _initialize_paystack_payment(DIRECTOR_ANNUAL_KOBO, {"plan": "director_annual"})
+
+
 @main.route('/payment/callback')
 @login_required
 def payment_callback():
@@ -1754,12 +1812,18 @@ def payment_callback():
 
     # Verify payment status, payer email, metadata user_id, AND that the amount
     # is one we actually charge (so the tier can't be downgraded by paying less).
+    _all_valid_amounts = (
+        PRO_MONTHLY_KOBO, PRO_ANNUAL_KOBO,
+        CREATOR_MONTHLY_KOBO, CREATOR_ANNUAL_KOBO,
+        STUDIO_MONTHLY_KOBO, STUDIO_ANNUAL_KOBO,
+        DIRECTOR_MONTHLY_KOBO, DIRECTOR_ANNUAL_KOBO,
+    )
     verified = (
         result.get('status')
         and data.get('status') == 'success'
         and data.get('customer', {}).get('email') == current_user.email
         and str((data.get('metadata') or {}).get('user_id')) == str(current_user.id)
-        and amount in (PRO_MONTHLY_KOBO, PRO_ANNUAL_KOBO)
+        and amount in _all_valid_amounts
     )
 
     if not verified:
@@ -1773,13 +1837,27 @@ def payment_callback():
         flash('This payment has already been applied. ⭐', 'info')
         return redirect(url_for('main.dashboard'))
 
-    # Tier is derived from the verified amount, not the (spoofable) metadata.
-    is_annual = amount == PRO_ANNUAL_KOBO
-    current_user.plan = 'pro'
-    grant = 1200 if is_annual else 100
+    # Derive plan and credits from amount
+    if amount in (DIRECTOR_MONTHLY_KOBO,):
+        new_plan = 'director'; grant = 1000
+    elif amount == DIRECTOR_ANNUAL_KOBO:
+        new_plan = 'director'; grant = 12000
+    elif amount == STUDIO_MONTHLY_KOBO:
+        new_plan = 'studio'; grant = 300
+    elif amount == STUDIO_ANNUAL_KOBO:
+        new_plan = 'studio'; grant = 3600
+    elif amount == CREATOR_ANNUAL_KOBO:
+        new_plan = 'creator'; grant = 1200
+    elif amount == PRO_ANNUAL_KOBO:
+        new_plan = 'creator'; grant = 1200
+    else:
+        # PRO_MONTHLY_KOBO == CREATOR_MONTHLY_KOBO
+        new_plan = 'creator'; grant = 100
+    is_annual = amount in (CREATOR_ANNUAL_KOBO, STUDIO_ANNUAL_KOBO, DIRECTOR_ANNUAL_KOBO, PRO_ANNUAL_KOBO)
+    current_user.plan = new_plan
     current_user.credits = (current_user.credits or 0) + grant
     from models import CreditLedger
-    db.session.add(CreditLedger(user_id=current_user.id, delta=grant, reason=f'Paystack {"annual" if is_annual else "monthly"} grant'))
+    db.session.add(CreditLedger(user_id=current_user.id, delta=grant, reason=f'Paystack {new_plan} {"annual" if is_annual else "monthly"} grant'))
     db.session.add(Payment(
         user_id=current_user.id,
         reference=reference,
@@ -1800,7 +1878,7 @@ def payment_callback():
         send_pro_upgrade_email(current_user.email, current_user.username)
     except Exception as e:
         print(f"Email error: {e}")
-    flash('Payment successful! Welcome to Pro! ⭐', 'success')
+    flash(f'Payment successful! Welcome to {new_plan.title()}! ⭐', 'success')
     return redirect(url_for('main.dashboard'))
 
 
@@ -2661,18 +2739,36 @@ def payment_webhook():
             if (
                 user
                 and reference
-                and amount in (PRO_MONTHLY_KOBO, PRO_ANNUAL_KOBO)
+                and amount in (
+                    PRO_MONTHLY_KOBO, PRO_ANNUAL_KOBO,
+                    CREATOR_MONTHLY_KOBO, CREATOR_ANNUAL_KOBO,
+                    STUDIO_MONTHLY_KOBO, STUDIO_ANNUAL_KOBO,
+                    DIRECTOR_MONTHLY_KOBO, DIRECTOR_ANNUAL_KOBO,
+                )
                 and not Payment.query.filter_by(reference=reference).first()
             ):
-                is_annual = amount == PRO_ANNUAL_KOBO
-                user.plan = 'pro'
-                grant = 1200 if is_annual else 100
+                is_annual = amount in (CREATOR_ANNUAL_KOBO, STUDIO_ANNUAL_KOBO, DIRECTOR_ANNUAL_KOBO, PRO_ANNUAL_KOBO)
+                if amount == DIRECTOR_MONTHLY_KOBO:
+                    new_plan = 'director'; grant = 1000
+                elif amount == DIRECTOR_ANNUAL_KOBO:
+                    new_plan = 'director'; grant = 12000
+                elif amount == STUDIO_MONTHLY_KOBO:
+                    new_plan = 'studio'; grant = 300
+                elif amount == STUDIO_ANNUAL_KOBO:
+                    new_plan = 'studio'; grant = 3600
+                elif amount == CREATOR_ANNUAL_KOBO:
+                    new_plan = 'creator'; grant = 1200
+                elif amount == PRO_ANNUAL_KOBO:
+                    new_plan = 'creator'; grant = 1200
+                else:
+                    new_plan = 'creator'; grant = 100
+                user.plan = new_plan
                 user.credits = (user.credits or 0) + grant
                 from models import CreditLedger
                 db.session.add(CreditLedger(
                     user_id=user.id,
                     delta=grant,
-                    reason=f'Paystack webhook {"annual" if is_annual else "monthly"} grant',
+                    reason=f'Paystack webhook {new_plan} {"annual" if is_annual else "monthly"} grant',
                 ))
                 db.session.add(Payment(
                     user_id=user.id,
@@ -2871,6 +2967,163 @@ def admin_paystack_webhooks():
         query = query.filter_by(signature_verified=(verified == 'true'))
     webhook_logs = query.order_by(PaystackWebhookLog.created_at.desc()).limit(200).all()
     return render_template('main/admin_paystack_webhooks.html', webhook_logs=webhook_logs)
+
+
+# ---------- Admin Newsletter Campaigns ----------
+
+@main.route('/admin/newsletter/campaigns')
+@admin_required
+def admin_newsletter_campaigns():
+    from models import NewsletterCampaign
+    campaigns = NewsletterCampaign.query.order_by(NewsletterCampaign.created_at.desc()).all()
+    return render_template('admin/newsletter_campaigns.html', campaigns=campaigns)
+
+
+@main.route('/admin/newsletter/campaigns/new', methods=['POST'])
+@admin_required
+def admin_newsletter_campaign_new():
+    from models import NewsletterCampaign
+    subject = request.form.get('subject', '').strip()
+    html_body = request.form.get('html_body', '').strip()
+    if not subject or not html_body:
+        flash('Subject and body are required.', 'danger')
+        return redirect(url_for('main.admin_newsletter_campaigns'))
+    campaign = NewsletterCampaign(subject=subject, html_body=html_body, status='draft')
+    db.session.add(campaign)
+    db.session.commit()
+    flash('Campaign created.', 'success')
+    return redirect(url_for('main.admin_newsletter_campaigns'))
+
+
+@main.route('/admin/newsletter/campaigns/<int:id>/launch', methods=['POST'])
+@admin_required
+def admin_newsletter_campaign_launch(id):
+    from models import NewsletterCampaign
+    from services.newsletter import collect_recipients
+    campaign = NewsletterCampaign.query.get_or_404(id)
+    total = len(collect_recipients(limit=99999, offset=0))
+    campaign.total_audience = total
+    campaign.batch_offset = 0
+    campaign.status = 'sending'
+    campaign.started_at = datetime.now(timezone.utc)
+    db.session.commit()
+    flash(f'Campaign launched to {total} recipients.', 'success')
+    return redirect(url_for('main.admin_newsletter_campaigns'))
+
+
+@main.route('/admin/newsletter/campaigns/<int:id>/pause', methods=['POST'])
+@admin_required
+def admin_newsletter_campaign_pause(id):
+    from models import NewsletterCampaign
+    campaign = NewsletterCampaign.query.get_or_404(id)
+    if campaign.status == 'sending':
+        campaign.status = 'paused'
+        flash('Campaign paused.', 'info')
+    elif campaign.status == 'paused':
+        campaign.status = 'sending'
+        flash('Campaign resumed.', 'success')
+    db.session.commit()
+    return redirect(url_for('main.admin_newsletter_campaigns'))
+
+
+@main.route('/admin/newsletter/campaigns/<int:id>/delete', methods=['POST'])
+@admin_required
+def admin_newsletter_campaign_delete(id):
+    from models import NewsletterCampaign
+    campaign = NewsletterCampaign.query.get_or_404(id)
+    if campaign.status != 'draft':
+        flash('Only draft campaigns can be deleted.', 'danger')
+        return redirect(url_for('main.admin_newsletter_campaigns'))
+    db.session.delete(campaign)
+    db.session.commit()
+    flash('Campaign deleted.', 'success')
+    return redirect(url_for('main.admin_newsletter_campaigns'))
+
+
+# ---------- Notifications API ----------
+
+@main.route('/api/notifications')
+@login_required
+def api_notifications():
+    from models import Notification
+    notifs = Notification.query.filter_by(
+        user_id=current_user.id, is_read=False
+    ).order_by(Notification.created_at.desc()).limit(20).all()
+    return jsonify([{
+        'id': n.id,
+        'title': n.title,
+        'message': n.message,
+        'link': n.link,
+        'type': n.type,
+        'created_at': n.created_at.isoformat() if n.created_at else None,
+    } for n in notifs])
+
+
+@main.route('/api/notifications/<int:notif_id>/read', methods=['POST'])
+@login_required
+def api_notification_read(notif_id):
+    from models import Notification
+    notif = Notification.query.filter_by(id=notif_id, user_id=current_user.id).first_or_404()
+    notif.is_read = True
+    db.session.commit()
+    return jsonify({'ok': True})
+
+
+@main.route('/admin/notifications/broadcast', methods=['POST'])
+@admin_required
+@csrf.exempt
+def admin_notifications_broadcast():
+    from models import Notification
+    data = request.get_json(silent=True) or {}
+    title = data.get('title', '').strip()
+    message = data.get('message', '').strip()
+    link = data.get('link', '').strip() or None
+    if not title or not message:
+        return jsonify({'ok': False, 'error': 'title and message required'}), 400
+    users = User.query.all()
+    for u in users:
+        db.session.add(Notification(
+            user_id=u.id,
+            title=title,
+            message=message,
+            link=link,
+            type='info',
+        ))
+    db.session.commit()
+    return jsonify({'ok': True, 'sent_to': len(users)})
+
+
+# ---------- Admin Promo Campaigns ----------
+
+@main.route('/admin/campaigns', methods=['GET', 'POST'])
+@admin_required
+def admin_promo_campaigns():
+    result = None
+    if request.method == 'POST':
+        offer_text = request.form.get('offer_text', '').strip()
+        selected_platforms = request.form.getlist('platforms')
+        if offer_text:
+            try:
+                from services.promo_campaign import run_promo_campaign
+                result = run_promo_campaign(offer_text, selected_platforms or None)
+                flash('Campaign launched!', 'success')
+            except Exception as exc:
+                flash(f'Campaign error: {exc}', 'danger')
+        else:
+            flash('Offer text is required.', 'danger')
+    return render_template('admin/campaigns.html', result=result)
+
+
+# ---------- PWA Routes ----------
+
+@main.route('/offline')
+def offline():
+    return render_template('main/offline.html')
+
+
+@main.route('/download-app')
+def download_app():
+    return render_template('main/download.html')
 
 @main.route('/download/video/<int:generation_id>')
 @login_required

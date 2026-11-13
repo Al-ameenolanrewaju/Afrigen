@@ -182,6 +182,21 @@ def _post_to_platform(platform: str, content: dict, post: dict) -> dict:
             image_title=content.get("image_title", post.get("title", "")),
         )
 
+    elif platform == "facebook":
+        from platforms.facebook import post_to_page
+        return post_to_page(
+            text=content.get("content", ""),
+            link=canonical,
+        )
+
+    elif platform == "instagram":
+        return {
+            "ok": True,
+            "platform": "instagram",
+            "content": content.get("content", ""),
+            "note": "Ready for Instagram publishing via Meta Business Suite"
+        }
+
     return {"ok": False, "error": f"Platform '{platform}' is not active"}
 
 

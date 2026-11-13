@@ -185,6 +185,9 @@ def ensure_legacy_schema_columns():
                     ('signup_at', 'TIMESTAMPTZ', "UPDATE users SET signup_at = created_at WHERE signup_at IS NULL"),
                     ('telegram_link_code', 'VARCHAR(20)', None),
                     ('free_video_allowance', 'INTEGER', "UPDATE users SET free_video_allowance = 0 WHERE free_video_allowance IS NULL"),
+                    ('monthly_free_images_left', 'INTEGER DEFAULT 2', "UPDATE users SET monthly_free_images_left = 2 WHERE monthly_free_images_left IS NULL"),
+                    ('monthly_free_videos_left', 'INTEGER DEFAULT 1', "UPDATE users SET monthly_free_videos_left = 1 WHERE monthly_free_videos_left IS NULL"),
+                    ('last_quota_reset_at', 'TIMESTAMPTZ', None),
                 ],
                 'subscribers': [
                     ('updated_at', 'TIMESTAMPTZ', "UPDATE subscribers SET updated_at = created_at WHERE updated_at IS NULL")
@@ -351,6 +354,36 @@ def generate_daily_content():
             pipeline.run_automatic()
         except Exception as e:
             print(f"Daily Content Engine generation failed: {e}")
+
+
+@scheduler.task('cron', id='monthly_quota_reset', day=1, hour=0, minute=0)
+def monthly_quota_reset_job():
+    with app.app_context():
+        from models import db, User
+        from datetime import datetime, timezone
+        try:
+            spark_users = User.query.filter(User.plan.in_(['free', 'spark'])).all()
+            for u in spark_users:
+                u.monthly_images_used = 0
+                u.free_video_allowance = 1
+                u.monthly_free_images_left = 2
+                u.monthly_free_videos_left = 1
+                u.last_quota_reset_at = datetime.now(timezone.utc)
+            db.session.commit()
+            logger.info(f"Monthly quota reset for {len(spark_users)} Spark users")
+        except Exception as e:
+            logger.error(f"Monthly quota reset failed: {e}")
+            db.session.rollback()
+
+
+@scheduler.task('cron', id='daily_newsletter', hour=8, minute=0)
+def daily_newsletter_job():
+    with app.app_context():
+        try:
+            from services.newsletter import run_daily_newsletter_batch
+            run_daily_newsletter_batch()
+        except Exception as e:
+            print(f"Daily newsletter batch failed: {e}")
 
 
 # Setup logging
