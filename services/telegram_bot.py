@@ -555,9 +555,15 @@ class TelegramBotService:
 
         try:
             if mode == "image":
-                refined_prompt = refine_image_prompt(user_prompt, style)
+                refined_prompt = refine_image_prompt(user_prompt, style, user=user)
             else:
-                refined_prompt = refine_prompt(user_prompt, style)
+                refined_prompt = refine_prompt(
+                    user_prompt,
+                    style=style,
+                    model_name="fal-ai/kling-video/v1/standard/text-to-video",
+                    duration="10" if extended else "5",
+                    user=user,
+                )
         except Exception as e:
             logger.warning("Refine error in bot: %s; using original prompt", e)
             refined_prompt = user_prompt
@@ -577,8 +583,15 @@ class TelegramBotService:
                     error_msg = res.get("error") if res else "Image generation returned no result."
             else:
                 wait_note = "this usually takes 1-3 minutes"
-                self.send_message(chat_id, f"🎬 <b>Rendering video with AI...</b> ({wait_note})")
-                res = generate_video(refined_prompt, style=style, aspect_ratio="16:9", extended=extended, allow_fal=allow_fal)
+                self.send_message(chat_id, f"🎬 <b>Rendering Kling AI video...</b> ({wait_note})")
+                res = generate_video(
+                    refined_prompt,
+                    style=style,
+                    aspect_ratio="16:9",
+                    extended=extended,
+                    duration="10" if extended else "5",
+                    allow_fal=allow_fal
+                )
                 if res and res.get("success"):
                     media_url = res.get("video_url")
                 else:

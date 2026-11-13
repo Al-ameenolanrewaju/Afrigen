@@ -24,16 +24,12 @@ def generate_video(
     style="cinematic",
     aspect_ratio="16:9",
     extended=False,
+    duration="5",
     allow_fal=False,
 ):
     if not allow_fal:
         return {"success": False, "error": "Video generation is a Pro feature."}
-    # Same model selection as the website's async path: Pro users (extended=True)
-    # get the premium 10s Kling clip on cinematic/realistic/african and a longer
-    # AnimateDiff clip on anime/social; everyone else gets the short LTX clip.
-    # This call is synchronous (fal_client.subscribe blocks until the video is
-    # ready), which is what the Telegram bot needs.
-    model, arguments = _build_t2v_request(prompt, style, aspect_ratio, extended)
+    model, arguments = _build_t2v_request(prompt, style, aspect_ratio, extended, duration=duration)
     last_error = None
 
     for attempt in range(1, MAX_RETRIES + 1):
@@ -146,10 +142,9 @@ def _build_t2v_request(prompt, style, aspect_ratio, extended, duration="5"):
 
     The single source of truth shared by the website's async path
     (generate_video_async) and the bot's synchronous path (generate_video), so
-    both produce identical videos:
-      - anime/social  -> AnimateDiff (longer 32-frame clip when extended)
-      - extended       -> premium Kling clip (cinematic/realistic/african)
-      - otherwise      -> short LTX clip
+    both produce identical high-quality videos:
+      - anime/social  -> AnimateDiff
+      - all others    -> premium Kling AI (5s standard, 10s extended)
     """
     duration = str(duration or "5")
     if duration not in {"5", "10", "15", "20"}:
@@ -157,16 +152,20 @@ def _build_t2v_request(prompt, style, aspect_ratio, extended, duration="5"):
 
     if style in ANIMATEDIFF_STYLES:
         model = ANIMATEDIFF_MODEL
-    elif extended or duration in {"10", "15", "20"}:
-        model = KLING_T2V_MODEL
     else:
-        model = LTX_MODEL
+        # Standardize on Kling AI for cinematic, realistic, and African video generation.
+        model = KLING_T2V_MODEL
 
     arguments = {"prompt": prompt}
 
     if model in (ANIMATEDIFF_MODEL, KLING_T2V_MODEL):
         arguments["aspect_ratio"] = aspect_ratio if aspect_ratio in ("16:9", "9:16", "1:1") else "16:9"
-        arguments["duration"] = "10" if duration in {"10", "15", "20"} else "5"
+        arguments["duration"] = "10" if (extended or duration in {"10", "15", "20"}) else "5"
+        if model == KLING_T2V_MODEL:
+            arguments["negative_prompt"] = (
+                "blurry, distorted faces, deformed anatomy, low quality, warped, "
+                "glitch, pixelated, amateur, oversaturated, text watermark"
+            )
     else:
         arguments["aspect_ratio"] = aspect_ratio if aspect_ratio in ("16:9", "9:16") else "16:9"
 

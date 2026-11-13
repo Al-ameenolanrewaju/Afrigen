@@ -137,15 +137,12 @@ def extract_on_screen_text(user_prompt):
         return ""
 
 
-def get_model_prompt_rules(model_name="fal-ai/ltx-2.3-quality/clean-plate", duration="5"):
+def get_model_prompt_rules(model_name="fal-ai/kling-video/v1/standard/text-to-video", duration="5"):
     """Return model-specific instructions for prompt generation.
 
-    Different FAL backends have different failure modes: the free LTX model is
-    best with simple, stable compositions, while Kling handles more cinematic and
-    longer-duration continuity. We tune the prompt rather than trying to force a
-    single generic prompt across all models.
+    Optimized for Kling AI to generate high-fidelity, physically consistent, cinematic video.
     """
-    model_name = (model_name or "fal-ai/ltx-2.3-quality/clean-plate").lower()
+    model_name = (model_name or "fal-ai/kling-video/v1/standard/text-to-video").lower()
     duration = str(duration or "5")
 
     if "kling" in model_name:
@@ -198,7 +195,7 @@ def get_model_prompt_rules(model_name="fal-ai/ltx-2.3-quality/clean-plate", dura
 def refine_prompt(
     user_prompt,
     style="cinematic",
-    model_name="fal-ai/ltx-2.3-quality/clean-plate",
+    model_name="fal-ai/kling-video/v1/standard/text-to-video",
     duration="5",
     user=None,
 ):
