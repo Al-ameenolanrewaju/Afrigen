@@ -128,7 +128,8 @@ class TelegramBotService:
     def set_webhook(self, webhook_url, secret_token=None):
         payload = {
             "url": webhook_url,
-            "drop_pending_updates": True
+            "drop_pending_updates": True,
+            "allowed_updates": ["message", "edited_message", "callback_query"]
         }
         if secret_token:
             payload["secret_token"] = secret_token
@@ -666,3 +667,4 @@ class TelegramBotService:
 
 
 telegram_bot = TelegramBotService()
+

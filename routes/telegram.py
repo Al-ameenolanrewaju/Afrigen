@@ -46,6 +46,11 @@ def setup_webhook():
     if not base_url.startswith("http"):
         base_url = f"https://{base_url}"
 
+    # Telegram does not follow HTTP redirects (301/307).
+    # afrigen.com.ng redirects to www.afrigen.com.ng, so normalize to www.
+    if "afrigen.com.ng" in base_url and "www." not in base_url:
+        base_url = base_url.replace("://afrigen.com.ng", "://www.afrigen.com.ng")
+
     webhook_url = f"{base_url}/telegram/webhook"
     secret_token = os.environ.get("TELEGRAM_WEBHOOK_SECRET") or None
 
@@ -94,3 +99,4 @@ def link_status():
         "mode": tg.mode if tg else "video",
         "style": tg.style if tg else "cinematic"
     })
+
