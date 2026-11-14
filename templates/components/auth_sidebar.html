@@ -30,6 +30,12 @@
         <li>
         </li>
         <li><a class="nav-link" href="{{ url_for('main.assistant') }}" style="color: #F0F6FC;"><i class="fa-solid fa-robot"></i> AI Assistant</a></li>
+        <li>
+            <a class="nav-link d-flex align-items-center justify-content-between" href="{{ url_for('main.download_app') }}" style="color: #F0F6FC;">
+                <span><i class="fa-solid fa-mobile-screen-button text-warning me-2"></i> Install App</span>
+                <span class="badge" style="background: rgba(245, 166, 35, 0.15); color: #F5A623; border: 1px solid rgba(245, 166, 35, 0.3); font-size: 10px;">PWA</span>
+            </a>
+        </li>
         <li><hr style="border-color: #30363D;"></li>
         <li><a class="nav-link" href="{{ url_for('main.upgrade') }}" style="color: #F0F6FC;"><i class="fa-solid fa-credit-card"></i> Billing</a></li>
         <li><a class="nav-link" href="{{ url_for('main.connected_accounts') }}" style="color: #F0F6FC;"><i class="fa-solid fa-plug"></i> Connected Accounts</a></li>
@@ -43,12 +49,21 @@
 </div>
 
 <!-- Mobile navbar (shown only on small screens) -->
-<nav class="navbar navbar-dark d-lg-none p-3 border-bottom" style="border-color: #30363D !important; background: #0D1117;">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="/"><i class="fa-solid fa-clapperboard"></i> <span class="text-gradient">Afrigen</span></a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasAuthNav">
-            <span class="navbar-toggler-icon"></span>
-        </button>
+<nav class="navbar navbar-dark d-lg-none px-3 py-2 border-bottom" style="border-color: #30363D !important; background: #0D1117;">
+    <div class="container-fluid p-0 d-flex align-items-center justify-content-between">
+        <a class="navbar-brand d-flex align-items-center gap-2 m-0" href="/">
+            <i class="fa-solid fa-clapperboard text-warning"></i>
+            <span class="text-gradient fw-bold">Afrigen</span>
+        </a>
+        <div class="d-flex align-items-center gap-2">
+            <button id="notifBellBtnMobile" class="btn btn-sm position-relative text-white p-0 rounded-circle d-flex align-items-center justify-content-center" type="button" data-bs-toggle="offcanvas" data-bs-target="#notifOffcanvas" style="width: 36px; height: 36px; background: #161B22; border: 1px solid #30363D;" title="Notifications">
+                <i class="fa-solid fa-bell" style="font-size: 14px; color: #C9D1D9;"></i>
+                <span id="notifBadgeMobile" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display: none; font-size: 9px; padding: 2px 5px;">0</span>
+            </button>
+            <button class="navbar-toggler p-1 border-0" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasAuthNav">
+                <span class="navbar-toggler-icon" style="width: 22px; height: 22px;"></span>
+            </button>
+        </div>
     </div>
 </nav>
 
@@ -80,6 +95,12 @@
             <li><a class="nav-link" href="{{ url_for('main.campaigns') }}" style="color: #F0F6FC;"><i class="fa-solid fa-bullhorn"></i> Campaigns</a></li>
             <li><a class="nav-link" href="{{ url_for('main.automations') }}" style="color: #F0F6FC;"><i class="fa-solid fa-bolt text-warning"></i> Automations</a></li>
             <li><a class="nav-link" href="{{ url_for('main.assistant') }}" style="color: #F0F6FC;"><i class="fa-solid fa-robot"></i> AI Assistant</a></li>
+            <li>
+                <a class="nav-link d-flex align-items-center justify-content-between" href="{{ url_for('main.download_app') }}" style="color: #F0F6FC;">
+                    <span><i class="fa-solid fa-mobile-screen-button text-warning me-2"></i> Install App</span>
+                    <span class="badge" style="background: rgba(245, 166, 35, 0.15); color: #F5A623; border: 1px solid rgba(245, 166, 35, 0.3); font-size: 10px;">PWA</span>
+                </a>
+            </li>
             <li><hr style="border-color: #30363D;"></li>
             <li><a class="nav-link" href="{{ url_for('main.upgrade') }}" style="color: #F0F6FC;"><i class="fa-solid fa-credit-card"></i> Billing</a></li>
             <li><a class="nav-link" href="{{ url_for('main.connected_accounts') }}" style="color: #F0F6FC;"><i class="fa-solid fa-plug"></i> Connected Accounts</a></li>

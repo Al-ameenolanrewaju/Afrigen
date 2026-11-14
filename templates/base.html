@@ -203,20 +203,27 @@ content="Generate campaigns, blogs, social media content, videos, and visuals wi
         {% if not request.args.get('embedded') %}
         <header class="d-flex align-items-center justify-content-between px-3 px-lg-4 py-2 border-bottom" style="background: #0D1117; border-color: #30363D !important; min-height: 52px;">
             <div class="d-flex align-items-center gap-2">
-                <span class="badge" style="background: rgba(245, 166, 35, 0.15); color: #F5A623; border: 1px solid rgba(245, 166, 35, 0.3); text-transform: uppercase; font-size: 11px;">
-                    {{ current_user.plan or 'SPARK' }}
+                <span class="badge rounded-pill px-2 py-1" style="background: rgba(245, 166, 35, 0.15); color: #F5A623; border: 1px solid rgba(245, 166, 35, 0.35); text-transform: uppercase; font-size: 11px; font-weight: 600; letter-spacing: 0.5px;">
+                    <i class="fa-solid fa-crown me-1 text-warning" style="font-size: 10px;"></i>{{ current_user.plan or 'SPARK' }}
                 </span>
                 <span class="text-muted d-none d-sm-inline" style="font-size: 13px;">
                     Credits: <strong style="color: #F0F6FC;">{{ current_user.credits or 0 }}</strong>
                 </span>
+                {% if current_user.free_video_allowance %}
+                <span class="badge rounded-pill d-none d-md-inline" style="background: rgba(59, 130, 246, 0.15); color: #60A5FA; border: 1px solid rgba(59, 130, 246, 0.3); font-size: 11px;">
+                    <i class="fa-solid fa-video me-1"></i> {{ current_user.free_video_allowance }} Free Video{% if current_user.free_video_allowance > 1 %}s{% endif %}
+                </span>
+                {% endif %}
             </div>
             <div class="d-flex align-items-center gap-2">
-                <a href="{{ url_for('main.download_app') }}" class="btn btn-sm btn-outline-secondary d-none d-md-inline-flex align-items-center gap-1" style="color: #C9D1D9; border-color: #30363D; font-size: 12px;">
-                    <i class="fa-solid fa-mobile-screen"></i> App
+                {% if current_user.plan in ['free', 'spark', None] %}
+                <a href="{{ url_for('main.upgrade') }}" class="btn btn-sm text-dark fw-bold d-none d-sm-inline-flex align-items-center gap-1" style="background: #F5A623; border-radius: 6px; font-size: 12px; padding: 4px 12px;">
+                    <i class="fa-solid fa-arrow-up-right-from-square"></i> Upgrade
                 </a>
-                <button id="notifBellBtn" class="btn btn-sm position-relative text-white" type="button" data-bs-toggle="offcanvas" data-bs-target="#notifOffcanvas" style="background: #161B22; border: 1px solid #30363D;">
-                    <i class="fa-solid fa-bell"></i>
-                    <span id="notifBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display: none; font-size: 9px;">0</span>
+                {% endif %}
+                <button id="notifBellBtn" class="btn btn-sm position-relative text-white p-0 rounded-circle d-flex align-items-center justify-content-center" type="button" data-bs-toggle="offcanvas" data-bs-target="#notifOffcanvas" style="width: 36px; height: 36px; background: #161B22; border: 1px solid #30363D; transition: all 0.2s;" title="Notifications">
+                    <i class="fa-solid fa-bell" style="font-size: 14px; color: #C9D1D9;"></i>
+                    <span id="notifBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display: none; font-size: 9px; padding: 2px 5px;">0</span>
                 </button>
             </div>
         </header>
@@ -355,12 +362,23 @@ content="Generate campaigns, blogs, social media content, videos, and visuals wi
                 if (!res.ok) return;
                 const data = await res.json();
                 const badge = document.getElementById('notifBadge');
+                const badgeMobile = document.getElementById('notifBadgeMobile');
                 const list = document.getElementById('notifList');
-                if (!badge || !list) return;
+                if (!list) return;
+
+                const updateBadge = function(el, count) {
+                    if (!el) return;
+                    if (count > 0) {
+                        el.textContent = count;
+                        el.style.display = 'inline-block';
+                    } else {
+                        el.style.display = 'none';
+                    }
+                };
 
                 if (Array.isArray(data) && data.length > 0) {
-                    badge.textContent = data.length;
-                    badge.style.display = 'inline-block';
+                    updateBadge(badge, data.length);
+                    updateBadge(badgeMobile, data.length);
                     list.innerHTML = data.map(function(n) {
                         return '<div class="list-group-item p-3 border-bottom" style="background: #161B22; color: #F0F6FC; border-color: #30363D !important;">' +
                             '<div class="d-flex justify-content-between align-items-start mb-1">' +
@@ -372,7 +390,8 @@ content="Generate campaigns, blogs, social media content, videos, and visuals wi
                         '</div>';
                     }).join('');
                 } else {
-                    badge.style.display = 'none';
+                    updateBadge(badge, 0);
+                    updateBadge(badgeMobile, 0);
                     list.innerHTML = '<div class="p-4 text-center text-muted" style="font-size: 14px;">No new notifications.</div>';
                 }
             } catch (e) {}
@@ -385,7 +404,7 @@ content="Generate campaigns, blogs, social media content, videos, and visuals wi
             } catch (e) {}
         }
 
-        if (document.getElementById('notifBellBtn')) {
+        if (document.getElementById('notifBellBtn') || document.getElementById('notifBellBtnMobile')) {
             fetchNotifications();
             setInterval(fetchNotifications, 60000);
         }

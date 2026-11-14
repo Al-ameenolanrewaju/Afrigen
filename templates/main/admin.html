@@ -1,724 +1,917 @@
 {% extends "admin_base.html" %}
 
-{% block title %}Admin Overview{% endblock %}
+{% block title %}Executive Command Center{% endblock %}
 
 {% block content %}
-<!-- Quick Action Command Bar -->
-<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 p-3 rounded" style="background: #111827; border: 1px solid #1F2937;">
-    <div class="d-flex align-items-center gap-2 mb-2 mb-md-0">
-        <h4 style="color: #F5A623; margin: 0; font-weight: 700;"><i class="fa-solid fa-gauge-high me-2"></i>Executive Command Center</h4>
+<!-- Executive Header -->
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 p-3 rounded" style="background: linear-gradient(135deg, #111827 0%, #151C2C 100%); border: 1px solid #1F2937; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
+    <div class="d-flex align-items-center gap-3 mb-2 mb-md-0">
+        <div style="width: 44px; height: 44px; background: rgba(245, 166, 35, 0.15); border: 1px solid rgba(245, 166, 35, 0.35); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+            <i class="fa-solid fa-gauge-high" style="color: #F5A623; font-size: 20px;"></i>
+        </div>
+        <div>
+            <div class="d-flex align-items-center gap-2">
+                <h4 style="color: #F0F6FC; margin: 0; font-weight: 700; font-size: 20px;">Executive Command Center</h4>
+                <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34D399; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 11px;">
+                    ● Live System
+                </span>
+            </div>
+            <div style="color: #8B949E; font-size: 13px;">Afrigen Platform Diagnostics, Monetization & Operations</div>
+        </div>
     </div>
     <div class="d-flex flex-wrap gap-2">
-        <a href="{{ url_for('main.admin_promo_campaigns') }}" class="btn btn-sm" style="background: #F5A623; color: #0B0F19; font-weight: 700; border-radius: 6px;">
-            <i class="fa-solid fa-bullhorn me-1"></i> Blast Promo Campaign
+        <a href="{{ url_for('main.admin_promo_campaigns') }}" class="btn btn-sm d-inline-flex align-items-center gap-2" style="background: #F5A623; color: #0B0F19; font-weight: 700; border-radius: 6px; padding: 7px 14px; text-decoration: none;">
+            <i class="fa-solid fa-bullhorn"></i> Blast Promo Campaign
         </a>
-        <a href="{{ url_for('main.admin_newsletter_campaigns') }}" class="btn btn-sm" style="background: #1F2937; color: #60A5FA; border: 1px solid #374151; font-weight: 600; border-radius: 6px;">
-            <i class="fa-solid fa-envelope me-1"></i> Daily Newsletter
+        <a href="{{ url_for('main.admin_newsletter_campaigns') }}" class="btn btn-sm d-inline-flex align-items-center gap-2" style="background: #1F2937; color: #60A5FA; border: 1px solid #374151; font-weight: 600; border-radius: 6px; padding: 7px 14px; text-decoration: none;">
+            <i class="fa-solid fa-envelope"></i> Daily Newsletter
         </a>
-        <a href="{{ url_for('main.admin_blog') }}" class="btn btn-sm" style="background: #1F2937; color: #F3F4F6; border: 1px solid #374151; border-radius: 6px;">
-            <i class="fa-solid fa-newspaper me-1"></i> Blog CMS
-        </a>
-        <a href="{{ url_for('main.admin_pricing') }}" class="btn btn-sm" style="background: #1F2937; color: #F3F4F6; border: 1px solid #374151; border-radius: 6px;">
-            <i class="fa-solid fa-tags me-1"></i> Pricing
+        <a href="{{ url_for('main.admin_pricing') }}" class="btn btn-sm d-inline-flex align-items-center gap-2" style="background: #1F2937; color: #F3F4F6; border: 1px solid #374151; border-radius: 6px; padding: 7px 14px; text-decoration: none;">
+            <i class="fa-solid fa-tags"></i> Pricing Tiers
         </a>
     </div>
 </div>
 
-<!-- Top Stats Row -->
-<div id="overview" class="row g-3 mb-4">
-    <!-- Total Users -->
-    <div class="col">
-        <div class="admin-stat-card">
-            <div class="admin-stat-header">
-                <span>Total Users</span>
-                <i class="fa-solid fa-users text-secondary"></i>
-            </div>
-            <h2 class="admin-stat-value">{{ total_users }}</h2>
-            <div class="admin-stat-sub">
-                Pro: {{ pro_users }} | Free: {{ free_users }}
-            </div>
-        </div>
-    </div>
-    
-    <!-- Total Generations -->
-    <div class="col">
-        <div class="admin-stat-card">
-            <div class="admin-stat-header">
-                <span>Total Generations</span>
-                <i class="fa-solid fa-clapperboard text-secondary"></i>
-            </div>
-            <h2 class="admin-stat-value">{{ total_generations }}</h2>
-            <div class="admin-stat-sub">
-                Completed: {{ completed_generations }}
-            </div>
-        </div>
-    </div>
-    
-    <!-- Success Rate -->
-    <div class="col">
-        <div class="admin-stat-card">
-            <div class="admin-stat-header">
-                <span>Success Rate</span>
-                <i class="fa-solid fa-bolt text-secondary"></i>
-            </div>
-            <h2 class="admin-stat-value">{{ success_rate }}%</h2>
-            <div class="admin-stat-sub">
-                Failed: {{ failed_generations }}
-            </div>
-        </div>
-    </div>
-    
-    <!-- Automations -->
-    <div class="col">
-        <div class="admin-stat-card">
-            <div class="admin-stat-header">
-                <span>Automation Runs</span>
-                <i class="fa-solid fa-play text-secondary"></i>
-            </div>
-            <h2 class="admin-stat-value">{{ total_automation_runs }}</h2>
-            <div class="admin-stat-sub">
-                Workflows: {{ total_automation_workflows }}
-            </div>
-        </div>
-    </div>
-    
-    <!-- Assets -->
-    <div class="col">
-        <div class="admin-stat-card">
-            <div class="admin-stat-header">
-                <span>Campaign Assets</span>
-                <i class="fa-solid fa-box-open text-secondary"></i>
-            </div>
-            <h2 class="admin-stat-value">{{ total_campaign_assets }}</h2>
-            <div class="admin-stat-sub">
-                Active Campaigns
-            </div>
-        </div>
-    </div>
+<!-- Modern Tabbed Navigation -->
+<div class="admin-tab-nav">
+    <button class="admin-tab-btn active" data-tab="overview">
+        <i class="fa-solid fa-chart-pie" style="color: #F5A623;"></i> Overview & Metrics
+    </button>
+    <button class="admin-tab-btn" data-tab="users">
+        <i class="fa-solid fa-users" style="color: #60A5FA;"></i> Users & Quotas
+    </button>
+    <button class="admin-tab-btn" data-tab="generations">
+        <i class="fa-solid fa-clapperboard" style="color: #34D399;"></i> Generations & Queue
+    </button>
+    <button class="admin-tab-btn" data-tab="providers">
+        <i class="fa-solid fa-server" style="color: #A78BFA;"></i> AI Providers & Health
+    </button>
+    <button class="admin-tab-btn" data-tab="marketing">
+        <i class="fa-solid fa-bullhorn" style="color: #F87171;"></i> Growth & Social CMS
+    </button>
 </div>
 
-<div class="admin-chart-container mb-4">
-    <div class="admin-chart-header mb-3">
-        <div>
-            <h5 class="admin-chart-title">Website Visits</h5>
-            <div class="admin-stat-sub">One visit per browser session, with a 30-minute timeout.</div>
-        </div>
-        <div class="d-flex gap-4">
-            <div><strong>{{ website_visits_30days }}</strong><div class="admin-stat-sub">Last 30 days</div></div>
-            <div><strong>{{ website_visits_7days }}</strong><div class="admin-stat-sub">Last 7 days</div></div>
-            <div><strong>{{ website_visits_total }}</strong><div class="admin-stat-sub">All time</div></div>
-        </div>
-    </div>
-    <div class="row g-2">
-        {% for source, count in visit_source_breakdown.items() %}
-            <div class="col-6 col-md-3 d-flex justify-content-between">
-                <span>{{ source }}</span><strong>{{ count }}</strong>
+<!-- ========================================== -->
+<!-- TAB 1: OVERVIEW & METRICS                  -->
+<!-- ========================================== -->
+<div id="overview" class="admin-tab-pane active">
+    <!-- Top 5 Stat Cards -->
+    <div class="row g-3 mb-4">
+        <!-- Total Users -->
+        <div class="col-12 col-sm-6 col-xl">
+            <div class="admin-stat-card">
+                <div class="admin-stat-header">
+                    <span>Total Creators</span>
+                    <i class="fa-solid fa-users text-warning" style="font-size: 16px;"></i>
+                </div>
+                <h2 class="admin-stat-value">{{ total_users }}</h2>
+                <div class="admin-stat-sub d-flex gap-2 align-items-center mt-2">
+                    <span class="badge" style="background: rgba(245, 166, 35, 0.15); color: #F5A623;">Pro: {{ pro_users }}</span>
+                    <span class="badge" style="background: rgba(107, 114, 128, 0.2); color: #9CA3AF;">Free: {{ free_users }}</span>
+                </div>
             </div>
-        {% else %}
-            <div class="col admin-stat-sub">No website visits recorded in the last 30 days.</div>
-        {% endfor %}
-    </div>
-</div>
+        </div>
+        
+        <!-- Total Generations -->
+        <div class="col-12 col-sm-6 col-xl">
+            <div class="admin-stat-card">
+                <div class="admin-stat-header">
+                    <span>Total Generations</span>
+                    <i class="fa-solid fa-clapperboard text-info" style="font-size: 16px;"></i>
+                </div>
+                <h2 class="admin-stat-value">{{ total_generations }}</h2>
+                <div class="admin-stat-sub mt-2">
+                    <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34D399;">Completed: {{ completed_generations }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Success Rate -->
+        <div class="col-12 col-sm-6 col-xl">
+            <div class="admin-stat-card">
+                <div class="admin-stat-header">
+                    <span>Success Rate</span>
+                    <i class="fa-solid fa-bolt text-success" style="font-size: 16px;"></i>
+                </div>
+                <h2 class="admin-stat-value">{{ success_rate }}%</h2>
+                <div class="admin-stat-sub mt-2">
+                    <span class="badge" style="background: {% if failed_generations > 10 %}rgba(239, 68, 68, 0.2){% else %}rgba(107, 114, 128, 0.2){% endif %}; color: {% if failed_generations > 10 %}#F87171{% else %}#9CA3AF{% endif %};">Failed: {{ failed_generations }}</span>
+                </div>
+            </div>
+        </div>
 
-<!-- Signup Sources and Top Countries -->
-<div class="row g-4 mb-4">
-    <div class="col-md-6">
-        <div class="admin-chart-container h-100 mb-0">
-            <h5 class="admin-chart-title mb-3">Signup Sources</h5>
-            {% for source, count in source_breakdown.items() %}
-                {% set percentage = (count / total_users * 100) if total_users else 0 %}
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span>{{ source|title }}</span>
-                    <span>
-                        <strong>{{ count }}</strong>
-                        <span class="admin-stat-sub">
-                            ({{ "{:.1f}".format(percentage) }}%)
-                        </span>
-                    </span>
+        <!-- Total Revenue -->
+        <div class="col-12 col-sm-6 col-xl">
+            <div class="admin-stat-card">
+                <div class="admin-stat-header">
+                    <span>Platform Revenue</span>
+                    <i class="fa-solid fa-money-bill-wave text-success" style="font-size: 16px;"></i>
+                </div>
+                <h2 class="admin-stat-value" style="color: #34D399;">₦{{ "{:,.0f}".format((total_revenue or 0) / 100) }}</h2>
+                <div class="admin-stat-sub mt-2" style="font-size: 11px;">
+                    Monthly: ₦{{ "{:,.0f}".format((monthly_revenue or 0) / 100) }}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Automation Runs -->
+        <div class="col-12 col-sm-6 col-xl">
+            <div class="admin-stat-card">
+                <div class="admin-stat-header">
+                    <span>Automations</span>
+                    <i class="fa-solid fa-play text-primary" style="font-size: 16px;"></i>
+                </div>
+                <h2 class="admin-stat-value">{{ total_automation_runs }}</h2>
+                <div class="admin-stat-sub mt-2">
+                    <span class="badge" style="background: rgba(147, 51, 234, 0.15); color: #C084FC;">Workflows: {{ total_automation_workflows }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart: Platform Activity -->
+    <div class="admin-chart-container mb-4">
+        <div class="admin-chart-header">
+            <div>
+                <h5 class="admin-chart-title">Platform Activity (Last 7 Days)</h5>
+                <div class="admin-stat-sub">User signups vs generation throughput over time</div>
+            </div>
+            <span class="badge" style="background: #1F2937; color: #9CA3AF; border: 1px solid #374151;">Rolling 7-Day Window</span>
+        </div>
+        <div style="height: 300px; position: relative;">
+            <canvas id="activityChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Website Visits & Conversions -->
+    <div class="admin-chart-container mb-4">
+        <div class="admin-chart-header mb-3">
+            <div>
+                <h5 class="admin-chart-title"><i class="fa-solid fa-globe me-2 text-warning"></i>Website Visits & Traffic</h5>
+                <div class="admin-stat-sub">One visit per unique browser session (30-min sliding timeout)</div>
+            </div>
+            <div class="d-flex gap-4">
+                <div class="text-end">
+                    <strong style="font-size: 18px; color: #F0F6FC;">{{ website_visits_30days }}</strong>
+                    <div class="admin-stat-sub" style="font-size: 11px;">Last 30 Days</div>
+                </div>
+                <div class="text-end">
+                    <strong style="font-size: 18px; color: #F5A623;">{{ website_visits_7days }}</strong>
+                    <div class="admin-stat-sub" style="font-size: 11px;">Last 7 Days</div>
+                </div>
+                <div class="text-end">
+                    <strong style="font-size: 18px; color: #60A5FA;">{{ website_visits_total }}</strong>
+                    <div class="admin-stat-sub" style="font-size: 11px;">All-Time</div>
+                </div>
+            </div>
+        </div>
+        <hr style="border-color: #1F2937; margin: 12px 0 16px 0;">
+        <div class="row g-3">
+            {% for source, count in visit_source_breakdown.items() %}
+                <div class="col-6 col-md-3">
+                    <div class="p-2 rounded d-flex justify-content-between align-items-center" style="background: #111827; border: 1px solid #1F2937;">
+                        <span style="font-size: 13px; color: #C9D1D9;">{{ source|title }}</span>
+                        <strong style="color: #F5A623; font-size: 14px;">{{ count }}</strong>
+                    </div>
                 </div>
             {% else %}
-                <div class="admin-stat-sub">No signup source data yet.</div>
+                <div class="col-12 admin-stat-sub">No website visits recorded in the last 30 days.</div>
             {% endfor %}
         </div>
     </div>
 
-    <div class="col-md-6">
-        <div class="admin-chart-container h-100 mb-0">
-            <h5 class="admin-chart-title mb-3">Top Countries</h5>
-            {% for country, count in top_countries %}
-                {% set percentage = (count / total_users * 100) if total_users else 0 %}
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span>{{ country }}</span>
-                    <span>
-                        <strong>{{ count }}</strong>
-                        <span class="admin-stat-sub">
-                            ({{ "{:.1f}".format(percentage) }}%)
+    <!-- Breakdown Grid: Sources, Countries, Referrals -->
+    <div class="row g-4">
+        <!-- Signup Sources -->
+        <div class="col-md-4">
+            <div class="admin-chart-container h-100 mb-0">
+                <h5 class="admin-chart-title mb-3"><i class="fa-solid fa-arrow-right-to-bracket me-2 text-info"></i>Signup Sources</h5>
+                {% for source, count in source_breakdown.items() %}
+                    {% set percentage = (count / total_users * 100) if total_users else 0 %}
+                    <div class="d-flex justify-content-between align-items-center mb-2 p-2 rounded" style="background: rgba(255,255,255,0.02);">
+                        <span style="font-size: 13px;">{{ source|title }}</span>
+                        <span>
+                            <strong style="color: #F0F6FC;">{{ count }}</strong>
+                            <span class="admin-stat-sub">({{ "{:.1f}".format(percentage) }}%)</span>
                         </span>
-                    </span>
-                </div>
-            {% else %}
-                <div class="admin-stat-sub">No country data yet.</div>
-            {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="admin-stat-sub">No signup source data yet.</div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Top Countries -->
+        <div class="col-md-4">
+            <div class="admin-chart-container h-100 mb-0">
+                <h5 class="admin-chart-title mb-3"><i class="fa-solid fa-earth-africa me-2 text-warning"></i>Top Countries</h5>
+                {% for country, count in top_countries %}
+                    {% set percentage = (count / total_users * 100) if total_users else 0 %}
+                    <div class="d-flex justify-content-between align-items-center mb-2 p-2 rounded" style="background: rgba(255,255,255,0.02);">
+                        <span style="font-size: 13px;">{{ country or 'Nigeria' }}</span>
+                        <span>
+                            <strong style="color: #F0F6FC;">{{ count }}</strong>
+                            <span class="admin-stat-sub">({{ "{:.1f}".format(percentage) }}%)</span>
+                        </span>
+                    </div>
+                {% else %}
+                    <div class="admin-stat-sub">No country data yet.</div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Referral Conversion -->
+        <div class="col-md-4">
+            <div class="admin-chart-container h-100 mb-0">
+                <h5 class="admin-chart-title mb-3"><i class="fa-solid fa-gift me-2 text-success"></i>Referral Engine</h5>
+                <div class="d-flex justify-content-between mb-2"><span>Codes Generated</span><strong style="color: #F0F6FC;">{{ referral_codes_total }}</strong></div>
+                <div class="d-flex justify-content-between mb-2"><span>Codes Redeemed</span><strong style="color: #F5A623;">{{ referral_codes_used }}</strong></div>
+                <div class="d-flex justify-content-between mb-3"><span>Conversion Rate</span><strong style="color: #34D399;">{{ referral_conversion_rate }}%</strong></div>
+                <hr style="border-color: #1F2937;">
+                <div class="small fw-bold text-muted mb-2">TOP REFERRERS</div>
+                {% for user, count in top_referrers %}
+                    <div class="d-flex justify-content-between mb-1" style="font-size: 13px;">
+                        <span>{{ user.username }}</span><strong style="color: #60A5FA;">{{ count }} signups</strong>
+                    </div>
+                {% else %}
+                    <div class="admin-stat-sub">No converted referrals yet.</div>
+                {% endfor %}
+            </div>
         </div>
     </div>
 </div>
 
-<div id="referrals" class="row g-4 mb-4">
-    <div class="col-md-6">
-        <div class="admin-chart-container h-100 mb-0">
-            <h5 class="admin-chart-title mb-3">Referral Conversion</h5>
-            <div class="d-flex justify-content-between"><span>Codes generated</span><strong>{{ referral_codes_total }}</strong></div>
-            <div class="d-flex justify-content-between"><span>Codes used</span><strong>{{ referral_codes_used }}</strong></div>
-            <div class="d-flex justify-content-between"><span>Conversion rate</span><strong>{{ referral_conversion_rate }}%</strong></div>
-            <hr class="border-secondary">
-            {% for user, count in top_referrers %}<div class="d-flex justify-content-between"><span>{{ user.username }}</span><strong>{{ count }}</strong></div>{% else %}<span class="admin-stat-sub">No converted referrals yet.</span>{% endfor %}
-        </div>
-    </div>
-    <div class="col-md-6">
-        <div class="admin-chart-container h-100 mb-0">
-            <h5 class="admin-chart-title mb-3">Referral Signups, Last 7 Days</h5>
-            {% for item in referral_signups_7days %}<div class="d-flex justify-content-between"><span>{{ item.day }}</span><strong>{{ item.count }}</strong></div>{% endfor %}
-        </div>
-    </div>
-</div>
-
-<!-- Chart Section -->
-<div id="charts" class="admin-chart-container">
-    <div class="admin-chart-header">
-        <div>
-            <h5 class="admin-chart-title">Platform Activity (Last 7 Days)</h5>
-            <div class="admin-stat-sub">Signups and Generations.</div>
-        </div>
-        <div class="d-flex gap-2">
-            <span class="btn-admin active">Last 7 Days</span>
-        </div>
-    </div>
-    <div style="height: 300px; position: relative;">
-        <canvas id="activityChart"></canvas>
-    </div>
-</div>
-
-<!-- Grid Layout for Tables -->
-<div class="row g-4">
-    
-    <!-- All Users Table -->
-    <div id="users" class="col-12">
-        <div class="admin-chart-container" style="margin-bottom: 0;">
-            <div class="admin-chart-header mb-3">
-                <h5 class="admin-chart-title">All Users</h5>
+<!-- ========================================== -->
+<!-- TAB 2: USER DIRECTORY & QUOTAS             -->
+<!-- ========================================== -->
+<div id="users" class="admin-tab-pane">
+    <div class="admin-chart-container mb-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+            <div>
+                <h5 class="admin-chart-title mb-0">Creator Directory ({{ total_users }} Total)</h5>
+                <div class="admin-stat-sub">Search, grant free video allowances, upgrade plans, or ban accounts</div>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
                 <form method="get" class="d-flex gap-2">
                     <input
                         type="search"
                         name="user_search"
                         value="{{ request.args.get('user_search', '') }}"
-                        placeholder="Search email"
-                        class="form-control"
+                        placeholder="Search username or email..."
+                        class="form-control form-control-sm"
+                        style="background: #0B0F19; border: 1px solid #1F2937; color: white; width: 220px;"
                     >
-                    <button type="submit" class="btn-admin">Search</button>
+                    <button type="submit" class="btn-admin"><i class="fa-solid fa-magnifying-glass"></i></button>
                 </form>
-                <a href="{{ url_for('main.admin_credits') }}" class="btn-admin" style="text-decoration: none;">Credit ledger</a>
-                <form method="post" action="{{ url_for('main.admin_backfill_subscribers') }}" style="display:inline;">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn-admin" style="text-decoration: none;">Backfill subscribers</button>
-                </form>
+                <a href="{{ url_for('main.admin_credits') }}" class="btn-admin" style="text-decoration: none;">
+                    <i class="fa-solid fa-receipt me-1"></i> Credit Ledger
+                </a>
+                <a href="{{ url_for('main.export_users_csv') }}" class="btn-admin" style="text-decoration: none;">
+                    <i class="fa-solid fa-file-csv me-1"></i> Export CSV
+                </a>
             </div>
-            <div class="table-responsive">
-                <table class="admin-table">
-                    <thead>
-                        <tr>
-                            <th>Username</th>
-                            <th>Email</th>
-                            <th>Plan</th>
-                            <th>Credits</th>
-                            <th>Joined</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                        {% for user in users.items %}
-                        <tr>
-                            <td>
-                                <div class="fw-bold" style="color: white;">{{ user.username }}</div>
-                                <div style="font-size: 12px; color: var(--admin-text);">{{ user.country or 'Unknown' }} | {{ user.signup_source or 'direct' }}</div>
-                            </td>
-                            <td>{{ user.email }}</td>
-                            <td>
-                                <span class="admin-badge {% if user.plan == 'pro' %}admin-badge-orange{% elif user.plan == 'banned' %}admin-badge-red{% else %}admin-badge-gray{% endif %}">
-                                    {{ user.plan.upper() }}
-                                </span>
-                            </td>
-                            <td>
-                                <div>{{ user.credits }}</div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Creator</th>
+                        <th>Email</th>
+                        <th>Plan</th>
+                        <th>Credits & Allowance</th>
+                        <th>Joined</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users.items %}
+                    <tr>
+                        <td>
+                            <div class="fw-bold" style="color: white; font-size: 14px;">{{ user.username }}</div>
+                            <div style="font-size: 11px; color: var(--admin-text);">
+                                {{ user.country or 'Nigeria' }} • {{ user.signup_source or 'direct' }}
+                            </div>
+                        </td>
+                        <td style="color: #C9D1D9; font-size: 13px;">{{ user.email }}</td>
+                        <td>
+                            {% set plan_name = (user.plan or 'SPARK')|upper %}
+                            {% if plan_name in ['DIRECTOR', 'PRO'] %}
+                                <span class="admin-badge admin-badge-orange">{{ plan_name }}</span>
+                            {% elif plan_name in ['STUDIO', 'CREATOR'] %}
+                                <span class="admin-badge admin-badge-blue">{{ plan_name }}</span>
+                            {% elif plan_name == 'BANNED' %}
+                                <span class="admin-badge admin-badge-red">BANNED</span>
+                            {% else %}
+                                <span class="admin-badge admin-badge-gray">SPARK (FREE)</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <strong style="color: #F0F6FC;">{{ user.credits or 0 }}</strong>
+                                <span class="text-muted" style="font-size: 12px;">credits</span>
                                 {% if user.free_video_allowance %}
-                                <span class="badge" style="background-color: #2563EB; font-size: 11px;" title="Free Video Allowance">+{{ user.free_video_allowance }} Free Video{% if user.free_video_allowance > 1 %}s{% endif %}</span>
+                                <span class="badge" style="background: rgba(59, 130, 246, 0.2); color: #60A5FA; border: 1px solid rgba(59, 130, 246, 0.3); font-size: 11px;">
+                                    +{{ user.free_video_allowance }} Free Video{% if user.free_video_allowance > 1 %}s{% endif %}
+                                </span>
                                 {% endif %}
-                            </td>
-                            <td>{{ admin_resend_datetime(user.signup_at or user.created_at).strftime('%b %d, %Y') }}</td>
-                            <td>
-                                <div class="d-flex gap-2">
-                                    {% if user.email != 'oadedamola07@gmail.com' %}
-                                        {% if user.plan == 'free' %}
-                                        <a href="{{ url_for('main.grant_free_video', user_id=user.id, count=1) }}" class="btn-admin" style="color: #60A5FA; border-color: rgba(96, 165, 250, 0.3); text-decoration: none;" title="Gift 1 Free Video to {{ user.username }}">+ Video</a>
-                                        <a href="{{ url_for('main.upgrade_user', user_id=user.id) }}" class="btn-admin" style="text-decoration: none;">Upgrade</a>
-                                        {% elif user.plan == 'pro' %}
-                                        <a href="{{ url_for('main.downgrade_user', user_id=user.id) }}" class="btn-admin" style="text-decoration: none;">Downgrade</a>
-                                        {% endif %}
-                                        
-                                        {% if user.plan != 'banned' %}
-                                        <a href="{{ url_for('main.ban_user', user_id=user.id) }}" class="btn-admin" style="color: #F87171; border-color: rgba(239, 68, 68, 0.2); text-decoration: none;" onclick="sweetConfirmLink(event, 'Ban {{ user.username }}?')">Ban</a>
-                                        {% else %}
-                                        <a href="{{ url_for('main.upgrade_user', user_id=user.id) }}" class="btn-admin" style="color: #34D399; border-color: rgba(16, 185, 129, 0.2); text-decoration: none;" onclick="sweetConfirmLink(event, 'Unban {{ user.username }}?')">Unban</a>
-                                        {% endif %}
-                                        <a href="{{ url_for('main.delete_user', user_id=user.id) }}" class="btn-admin" style="color: #F87171; border-color: rgba(239, 68, 68, 0.2); text-decoration: none;" onclick="sweetConfirmLink(event, 'DELETE {{ user.username }}?')">Delete</a>
+                            </div>
+                        </td>
+                        <td style="color: #9CA3AF; font-size: 13px;">
+                            {{ admin_resend_datetime(user.signup_at or user.created_at).strftime('%b %d, %Y') }}
+                        </td>
+                        <td class="text-end">
+                            <div class="d-inline-flex gap-1">
+                                {% if user.email != 'oadedamola07@gmail.com' %}
+                                    <!-- Gift Free Video Button (Exempt from rate limits) -->
+                                    <a href="{{ url_for('main.grant_free_video', user_id=user.id, count=1) }}" class="btn btn-sm" style="background: rgba(96, 165, 250, 0.15); color: #60A5FA; border: 1px solid rgba(96, 165, 250, 0.3); font-size: 12px; font-weight: 600;" title="Gift 1 Free Video to {{ user.username }}">
+                                        <i class="fa-solid fa-video me-1"></i>+ Free Video
+                                    </a>
+
+                                    {% if user.plan in ['free', 'spark', None] %}
+                                    <a href="{{ url_for('main.upgrade_user', user_id=user.id) }}" class="btn btn-sm btn-outline-warning" style="font-size: 12px;">
+                                        Upgrade
+                                    </a>
                                     {% else %}
-                                        <span class="admin-badge admin-badge-orange"><i class="fa-solid fa-crown"></i> Admin</span>
+                                    <a href="{{ url_for('main.downgrade_user', user_id=user.id) }}" class="btn btn-sm btn-outline-secondary" style="font-size: 12px;">
+                                        Downgrade
+                                    </a>
                                     {% endif %}
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            <div class="d-flex justify-content-between mt-3">
-                {% if users.has_prev %}
-                <a class="btn-admin" href="{{ url_for(
-                    'main.admin',
-                    users_page=users.prev_num,
-                    generations_page=generations.page,
-                    user_search=request.args.get('user_search', ''),
-                    generation_search=request.args.get('generation_search', '')
-                ) }}">Previous</a>
-                {% endif %}
-                <span>Page {{ users.page }} of {{ users.pages or 1 }}</span>
-                {% if users.has_next %}
-                <a class="btn-admin" href="{{ url_for(
-                    'main.admin',
-                    users_page=users.next_num,
-                    generations_page=generations.page,
-                    user_search=request.args.get('user_search', ''),
-                    generation_search=request.args.get('generation_search', '')
-                ) }}">Next</a>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-    
-    <!-- Top Active Users -->
-    <div class="col-md-12">
-        <div class="admin-chart-container h-100 mb-0">
-            <h5 class="admin-chart-title mb-3">Top 5 Most Active Users</h5>
-            <div class="table-responsive">
-                <table class="admin-table">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Username</th>
-                            <th>Generations</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for user, count in top_users %}
-                        <tr>
-                            <td style="color: var(--admin-accent);">{{ loop.index }}</td>
-                            <td>{{ user.username }}</td>
-                            <td style="color: white; font-weight: 500;">{{ count }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- Recent Generations -->
-    <div id="generations" class="col-12">
-        <div class="admin-chart-container mb-0">
-            <h5 class="admin-chart-title mb-3">Recent Generations</h5>
-            <form method="get" class="d-flex gap-2 mb-3">
-                <input
-                    type="search"
-                    name="generation_search"
-                    value="{{ request.args.get('generation_search', '') }}"
-                    placeholder="Search status or type"
-                    class="form-control"
-                >
-                <button type="submit" class="btn-admin">Search</button>
-            </form>
-            <div class="table-responsive">
-                <table class="admin-table">
-                    <thead>
-                        <tr>
-                            <th>User</th>
-                            <th>Prompt</th>
-                            <th>Status</th>
-                            <th>Date</th>
-                            <th>Link</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for gen in generations.items %}
-                        <tr>
-                            <td>{{ gen.user.username }}</td>
-                            <td style="max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ gen.original_prompt }}</td>
-                            <td>
-                                <span class="admin-badge {% if gen.status == 'completed' %}admin-badge-green{% else %}admin-badge-red{% endif %}">
-                                    {{ gen.status }}
-                                </span>
-                            </td>
-                            <td>{{ admin_resend_datetime(gen.created_at).strftime('%b %d, %Y') }}</td>
-                            <td>
-                                {% if gen.video_url %}
-                                <a href="{{ gen.video_url }}" target="_blank" class="btn-admin" style="text-decoration: none;">Watch</a>
-                                {% elif gen.image_url %}
-                                <a href="{{ gen.image_url }}" target="_blank" class="btn-admin" style="text-decoration: none;">View</a>
+                                    
+                                    {% if user.plan != 'banned' %}
+                                    <a href="{{ url_for('main.ban_user', user_id=user.id) }}" class="btn btn-sm btn-outline-danger" style="font-size: 12px;" onclick="sweetConfirmLink(event, 'Ban {{ user.username }}?')">
+                                        Ban
+                                    </a>
+                                    {% else %}
+                                    <a href="{{ url_for('main.upgrade_user', user_id=user.id) }}" class="btn btn-sm btn-outline-success" style="font-size: 12px;">
+                                        Unban
+                                    </a>
+                                    {% endif %}
+                                    <a href="{{ url_for('main.delete_user', user_id=user.id) }}" class="btn btn-sm btn-outline-danger" style="font-size: 12px;" onclick="sweetConfirmLink(event, 'Permanently delete {{ user.username }}?')">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </a>
+                                {% else %}
+                                    <span class="admin-badge admin-badge-orange"><i class="fa-solid fa-crown me-1"></i>Super Admin</span>
                                 {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            <div class="d-flex justify-content-between mt-3">
-                {% if generations.has_prev %}
-                <a class="btn-admin" href="{{ url_for(
-                    'main.admin',
-                    users_page=users.page,
-                    generations_page=generations.prev_num,
-                    user_search=request.args.get('user_search', ''),
-                    generation_search=request.args.get('generation_search', '')
-                ) }}">Previous</a>
-                {% endif %}
-                <span>Page {{ generations.page }} of {{ generations.pages or 1 }}</span>
-                {% if generations.has_next %}
-                <a class="btn-admin" href="{{ url_for(
-                    'main.admin',
-                    users_page=users.page,
-                    generations_page=generations.next_num,
-                    user_search=request.args.get('user_search', ''),
-                    generation_search=request.args.get('generation_search', '')
-                ) }}">Next</a>
-                {% endif %}
-            </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top" style="border-color: #1F2937 !important;">
+            {% if users.has_prev %}
+            <a class="btn-admin" href="{{ url_for(
+                'main.admin',
+                users_page=users.prev_num,
+                generations_page=generations.page,
+                user_search=request.args.get('user_search', '')
+            ) }}#users">&larr; Previous</a>
+            {% else %}
+            <div></div>
+            {% endif %}
+            <span style="color: #9CA3AF; font-size: 13px;">Page {{ users.page }} of {{ users.pages or 1 }}</span>
+            {% if users.has_next %}
+            <a class="btn-admin" href="{{ url_for(
+                'main.admin',
+                users_page=users.next_num,
+                generations_page=generations.page,
+                user_search=request.args.get('user_search', '')
+            ) }}#users">Next &rarr;</a>
+            {% else %}
+            <div></div>
+            {% endif %}
         </div>
     </div>
 
-    <div id="generation-queue" class="col-12">
-        <div class="admin-chart-container mb-0">
-            <h5 class="admin-chart-title mb-3">Stuck & Failed Generation Queue</h5>
-            <div class="table-responsive">
-                <table class="admin-table">
-                    <thead><tr><th>ID</th><th>User</th><th>Status</th><th>Created</th><th>Refund</th><th>Actions</th></tr></thead>
-                    <tbody>
-                        {% for gen in stuck_generations %}
-                        <tr>
-                            <td>#{{ gen.id }}</td>
-                            <td>{{ gen.user.username }}</td>
-                            <td>{{ gen.status }}</td>
-                            <td>{{ admin_resend_datetime(gen.created_at).strftime('%b %d, %Y %H:%M') }}</td>
-                            <td>{{ 'Yes' if gen.refund_applied else 'No' }}</td>
-                            <td class="d-flex gap-2">
-                                {% if not gen.refund_applied and gen.generation_type != 'image' and gen.fal_request_id %}
-                                <form method="post" action="{{ url_for('main.admin_force_refund', generation_id=gen.id) }}"><button class="btn-admin" type="submit">Force refund</button></form>
-                                {% endif %}
-                                {% if gen.generation_type != 'image' %}<form method="post" action="{{ url_for('main.admin_force_retry', generation_id=gen.id) }}"><button class="btn-admin" type="submit">Force retry</button></form>{% endif %}
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr><td colspan="6" class="text-center">No stuck or failed generations</td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- New Section: Health & Revenue -->
-    <div id="health" class="col-md-6">
-        <div class="admin-chart-container h-100 mb-0">
-            <h5 class="admin-chart-title mb-3">AI Provider Health</h5>
-            <div class="table-responsive">
-                <table class="admin-table">
-                    <thead>
-                        <tr>
-                            <th>Provider</th>
-                            <th>Status</th>
-                            <th>Avg Latency</th>
-                            <th>Successes</th>
-                            <th>Failures</th>
-                            <th>Last Error</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for health in provider_health %}
-                        <tr>
-                            <td style="color: white; text-transform: capitalize;">{{ health.provider }}</td>
-                            <td>
-                                <span class="admin-badge {% if health.status == 'healthy' %}admin-badge-green{% elif health.status == 'degraded' %}admin-badge-orange{% else %}admin-badge-red{% endif %}">
-                                    {{ health.status.upper() }}
-                                </span>
-                            </td>
-                            <td>{{ health.avg_latency_ms }} ms</td>
-                            <td>{{ health.success_count }}</td>
-                            <td>{{ health.failure_count }}</td>
-                            <td style="max-width: 240px;">{{ admin_provider_error(health.last_error) }}</td>
-                        </tr>
-                        {% else %}
-                        <tr><td colspan="6" class="text-center">No provider health data</td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <div id="external-provider-status" class="col-md-6">
-    <div class="admin-chart-container h-100 mb-0">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="admin-chart-title text-white mb-0">Media Provider Status</h5>
-            <button type="button" class="btn-admin" id="check-provider-status">Check now</button>
-        </div>
-        <div class="border-bottom border-secondary py-3" data-provider="fal">
-            <div class="d-flex justify-content-between align-items-center">
-                <strong class="text-white">FAL</strong>
-                <span id="fal-provider-status-badge" class="admin-badge admin-badge-orange">NOT CHECKED</span>
-            </div>
-            <small id="fal-provider-detail" class="text-white-50 d-block mt-1">Live status has not been checked.</small>
-            <div class="d-flex justify-content-between mt-2">
-                <span class="text-white-50">FAL credits remaining</span>
-                <strong id="fal-provider-credits" style="color: #F5A623;">Unavailable</strong>
-            </div>
-            <small id="fal-provider-credits-detail" class="text-white-50 d-block mb-1">Check status to retrieve balance information.</small>
-            <a href="https://fal.ai/dashboard/billing" target="_blank" rel="noopener" class="small text-info">Open FAL billing</a>
-        </div>
-        <div class="py-3" data-provider="huggingface">
-            <div class="d-flex justify-content-between align-items-center">
-                <strong class="text-white">Hugging Face</strong>
-                <span id="huggingface-provider-status-badge" class="admin-badge admin-badge-orange">NOT CHECKED</span>
-            </div>
-            <small id="huggingface-provider-detail" class="text-white-50 d-block mt-1">Live status has not been checked.</small>
-            <small id="huggingface-provider-model" class="text-white-50 d-block mt-2">Model status unavailable until checked.</small>
+    <!-- Top 5 Active Users Leaderboard -->
+    <div class="admin-chart-container mb-0">
+        <h5 class="admin-chart-title mb-3"><i class="fa-solid fa-trophy me-2 text-warning"></i>Top 5 Most Active Creators</h5>
+        <div class="table-responsive">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th style="width: 60px;">Rank</th>
+                        <th>Creator</th>
+                        <th>Total Generations Completed</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user, count in top_users %}
+                    <tr>
+                        <td>
+                            <span class="badge rounded-circle p-2" style="background: rgba(245, 166, 35, 0.15); color: #F5A623; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center;">
+                                #{{ loop.index }}
+                            </span>
+                        </td>
+                        <td>
+                            <strong style="color: white;">{{ user.username }}</strong>
+                            <span class="text-muted small ms-2">{{ user.email }}</span>
+                        </td>
+                        <td><strong style="color: #34D399; font-size: 15px;">{{ count }}</strong></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
-    
-    <div id="payments" class="col-md-6">
-        <div class="admin-chart-container h-100 mb-0">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="admin-chart-title mb-0">Recent Payments</h5>
-                <span class="admin-badge admin-badge-green">
-                    Revenue: ₦{{ "{:,.0f}".format((total_revenue or 0) / 100) }}
-                </span>
+
+<!-- ========================================== -->
+<!-- TAB 3: GENERATIONS & QUEUE                 -->
+<!-- ========================================== -->
+<div id="generations" class="admin-tab-pane">
+    <!-- Stuck & Failed Generations Queue -->
+    <div id="generation-queue" class="admin-chart-container mb-4" style="border-left: 4px solid #F5A623;">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h5 class="admin-chart-title mb-1" style="color: #F5A623;"><i class="fa-solid fa-triangle-exclamation me-2"></i>Stuck & Failed Generation Queue</h5>
+                <div class="admin-stat-sub">Generations requiring admin intervention (force retry or automatic refund)</div>
             </div>
-            <div class="table-responsive">
-                <table class="admin-table">
-                    <thead>
-                        <tr>
-                            <th>User</th>
-                            <th>Amount</th>
-                            <th>Plan</th>
-                            <th>Date</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for payment in recent_payments %}
-                        <tr>
-                            <td style="color: white;">{{ payment.user.username }}</td>
-                            <td>₦{{ "{:,.0f}".format((payment.amount or 0) / 100) }}</td>
-                            <td><span class="admin-badge admin-badge-orange">{{ payment.plan.upper() }}</span></td>
-                            <td>{{ payment.created_at.strftime('%b %d') }}</td>
-                        </tr>
-                        {% else %}
-                        <tr><td colspan="4" class="text-center">No recent payments</td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            <span class="badge" style="background: #1F2937; color: #F3F4F6;">{{ stuck_generations|length }} Pending Review</span>
+        </div>
+        <div class="table-responsive">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>User</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                        <th>Refund Status</th>
+                        <th>Resolution Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for gen in stuck_generations %}
+                    <tr>
+                        <td style="color: white; font-weight: 600;">#{{ gen.id }}</td>
+                        <td>{{ gen.user.username }}</td>
+                        <td>
+                            <span class="admin-badge admin-badge-red">{{ gen.status }}</span>
+                        </td>
+                        <td style="color: #9CA3AF; font-size: 13px;">
+                            {{ admin_resend_datetime(gen.created_at).strftime('%b %d, %Y %H:%M') }}
+                        </td>
+                        <td>
+                            {% if gen.refund_applied %}
+                            <span class="badge bg-success" style="font-size: 11px;">Refunded</span>
+                            {% else %}
+                            <span class="badge bg-secondary" style="font-size: 11px;">Not Refunded</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="d-flex gap-2">
+                                {% if not gen.refund_applied and gen.generation_type != 'image' and gen.fal_request_id %}
+                                <form method="post" action="{{ url_for('main.admin_force_refund', generation_id=gen.id) }}" style="display:inline;">
+                                    <button class="btn btn-sm btn-outline-warning" type="submit" style="font-size: 12px;">Force Refund</button>
+                                </form>
+                                {% endif %}
+                                {% if gen.generation_type != 'image' %}
+                                <form method="post" action="{{ url_for('main.admin_force_retry', generation_id=gen.id) }}" style="display:inline;">
+                                    <button class="btn btn-sm btn-outline-success" type="submit" style="font-size: 12px;">Force Retry</button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center py-4 text-muted">
+                            <i class="fa-solid fa-check-circle text-success me-2"></i>No stuck or failed generations in queue. All systems operating cleanly!
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Recent Generations Table -->
+    <div class="admin-chart-container mb-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+            <h5 class="admin-chart-title mb-0">Recent Video & Image Generations</h5>
+            <div class="d-flex gap-2">
+                <form method="get" class="d-flex gap-2">
+                    <input
+                        type="search"
+                        name="generation_search"
+                        value="{{ request.args.get('generation_search', '') }}"
+                        placeholder="Search status, prompt, type..."
+                        class="form-control form-control-sm"
+                        style="background: #0B0F19; border: 1px solid #1F2937; color: white; width: 220px;"
+                    >
+                    <button type="submit" class="btn-admin"><i class="fa-solid fa-magnifying-glass"></i></button>
+                </form>
+                <a href="{{ url_for('main.export_generations_csv') }}" class="btn-admin" style="text-decoration: none;">
+                    <i class="fa-solid fa-file-csv me-1"></i> Export CSV
+                </a>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Creator</th>
+                        <th>Prompt Details</th>
+                        <th>Status</th>
+                        <th>Timestamp</th>
+                        <th class="text-end">Asset</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for gen in generations.items %}
+                    <tr>
+                        <td>
+                            <strong style="color: white;">{{ gen.user.username }}</strong>
+                            <div style="font-size: 11px; color: #8B949E;">#{{ gen.id }} • {{ gen.generation_type|upper }}</div>
+                        </td>
+                        <td style="max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #C9D1D9; font-size: 13px;" title="{{ gen.original_prompt }}">
+                            {{ gen.original_prompt }}
+                        </td>
+                        <td>
+                            {% if gen.status == 'completed' %}
+                            <span class="admin-badge admin-badge-green">COMPLETED</span>
+                            {% elif gen.status == 'processing' %}
+                            <span class="admin-badge admin-badge-orange">PROCESSING</span>
+                            {% else %}
+                            <span class="admin-badge admin-badge-red">{{ gen.status|upper }}</span>
+                            {% endif %}
+                        </td>
+                        <td style="color: #9CA3AF; font-size: 13px;">
+                            {{ admin_resend_datetime(gen.created_at).strftime('%b %d, %Y %H:%M') }}
+                        </td>
+                        <td class="text-end">
+                            {% if gen.video_url %}
+                            <a href="{{ gen.video_url }}" target="_blank" rel="noopener" class="btn-admin text-decoration-none" style="color: #60A5FA;">
+                                <i class="fa-solid fa-play me-1"></i> Watch
+                            </a>
+                            {% elif gen.image_url %}
+                            <a href="{{ gen.image_url }}" target="_blank" rel="noopener" class="btn-admin text-decoration-none" style="color: #34D399;">
+                                <i class="fa-solid fa-image me-1"></i> View
+                            </a>
+                            {% else %}
+                            <span class="text-muted" style="font-size: 12px;">N/A</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top" style="border-color: #1F2937 !important;">
+            {% if generations.has_prev %}
+            <a class="btn-admin" href="{{ url_for(
+                'main.admin',
+                users_page=users.page,
+                generations_page=generations.prev_num,
+                generation_search=request.args.get('generation_search', '')
+            ) }}#generations">&larr; Previous</a>
+            {% else %}
+            <div></div>
+            {% endif %}
+            <span style="color: #9CA3AF; font-size: 13px;">Page {{ generations.page }} of {{ generations.pages or 1 }}</span>
+            {% if generations.has_next %}
+            <a class="btn-admin" href="{{ url_for(
+                'main.admin',
+                users_page=users.page,
+                generations_page=generations.next_num,
+                generation_search=request.args.get('generation_search', '')
+            ) }}#generations">Next &rarr;</a>
+            {% else %}
+            <div></div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Customer UserContent -->
+    <div class="admin-chart-container mb-0">
+        <h5 class="admin-chart-title mb-3">Recent Customer Content Assets</h5>
+        <div class="table-responsive">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Type</th>
+                        <th>Title</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for content in recent_user_content %}
+                    <tr>
+                        <td style="color: white;">{{ content.user.username }}</td>
+                        <td><span class="badge" style="background: #1F2937; color: #9CA3AF;">{{ content.content_type }}</span></td>
+                        <td style="color: #F0F6FC;">{{ content.title or 'Untitled Asset' }}</td>
+                        <td><span class="admin-badge admin-badge-green">{{ content.status }}</span></td>
+                        <td style="color: #8B949E; font-size: 13px;">{{ admin_resend_datetime(content.created_at).strftime('%b %d, %Y') }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="5" class="text-center text-muted py-3">No customer content saved yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- TAB 4: AI PROVIDERS & HEALTH               -->
+<!-- ========================================== -->
+<div id="providers" class="admin-tab-pane">
+    <div class="row g-4 mb-4">
+        <!-- Live Provider Diagnostics -->
+        <div class="col-md-6">
+            <div class="admin-chart-container h-100 mb-0">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="admin-chart-title mb-0"><i class="fa-solid fa-microchip me-2 text-warning"></i>Live Media Provider Balances</h5>
+                    <button type="button" class="btn btn-sm btn-outline-warning" id="check-provider-status">
+                        <i class="fa-solid fa-arrows-rotate me-1"></i> Check Now
+                    </button>
+                </div>
+                
+                <!-- Fal AI Card -->
+                <div class="p-3 rounded mb-3" style="background: #111827; border: 1px solid #1F2937;" data-provider="fal">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <strong style="color: #F0F6FC; font-size: 15px;">Fal AI (Video & Image GPU)</strong>
+                        <span id="fal-provider-status-badge" class="admin-badge admin-badge-orange">NOT CHECKED</span>
+                    </div>
+                    <small id="fal-provider-detail" class="text-muted d-block mb-2">Live status has not been queried yet.</small>
+                    <div class="d-flex justify-content-between align-items-center pt-2 border-top" style="border-color: #1F2937 !important;">
+                        <span style="font-size: 13px; color: #9CA3AF;">Fal Credits Remaining:</span>
+                        <strong id="fal-provider-credits" style="color: #F5A623; font-size: 15px;">Unavailable</strong>
+                    </div>
+                    <small id="fal-provider-credits-detail" class="text-muted d-block mt-1" style="font-size: 11px;">Click 'Check Now' to query live balance.</small>
+                    <div class="mt-2 text-end">
+                        <a href="https://fal.ai/dashboard/billing" target="_blank" rel="noopener" class="small text-info text-decoration-none">
+                            Open Fal Billing Console &rarr;
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Hugging Face Card -->
+                <div class="p-3 rounded" style="background: #111827; border: 1px solid #1F2937;" data-provider="huggingface">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <strong style="color: #F0F6FC; font-size: 15px;">Hugging Face (Inference API)</strong>
+                        <span id="huggingface-provider-status-badge" class="admin-badge admin-badge-orange">NOT CHECKED</span>
+                    </div>
+                    <small id="huggingface-provider-detail" class="text-muted d-block mb-1">Live status not checked.</small>
+                    <small id="huggingface-provider-model" class="text-muted d-block" style="font-size: 12px;">Model endpoint ready.</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Monthly Financials & Spend -->
+        <div class="col-md-6">
+            <div class="admin-chart-container h-100 mb-0">
+                <h5 class="admin-chart-title mb-3"><i class="fa-solid fa-coins me-2 text-success"></i>Revenue & AI Cost Margin</h5>
+                <div class="p-3 rounded mb-3" style="background: #111827; border: 1px solid #1F2937;">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span style="color: #9CA3AF;">Gross Platform Revenue</span>
+                        <strong style="color: #34D399; font-size: 16px;">₦{{ "{:,.0f}".format((total_revenue or 0) / 100) }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span style="color: #9CA3AF;">Monthly Revenue</span>
+                        <strong style="color: #F0F6FC;">₦{{ "{:,.0f}".format((monthly_revenue or 0) / 100) }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span style="color: #9CA3AF;">Estimated Fal GPU Spend</span>
+                        <strong style="color: #F5A623;">${{ "{:,.3f}".format(monthly_fal_spend or 0) }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between pt-2 border-top" style="border-color: #1F2937 !important;">
+                        <span style="color: #9CA3AF;">AI Requests / Total Provider Cost</span>
+                        <strong style="color: #60A5FA;">{{ monthly_provider_request_count }} / ${{ "{:,.3f}".format(monthly_provider_cost or 0) }}</strong>
+                    </div>
+                </div>
+
+                <!-- Recent Payments Mini Table -->
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="small fw-bold text-muted text-uppercase">Recent Subscriptions</span>
+                    <a href="{{ url_for('main.export_payments_csv') }}" class="small text-info text-decoration-none">Export Payments</a>
+                </div>
+                <div class="table-responsive">
+                    <table class="admin-table" style="font-size: 12px;">
+                        <thead>
+                            <tr>
+                                <th>Creator</th>
+                                <th>Amount</th>
+                                <th>Plan</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for payment in recent_payments %}
+                            <tr>
+                                <td style="color: white;">{{ payment.user.username }}</td>
+                                <td style="color: #34D399; font-weight: 600;">₦{{ "{:,.0f}".format((payment.amount or 0) / 100) }}</td>
+                                <td><span class="admin-badge admin-badge-orange">{{ payment.plan.upper() }}</span></td>
+                                <td style="color: #8B949E;">{{ payment.created_at.strftime('%b %d') }}</td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="4" class="text-center text-muted py-2">No recent payments</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
 
-    <div id="costs" class="col-md-6">
-        <div class="admin-chart-container h-100 mb-0">
-            <h5 class="admin-chart-title mb-3">Monthly Revenue & AI Spend</h5>
-            <div class="d-flex justify-content-between mb-2">
-                <span>Revenue</span>
-                <strong>₦{{ "{:,.0f}".format((monthly_revenue or 0) / 100) }}</strong>
+    <!-- AI Provider Health Table -->
+    <div class="admin-chart-container mb-0">
+        <h5 class="admin-chart-title mb-3"><i class="fa-solid fa-heart-pulse me-2 text-danger"></i>Provider Latency & Reliability Diagnostics</h5>
+        <div class="table-responsive">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>AI Provider</th>
+                        <th>Health Status</th>
+                        <th>Avg Latency</th>
+                        <th>Successes</th>
+                        <th>Failures</th>
+                        <th>Last Error Encountered</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for health in provider_health %}
+                    <tr>
+                        <td style="color: white; font-weight: 600; text-transform: capitalize;">{{ health.provider }}</td>
+                        <td>
+                            <span class="admin-badge {% if health.status == 'healthy' %}admin-badge-green{% elif health.status == 'degraded' %}admin-badge-orange{% else %}admin-badge-red{% endif %}">
+                                {{ health.status.upper() }}
+                            </span>
+                        </td>
+                        <td>{{ health.avg_latency_ms }} ms</td>
+                        <td><strong style="color: #34D399;">{{ health.success_count }}</strong></td>
+                        <td><strong style="color: {% if health.failure_count > 0 %}#F87171{% else %}#9CA3AF{% endif %};">{{ health.failure_count }}</strong></td>
+                        <td style="max-width: 300px; color: #8B949E; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                            {{ admin_provider_error(health.last_error) }}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="6" class="text-center text-muted py-3">No provider health data recorded.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- TAB 5: GROWTH, SOCIAL & CMS                -->
+<!-- ========================================== -->
+<div id="marketing" class="admin-tab-pane">
+    <div class="row g-4 mb-4">
+        <!-- Quick Marketing Launchpads -->
+        <div class="col-md-6">
+            <div class="admin-chart-container h-100 mb-0">
+                <h5 class="admin-chart-title mb-3"><i class="fa-solid fa-rocket me-2 text-warning"></i>Growth Engine Launchpad</h5>
+                <div class="d-flex flex-column gap-3">
+                    <div class="p-3 rounded d-flex justify-content-between align-items-center" style="background: #111827; border: 1px solid #1F2937;">
+                        <div>
+                            <strong style="color: #F0F6FC;">Promotional Campaigns</strong>
+                            <div class="small text-muted">Generate Python PIL flyers & autopost to Telegram, Facebook, LinkedIn</div>
+                        </div>
+                        <a href="{{ url_for('main.admin_promo_campaigns') }}" class="btn-admin text-decoration-none" style="color: #F5A623;">
+                            Launch &rarr;
+                        </a>
+                    </div>
+                    <div class="p-3 rounded d-flex justify-content-between align-items-center" style="background: #111827; border: 1px solid #1F2937;">
+                        <div>
+                            <strong style="color: #F0F6FC;">Daily Rotating Newsletter</strong>
+                            <div class="small text-muted">Automated 1-80, 81-190 daily batch delivery to active subscribers</div>
+                        </div>
+                        <a href="{{ url_for('main.admin_newsletter_campaigns') }}" class="btn-admin text-decoration-none" style="color: #60A5FA;">
+                            Manage &rarr;
+                        </a>
+                    </div>
+                    <div class="p-3 rounded d-flex justify-content-between align-items-center" style="background: #111827; border: 1px solid #1F2937;">
+                        <div>
+                            <strong style="color: #F0F6FC;">Blog CMS & SEO Hub</strong>
+                            <div class="small text-muted">AI generated articles with auto-distribution hooks</div>
+                        </div>
+                        <a href="{{ url_for('main.admin_blog') }}" class="btn-admin text-decoration-none" style="color: #34D399;">
+                            Edit Posts &rarr;
+                        </a>
+                    </div>
+                </div>
             </div>
-            <div class="d-flex justify-content-between mb-2">
-                <span>Estimated Fal spend</span>
-                <strong>${{ "{:,.3f}".format(monthly_fal_spend or 0) }}</strong>
-            </div>
-            <div class="d-flex justify-content-between">
-                <span>AI provider requests / cost</span>
-                <strong>{{ monthly_provider_request_count }} / ${{ "{:,.3f}".format(monthly_provider_cost or 0) }}</strong>
+        </div>
+
+        <!-- Audience & Subscribers Overview -->
+        <div class="col-md-6">
+            <div class="admin-chart-container h-100 mb-0">
+                <h5 class="admin-chart-title mb-3"><i class="fa-solid fa-users-viewfinder me-2 text-info"></i>Audience & Opt-In Health</h5>
+                <div class="p-3 rounded mb-3" style="background: #111827; border: 1px solid #1F2937;">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Total Newsletter Subscribers</span>
+                        <strong style="color: #34D399; font-size: 15px;">{{ total_subscribers }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Missing Email Sync (Users without sub row)</span>
+                        <strong style="color: #F5A623;">{{ missing_subscribers_count }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Email Opt-Outs</span>
+                        <strong style="color: #9CA3AF;">{{ total_email_optouts }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between pt-2 border-top" style="border-color: #1F2937 !important;">
+                        <span>Total Registered Workspace Brands</span>
+                        <strong style="color: #60A5FA;">{{ total_brands }}</strong>
+                    </div>
+                </div>
+                <form method="post" action="{{ url_for('main.admin_backfill_subscribers') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-sm btn-outline-info w-100">
+                        <i class="fa-solid fa-user-plus me-1"></i> Sync All Users to Newsletter Subscribers
+                    </button>
+                </form>
             </div>
         </div>
     </div>
 
-    <!-- New Section: Connected Accounts & Social Publishing -->
-    <div id="connected-accounts" class="col-12">
-        <div class="admin-chart-container mb-0">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="admin-chart-title mb-0">Connected Accounts (Total: {{ total_connected_accounts }})</h5>
-            </div>
-            <div class="table-responsive">
-                <table class="admin-table">
-                    <thead>
-                        <tr>
-                            <th>User</th>
-                            <th>Provider</th>
-                            <th>Account Name</th>
-                            <th>Status</th>
-                            <th>Connected On</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for acc in recent_connected_accounts %}
-                        <tr>
-                            <td style="color: white;">{{ acc.user.username }}</td>
-                            <td style="text-transform: capitalize;">{{ acc.provider }}</td>
-                            <td>{{ acc.account_name or 'N/A' }}</td>
-                            <td>
-                                <span class="admin-badge {% if acc.status == 'connected' %}admin-badge-green{% else %}admin-badge-red{% endif %}">
-                                    {{ acc.status.upper() }}
-                                </span>
-                            </td>
-                            <td>{{ acc.connected_at.strftime('%b %d, %Y') }}</td>
-                        </tr>
-                        {% else %}
-                        <tr><td colspan="5" class="text-center">No connected accounts yet</td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+    <!-- Connected Accounts Table -->
+    <div id="connected-accounts" class="admin-chart-container mb-4">
+        <h5 class="admin-chart-title mb-3">Connected Social Publishing Accounts ({{ total_connected_accounts }} Total)</h5>
+        <div class="table-responsive">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Creator</th>
+                        <th>Network</th>
+                        <th>Account Name</th>
+                        <th>Status</th>
+                        <th>Connected On</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for acc in recent_connected_accounts %}
+                    <tr>
+                        <td style="color: white;">{{ acc.user.username }}</td>
+                        <td style="text-transform: capitalize;">{{ acc.provider }}</td>
+                        <td>{{ acc.account_name or 'N/A' }}</td>
+                        <td>
+                            <span class="admin-badge {% if acc.status == 'connected' %}admin-badge-green{% else %}admin-badge-red{% endif %}">
+                                {{ acc.status.upper() }}
+                            </span>
+                        </td>
+                        <td style="color: #8B949E; font-size: 13px;">{{ acc.connected_at.strftime('%b %d, %Y') }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="5" class="text-center text-muted py-3">No connected accounts yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 
-    <!-- Content Hub: Distributions -->
-    <div id="content-distributions" class="col-12">
-        <div class="admin-chart-container mb-0">
-            <h5 class="admin-chart-title mb-3">Recent Content Distributions (Social Media)</h5>
-            <div class="table-responsive">
-                <table class="admin-table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Blog Post</th>
-                            <th>Status</th>
-                            <th>Success / Total</th>
-                            <th>Date</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for run in recent_distributions %}
-                        <tr>
-                            <td>#{{ run.id }}</td>
-                            <td style="color: white; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                                {{ run.blog_post.title if run.blog_post else 'Unknown' }}
-                            </td>
-                            <td>
-                                <span class="admin-badge {% if run.status == 'completed' %}admin-badge-green{% elif run.status == 'failed' %}admin-badge-red{% else %}admin-badge-orange{% endif %}">
-                                    {{ run.status.upper() }}
-                                </span>
-                            </td>
-                            <td>{{ run.success_count }} / {{ run.total_platforms }}</td>
-                            <td>{{ run.started_at.strftime('%b %d, %Y') }}</td>
-                            <td>
-                                <a href="{{ url_for('main.admin_distribution_run', run_id=run.id) }}" class="btn-admin" style="text-decoration: none;">View</a>
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr><td colspan="6" class="text-center">No distribution runs yet</td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- Content Hub: Blogs & Newsletters -->
-    <div id="content-blogs" class="col-md-6">
-        <div class="admin-chart-container h-100 mb-0">
-            <h5 class="admin-chart-title mb-3">Recent Blog Posts (Legacy Content Hub)</h5>
-            <div class="table-responsive">
-                <table class="admin-table">
-                    <thead>
-                        <tr>
-                            <th>Title</th>
-                            <th>Status</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for post in recent_blogs %}
-                        <tr>
-                            <td style="color: white; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ post.title }}</td>
-                            <td>
-                                <span class="admin-badge {% if post.status == 'published' %}admin-badge-green{% else %}admin-badge-orange{% endif %}">
-                                    {{ post.status.upper() }}
-                                </span>
-                            </td>
-                            <td>
-                                <a href="{{ url_for('main.admin_blog') }}" class="btn-admin" style="text-decoration: none;">Manage</a>
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr><td colspan="3" class="text-center">No blog posts</td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <div id="publishing-history" class="col-12">
-        <div class="admin-chart-container mb-0">
-            <h5 class="admin-chart-title mb-3">Publishing History (Connected Accounts)</h5>
-            <div class="table-responsive"><table class="admin-table"><thead><tr><th>User</th><th>Provider</th><th>Status</th><th>Published</th><th>URL</th></tr></thead><tbody>
-            {% for log in recent_publishing_logs %}<tr><td>{{ log.user.username }}</td><td>{{ log.provider }}</td><td>{{ log.status }}</td><td>{{ admin_resend_datetime(log.published_at).strftime('%b %d, %Y') }}</td><td>{% if log.published_url %}<a href="{{ log.published_url }}" target="_blank" rel="noopener">Open</a>{% else %}N/A{% endif %}</td></tr>{% else %}<tr><td colspan="5">No connected-account publishing logs.</td></tr>{% endfor %}
-            </tbody></table></div>
-        </div>
-    </div>
-
-    <div class="col-md-6"><div class="admin-chart-container h-100 mb-0"><h5 class="admin-chart-title mb-3">Brands Registered</h5><h2 class="admin-stat-value">{{ total_brands }}</h2></div></div>
-    <div class="col-md-6"><div class="admin-chart-container h-100 mb-0"><h5 class="admin-chart-title mb-3">Waitlist & Opt-outs</h5><div class="d-flex justify-content-between"><span>Subscribers</span><strong>{{ total_subscribers }}</strong></div><div class="d-flex justify-content-between"><span>Missing email subscribers</span><strong>{{ missing_subscribers_count }}</strong></div><div class="d-flex justify-content-between"><span>Email opt-outs</span><strong>{{ total_email_optouts }}</strong></div></div></div>
-
-    <div class="col-md-6"><div class="admin-chart-container h-100 mb-0"><h5 class="admin-chart-title mb-3">Top Campaign Engagement</h5>{% for campaign, engagement, metrics in top_campaigns %}<div class="d-flex justify-content-between"><span>{{ campaign.title or campaign.goal }}</span><strong>{{ engagement }}</strong></div>{% else %}<span class="admin-stat-sub">No campaign analytics yet.</span>{% endfor %}</div></div>
-    <div class="col-md-6"><div class="admin-chart-container h-100 mb-0"><h5 class="admin-chart-title mb-3">Auto-publish Adoption</h5>{% for provider, count in auto_publish_by_provider %}<div class="d-flex justify-content-between"><span>{{ provider }}</span><strong>{{ count }}</strong></div>{% else %}<span class="admin-stat-sub">No auto-publish preferences yet.</span>{% endfor %}</div></div>
-
-    <div id="user-content" class="col-12"><div class="admin-chart-container mb-0"><h5 class="admin-chart-title mb-3">Recent Customer Content (UserContent)</h5><div class="table-responsive"><table class="admin-table"><thead><tr><th>User</th><th>Type</th><th>Title</th><th>Status</th><th>Created</th></tr></thead><tbody>{% for content in recent_user_content %}<tr><td>{{ content.user.username }}</td><td>{{ content.content_type }}</td><td>{{ content.title or 'Untitled' }}</td><td>{{ content.status }}</td><td>{{ admin_resend_datetime(content.created_at).strftime('%b %d, %Y') }}</td></tr>{% else %}<tr><td colspan="5">No customer content yet.</td></tr>{% endfor %}</tbody></table></div></div></div>
-
-    <div class="col-md-6">
-        <div class="admin-chart-container h-100 mb-0">
-            <h5 class="admin-chart-title mb-3">Recent Newsletters</h5>
-            <div class="table-responsive">
-                <table class="admin-table">
-                    <thead>
-                        <tr>
-                            <th>Subject</th>
-                            <th>Status</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for nl in recent_newsletters %}
-                        <tr>
-                            <td style="color: white; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ nl.subject }}</td>
-                            <td>
-                                <span class="admin-badge {% if nl.status == 'sent' %}admin-badge-green{% else %}admin-badge-orange{% endif %}">
-                                    {{ nl.status.upper() }}
-                                </span>
-                            </td>
-                            <td>
-                                <a href="{{ url_for('main.admin_newsletter') }}" class="btn-admin" style="text-decoration: none;">Manage</a>
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr><td colspan="3" class="text-center">No newsletters</td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+    <!-- Recent Distributions -->
+    <div class="admin-chart-container mb-0">
+        <h5 class="admin-chart-title mb-3">Social Distribution History</h5>
+        <div class="table-responsive">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Run ID</th>
+                        <th>Article / Campaign</th>
+                        <th>Status</th>
+                        <th>Success Rate</th>
+                        <th>Date</th>
+                        <th>Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for run in recent_distributions %}
+                    <tr>
+                        <td style="color: white; font-weight: 600;">#{{ run.id }}</td>
+                        <td style="color: #F0F6FC; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                            {{ run.blog_post.title if run.blog_post else 'Promotional Run' }}
+                        </td>
+                        <td>
+                            <span class="admin-badge {% if run.status == 'completed' %}admin-badge-green{% elif run.status == 'failed' %}admin-badge-red{% else %}admin-badge-orange{% endif %}">
+                                {{ run.status.upper() }}
+                            </span>
+                        </td>
+                        <td><strong style="color: #34D399;">{{ run.success_count }}</strong> / {{ run.total_platforms }}</td>
+                        <td style="color: #8B949E; font-size: 13px;">{{ run.started_at.strftime('%b %d, %Y') }}</td>
+                        <td>
+                            <a href="{{ url_for('main.admin_distribution_run', run_id=run.id) }}" class="btn-admin text-decoration-none">
+                                Inspect
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="6" class="text-center text-muted py-3">No social distributions recorded yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
@@ -726,10 +919,11 @@
 
 {% block scripts %}
 <script>
+    // Live Provider Status Check
     const providerStatusButton = document.getElementById('check-provider-status');
     providerStatusButton?.addEventListener('click', async () => {
         providerStatusButton.disabled = true;
-        providerStatusButton.textContent = 'Checking...';
+        providerStatusButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Checking...';
         try {
             const response = await fetch('{{ url_for("main.admin_provider_status") }}', {
                 headers: { 'Accept': 'application/json' }
@@ -738,25 +932,33 @@
             const providers = await response.json();
             for (const key of ['fal', 'huggingface']) {
                 const provider = providers[key];
+                if (!provider) continue;
                 const badge = document.getElementById(`${key}-provider-status-badge`);
-                badge.textContent = provider.status.replaceAll('_', ' ').toUpperCase();
-                badge.className = `admin-badge ${provider.status === 'healthy' ? 'admin-badge-green' : provider.status === 'offline' ? 'admin-badge-red' : 'admin-badge-orange'}`;
-                document.getElementById(`${key}-provider-detail`).textContent = provider.detail;
+                if (badge) {
+                    badge.textContent = (provider.status || '').replaceAll('_', ' ').toUpperCase();
+                    badge.className = `admin-badge ${provider.status === 'healthy' ? 'admin-badge-green' : provider.status === 'offline' ? 'admin-badge-red' : 'admin-badge-orange'}`;
+                }
+                const detail = document.getElementById(`${key}-provider-detail`);
+                if (detail) detail.textContent = provider.detail;
             }
-            document.getElementById('fal-provider-credits').textContent = providers.fal.credits ?? 'Unavailable';
-            document.getElementById('fal-provider-credits-detail').textContent = providers.fal.credits_detail;
-            document.getElementById('huggingface-provider-model').textContent = `Model: ${providers.huggingface.model}`;
+            const creditsEl = document.getElementById('fal-provider-credits');
+            if (creditsEl) creditsEl.textContent = providers.fal?.credits ?? 'Unavailable';
+            const creditsDetailEl = document.getElementById('fal-provider-credits-detail');
+            if (creditsDetailEl) creditsDetailEl.textContent = providers.fal?.credits_detail || '';
+            const hfModelEl = document.getElementById('huggingface-provider-model');
+            if (hfModelEl) hfModelEl.textContent = `Model: ${providers.huggingface?.model || 'Ready'}`;
         } catch (error) {
             for (const key of ['fal', 'huggingface']) {
-                document.getElementById(`${key}-provider-detail`).textContent = 'Could not retrieve provider status.';
+                const detail = document.getElementById(`${key}-provider-detail`);
+                if (detail) detail.textContent = 'Could not retrieve live status.';
             }
         } finally {
             providerStatusButton.disabled = false;
-            providerStatusButton.textContent = 'Check now';
+            providerStatusButton.innerHTML = '<i class="fa-solid fa-arrows-rotate me-1"></i> Check Now';
         }
     });
 
-    // Prepare data for Chart.js
+    // Chart.js 7-Day Platform Activity
     const signupDataRaw = {{ signups_7days | tojson | safe }};
     const genDataRaw = {{ generations_7days | tojson | safe }};
     
@@ -764,108 +966,111 @@
     const signupCounts = signupDataRaw.map(d => d.count);
     const genCounts = genDataRaw.map(d => d.count);
 
-    const ctx = document.getElementById('activityChart').getContext('2d');
-    
-    // Gradient for signups
-    const gradientSignups = ctx.createLinearGradient(0, 0, 0, 300);
-    gradientSignups.addColorStop(0, 'rgba(245, 166, 35, 0.4)'); // --admin-accent
-    gradientSignups.addColorStop(1, 'rgba(245, 166, 35, 0.0)');
+    const canvas = document.getElementById('activityChart');
+    if (canvas) {
+        const ctx = canvas.getContext('2d');
+        
+        const gradientSignups = ctx.createLinearGradient(0, 0, 0, 300);
+        gradientSignups.addColorStop(0, 'rgba(245, 166, 35, 0.35)');
+        gradientSignups.addColorStop(1, 'rgba(245, 166, 35, 0.0)');
 
-    // Gradient for generations
-    const gradientGens = ctx.createLinearGradient(0, 0, 0, 300);
-    gradientGens.addColorStop(0, 'rgba(16, 185, 129, 0.3)'); // Green
-    gradientGens.addColorStop(1, 'rgba(16, 185, 129, 0.0)');
+        const gradientGens = ctx.createLinearGradient(0, 0, 0, 300);
+        gradientGens.addColorStop(0, 'rgba(16, 185, 129, 0.35)');
+        gradientGens.addColorStop(1, 'rgba(16, 185, 129, 0.0)');
 
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [
-                {
-                    label: 'User Signups',
-                    data: signupCounts,
-                    borderColor: '#F5A623',
-                    backgroundColor: gradientSignups,
-                    borderWidth: 2,
-                    tension: 0.4, // Smooth curve
-                    fill: true,
-                    pointBackgroundColor: '#0B0F19',
-                    pointBorderColor: '#F5A623',
-                    pointBorderWidth: 2,
-                    pointRadius: 4,
-                    pointHoverRadius: 6
-                },
-                {
-                    label: 'Generations',
-                    data: genCounts,
-                    borderColor: '#10B981',
-                    backgroundColor: gradientGens,
-                    borderWidth: 2,
-                    tension: 0.4,
-                    fill: true,
-                    pointBackgroundColor: '#0B0F19',
-                    pointBorderColor: '#10B981',
-                    pointBorderWidth: 2,
-                    pointRadius: 4,
-                    pointHoverRadius: 6
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'top',
-                    align: 'end',
-                    labels: {
-                        color: '#9CA3AF',
-                        usePointStyle: true,
-                        boxWidth: 8
-                    }
-                },
-                tooltip: {
-                    backgroundColor: '#151C2C',
-                    titleColor: '#F3F4F6',
-                    bodyColor: '#9CA3AF',
-                    borderColor: '#1F2937',
-                    borderWidth: 1,
-                    padding: 12,
-                    boxPadding: 6,
-                    usePointStyle: true
-                }
-            },
-            scales: {
-                x: {
-                    grid: {
-                        color: 'rgba(31, 41, 55, 0.5)',
-                        drawBorder: false,
-                        tickLength: 0
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Creator Signups',
+                        data: signupCounts,
+                        borderColor: '#F5A623',
+                        backgroundColor: gradientSignups,
+                        borderWidth: 2.5,
+                        tension: 0.35,
+                        fill: true,
+                        pointBackgroundColor: '#0B0F19',
+                        pointBorderColor: '#F5A623',
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
                     },
-                    ticks: {
-                        color: '#6B7280',
-                        padding: 10
+                    {
+                        label: 'Generations',
+                        data: genCounts,
+                        borderColor: '#10B981',
+                        backgroundColor: gradientGens,
+                        borderWidth: 2.5,
+                        tension: 0.35,
+                        fill: true,
+                        pointBackgroundColor: '#0B0F19',
+                        pointBorderColor: '#10B981',
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        align: 'end',
+                        labels: {
+                            color: '#9CA3AF',
+                            usePointStyle: true,
+                            boxWidth: 8,
+                            font: { family: 'Inter', size: 12 }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: '#151C2C',
+                        titleColor: '#F3F4F6',
+                        bodyColor: '#9CA3AF',
+                        borderColor: '#1F2937',
+                        borderWidth: 1,
+                        padding: 12,
+                        usePointStyle: true
                     }
                 },
-                y: {
-                    grid: {
-                        color: 'rgba(31, 41, 55, 0.5)',
-                        drawBorder: false,
-                        tickLength: 0
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(31, 41, 55, 0.5)', drawBorder: false },
+                        ticks: { color: '#6B7280', padding: 8 }
                     },
-                    ticks: {
-                        color: '#6B7280',
-                        padding: 10,
-                        stepSize: 1,
-                        beginAtZero: true
+                    y: {
+                        grid: { color: 'rgba(31, 41, 55, 0.5)', drawBorder: false },
+                        ticks: { color: '#6B7280', padding: 8, beginAtZero: true, stepSize: 1 }
                     }
-                }
-            },
-            interaction: {
-                mode: 'index',
-                intersect: false,
+                },
+                interaction: { mode: 'index', intersect: false }
             }
-        }
-    });
+        });
+    }
+
+    // SweetAlert2 helper for destructive actions
+    function sweetConfirmLink(event, message) {
+        event.preventDefault();
+        const url = event.currentTarget.getAttribute('href');
+        Swal.fire({
+            title: 'Confirm Action',
+            text: message,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#E02424',
+            cancelButtonColor: '#374151',
+            confirmButtonText: 'Yes, proceed',
+            background: '#161B22',
+            color: '#F0F6FC'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = url;
+            }
+        });
+    }
 </script>
 {% endblock %}

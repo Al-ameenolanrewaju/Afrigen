@@ -258,6 +258,74 @@
         .admin-badge-red { background: rgba(239, 68, 68, 0.2); color: #F87171; }
         .admin-badge-gray { background: rgba(156, 163, 175, 0.2); color: #9CA3AF; }
         .admin-badge-orange { background: rgba(245, 166, 35, 0.2); color: #F5A623; }
+        .admin-badge-purple { background: rgba(168, 85, 247, 0.2); color: #C084FC; }
+
+        /* Modern Tabs */
+        .admin-tab-nav {
+            display: flex;
+            gap: 8px;
+            border-bottom: 1px solid var(--admin-border);
+            padding-bottom: 12px;
+            margin-bottom: 24px;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+        .admin-tab-nav::-webkit-scrollbar { display: none; }
+        .admin-tab-btn {
+            background: transparent;
+            border: 1px solid transparent;
+            color: #9CA3AF;
+            padding: 9px 18px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+        .admin-tab-btn:hover {
+            color: #F3F4F6;
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .admin-tab-btn.active {
+            background: #1F2937;
+            color: #F5A623;
+            border-color: rgba(245, 166, 35, 0.35);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+        .admin-tab-pane {
+            display: none;
+        }
+        .admin-tab-pane.active {
+            display: block;
+            animation: fadeIn 0.25s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Enhanced Card & Table Polish */
+        .admin-stat-card {
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+        .admin-stat-card:hover {
+            border-color: rgba(245, 166, 35, 0.3);
+            transform: translateY(-2px);
+        }
+        .admin-table tbody tr {
+            transition: background-color 0.15s ease;
+        }
+        .admin-table tbody tr:hover {
+            background-color: rgba(255, 255, 255, 0.025);
+        }
+        .table-responsive {
+            border-radius: 8px;
+        }
 
         @media (max-width: 992px) {
             .admin-sidebar {
@@ -425,6 +493,45 @@
         window.alert = function(message) {
             window.showAfrigenAlert({ text: String(message) });
         };
+
+        // Modern Tab Navigation Support
+        function switchAdminTab(targetId) {
+            if (!targetId) return;
+            const cleanId = targetId.replace('#', '');
+            const tabBtn = document.querySelector(`.admin-tab-btn[data-tab="${cleanId}"]`);
+            const tabPane = document.getElementById(cleanId);
+            if (tabBtn && tabPane) {
+                document.querySelectorAll('.admin-tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.admin-tab-pane').forEach(p => p.classList.remove('active'));
+                tabBtn.classList.add('active');
+                tabPane.classList.add('active');
+                window.history.replaceState(null, null, '#' + cleanId);
+            }
+        }
+        window.addEventListener('DOMContentLoaded', () => {
+            const hash = window.location.hash;
+            if (hash) {
+                switchAdminTab(hash);
+            }
+            document.querySelectorAll('.admin-tab-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const tab = btn.getAttribute('data-tab');
+                    switchAdminTab(tab);
+                });
+            });
+            document.querySelectorAll('.admin-sidebar a[href*="#"]').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    const parts = link.getAttribute('href').split('#');
+                    if (parts.length > 1 && parts[1]) {
+                        const tabPane = document.getElementById(parts[1]);
+                        if (tabPane) {
+                            switchAdminTab(parts[1]);
+                        }
+                    }
+                });
+            });
+        });
     </script>
     {% block scripts %}{% endblock %}
 </body>

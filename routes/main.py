@@ -1059,6 +1059,7 @@ def admin_provider_status():
 
 @main.route('/admin')
 @admin_required
+@limiter.exempt
 def admin():
     from sqlalchemy import func, or_, and_, case
     from sqlalchemy.orm import joinedload
@@ -1408,6 +1409,7 @@ def admin():
 
 @main.route('/admin/generation/<int:generation_id>/force-refund', methods=['POST'])
 @admin_required
+@limiter.exempt
 def admin_force_refund(generation_id):
     generation = db.session.get(Generation, generation_id)
     if not generation:
@@ -1430,6 +1432,7 @@ def admin_force_refund(generation_id):
 
 @main.route('/admin/generation/<int:generation_id>/force-retry', methods=['POST'])
 @admin_required
+@limiter.exempt
 def admin_force_retry(generation_id):
     generation = db.session.get(Generation, generation_id)
     if not generation:
@@ -1470,6 +1473,8 @@ def admin_force_retry(generation_id):
 
 @main.route('/admin/grant-free-video/<int:user_id>', methods=['GET', 'POST'])
 @admin_required
+@csrf.exempt
+@limiter.exempt
 def grant_free_video(user_id):
     user = db.session.get(User, user_id)
     if not user:
@@ -1487,6 +1492,7 @@ def grant_free_video(user_id):
 
 @main.route('/admin/upgrade/<int:user_id>')
 @admin_required
+@limiter.exempt
 def upgrade_user(user_id):
     user = db.session.get(User, user_id)
     if user:
@@ -1508,6 +1514,7 @@ def upgrade_user(user_id):
 
 @main.route('/admin/credits', methods=['GET', 'POST'])
 @admin_required
+@limiter.exempt
 def admin_credits():
     from models import CreditLedger
     lookup_user = None
@@ -1635,6 +1642,7 @@ def export_generations_csv():
 
 @main.route('/admin/downgrade/<int:user_id>')
 @admin_required
+@limiter.exempt
 def downgrade_user(user_id):
     user = db.session.get(User, user_id)
     if user:
@@ -1651,6 +1659,7 @@ def downgrade_user(user_id):
 
 @main.route('/admin/ban/<int:user_id>')
 @admin_required
+@limiter.exempt
 def ban_user(user_id):
     user = db.session.get(User, user_id)
     if user:
@@ -1667,6 +1676,7 @@ def ban_user(user_id):
 
 @main.route('/admin/delete/<int:user_id>')
 @admin_required
+@limiter.exempt
 def delete_user(user_id):
     user = db.session.get(User, user_id)
     if user:
@@ -3077,6 +3087,7 @@ def api_notification_read(notif_id):
 @main.route('/admin/notifications/broadcast', methods=['POST'])
 @admin_required
 @csrf.exempt
+@limiter.exempt
 def admin_notifications_broadcast():
     from models import Notification
     data = request.get_json(silent=True) or {}
@@ -3102,6 +3113,7 @@ def admin_notifications_broadcast():
 
 @main.route('/admin/campaigns', methods=['GET', 'POST'])
 @admin_required
+@limiter.exempt
 def admin_promo_campaigns():
     result = None
     if request.method == 'POST':
