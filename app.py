@@ -23,7 +23,7 @@ from datetime import datetime, timezone
 from models import db, User, Generation, SavedPrompt, Referral, WebsiteVisit, TelegramUser
 from config import DevelopmentConfig, ProductionConfig, TestingConfig
 from extensions import csrf, limiter
-from routes.main import main
+from routes.main import main, is_admin_user
 from routes.auth import auth
 from routes.api import api
 from routes.campaigns import campaigns_bp
@@ -483,7 +483,8 @@ def inject_socials():
         TWITTER_URL=TWITTER_URL,
         INSTAGRAM_URL=INSTAGRAM_URL,
         LINKEDIN_URL=LINKEDIN_URL,
-        TELEGRAM_URL=TELEGRAM_URL
+        TELEGRAM_URL=TELEGRAM_URL,
+        is_admin_user=is_admin_user,
     )
 
 

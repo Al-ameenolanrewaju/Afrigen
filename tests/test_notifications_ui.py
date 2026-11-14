@@ -115,3 +115,7 @@ def test_notification_center_history_and_read_actions_are_user_scoped():
         admin_layout = render_template("admin_base.html")
     assert admin_layout.count('data-notification-trigger') == 2
     assert 'id="notificationPanel"' in admin_layout
+    assert 'id="adminMoreDrawer"' in admin_layout
+    assert 'aria-label="Mobile admin navigation"' in admin_layout
+    assert 'href="/admin/newsletter"' in admin_layout
+    assert 'href="/admin/provider-status"' in admin_layout

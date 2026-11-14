@@ -12,7 +12,7 @@ Afrigen V2 is a monolithic Flask application structured with a Service Layer pat
    - `provider_manager.py`: The single point of entry for text-based AI generation. Routes requests to specific AI models based on task mapping and health checks.
    - `workflow_planner.py`: Generates sequential tasks for a marketing campaign.
    - `workflow_executor.py`: Asynchronously executes campaign tasks and records progress.
-   - `video.py`, `audio.py`, `claude.py`: Specific integration layers for Fal AI and Anthropic.
+   - `video.py`, `audio.py`, `claude.py`: Backend integration layers behind Afrigen's AI product services.
 4. **Templates (`templates/`)**: Jinja2 HTML templates.
 
 ## The Campaign Engine Flow

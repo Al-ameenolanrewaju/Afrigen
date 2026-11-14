@@ -339,7 +339,86 @@
             .admin-main-content {
                 margin-left: 0;
                 width: 100%;
+                padding-bottom: calc(86px + env(safe-area-inset-bottom));
             }
+        }
+
+        .admin-mobile-bottom-nav {
+            position: fixed;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 1030;
+            display: none;
+            height: calc(68px + env(safe-area-inset-bottom));
+            align-items: center;
+            justify-content: space-around;
+            padding: 5px max(8px, env(safe-area-inset-right)) calc(5px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+            border-top: 1px solid #354154;
+            background: rgba(17, 24, 39, .98);
+            backdrop-filter: blur(14px);
+        }
+        .admin-mobile-bottom-nav a,
+        .admin-mobile-bottom-nav button {
+            display: flex;
+            min-width: 44px;
+            min-height: 48px;
+            flex: 1;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            border: 0;
+            border-radius: 10px;
+            background: transparent;
+            color: #A5AFBF;
+            font: inherit;
+            font-size: 10px;
+            text-decoration: none;
+        }
+        .admin-mobile-bottom-nav i { font-size: 16px; }
+        .admin-mobile-bottom-nav .active { color: #D6AD65; }
+        .admin-mobile-bottom-nav :focus-visible { outline: 2px solid #D6AD65; outline-offset: -2px; }
+        .admin-more-sheet.offcanvas-bottom {
+            --bs-offcanvas-height: min(86vh, 720px);
+            height: min(86vh, 720px);
+            max-height: calc(100vh - 8px);
+            border: 1px solid #354154;
+            border-bottom: 0;
+            border-radius: 20px 20px 0 0;
+            background: #111827;
+            color: #F5F1E8;
+        }
+        .admin-more-sheet .offcanvas-header { border-bottom: 1px solid #354154; }
+        .admin-more-sheet .offcanvas-body {
+            overflow-y: auto;
+            padding: 12px 16px calc(18px + env(safe-area-inset-bottom));
+        }
+        .admin-more-sheet h6 {
+            margin: 18px 0 7px;
+            color: #A5AFBF;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+        }
+        .admin-more-sheet a {
+            display: flex;
+            min-height: 46px;
+            align-items: center;
+            gap: 12px;
+            padding: 9px 10px;
+            border-radius: 10px;
+            color: #F5F1E8;
+            text-decoration: none;
+        }
+        .admin-more-sheet a i { width: 18px; color: #A5AFBF; text-align: center; }
+        .admin-more-sheet a:hover,
+        .admin-more-sheet a:focus-visible,
+        .admin-more-sheet a[aria-current="page"] { background: #202B3B; color: #D6AD65; }
+        .admin-more-sheet a[aria-current="page"] i { color: #D6AD65; }
+        @media (max-width: 992px) {
+            .admin-mobile-bottom-nav { display: flex; }
         }
     </style>
     
@@ -453,9 +532,6 @@
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>
                     <span class="notification-badge" data-notification-badge></span>
                 </button>
-                <button class="btn btn-outline-secondary border-0" onclick="document.getElementById('adminSidebar').classList.toggle('show')" aria-label="Open admin navigation">
-                    <i class="fa-solid fa-bars text-white"></i>
-                </button>
             </div>
         </div>
 
@@ -486,6 +562,60 @@
         {% block content %}{% endblock %}
     </div>
 
+    <div class="offcanvas offcanvas-bottom admin-more-sheet" tabindex="-1" id="adminMoreDrawer" aria-labelledby="adminMoreTitle">
+        <div class="offcanvas-header">
+            <div>
+                <h5 class="offcanvas-title text-white mb-0" id="adminMoreTitle">Admin navigation</h5>
+                <small class="text-secondary">Administration tools and workspace links</small>
+            </div>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close admin navigation"></button>
+        </div>
+        <div class="offcanvas-body">
+            <h6>Administration</h6>
+            <a href="{{ url_for('main.admin') }}" {% if request.endpoint == 'main.admin' %}aria-current="page"{% endif %}><i class="fa-solid fa-border-all"></i>Overview</a>
+            <a href="{{ url_for('main.admin_promo_campaigns') }}" {% if request.endpoint == 'main.admin_promo_campaigns' %}aria-current="page"{% endif %}><i class="fa-solid fa-bullhorn"></i>AI Promo Campaigns</a>
+            <a href="{{ url_for('main.admin_newsletter_campaigns') }}" {% if request.endpoint and 'newsletter' in request.endpoint %}aria-current="page"{% endif %}><i class="fa-solid fa-envelope"></i>Daily Newsletter</a>
+            <a href="{{ url_for('main.admin_newsletter') }}" {% if request.endpoint == 'main.admin_newsletter' %}aria-current="page"{% endif %}><i class="fa-solid fa-pen-to-square"></i>Newsletter editor</a>
+            <a href="{{ url_for('main.admin_blog') }}" {% if request.endpoint and 'blog' in request.endpoint %}aria-current="page"{% endif %}><i class="fa-solid fa-newspaper"></i>Blog CMS</a>
+            <a href="{{ url_for('main.admin_distribution') }}" {% if request.endpoint and 'distribution' in request.endpoint %}aria-current="page"{% endif %}><i class="fa-solid fa-satellite-dish"></i>Social Distribution</a>
+            <a href="{{ url_for('main.admin_pricing') }}" {% if request.endpoint == 'main.admin_pricing' %}aria-current="page"{% endif %}><i class="fa-solid fa-tags"></i>Pricing &amp; Tiers</a>
+            <a href="{{ url_for('main.admin_credits') }}" {% if request.endpoint == 'main.admin_credits' %}aria-current="page"{% endif %}><i class="fa-solid fa-coins"></i>Manage Credits</a>
+            <a href="{{ url_for('main.admin_paystack_webhooks') }}" {% if request.endpoint == 'main.admin_paystack_webhooks' %}aria-current="page"{% endif %}><i class="fa-solid fa-money-bill-transfer"></i>Payment Webhooks</a>
+            <a href="{{ url_for('main.admin_provider_status') }}" {% if request.endpoint == 'main.admin_provider_status' %}aria-current="page"{% endif %}><i class="fa-solid fa-heart-pulse"></i>AI Provider Status</a>
+            <h6>Dashboard sections</h6>
+            <a href="{{ url_for('main.admin') }}#users"><i class="fa-solid fa-users"></i>Users &amp; Activity</a>
+            <a href="{{ url_for('main.admin') }}#health"><i class="fa-solid fa-heart-pulse"></i>AI Provider Health</a>
+            <a href="{{ url_for('main.admin') }}#payments"><i class="fa-solid fa-money-bill"></i>Revenue &amp; Payments</a>
+            <a href="{{ url_for('main.admin') }}#connected-accounts"><i class="fa-solid fa-link"></i>Connected Accounts</a>
+            <h6>Workspace</h6>
+            <a href="{{ url_for('main.dashboard') }}"><i class="fa-solid fa-house"></i>Back to App</a>
+            <a href="{{ url_for('auth.logout') }}" style="color:#F0A5A5;"><i class="fa-solid fa-right-from-bracket"></i>Log Out</a>
+        </div>
+    </div>
+
+    <nav class="admin-mobile-bottom-nav" aria-label="Mobile admin navigation">
+        <a href="{{ url_for('main.admin') }}" {% if request.endpoint == 'main.admin' %}class="active" aria-current="page"{% endif %}><i class="fa-solid fa-house"></i><span>Home</span></a>
+        <a href="{{ url_for('main.admin') }}#users"><i class="fa-solid fa-users"></i><span>Users</span></a>
+        <a href="{{ url_for('main.admin_promo_campaigns') }}" {% if request.endpoint == 'main.admin_promo_campaigns' %}class="active" aria-current="page"{% endif %}><i class="fa-solid fa-bullhorn"></i><span>Campaigns</span></a>
+        <a href="{{ url_for('main.dashboard') }}"><i class="fa-solid fa-arrow-left"></i><span>App</span></a>
+        <button type="button" data-bs-toggle="offcanvas" data-bs-target="#adminMoreDrawer" aria-controls="adminMoreDrawer" aria-expanded="false" id="adminMoreButton"><i class="fa-solid fa-ellipsis"></i><span>More</span></button>
+    </nav>
+
+    <script>
+        (function () {
+            var drawer = document.getElementById('adminMoreDrawer');
+            var button = document.getElementById('adminMoreButton');
+            if (!drawer || !button) return;
+            drawer.addEventListener('shown.bs.offcanvas', function () {
+                button.setAttribute('aria-expanded', 'true');
+                button.classList.add('active');
+            });
+            drawer.addEventListener('hidden.bs.offcanvas', function () {
+                button.setAttribute('aria-expanded', 'false');
+                button.classList.remove('active');
+            });
+        })();
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         window.showAfrigenAlert = function(options) {

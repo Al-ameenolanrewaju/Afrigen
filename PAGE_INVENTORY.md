@@ -134,6 +134,29 @@ are required work, not assertions that those requirements are already met.
 until its route, behavior, links, access rules, and states have been reviewed. The
 orphan templates above are deliberately listed rather than silently discarded.
 
+## Mobile navigation coverage supplement (2026-11-14)
+
+The mobile navigation destination inventory is verified separately from the page
+redesign inventory. Counts deduplicate rendered URL paths, queries, and fragments:
+
+| Scope | Desktop destinations | Mobile destinations |
+|---|---:|---:|
+| Standard user app shell | 16 | 24 |
+| Admin account in the app shell | 17 | 34 |
+| Admin-specific shell | 12 | 16 |
+| Union of role-specific desktop layouts | 25 | — |
+| Union of role-specific mobile layouts | — | 38 |
+
+The user More sheet covers all existing desktop destinations plus additional existing
+routes not present in the desktop sidebar. The admin More sheet preserves admin
+sidebar links, dashboard anchors, and existing admin routes not listed in the sidebar.
+Nonexistent proposed destinations were omitted. One stale campaign active-state
+endpoint was corrected; menu endpoints render and role-gated admin links are tested.
+The navigation-specific implementation, test results, viewport checks, and
+limitations are recorded in [AFRIGEN_2_IMPLEMENTATION_STATUS.md](./AFRIGEN_2_IMPLEMENTATION_STATUS.md).
+These navigation counts do not change the page redesign coverage counts above and do
+not imply that every page or workflow has been redesigned or tested.
+
 ## Route catalog
 
 All six blueprints and four direct application routes were checked. Route patterns

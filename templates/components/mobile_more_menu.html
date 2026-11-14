@@ -1,0 +1,195 @@
+<div class="offcanvas offcanvas-bottom mobile-navigation-drawer" tabindex="-1" id="mobileDrawer" aria-labelledby="mobileDrawerTitle">
+    <div class="mobile-more-handle" aria-hidden="true"></div>
+    <div class="offcanvas-header">
+        <div>
+            <h2 class="offcanvas-title" id="mobileDrawerTitle">More</h2>
+            <p class="mobile-more-subtitle mb-0">Your Afrigen workspace</p>
+        </div>
+        <button type="button" class="mobile-more-close" data-bs-dismiss="offcanvas" aria-label="Close navigation">
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+    </div>
+    <div class="offcanvas-body mobile-more-body">
+        <div class="mobile-drawer-account">
+            <div class="mobile-account-identity">
+                <span class="mobile-account-avatar">{{ (current_user.username or current_user.email or 'A')[:1]|upper }}</span>
+                <span class="mobile-account-name">{{ current_user.username }}</span>
+            </div>
+            <div class="mobile-account-entitlements">
+                <span class="badge-plan-pill">{{ (current_user.plan or 'SPARK')|upper }}</span>
+                <span>{{ current_user.credits or 0 }} credits</span>
+            </div>
+        </div>
+
+        <label class="mobile-nav-search">
+            <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+            <input type="search" id="mobileNavSearch" placeholder="Find a destination" autocomplete="off" aria-label="Search navigation">
+        </label>
+
+        <nav class="mobile-more-groups" aria-label="Additional navigation">
+            <section class="mobile-more-group" data-nav-group>
+                <h3>Creative workspace</h3>
+                <a href="{{ url_for('main.create', mode='video') }}" data-nav-item {% if request.endpoint == 'main.create' and request.args.get('mode', 'video') == 'video' %}aria-current="page"{% endif %}>
+                    <i class="fa-solid fa-video" aria-hidden="true"></i><span>AI Video</span>{% if request.endpoint == 'main.create' and request.args.get('mode', 'video') == 'video' %}<i class="fa-solid fa-check mobile-nav-selected" aria-hidden="true"></i>{% endif %}
+                </a>
+                <a href="{{ url_for('main.create', mode='image') }}" data-nav-item {% if request.endpoint == 'main.create' and request.args.get('mode') == 'image' %}aria-current="page"{% endif %}>
+                    <i class="fa-solid fa-image" aria-hidden="true"></i><span>AI Image</span>{% if request.endpoint == 'main.create' and request.args.get('mode') == 'image' %}<i class="fa-solid fa-check mobile-nav-selected" aria-hidden="true"></i>{% endif %}
+                </a>
+                <a href="{{ url_for('main.create', mode='voice') }}" data-nav-item {% if request.endpoint == 'main.create' and request.args.get('mode') == 'voice' %}aria-current="page"{% endif %}>
+                    <i class="fa-solid fa-microphone-lines" aria-hidden="true"></i><span>AI Voiceover</span>{% if request.endpoint == 'main.create' and request.args.get('mode') == 'voice' %}<i class="fa-solid fa-check mobile-nav-selected" aria-hidden="true"></i>{% endif %}
+                </a>
+                <a href="{{ url_for('main.create', mode='writing') }}" data-nav-item {% if request.endpoint == 'main.create' and request.args.get('mode') == 'writing' %}aria-current="page"{% endif %}>
+                    <i class="fa-solid fa-feather-pointed" aria-hidden="true"></i><span>AI Writing</span>{% if request.endpoint == 'main.create' and request.args.get('mode') == 'writing' %}<i class="fa-solid fa-check mobile-nav-selected" aria-hidden="true"></i>{% endif %}
+                </a>
+                <a href="{{ url_for('main.saved_prompts') }}" data-nav-item {% if request.endpoint == 'main.saved_prompts' %}aria-current="page"{% endif %}>
+                    <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i><span>Prompt Lab &amp; saved prompts</span>{% if request.endpoint == 'main.saved_prompts' %}<i class="fa-solid fa-check mobile-nav-selected" aria-hidden="true"></i>{% endif %}
+                </a>
+                <a href="{{ url_for('main.assistant') }}" data-nav-item {% if request.endpoint == 'main.assistant' %}aria-current="page"{% endif %}>
+                    <i class="fa-solid fa-message" aria-hidden="true"></i><span>AI Assistant</span>{% if request.endpoint == 'main.assistant' %}<i class="fa-solid fa-check mobile-nav-selected" aria-hidden="true"></i>{% endif %}
+                </a>
+                <a href="{{ url_for('movie_studio.index') }}" data-nav-item {% if request.endpoint and 'movie_studio' in request.endpoint %}aria-current="page"{% endif %}>
+                    <i class="fa-solid fa-film" aria-hidden="true"></i><span>Movie Studio</span>{% if user_tier < 3 %}<span class="mobile-nav-tier">Director</span>{% endif %}{% if request.endpoint and 'movie_studio' in request.endpoint %}<i class="fa-solid fa-check mobile-nav-selected" aria-hidden="true"></i>{% endif %}
+                </a>
+            </section>
+
+            <section class="mobile-more-group" data-nav-group>
+                <h3>My work</h3>
+                <a href="{{ url_for('main.history') }}" data-nav-item {% if request.endpoint == 'main.history' %}aria-current="page"{% endif %}>
+                    <i class="fa-solid fa-photo-film" aria-hidden="true"></i><span>My Creations &amp; generation history</span>{% if request.endpoint == 'main.history' %}<i class="fa-solid fa-check mobile-nav-selected" aria-hidden="true"></i>{% endif %}
+                </a>
+                <a href="{{ url_for('movie_studio.index') }}" data-nav-item {% if request.endpoint and 'movie_studio' in request.endpoint %}aria-current="page"{% endif %}>
+                    <i class="fa-solid fa-folder-open" aria-hidden="true"></i><span>Projects</span>{% if request.endpoint and 'movie_studio' in request.endpoint %}<i class="fa-solid fa-check mobile-nav-selected" aria-hidden="true"></i>{% endif %}
+                </a>
+                <a href="{{ url_for('main.brands') }}" data-nav-item {% if request.endpoint == 'main.brands' %}aria-current="page"{% endif %}>
+                    <i class="fa-solid fa-palette" aria-hidden="true"></i><span>Brand Kit</span>{% if request.endpoint == 'main.brands' %}<i class="fa-solid fa-check mobile-nav-selected" aria-hidden="true"></i>{% endif %}
+                </a>
+                <a href="{{ url_for('main.saved_prompts') }}" data-nav-item {% if request.endpoint == 'main.saved_prompts' %}aria-current="page"{% endif %}>
+                    <i class="fa-solid fa-bookmark" aria-hidden="true"></i><span>Saved prompts</span>{% if request.endpoint == 'main.saved_prompts' %}<i class="fa-solid fa-check mobile-nav-selected" aria-hidden="true"></i>{% endif %}
+                </a>
+                <a href="{{ url_for('main.notifications') }}" data-nav-item {% if request.endpoint == 'main.notifications' %}aria-current="page"{% endif %}>
+                    <i class="fa-solid fa-bell" aria-hidden="true"></i><span>Notifications</span>{% if request.endpoint == 'main.notifications' %}<i class="fa-solid fa-check mobile-nav-selected" aria-hidden="true"></i>{% endif %}
+                </a>
+            </section>
+
+            <section class="mobile-more-group" data-nav-group>
+                <h3>Business &amp; growth</h3>
+                <a href="{{ url_for('main.campaigns') }}" data-nav-item {% if request.endpoint in ['main.campaigns', 'main.build_campaign', 'main.campaign_detail'] %}aria-current="page"{% endif %}>
+                    <i class="fa-solid fa-bullhorn" aria-hidden="true"></i><span>Marketing &amp; campaigns</span>{% if request.endpoint in ['main.campaigns', 'main.build_campaign', 'main.campaign_detail'] %}<i class="fa-solid fa-check mobile-nav-selected" aria-hidden="true"></i>{% endif %}
+                </a>
+                <a href="{{ url_for('main.automations') }}" data-nav-item {% if request.endpoint in ['main.automations', 'main.build_automation', 'main.automation_run_details'] %}aria-current="page"{% endif %}>
+                    <i class="fa-solid fa-bolt" aria-hidden="true"></i><span>Automation</span>{% if request.endpoint in ['main.automations', 'main.build_automation', 'main.automation_run_details'] %}<i class="fa-solid fa-check mobile-nav-selected" aria-hidden="true"></i>{% endif %}
+                </a>
+                <a href="{{ url_for('main.connected_accounts') }}" data-nav-item {% if request.endpoint == 'main.connected_accounts' %}aria-current="page"{% endif %}>
+                    <i class="fa-solid fa-link" aria-hidden="true"></i><span>Integrations</span>{% if request.endpoint == 'main.connected_accounts' %}<i class="fa-solid fa-check mobile-nav-selected" aria-hidden="true"></i>{% endif %}
+                </a>
+                <a href="{{ url_for('main.analytics') }}" data-nav-item {% if request.endpoint == 'main.analytics' %}aria-current="page"{% endif %}>
+                    <i class="fa-solid fa-chart-line" aria-hidden="true"></i><span>Analytics</span>{% if request.endpoint == 'main.analytics' %}<i class="fa-solid fa-check mobile-nav-selected" aria-hidden="true"></i>{% endif %}
+                </a>
+                <a href="{{ url_for('main.referral') }}" data-nav-item {% if request.endpoint == 'main.referral' %}aria-current="page"{% endif %}>
+                    <i class="fa-solid fa-user-group" aria-hidden="true"></i><span>Referrals</span>{% if request.endpoint == 'main.referral' %}<i class="fa-solid fa-check mobile-nav-selected" aria-hidden="true"></i>{% endif %}
+                </a>
+            </section>
+
+            <section class="mobile-more-group" data-nav-group>
+                <h3>Account</h3>
+                <a href="{{ url_for('main.profile') }}" data-nav-item {% if request.endpoint == 'main.profile' %}aria-current="page"{% endif %}>
+                    <i class="fa-solid fa-user" aria-hidden="true"></i><span>Profile</span>{% if request.endpoint == 'main.profile' %}<i class="fa-solid fa-check mobile-nav-selected" aria-hidden="true"></i>{% endif %}
+                </a>
+                <a href="{{ url_for('main.upgrade') }}" data-nav-item {% if request.endpoint == 'main.upgrade' %}aria-current="page"{% endif %}>
+                    <i class="fa-solid fa-credit-card" aria-hidden="true"></i><span>Subscription, billing &amp; credits</span>{% if request.endpoint == 'main.upgrade' %}<i class="fa-solid fa-check mobile-nav-selected" aria-hidden="true"></i>{% endif %}
+                </a>
+                <a href="{{ url_for('main.settings') }}#account" data-nav-item {% if request.endpoint == 'main.settings' %}aria-current="page"{% endif %}>
+                    <i class="fa-solid fa-shield-halved" aria-hidden="true"></i><span>Settings &amp; security</span>{% if request.endpoint == 'main.settings' %}<i class="fa-solid fa-check mobile-nav-selected" aria-hidden="true"></i>{% endif %}
+                </a>
+            </section>
+
+            <section class="mobile-more-group" data-nav-group>
+                <h3>Support</h3>
+                <a href="{{ url_for('main.docs') }}" data-nav-item {% if request.endpoint == 'main.docs' %}aria-current="page"{% endif %}>
+                    <i class="fa-solid fa-circle-question" aria-hidden="true"></i><span>Help centre &amp; FAQs</span>{% if request.endpoint == 'main.docs' %}<i class="fa-solid fa-check mobile-nav-selected" aria-hidden="true"></i>{% endif %}
+                </a>
+                <a href="{{ url_for('main.contact') }}" data-nav-item {% if request.endpoint == 'main.contact' %}aria-current="page"{% endif %}>
+                    <i class="fa-solid fa-headset" aria-hidden="true"></i><span>Contact support</span>{% if request.endpoint == 'main.contact' %}<i class="fa-solid fa-check mobile-nav-selected" aria-hidden="true"></i>{% endif %}
+                </a>
+                <a href="{{ url_for('main.feedback') }}" data-nav-item {% if request.endpoint == 'main.feedback' %}aria-current="page"{% endif %}>
+                    <i class="fa-solid fa-comment-dots" aria-hidden="true"></i><span>Give feedback</span>{% if request.endpoint == 'main.feedback' %}<i class="fa-solid fa-check mobile-nav-selected" aria-hidden="true"></i>{% endif %}
+                </a>
+            </section>
+
+            {% if is_admin_user(current_user) %}
+            <section class="mobile-more-group mobile-more-admin" data-nav-group>
+                <h3>Administration</h3>
+                <a href="{{ url_for('main.admin') }}" data-nav-item {% if request.endpoint == 'main.admin' %}aria-current="page"{% endif %}>
+                    <i class="fa-solid fa-shield" aria-hidden="true"></i><span>Admin dashboard</span>{% if request.endpoint == 'main.admin' %}<i class="fa-solid fa-check mobile-nav-selected" aria-hidden="true"></i>{% endif %}
+                </a>
+                <a href="{{ url_for('main.admin_credits') }}" data-nav-item {% if request.endpoint == 'main.admin_credits' %}aria-current="page"{% endif %}>
+                    <i class="fa-solid fa-coins" aria-hidden="true"></i><span>Manage credits</span>{% if request.endpoint == 'main.admin_credits' %}<i class="fa-solid fa-check mobile-nav-selected" aria-hidden="true"></i>{% endif %}
+                </a>
+                <a href="{{ url_for('main.admin_promo_campaigns') }}" data-nav-item {% if request.endpoint == 'main.admin_promo_campaigns' %}aria-current="page"{% endif %}><i class="fa-solid fa-bullhorn" aria-hidden="true"></i><span>Promo campaigns</span>{% if request.endpoint == 'main.admin_promo_campaigns' %}<i class="fa-solid fa-check mobile-nav-selected" aria-hidden="true"></i>{% endif %}</a>
+                <a href="{{ url_for('main.admin_newsletter_campaigns') }}" data-nav-item {% if request.endpoint == 'main.admin_newsletter_campaigns' %}aria-current="page"{% endif %}><i class="fa-solid fa-envelope" aria-hidden="true"></i><span>Newsletter campaigns</span>{% if request.endpoint == 'main.admin_newsletter_campaigns' %}<i class="fa-solid fa-check mobile-nav-selected" aria-hidden="true"></i>{% endif %}</a>
+                <a href="{{ url_for('main.admin_newsletter') }}" data-nav-item {% if request.endpoint == 'main.admin_newsletter' %}aria-current="page"{% endif %}><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i><span>Newsletter editor</span>{% if request.endpoint == 'main.admin_newsletter' %}<i class="fa-solid fa-check mobile-nav-selected" aria-hidden="true"></i>{% endif %}</a>
+                <a href="{{ url_for('main.admin_blog') }}" data-nav-item {% if request.endpoint and 'blog' in request.endpoint %}aria-current="page"{% endif %}><i class="fa-solid fa-newspaper" aria-hidden="true"></i><span>Blog CMS</span>{% if request.endpoint and 'blog' in request.endpoint %}<i class="fa-solid fa-check mobile-nav-selected" aria-hidden="true"></i>{% endif %}</a>
+                <a href="{{ url_for('main.admin_distribution') }}" data-nav-item {% if request.endpoint and 'distribution' in request.endpoint %}aria-current="page"{% endif %}><i class="fa-solid fa-satellite-dish" aria-hidden="true"></i><span>Social distribution</span>{% if request.endpoint and 'distribution' in request.endpoint %}<i class="fa-solid fa-check mobile-nav-selected" aria-hidden="true"></i>{% endif %}</a>
+                <a href="{{ url_for('main.admin_pricing') }}" data-nav-item {% if request.endpoint == 'main.admin_pricing' %}aria-current="page"{% endif %}><i class="fa-solid fa-tags" aria-hidden="true"></i><span>Pricing &amp; tiers</span>{% if request.endpoint == 'main.admin_pricing' %}<i class="fa-solid fa-check mobile-nav-selected" aria-hidden="true"></i>{% endif %}</a>
+                <a href="{{ url_for('main.admin_paystack_webhooks') }}" data-nav-item {% if request.endpoint == 'main.admin_paystack_webhooks' %}aria-current="page"{% endif %}><i class="fa-solid fa-money-bill-transfer" aria-hidden="true"></i><span>Payment webhooks</span>{% if request.endpoint == 'main.admin_paystack_webhooks' %}<i class="fa-solid fa-check mobile-nav-selected" aria-hidden="true"></i>{% endif %}</a>
+                <a href="{{ url_for('main.admin_provider_status') }}" data-nav-item {% if request.endpoint == 'main.admin_provider_status' %}aria-current="page"{% endif %}><i class="fa-solid fa-heart-pulse" aria-hidden="true"></i><span>AI Provider Status</span>{% if request.endpoint == 'main.admin_provider_status' %}<i class="fa-solid fa-check mobile-nav-selected" aria-hidden="true"></i>{% endif %}</a>
+            </section>
+            {% endif %}
+
+            <a class="mobile-drawer-signout" href="{{ url_for('auth.logout') }}"><i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i><span>Sign out</span></a>
+            <p class="mobile-nav-no-results" hidden>No matching destinations.</p>
+        </nav>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const panel = document.getElementById('mobileDrawer');
+    const search = document.getElementById('mobileNavSearch');
+    if (!panel || !search) return;
+
+    const moreButton = document.querySelector('.mobile-nav-more');
+    panel.addEventListener('shown.bs.offcanvas', function () {
+        if (moreButton) {
+            moreButton.setAttribute('aria-expanded', 'true');
+            moreButton.classList.add('active');
+        }
+    });
+    panel.addEventListener('hidden.bs.offcanvas', function () {
+        if (moreButton) {
+            moreButton.setAttribute('aria-expanded', 'false');
+            moreButton.classList.remove('active');
+        }
+    });
+
+    const items = Array.from(panel.querySelectorAll('[data-nav-item]'));
+    const groups = Array.from(panel.querySelectorAll('[data-nav-group]'));
+    const noResults = panel.querySelector('.mobile-nav-no-results');
+
+    search.addEventListener('input', function () {
+        const query = search.value.trim().toLocaleLowerCase();
+        let visibleCount = 0;
+        groups.forEach(function (group) {
+            let groupVisible = 0;
+            group.querySelectorAll('[data-nav-item]').forEach(function (item) {
+                const visible = !query || item.textContent.toLocaleLowerCase().includes(query);
+                item.hidden = !visible;
+                if (visible) groupVisible++;
+            });
+            group.hidden = groupVisible === 0;
+            visibleCount += groupVisible;
+        });
+        items.filter(function (item) { return !item.closest('[data-nav-group]'); }).forEach(function (item) {
+            const visible = !query || item.textContent.toLocaleLowerCase().includes(query);
+            item.hidden = !visible;
+            if (visible) visibleCount++;
+        });
+        noResults.hidden = visibleCount > 0;
+    });
+
+    panel.addEventListener('shown.bs.offcanvas', function () {
+        search.value = '';
+        search.dispatchEvent(new Event('input'));
+    });
+});
+</script>

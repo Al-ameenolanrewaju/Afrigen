@@ -5,7 +5,7 @@ Afrigen V2 is an AI-powered marketing and campaign generation platform designed 
 ## Features
 
 - **Campaign Engine**: Automatically sequence and generate entire marketing campaigns using AI.
-- **Provider Manager**: Robust integration with multiple AI providers (OpenAI, Anthropic, Fal AI, Gemini) with built-in fallbacks.
+- **AI Orchestration**: Server-side task routing, provider adapters, and fallbacks; infrastructure choices remain private to Afrigen.
 - **Workflow Executor**: Background processing of AI generation tasks with automated retry mechanisms.
 - **Asset Library**: Centralized storage for all generated text, images, video, and audio assets.
 
@@ -14,17 +14,17 @@ Afrigen V2 is an AI-powered marketing and campaign generation platform designed 
 - **Backend**: Python 3.13, Flask, SQLAlchemy (PostgreSQL).
 - **Frontend**: HTML5, Bootstrap 5, Vanilla JavaScript.
 - **Background Jobs**: Threading / APScheduler.
-- **AI Integrations**: ProviderManager routing, Fal AI (Video/Image).
+- **AI Integrations**: Backend-only generation services configured through private deployment settings.
 
 ## Environment Variables
 
-Ensure the following are set in your `.env`:
+Set application secrets in your private deployment environment. Never place
+provider credentials in templates, JavaScript, or other browser-delivered files.
+
+The application requires:
 - `SECRET_KEY`: Flask secret key.
 - `DATABASE_URL`: PostgreSQL connection string (Supabase).
-- `FAL_KEY_ID` / `FAL_KEY_SECRET`: Credentials for Fal AI (Image/Video).
-- `GROQ_API_KEY`: Credentials for Groq (Llama).
-- `ANTHROPIC_API_KEY`: Credentials for Claude (Prompt Refinement).
-- `OPENAI_API_KEY` (Optional)
+- AI service credentials as defined by the private operations configuration.
 
 ## Local Development
 

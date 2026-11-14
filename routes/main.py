@@ -1127,12 +1127,24 @@ def public_share(token):
 @main.route('/result/video')
 @login_required
 def video_result():
+    generation_id = request.args.get('generation_id', type=int)
+    generation = Generation.query.filter_by(
+        id=generation_id,
+        user_id=current_user.id,
+    ).first() if generation_id else None
     return render_template('main/result.html',
-        video_url=request.args.get('video_url', ''),
-        original=request.args.get('original', ''),
-        refined=request.args.get('refined', ''),
+        video_url=(
+            generation_media_url(generation.id, 'video')
+            if generation and generation.video_url else ''
+        ),
+        original=generation.original_prompt if generation else request.args.get('original', ''),
+        refined=generation.refined_prompt if generation else request.args.get('refined', ''),
         style=request.args.get('style', ''),
-        audio_url=request.args.get('audio_url')
+        audio_url=(
+            generation_media_url(generation.id, 'audio')
+            if generation and generation.audio_url else None
+        ),
+        share_url=share_url_for(generation.id) if generation and generation.video_url else '',
     )
 
 @main.route('/result/image')
@@ -1150,9 +1162,12 @@ def image_result():
     )
     return render_template('main/image_result.html',
         image_url=image_url,
-        original=request.args.get('original', ''),
-        refined=request.args.get('refined', ''),
-        share_url=request.args.get('share_url', '')
+        original=generation.original_prompt if generation else request.args.get('original', ''),
+        refined=generation.refined_prompt if generation else request.args.get('refined', ''),
+        share_url=(
+            share_url_for(generation.id)
+            if generation and generation.image_url else ''
+        ),
     )
 
 @main.route('/history')

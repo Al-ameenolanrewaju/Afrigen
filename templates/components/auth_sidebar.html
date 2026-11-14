@@ -155,7 +155,7 @@
                     <span>Help &amp; Guide</span>
                 </a>
             </li>
-            {% if current_user.email == 'oadedamola07@gmail.com' %}
+            {% if is_admin_user(current_user) %}
             <li class="sidebar-nav-item">
                 <a class="sidebar-nav-link" href="{{ url_for('main.admin') }}" style="color: var(--af-gold, #D6AD65);">
                     <i class="fa-solid fa-shield"></i>
@@ -192,32 +192,7 @@
     </div>
 </aside>
 
-<div class="offcanvas offcanvas-start mobile-navigation-drawer" tabindex="-1" id="mobileDrawer" aria-labelledby="mobileDrawerTitle">
-    <div class="offcanvas-header">
-        <h2 class="offcanvas-title" id="mobileDrawerTitle">Afrigen</h2>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close navigation"></button>
-    </div>
-    <div class="offcanvas-body">
-        <div class="mobile-drawer-account">
-            <span class="badge-plan-pill">{{ (current_user.plan or 'SPARK')|upper }}</span>
-            <span>{{ current_user.credits or 0 }} credits</span>
-        </div>
-        <nav class="mobile-drawer-links" aria-label="Additional navigation">
-            <a href="{{ url_for('main.saved_prompts') }}"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> Prompt Lab</a>
-            <a href="{{ url_for('main.assistant') }}"><i class="fa-solid fa-message" aria-hidden="true"></i> AI Assistant</a>
-            <a href="{{ url_for('main.brands') }}"><i class="fa-solid fa-palette" aria-hidden="true"></i> Brand Kit</a>
-            <a href="{{ url_for('main.campaigns') }}"><i class="fa-solid fa-bullhorn" aria-hidden="true"></i> Campaigns</a>
-            <a href="{{ url_for('main.automations') }}"><i class="fa-solid fa-bolt" aria-hidden="true"></i> Automations</a>
-            <a href="{{ url_for('main.upgrade') }}"><i class="fa-solid fa-credit-card" aria-hidden="true"></i> Subscription &amp; Credits</a>
-            <a href="{{ url_for('main.settings') }}"><i class="fa-solid fa-gear" aria-hidden="true"></i> Settings</a>
-            <a href="{{ url_for('main.docs') }}"><i class="fa-solid fa-circle-question" aria-hidden="true"></i> Help &amp; Guide</a>
-            {% if current_user.email == 'oadedamola07@gmail.com' %}
-            <a href="{{ url_for('main.admin') }}"><i class="fa-solid fa-shield" aria-hidden="true"></i> Admin Panel</a>
-            {% endif %}
-            <a class="mobile-drawer-signout" href="{{ url_for('auth.logout') }}"><i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i> Sign Out</a>
-        </nav>
-    </div>
-</div>
+{% include 'components/mobile_more_menu.html' %}
 
 <nav class="mobile-bottom-nav d-flex d-lg-none" aria-label="Mobile navigation">
     <a href="{{ url_for('main.dashboard') }}" class="mobile-nav-item {% if request.endpoint == 'main.dashboard' %}active{% endif %}" {% if request.endpoint == 'main.dashboard' %}aria-current="page"{% endif %}>
@@ -236,4 +211,19 @@
         <i class="fa-solid fa-film"></i>
         <span>Studio</span>
     </a>
+    {% set more_endpoints = [
+        'main.saved_prompts', 'main.assistant', 'main.brands', 'main.campaigns',
+        'main.build_campaign', 'main.campaign_detail', 'main.automations',
+        'main.build_automation', 'main.automation_run_details', 'main.connected_accounts',
+        'main.analytics', 'main.referral', 'main.notifications', 'main.profile',
+        'main.upgrade', 'main.settings', 'main.docs', 'main.contact',
+        'main.feedback', 'main.admin', 'main.admin_credits'
+    ] %}
+    <button class="mobile-nav-item mobile-nav-more {% if request.endpoint in more_endpoints %}active{% endif %}"
+            type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileDrawer"
+            aria-controls="mobileDrawer" aria-expanded="false"
+            {% if request.endpoint in more_endpoints %}aria-current="page"{% endif %}>
+        <i class="fa-solid fa-ellipsis"></i>
+        <span>More</span>
+    </button>
 </nav>

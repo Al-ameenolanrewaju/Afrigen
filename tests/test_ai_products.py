@@ -86,7 +86,7 @@ def test_provider_manager_sanitizes_adapter_output_and_returns_safe_errors():
 
 
 def test_provider_labels_errors_and_media_origins_are_customer_safe():
-    assert product_label_for_provider("Fal (Image)") == "Afrigen Media Engine"
+    assert product_label_for_provider("Fal (Image)") == "Afrigen Image Engine"
     assert product_label_for_provider("Kling Pro") == "Afrigen Video Engine"
     assert not _CUSTOMER_PROVIDER_NAMES.search(customer_error("video"))
     assert _is_allowed_url("https://v3.fal.media/files/generated.mp4")
@@ -149,3 +149,30 @@ def test_generation_media_proxy_enforces_generation_ownership():
     assert client.get(
         f"/media/generation/{generation_id}/video"
     ).status_code == 404
+
+
+def test_customer_settings_hides_ai_provider_configuration_and_admin_route_stays_protected():
+    with app.app_context():
+        user = User(
+            username="settings_owner",
+            email="settings-owner@example.test",
+            password="pw",
+        )
+        db.session.add(user)
+        db.session.commit()
+        user_id = user.id
+
+    client = app.test_client()
+    with client.session_transaction() as session:
+        session["_user_id"] = str(user_id)
+        session["_fresh"] = True
+
+    settings_response = client.get("/settings")
+    assert settings_response.status_code == 200
+    for provider_name in (
+        b"Groq", b"Gemini", b"Kling", b"Flux", b"OpenAI",
+        b"Anthropic", b"Claude", b"Replicate", b"fal.ai",
+    ):
+        assert provider_name not in settings_response.data
+
+    assert client.get("/admin/provider-status").status_code == 302

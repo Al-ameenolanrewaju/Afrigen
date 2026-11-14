@@ -110,8 +110,8 @@ const SITE_URL = "{{ request.host_url }}";
 // Load data from sessionStorage
 const resultData = JSON.parse(sessionStorage.getItem('resultData') || '{}');
 sessionStorage.removeItem('resultData');
-
-console.log('Raw sessionStorage:', sessionStorage.getItem('resultData'));
+const serverVideoUrl = {{ video_url|tojson }};
+const serverShareUrl = {{ share_url|tojson }};
 
 document.addEventListener('DOMContentLoaded', function() {
     if (resultData.original) {
@@ -130,8 +130,8 @@ document.addEventListener('DOMContentLoaded', function() {
         };
         document.getElementById('styleLabel').textContent = styleMap[resultData.style] || resultData.style;
     }
-    if (resultData.video_url) {
-        const url = resultData.video_url;
+    if (serverVideoUrl) {
+        const url = serverVideoUrl;
         document.getElementById('videoSection').style.display = 'block';
         document.getElementById('videoSrcMp4').src = url;
         document.getElementById('videoSrcWebm').src = url;
@@ -142,13 +142,13 @@ document.addEventListener('DOMContentLoaded', function() {
         // Each share carries an invite back to Afrigen — that's the growth loop.
         // Prefer the per-clip share page (it shows the clip + a sign-up CTA and
         // gets a rich thumbnail preview); fall back to the site root.
-        const shareTarget = resultData.share_url || SITE_URL;
+        const shareTarget = serverShareUrl || SITE_URL;
         const twText = `I made this with @AfrigenAI 🎬🌍 — one line of text became a video. Create yours with Afrigen 👇`;
         document.getElementById('shareTwitter').href = `https://twitter.com/intent/tweet?text=${encodeURIComponent(twText)}&url=${encodeURIComponent(shareTarget)}`;
         document.getElementById('shareFacebook').href = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareTarget)}`;
-        if (resultData.share_url) {
+        if (serverShareUrl) {
             const sp = document.getElementById('sharePage');
-            sp.href = resultData.share_url;
+            sp.href = serverShareUrl;
             sp.style.display = 'inline-block';
         }
         
@@ -156,8 +156,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const pubBtn = document.getElementById('publishSocialBtn');
         pubBtn.style.display = 'inline-block';
         pubBtn.addEventListener('click', () => {
-            const mediaUrl = resultData.video_url || resultData.image_url;
-            const mediaType = resultData.video_url ? 'video' : 'image';
+            const mediaUrl = serverVideoUrl;
+            const mediaType = 'video';
             const text = resultData.refined || resultData.original || '';
             openSocialPublishModal(text, mediaUrl, mediaType);
         });
@@ -165,7 +165,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function copyLink() {
-    const target = resultData.share_url || resultData.video_url || SITE_URL;
+    const target = serverShareUrl || serverVideoUrl || SITE_URL;
     const invite = `I made this AI video with Afrigen 🎬🌍\nWatch & create your own 👉 ${target}`;
     navigator.clipboard.writeText(invite);
     alert('Invite copied! Paste it anywhere 📋');

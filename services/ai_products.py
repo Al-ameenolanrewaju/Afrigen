@@ -47,6 +47,7 @@ IMAGE_MODEL_REGISTRY = {
 }
 
 _PROVIDER_LABELS = {
+    "providermanager": "Afrigen Intelligence",
     "groq": "Afrigen Intelligence",
     "gemini": "Afrigen Intelligence",
     "openai": "Afrigen Intelligence",
@@ -59,6 +60,8 @@ _PROVIDER_LABELS = {
     "kling": "Afrigen Video Engine",
     "flux": "Afrigen Image Engine",
     "hugging face": "Afrigen Image Engine",
+    "huggingface": "Afrigen Image Engine",
+    "audioservice": "Afrigen Voice Engine",
     "replicate": "Afrigen Media Engine",
     "fal": "Afrigen Media Engine",
     "elevenlabs": "Afrigen Voice Engine",
@@ -84,6 +87,10 @@ _PROVIDER_PATTERN = re.compile(
 def product_label_for_provider(provider_name, default="Afrigen Creative Engine"):
     """Return a customer-safe product label for an internal provider identifier."""
     normalized = (provider_name or "").strip().lower().replace("_", " ")
+    if "fal" in normalized and "image" in normalized:
+        return PRODUCT_LABELS["image"]
+    if "fal" in normalized and "video" in normalized:
+        return PRODUCT_LABELS["video"]
     for identifier, label in _PROVIDER_LABELS.items():
         if identifier in normalized:
             return label
@@ -139,7 +146,7 @@ def redact_secrets(value, additional_secrets=()):
     }
     secrets.update(
         secret for key, secret in os.environ.items()
-        if key.endswith(("_API_KEY", "_TOKEN", "_SECRET"))
+        if key.endswith(("_API_KEY", "_TOKEN", "_SECRET", "_KEY"))
         and isinstance(secret, str) and len(secret) >= 6
     )
     redacted = value

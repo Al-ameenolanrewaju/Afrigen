@@ -1,13 +1,13 @@
 # Afrigen V2 - Comprehensive Technical Audit & Upgrade Roadmap
 
 ## 1. Overview & Current Architecture
-Afrigen V2 is an AI marketing automation platform serving African and global creators. It generates marketing strategies, social media copy, image assets, and videos using multi-model AI routing (Groq, Claude, OpenAI, Fal AI, Hugging Face).
+Afrigen V2 is an AI marketing automation platform serving African and global creators. It generates marketing strategies, social media copy, image assets, and videos through Afrigen's server-side AI orchestration layer.
 
 ### Core Components
 - **Web Layer**: Flask application (`app.py`, `routes/`).
 - **Database & State**: PostgreSQL managed via SQLAlchemy and Flask-Migrate (Alembic).
 - **Background Tasks**: APScheduler in-app cron jobs + webhook worker threads.
-- **Media Engine**: Fal AI (Kling / AnimateDiff / LTX) + local FFmpeg rendering.
+- **Media Engine**: Afrigen Video and Image Engines with local FFmpeg rendering.
 
 ---
 
@@ -18,8 +18,8 @@ Afrigen V2 is an AI marketing automation platform serving African and global cre
 - Updated `video_gate`, `charge_video`, and `refund_video` in `services/credits.py` to allow free-tier users with active allowance to generate videos at 0 credits.
 - Added one-click **`+ Video`** action button and allowance badges to `/admin` and `/admin/credits`.
 
-### B. Voice Note Prompting (Groq Whisper)
-- Built `transcribe_voice_note(audio_file_path)` in `services/audio.py` powered by Groq's high-speed `whisper-large-v3` API.
+### B. Voice Note Prompting
+- Built `transcribe_voice_note(audio_file_path)` in `services/audio.py` behind the server-side transcription service.
 - The transcription path is available for integrations that need prompt capture from recorded audio without the Telegram bot layer.
 
 ### C. Automatic Free Video Watermarking (Viral Engine)
