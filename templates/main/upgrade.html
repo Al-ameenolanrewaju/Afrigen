@@ -1,232 +1,184 @@
 {% extends "base.html" %}
 
-{% block title %}Upgrade to Afrigen Pro{% endblock %}
+{% block title %}Subscription Plans &amp; Upgrades | Afrigen 2.0{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="row justify-content-center">
-        <div class="col-lg-10">
+<div class="page-container py-4">
+    <!-- Header -->
+    <div class="text-center mb-5">
+        <span class="badge-gold mb-2"><i class="fa-solid fa-crown text-warning me-1"></i> MEMBERSHIP TIERS</span>
+        <h1 class="display-5 fw-bold text-white mb-2">Upgrade Your Creative Production</h1>
+        <p class="lead text-secondary max-w-600 mx-auto">
+            Choose the plan that fits your scale. From individual creators to production studios directing complete AI feature films.
+        </p>
+    </div>
 
-            <!-- Header -->
-            <div class="text-center mb-4">
-                <h1 style="color: #F5A623; font-size: 1.6rem;"><i class="fa-solid fa-star"></i> Upgrade Your Afrigen Plan</h1>
-                <p style="color: #C9D1D9;">Unlock AI video generation, premium images, and powerful creator features.</p>
-            </div>
-
-            <!-- Free vs Paid Quick Comparison -->
-            <div class="card p-4 mb-4">
-                <h5 style="color: #F5A623;" class="mb-3">Free vs Paid</h5>
-                <div class="table-responsive">
-                    <table class="table" style="color: #F0F6FC;">
-                        <thead>
-                            <tr>
-                                <th style="color: #888;">Feature</th>
-                                <th class="text-center" style="color: #888;">Free / Spark</th>
-                                <th class="text-center" style="color: #F5A623;">Creator ⭐</th>
-                                <th class="text-center" style="color: #9B59B6;">Studio 🎬</th>
-                                <th class="text-center" style="color: #E67E22;">Director 👑</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>Video Generation</td>
-                                <td class="text-center" style="color: #888;">1/month</td>
-                                <td class="text-center" style="color: #27AE60;">Credit-based</td>
-                                <td class="text-center" style="color: #27AE60;">Credit-based</td>
-                                <td class="text-center" style="color: #27AE60;">Credit-based</td>
-                            </tr>
-                            <tr>
-                                <td>Image Generation</td>
-                                <td class="text-center" style="color: #888;">2/month</td>
-                                <td class="text-center" style="color: #27AE60;"><i class="fa-solid fa-circle-check"></i> Credit-based</td>
-                                <td class="text-center" style="color: #27AE60;"><i class="fa-solid fa-circle-check"></i></td>
-                                <td class="text-center" style="color: #27AE60;"><i class="fa-solid fa-circle-check"></i></td>
-                            </tr>
-                            <tr>
-                                <td>Image to Video</td>
-                                <td class="text-center" style="color: #E74C3C;"><i class="fa-solid fa-xmark"></i></td>
-                                <td class="text-center" style="color: #E74C3C;"><i class="fa-solid fa-xmark"></i></td>
-                                <td class="text-center" style="color: #27AE60;"><i class="fa-solid fa-circle-check"></i></td>
-                                <td class="text-center" style="color: #27AE60;"><i class="fa-solid fa-circle-check"></i></td>
-                            </tr>
-                            <tr>
-                                <td>Monthly Credits</td>
-                                <td class="text-center" style="color: #888;">—</td>
-                                <td class="text-center" style="color: #F5A623;">100</td>
-                                <td class="text-center" style="color: #9B59B6;">300</td>
-                                <td class="text-center" style="color: #E67E22;">1,000</td>
-                            </tr>
-                            <tr>
-                                <td>Telegram Bot</td>
-                                <td class="text-center" style="color: #27AE60;"><i class="fa-solid fa-circle-check"></i></td>
-                                <td class="text-center" style="color: #27AE60;"><i class="fa-solid fa-circle-check"></i></td>
-                                <td class="text-center" style="color: #27AE60;"><i class="fa-solid fa-circle-check"></i></td>
-                                <td class="text-center" style="color: #27AE60;"><i class="fa-solid fa-circle-check"></i></td>
-                            </tr>
-                            <tr>
-                                <td>Commercial License</td>
-                                <td class="text-center" style="color: #E74C3C;"><i class="fa-solid fa-xmark"></i></td>
-                                <td class="text-center" style="color: #E74C3C;"><i class="fa-solid fa-xmark"></i></td>
-                                <td class="text-center" style="color: #E74C3C;"><i class="fa-solid fa-xmark"></i></td>
-                                <td class="text-center" style="color: #27AE60;"><i class="fa-solid fa-circle-check"></i></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Plan Cards -->
-            <div class="row">
-                <!-- Creator Plan -->
-                <div class="col-md-4 mb-4">
-                    <div class="card p-4 text-center h-100" style="border-color: #F5A623;">
-                        <div style="position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: #F5A623; color: #0D1117; padding: 4px 16px; border-radius: 99px; font-size: 12px; font-weight: bold;">
-                            MOST POPULAR
-                        </div>
-                        <h4 style="color: #F5A623;" class="mt-2">Creator ⭐</h4>
-                        <h2 style="color: #F0F6FC;">₦10,000</h2>
-                        <p style="color: #888;">per month</p>
-                        <ul style="list-style: none; padding: 0; color: #C9D1D9; text-align: left;">
-                            <li class="mb-2">✅ 100 credits/month</li>
-                            <li class="mb-2">✅ AI video generation</li>
-                            <li class="mb-2">✅ Premium image generation</li>
-                            <li class="mb-2">✅ All video styles</li>
-                            <li class="mb-2">✅ Telegram bot access</li>
-                            <li class="mb-2">✅ Direct download</li>
-                            <li class="mb-2">✅ AI voiceover</li>
-                            <li class="mb-2">✅ Cancel anytime</li>
-                        </ul>
-                        <div class="mt-auto">
-                            {% if current_user.is_authenticated %}
-                            <form method="POST" action="{{ url_for('main.initialize_payment') }}">
-                                <button type="submit" class="btn btn-afrigen w-100 mt-2">Pay ₦10,000/mo 💳</button>
-                            </form>
-                            <form method="POST" action="{{ url_for('main.initialize_payment_annual') }}" class="mt-2">
-                                <button type="submit" class="btn btn-outline-warning w-100">Pay ₦100,000/yr (Save ₦20k)</button>
-                            </form>
-                            {% else %}
-                            <a href="{{ url_for('auth.register') }}" class="btn btn-afrigen w-100 mt-2">Sign up to get Creator</a>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Studio Plan -->
-                <div class="col-md-4 mb-4">
-                    <div class="card p-4 text-center h-100" style="border-color: #9B59B6;">
-                        <div style="position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: #9B59B6; color: #fff; padding: 4px 16px; border-radius: 99px; font-size: 12px; font-weight: bold;">
-                            FOR TEAMS
-                        </div>
-                        <h4 style="color: #9B59B6;" class="mt-2">Studio 🎬</h4>
-                        <h2 style="color: #F0F6FC;">₦15,000</h2>
-                        <p style="color: #888;">per month</p>
-                        <ul style="list-style: none; padding: 0; color: #C9D1D9; text-align: left;">
-                            <li class="mb-2">✅ 300 credits/month</li>
-                            <li class="mb-2">✅ Everything in Creator</li>
-                            <li class="mb-2">✅ Image-to-video generation</li>
-                            <li class="mb-2">✅ Priority generation queue</li>
-                            <li class="mb-2">✅ Extended video durations</li>
-                            <li class="mb-2">✅ Cancel anytime</li>
-                        </ul>
-                        <div class="mt-auto">
-                            {% if current_user.is_authenticated %}
-                            <form method="POST" action="{{ url_for('main.initialize_payment_studio') }}">
-                                <button type="submit" class="btn w-100 mt-2" style="background:#9B59B6;color:#fff;border:none;font-weight:600;">Pay ₦15,000/mo 💳</button>
-                            </form>
-                            <form method="POST" action="{{ url_for('main.initialize_payment_studio_annual') }}" class="mt-2">
-                                <button type="submit" class="btn w-100" style="border:1px solid #9B59B6;color:#9B59B6;background:transparent;font-weight:600;">Pay ₦150,000/yr (Save ₦30k)</button>
-                            </form>
-                            {% else %}
-                            <a href="{{ url_for('auth.register') }}" class="btn w-100 mt-2" style="background:#9B59B6;color:#fff;">Sign up to get Studio</a>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Director Plan -->
-                <div class="col-md-4 mb-4">
-                    <div class="card p-4 text-center h-100" style="border-color: #E67E22;">
-                        <div style="position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: #E67E22; color: #fff; padding: 4px 16px; border-radius: 99px; font-size: 12px; font-weight: bold;">
-                            ENTERPRISE
-                        </div>
-                        <h4 style="color: #E67E22;" class="mt-2">Director 👑</h4>
-                        <h2 style="color: #F0F6FC;">₦25,000</h2>
-                        <p style="color: #888;">per month</p>
-                        <ul style="list-style: none; padding: 0; color: #C9D1D9; text-align: left;">
-                            <li class="mb-2">✅ 1,000 credits/month</li>
-                            <li class="mb-2">✅ Everything in Studio</li>
-                            <li class="mb-2">✅ Commercial license</li>
-                            <li class="mb-2">✅ API access</li>
-                            <li class="mb-2">✅ Priority support</li>
-                            <li class="mb-2">✅ Cancel anytime</li>
-                        </ul>
-                        <div class="mt-auto">
-                            {% if current_user.is_authenticated %}
-                            <form method="POST" action="{{ url_for('main.initialize_payment_director') }}">
-                                <button type="submit" class="btn w-100 mt-2" style="background:#E67E22;color:#fff;border:none;font-weight:600;">Pay ₦25,000/mo 💳</button>
-                            </form>
-                            <form method="POST" action="{{ url_for('main.initialize_payment_director_annual') }}" class="mt-2">
-                                <button type="submit" class="btn w-100" style="border:1px solid #E67E22;color:#E67E22;background:transparent;font-weight:600;">Pay ₦250,000/yr (Save ₦50k)</button>
-                            </form>
-                            {% else %}
-                            <a href="{{ url_for('auth.register') }}" class="btn w-100 mt-2" style="background:#E67E22;color:#fff;">Sign up to get Director</a>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Trust -->
-            <div class="card p-3 mb-4 text-center">
-                <p style="color: #888; margin: 0; font-size: 14px;">
-                    🔒 Secure payment powered by Paystack &nbsp;|&nbsp;
-                    Supports cards, bank transfer and USSD &nbsp;|&nbsp;
-                    Cancel anytime
-                </p>
-            </div>
-
-            <!-- Back -->
-            <div class="text-center mt-2 mb-4">
-                {% if current_user.is_authenticated %}
-                <a href="{{ url_for('main.dashboard') }}" style="color: #888;">← Back to Dashboard</a>
-                {% else %}
-                <a href="{{ url_for('main.index') }}" style="color: #888;">← Back to Home</a>
-                {% endif %}
-            </div>
-
+    <!-- Free vs Paid Quick Comparison Table -->
+    <div class="card-surface mb-5 p-4">
+        <h4 class="h5 text-warning mb-3"><i class="fa-solid fa-list-check me-2"></i> Tier Capabilities Matrix</h4>
+        <div class="table-responsive">
+            <table class="table-custom">
+                <thead>
+                    <tr>
+                        <th>Capability</th>
+                        <th class="text-center">Spark (Free)</th>
+                        <th class="text-center text-success">Creator ⭐</th>
+                        <th class="text-center text-info">Studio 🎬</th>
+                        <th class="text-center text-warning">Director 👑</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="fw-bold text-white">Monthly AI Credits</td>
+                        <td class="text-center text-muted">—</td>
+                        <td class="text-center text-success fw-bold">100 Credits</td>
+                        <td class="text-center text-info fw-bold">300 Credits</td>
+                        <td class="text-center text-warning fw-bold">1,000 Credits</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold text-white">Kling AI Video (10s)</td>
+                        <td class="text-center text-muted">1 Token / Month</td>
+                        <td class="text-center text-success"><i class="fa-solid fa-circle-check"></i> Unlimited (Credits)</td>
+                        <td class="text-center text-info"><i class="fa-solid fa-circle-check"></i> Unlimited (Credits)</td>
+                        <td class="text-center text-warning"><i class="fa-solid fa-circle-check"></i> Unlimited (Credits)</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold text-white">Image-to-Video Animation</td>
+                        <td class="text-center text-muted"><i class="fa-solid fa-xmark"></i></td>
+                        <td class="text-center text-muted"><i class="fa-solid fa-xmark"></i></td>
+                        <td class="text-center text-info"><i class="fa-solid fa-circle-check"></i> Unlocked</td>
+                        <td class="text-center text-warning"><i class="fa-solid fa-circle-check"></i> Unlocked</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold text-white">AI Movie Studio (Filmmaking)</td>
+                        <td class="text-center text-muted"><i class="fa-solid fa-xmark"></i></td>
+                        <td class="text-center text-muted"><i class="fa-solid fa-xmark"></i></td>
+                        <td class="text-center text-muted"><i class="fa-solid fa-xmark"></i></td>
+                        <td class="text-center text-warning fw-bold"><i class="fa-solid fa-crown"></i> Full Access</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold text-white">Kling Pro Cinematic Engine</td>
+                        <td class="text-center text-muted"><i class="fa-solid fa-xmark"></i></td>
+                        <td class="text-center text-muted"><i class="fa-solid fa-xmark"></i></td>
+                        <td class="text-center text-muted"><i class="fa-solid fa-xmark"></i></td>
+                        <td class="text-center text-warning"><i class="fa-solid fa-circle-check"></i> ARRI 4K Quality</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold text-white">Nigerian Neural Voiceovers</td>
+                        <td class="text-center text-muted"><i class="fa-solid fa-xmark"></i></td>
+                        <td class="text-center text-success"><i class="fa-solid fa-circle-check"></i> Free TTS</td>
+                        <td class="text-center text-info"><i class="fa-solid fa-circle-check"></i> Free TTS</td>
+                        <td class="text-center text-warning"><i class="fa-solid fa-circle-check"></i> Multi-Track Audio</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold text-white">Commercial Rights License</td>
+                        <td class="text-center text-muted">Personal Use</td>
+                        <td class="text-center text-success"><i class="fa-solid fa-circle-check"></i> Full Commercial</td>
+                        <td class="text-center text-info"><i class="fa-solid fa-circle-check"></i> Full Commercial</td>
+                        <td class="text-center text-warning"><i class="fa-solid fa-circle-check"></i> Full Commercial</td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
+
+    <!-- Pricing Cards Grid -->
+    <div class="pricing-grid">
+        <!-- Creator Plan -->
+        <div class="pricing-card">
+            <div class="pricing-plan-name text-success">Creator ⭐</div>
+            <p class="text-secondary small">For solo creators &amp; influencers</p>
+            <div class="pricing-price">
+                <span>₦10,000</span>
+                <span class="pricing-period">/ month</span>
+            </div>
+            <ul class="pricing-features-list">
+                <li><i class="fa-solid fa-check text-success"></i> 100 monthly credits</li>
+                <li><i class="fa-solid fa-check text-success"></i> Kling AI 5s &amp; 10s video clips</li>
+                <li><i class="fa-solid fa-check text-success"></i> FLUX.1 8K image generation</li>
+                <li><i class="fa-solid fa-check text-success"></i> Free Nigerian AI voiceovers</li>
+                <li><i class="fa-solid fa-check text-success"></i> Full commercial license</li>
+                <li><i class="fa-solid fa-check text-success"></i> Telegram bot integration</li>
+            </ul>
+            <div class="mt-auto">
+                <form method="POST" action="{{ url_for('main.initialize_payment') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-surface w-100 mb-2">Pay ₦10,000 / Month</button>
+                </form>
+                <form method="POST" action="{{ url_for('main.initialize_payment_annual') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-ghost w-100 small" style="font-size: 11px;">Pay ₦100,000 / Year (Save ₦20k)</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Studio Plan -->
+        <div class="pricing-card">
+            <div class="pricing-plan-name text-info">Studio 🎬</div>
+            <p class="text-secondary small">For production teams &amp; agencies</p>
+            <div class="pricing-price">
+                <span>₦15,000</span>
+                <span class="pricing-period">/ month</span>
+            </div>
+            <ul class="pricing-features-list">
+                <li><i class="fa-solid fa-check text-info"></i> <strong>300 monthly credits</strong></li>
+                <li><i class="fa-solid fa-check text-info"></i> Everything in Creator tier</li>
+                <li><i class="fa-solid fa-check text-info"></i> <strong>Image-to-Video generation</strong></li>
+                <li><i class="fa-solid fa-check text-info"></i> Marketing campaign automation</li>
+                <li><i class="fa-solid fa-check text-info"></i> Brand Kit integration</li>
+                <li><i class="fa-solid fa-check text-info"></i> Priority GPU queue</li>
+            </ul>
+            <div class="mt-auto">
+                <form method="POST" action="{{ url_for('main.initialize_payment_studio') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-surface w-100 mb-2">Pay ₦15,000 / Month</button>
+                </form>
+                <form method="POST" action="{{ url_for('main.initialize_payment_studio_annual') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-ghost w-100 small" style="font-size: 11px;">Pay ₦150,000 / Year (Save ₦30k)</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Director Plan -->
+        <div class="pricing-card featured">
+            <div class="position-absolute top-0 end-0 m-3">
+                <span class="badge-director"><i class="fa-solid fa-crown me-1"></i> HOLLYWOOD GRADE</span>
+            </div>
+            <div class="pricing-plan-name text-warning">Director 👑</div>
+            <p class="text-secondary small">Full AI Film Production Suite</p>
+            <div class="pricing-price">
+                <span>₦25,000</span>
+                <span class="pricing-period">/ month</span>
+            </div>
+            <ul class="pricing-features-list">
+                <li><i class="fa-solid fa-check text-warning"></i> <strong>Full AI Movie Studio Access</strong></li>
+                <li><i class="fa-solid fa-check text-warning"></i> <strong>1,000 monthly credits</strong></li>
+                <li><i class="fa-solid fa-check text-warning"></i> Kling Pro cinematic shot generator</li>
+                <li><i class="fa-solid fa-check text-warning"></i> AI Screenplay Writer &amp; Character dossiers</li>
+                <li><i class="fa-solid fa-check text-warning"></i> Multi-shot FFmpeg master film rendering</li>
+                <li><i class="fa-solid fa-check text-warning"></i> Dedicated support &amp; priority GPU queue</li>
+            </ul>
+            <div class="mt-auto">
+                <form method="POST" action="{{ url_for('main.initialize_payment_director') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-gold w-100 mb-2">
+                        <i class="fa-solid fa-crown me-1"></i> Upgrade to Director (₦25k/mo)
+                    </button>
+                </form>
+                <form method="POST" action="{{ url_for('main.initialize_payment_director_annual') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-ghost w-100 small" style="font-size: 11px;">Pay ₦250,000 / Year (Save ₦50k)</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Security Guarantee -->
+    <div class="card-surface text-center p-3 mt-5">
+        <p class="small text-secondary mb-0">
+            🔒 <strong>Bank-Grade Security</strong> · Processed by Paystack · Accepts Debit/Credit Cards, Bank Transfers &amp; USSD · Cancel Anytime
+        </p>
+    </div>
 </div>
-
-<style>
-    .btn-afrigen {
-        background: #F5A623;
-        color: #0D1117;
-        border: none;
-        font-weight: 600;
-    }
-
-    .btn-afrigen:hover {
-        background: #e09515;
-        color: #0D1117;
-    }
-
-    .card {
-        background: #161B22;
-        border: 1px solid #30363D;
-        border-radius: 16px;
-        position: relative;
-    }
-
-    .table thead th {
-        border-bottom: 1px solid #30363D;
-        color: #888;
-    }
-
-    .table td {
-        border-bottom: 1px solid #21262D;
-        vertical-align: middle;
-    }
-</style>
-
 {% endblock %}

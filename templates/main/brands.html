@@ -1,16 +1,20 @@
 {% extends "base.html" %}
 
-{% block title %}Brand Workspace | Afrigen{% endblock %}
+{% block title %}Brand Kit Studio | Afrigen 2.0{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4" style="max-width: 1200px;">
-    <div class="d-flex justify-content-between align-items-center mb-5">
+<div class="page-container">
+    <!-- Header -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 pb-3 border-bottom" style="border-color: var(--af-border) !important;">
         <div>
-            <h2 style="color: #F0F6FC; font-weight: 700; letter-spacing: -0.5px;">Brand Workspace</h2>
-            <p style="color: #8B949E; margin: 0;">Manage identities and automatically enforce brand context on AI generations.</p>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="badge-gold"><i class="fa-solid fa-palette text-warning me-1"></i> BRAND IDENTITY</span>
+            </div>
+            <h1 class="page-title">Brand Kit Studio</h1>
+            <p class="page-subtitle">Save brand colors, tone of voice, and guidelines to automatically enforce consistency on all AI creations.</p>
         </div>
-        <button class="btn btn-warning px-4 py-2" data-bs-toggle="modal" data-bs-target="#createBrandModal" style="font-weight: 600; border-radius: 8px;">
-            <i class="fa-solid fa-plus me-2"></i> New Brand
+        <button class="btn btn-gold" data-bs-toggle="modal" data-bs-target="#createBrandModal">
+            <i class="fa-solid fa-plus me-1"></i> New Brand Profile
         </button>
     </div>
 
@@ -18,16 +22,12 @@
     <div class="row g-4" id="brands-grid"></div>
 
     <!-- Empty State -->
-    <div id="empty-brands" style="display: none; text-align: center; padding: 80px 20px;">
-        <div style="width: 100px; height: 100px; background: rgba(245,166,35,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px;">
-            <i class="fa-solid fa-crown fa-3x" style="color: #F5A623;"></i>
-        </div>
-        <h3 style="color: #F0F6FC; font-weight: 600; margin-bottom: 12px;">Create your first Brand</h3>
-        <p style="color: #8B949E; max-width: 500px; margin: 0 auto 32px;">
-            Define your brand's voice, colors, and rules once. Afrigen will automatically inject this context into all your future generations.
-        </p>
-        <button class="btn btn-warning px-5 py-3" data-bs-toggle="modal" data-bs-target="#createBrandModal" style="font-weight: 600; border-radius: 99px; font-size: 16px;">
-            Setup Brand Profile <i class="fa-solid fa-arrow-right ms-2"></i>
+    <div id="empty-brands" class="empty-state" style="display: none;">
+        <div class="empty-state-icon"><i class="fa-solid fa-crown"></i></div>
+        <h4 class="empty-state-title">Define Your First Brand Kit</h4>
+        <p class="empty-state-desc">Define your brand colors, voice, and rules once. Afrigen will seamlessly inject your brand context into all image, video, and marketing generations.</p>
+        <button class="btn btn-gold" data-bs-toggle="modal" data-bs-target="#createBrandModal">
+            <i class="fa-solid fa-plus me-1"></i> Setup Brand Profile
         </button>
     </div>
 </div>
@@ -35,41 +35,42 @@
 <!-- Create Brand Modal -->
 <div class="modal fade" id="createBrandModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content" style="background: #161B22; border: 1px solid #30363D;">
-            <div class="modal-header border-bottom-0">
-                <h5 class="modal-title" style="color: #F0F6FC;">Create Brand Profile</h5>
+        <div class="modal-content" style="background: var(--af-charcoal); border: 1px solid var(--af-border); color: var(--af-white);">
+            <div class="modal-header" style="border-bottom: 1px solid var(--af-border);">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-palette text-warning me-2"></i> Create Brand Identity</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body pb-5">
+            <div class="modal-body p-4">
                 <form id="brandForm">
                     <div class="row g-3">
                         <div class="col-md-6 form-group">
-                            <label style="color: #8B949E; font-size: 13px;">Brand Name *</label>
-                            <input type="text" id="b_name" class="form-control bg-dark text-white border-secondary" required>
+                            <label class="form-label">Brand Name *</label>
+                            <input type="text" id="b_name" class="form-control" placeholder="e.g., Kente Digital" required>
                         </div>
                         <div class="col-md-6 form-group">
-                            <label style="color: #8B949E; font-size: 13px;">Industry</label>
-                            <input type="text" id="b_industry" class="form-control bg-dark text-white border-secondary">
+                            <label class="form-label">Industry</label>
+                            <input type="text" id="b_industry" class="form-control" placeholder="e.g., Fashion &amp; Media">
                         </div>
                         <div class="col-md-12 form-group">
-                            <label style="color: #8B949E; font-size: 13px;">Voice & Tone (e.g. Professional, Playful, Elegant)</label>
-                            <input type="text" id="b_voice" class="form-control bg-dark text-white border-secondary">
+                            <label class="form-label">Tone &amp; Voice (e.g., Sophisticated, Playful, African Luxury)</label>
+                            <input type="text" id="b_voice" class="form-control" placeholder="e.g., Bold, Pan-African, High-Energy">
                         </div>
                         <div class="col-md-6 form-group">
-                            <label style="color: #8B949E; font-size: 13px;">Primary Colors (e.g. Gold & Black)</label>
-                            <input type="text" id="b_colors" class="form-control bg-dark text-white border-secondary">
+                            <label class="form-label">Primary Brand Colors</label>
+                            <input type="text" id="b_colors" class="form-control" placeholder="e.g., Gold (#E9AD32) &amp; Obsidian Black">
                         </div>
                         <div class="col-md-6 form-group">
-                            <label style="color: #8B949E; font-size: 13px;">Target Audience</label>
-                            <input type="text" id="b_audience" class="form-control bg-dark text-white border-secondary">
+                            <label class="form-label">Target Audience</label>
+                            <input type="text" id="b_audience" class="form-control" placeholder="e.g., Young African professionals &amp; creators">
                         </div>
                         <div class="col-md-12 form-group">
-                            <label style="color: #8B949E; font-size: 13px;">Custom AI Instructions</label>
-                            <textarea id="b_instructions" class="form-control bg-dark text-white border-secondary" rows="3" placeholder="e.g. Always use minimalist aesthetics. Never use cartoonish illustrations."></textarea>
+                            <label class="form-label">Custom AI Generation Directives</label>
+                            <textarea id="b_instructions" class="form-control" rows="3" placeholder="e.g., Always use 35mm candid African photography aesthetics. Avoid cartoonish styles."></textarea>
                         </div>
                     </div>
-                    <div class="d-flex justify-content-end mt-4">
-                        <button type="submit" class="btn btn-warning px-4">Create Brand</button>
+                    <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top" style="border-color: var(--af-border) !important;">
+                        <button type="button" class="btn btn-surface" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-gold">Save Brand Kit</button>
                     </div>
                 </form>
             </div>
@@ -98,20 +99,23 @@
                     const card = document.createElement('div');
                     card.className = 'col-md-6 col-lg-4';
                     card.innerHTML = `
-                        <div class="card h-100" style="background: #161B22; border: 1px solid ${isActive ? '#F5A623' : '#30363D'}; border-radius: 12px; transition: all 0.2s; cursor: pointer;">
-                            <div class="card-body p-4" onclick="window.location.href='/brand/${b.id}'">
-                                <div class="d-flex justify-content-between align-items-start mb-3">
-                                    <div style="width: 48px; height: 48px; background: rgba(255,255,255,0.05); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
-                                        <i class="fa-solid fa-building fs-4" style="color: #C9D1D9;"></i>
-                                    </div>
-                                    ${isActive ? '<span class="badge bg-warning text-dark">Active</span>' : ''}
+                        <div class="card-surface h-100 d-flex flex-column" style="border-color: ${isActive ? 'var(--af-gold)' : 'var(--af-border)'};">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div class="metric-icon-box" style="width: 44px; height: 44px; font-size: 1.25rem;">
+                                    <i class="fa-solid fa-building"></i>
                                 </div>
-                                <h5 style="color: #F0F6FC; font-weight: 600; margin-bottom: 4px;">${escapeHtml(b.name)}</h5>
-                                <p style="color: #8B949E; font-size: 14px; margin-bottom: 0;">${escapeHtml(b.industry || 'No industry set')}</p>
+                                ${isActive ? '<span class="badge-gold">Active Context</span>' : ''}
                             </div>
-                            <div class="card-footer p-3 border-top" style="border-color: #30363D !important; background: transparent; display: flex; justify-content: space-between;">
-                                <button class="btn btn-sm btn-outline-secondary text-white" onclick="event.stopPropagation(); window.BrandContext.setActiveBrand('${b.id}'); window.location.reload();">Set Active</button>
-                                <button class="btn btn-sm text-danger" onclick="event.stopPropagation(); Swal.fire({title: 'Delete brand?', icon: 'warning', showCancelButton: true, background: '#161B22', color: '#F0F6FC', confirmButtonColor: '#F5A623'}).then((r) => { if(r.isConfirmed){ window.BrandContext.deleteBrand('${b.id}').then(renderGrid).catch(console.error); } });"><i class="fa-solid fa-trash"></i></button>
+                            <h4 class="h5 text-white mb-1">${escapeHtml(b.name)}</h4>
+                            <p class="small text-secondary mb-3">${escapeHtml(b.industry || 'No industry set')}</p>
+                            
+                            <div class="mt-auto pt-3 border-top d-flex justify-content-between align-items-center" style="border-color: var(--af-border) !important;">
+                                <button class="btn btn-sm ${isActive ? 'btn-gold' : 'btn-surface'}" onclick="window.BrandContext.setActiveBrand('${b.id}'); window.location.reload();">
+                                    ${isActive ? '<i class="fa-solid fa-check me-1"></i> Selected' : 'Set Active'}
+                                </button>
+                                <button class="btn btn-sm btn-ghost text-danger p-1" onclick="deleteBrandConfirm('${b.id}')" title="Delete">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
                             </div>
                         </div>
                     `;
@@ -119,6 +123,22 @@
                 });
             }
         }
+        
+        window.deleteBrandConfirm = function(id) {
+            Swal.fire({
+                title: 'Delete brand kit?',
+                text: 'This will remove the saved identity and prompt directives.',
+                icon: 'warning',
+                showCancelButton: true,
+                background: '#141414',
+                color: '#F4F1EA',
+                confirmButtonColor: '#E9AD32'
+            }).then((r) => {
+                if (r.isConfirmed) {
+                    window.BrandContext.deleteBrand(id).then(renderGrid).catch(console.error);
+                }
+            });
+        };
         
         renderGrid();
         document.addEventListener('brand-context-loaded', renderGrid);
@@ -136,6 +156,7 @@
             window.BrandContext.saveBrand(brandData).then(() => {
                 document.querySelector('.btn-close').click();
                 renderGrid();
+                window.showAfrigenAlert({ text: "Brand profile saved successfully!", icon: "success" });
             }).catch(console.error);
         });
     });

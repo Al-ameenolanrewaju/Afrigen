@@ -43,6 +43,9 @@ import re
 import tempfile
 from datetime import date, datetime, timezone
 from functools import wraps
+import logging
+
+logger = logging.getLogger(__name__)
 from werkzeug.utils import secure_filename
 from zoneinfo import ZoneInfo
 
@@ -903,6 +906,70 @@ def generate_image():
         print("IMAGE GENERATION ERROR:", str(e))
         flash("Image generation failed. Please try again.", 'danger')
         return redirect(url_for('main.dashboard'))
+
+
+@main.route('/generate-voice', methods=['POST'])
+@login_required
+def generate_voice():
+    """Synthesize standalone Nigerian voiceover narration via Edge-TTS and Fal storage."""
+    prompt = (request.form.get('prompt') or (request.json.get('prompt') if request.is_json else '') or '').strip()
+    voice = request.form.get('voice') or (request.json.get('voice') if request.is_json else 'en-NG-AbeoNeural')
+
+    if not prompt:
+        if request.is_json:
+            return jsonify({"success": False, "error": "Please enter a voiceover script or prompt."}), 400
+        flash('Please enter a voiceover script or prompt!', 'danger')
+        return redirect(url_for('main.create'))
+
+    locked_user = db.session.get(User, current_user.id, with_for_update=True)
+    if not is_paid_plan(locked_user.plan) and (getattr(locked_user, 'free_video_allowance', 0) or 0) <= 0:
+        msg = "Voiceover synthesis is a Pro feature. Please upgrade to create voiceovers!"
+        if request.is_json:
+            return jsonify({"success": False, "error": msg}), 403
+        flash(msg, 'warning')
+        return redirect(url_for('main.upgrade'))
+
+    try:
+        from services.audio import generate_voiceover, generate_video_script
+        from services.credits import deduct_credits_atomic
+        
+        if len(prompt.split()) < 10:
+            script = generate_video_script(prompt) or prompt
+        else:
+            script = prompt
+
+        audio_url = generate_voiceover(script)
+        if not audio_url:
+            raise Exception("Voice synthesis engine returned no audio file.")
+
+        if is_paid_plan(locked_user.plan):
+            deduct_credits_atomic(locked_user.id, 1, reason="Standalone voiceover synthesis")
+
+        generation = Generation(
+            user_id=current_user.id,
+            original_prompt=prompt,
+            refined_prompt=script,
+            audio_url=audio_url,
+            generation_type="voice",
+            status="completed",
+            credit_cost=1
+        )
+        db.session.add(generation)
+        db.session.commit()
+
+        if request.is_json:
+            return jsonify({"success": True, "audio_url": audio_url, "script": script, "generation_id": generation.id})
+
+        flash("Voiceover synthesized successfully!", "success")
+        return redirect(url_for('main.history'))
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error("Voice generation error: %s", e)
+        if request.is_json:
+            return jsonify({"success": False, "error": str(e)}), 500
+        flash(f"Voiceover generation failed: {str(e)}", "danger")
+        return redirect(url_for('main.create'))
 
 
 @main.route('/generation/<int:generation_id>/retry', methods=['POST'])
@@ -3052,26 +3119,142 @@ def admin_newsletter_campaign_delete(id):
 
 # ---------- Notifications API ----------
 
+_NOTIFICATION_CATEGORY_TERMS = {
+    'security': ('login', 'password', 'security', 'suspicious', 'authentication'),
+    'movie_studio': ('movie studio', 'project', 'scene', 'render'),
+    'billing': ('payment', 'subscription', 'credit', 'upgrade', 'billing', 'invoice', 'expir'),
+    'generation': ('generation', 'video', 'image', 'voice', 'generated', 'failed'),
+}
+
+
+def _notification_text_expression(Notification):
+    from sqlalchemy import func
+
+    return func.lower(
+        func.coalesce(Notification.title, '') + ' ' +
+        func.coalesce(Notification.message, '') + ' ' +
+        func.coalesce(Notification.type, '')
+    )
+
+
+def _notification_category_matches(Notification, category):
+    from sqlalchemy import and_, not_, or_
+
+    text = _notification_text_expression(Notification)
+    matches = {
+        name: or_(*(text.like('%' + term + '%') for term in terms))
+        for name, terms in _NOTIFICATION_CATEGORY_TERMS.items()
+    }
+
+    if category == 'general':
+        return not_(or_(*matches.values()))
+    if category == 'security':
+        return matches[category]
+    if category == 'movie_studio':
+        return and_(matches[category], not_(matches['security']))
+    if category == 'billing':
+        return and_(
+            matches[category],
+            not_(or_(matches['security'], matches['movie_studio'])),
+        )
+    return and_(
+        matches['generation'],
+        not_(or_(matches['security'], matches['movie_studio'], matches['billing'])),
+    )
+
+
+def _notification_category(notification):
+    text = '{} {} {}'.format(
+        notification.title or '',
+        notification.message or '',
+        notification.type or '',
+    ).lower()
+    for category in ('security', 'movie_studio', 'billing', 'generation'):
+        if any(term in text for term in _NOTIFICATION_CATEGORY_TERMS[category]):
+            return category
+    return 'general'
+
+
+def _serialize_notification(notification):
+    return {
+        'id': notification.id,
+        'title': notification.title,
+        'message': notification.message,
+        'link': notification.link,
+        'type': notification.type,
+        'category': _notification_category(notification),
+        'is_read': notification.is_read,
+        'created_at': notification.created_at.isoformat() if notification.created_at else None,
+    }
+
+
+@main.route('/notifications')
+@login_required
+def notifications():
+    return render_template('main/notifications.html')
+
+
 @main.route('/api/notifications')
 @login_required
 def api_notifications():
-    try:
-        from models import Notification
-        notifs = Notification.query.filter_by(
-            user_id=current_user.id, is_read=False
-        ).order_by(Notification.created_at.desc()).limit(20).all()
-        return jsonify([{
-            'id': n.id,
-            'title': n.title,
-            'message': n.message,
-            'link': n.link,
-            'type': n.type,
-            'created_at': n.created_at.isoformat() if n.created_at else None,
-        } for n in notifs])
-    except Exception as e:
-        db.session.rollback()
-        logger.warning("Could not fetch notifications: %s", e)
-        return jsonify([])
+    from flask import make_response
+    from models import Notification
+
+    unread_count = Notification.query.filter_by(
+        user_id=current_user.id, is_read=False
+    ).count()
+    notifs = Notification.query.filter_by(
+        user_id=current_user.id, is_read=False
+    ).order_by(Notification.created_at.desc(), Notification.id.desc()).limit(20).all()
+    response = make_response(jsonify([_serialize_notification(n) for n in notifs]))
+    response.headers['X-Unread-Count'] = str(unread_count)
+    response.headers['Cache-Control'] = 'no-store'
+    return response
+
+
+@main.route('/api/notifications/history')
+@login_required
+def api_notification_history():
+    from models import Notification
+
+    status = request.args.get('status', 'all').lower()
+    category = request.args.get('category', 'all').lower()
+    if status not in ('all', 'unread', 'read'):
+        return jsonify({'error': 'Invalid notification status.'}), 400
+    if category not in ('all', 'general', 'generation', 'billing', 'security', 'movie_studio'):
+        return jsonify({'error': 'Invalid notification category.'}), 400
+
+    page = max(request.args.get('page', 1, type=int) or 1, 1)
+    per_page = min(max(request.args.get('per_page', 20, type=int) or 20, 1), 50)
+    query = Notification.query.filter_by(user_id=current_user.id)
+    if status == 'unread':
+        query = query.filter_by(is_read=False)
+    elif status == 'read':
+        query = query.filter_by(is_read=True)
+    if category != 'all':
+        query = query.filter(_notification_category_matches(Notification, category))
+
+    search = request.args.get('q', '').strip()[:100]
+    if search:
+        escaped_search = search.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
+        text = _notification_text_expression(Notification)
+        query = query.filter(text.like('%' + escaped_search.lower() + '%', escape='\\'))
+
+    total = query.count()
+    notifications_page = query.order_by(
+        Notification.created_at.desc(), Notification.id.desc()
+    ).offset((page - 1) * per_page).limit(per_page).all()
+    unread_count = Notification.query.filter_by(
+        user_id=current_user.id, is_read=False
+    ).count()
+    return jsonify({
+        'notifications': [_serialize_notification(n) for n in notifications_page],
+        'total': total,
+        'unread_count': unread_count,
+        'page': page,
+        'per_page': per_page,
+        'pages': (total + per_page - 1) // per_page,
+    })
 
 
 @main.route('/api/notifications/<int:notif_id>/read', methods=['POST'])
@@ -3082,6 +3265,18 @@ def api_notification_read(notif_id):
     notif.is_read = True
     db.session.commit()
     return jsonify({'ok': True})
+
+
+@main.route('/api/notifications/read-all', methods=['POST'])
+@login_required
+def api_notifications_read_all():
+    from models import Notification
+
+    updated = Notification.query.filter_by(
+        user_id=current_user.id, is_read=False
+    ).update({'is_read': True}, synchronize_session=False)
+    db.session.commit()
+    return jsonify({'ok': True, 'updated': updated})
 
 
 @main.route('/admin/notifications/broadcast', methods=['POST'])

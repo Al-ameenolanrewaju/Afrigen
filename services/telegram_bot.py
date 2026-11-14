@@ -513,11 +513,11 @@ class TelegramBotService:
             images_used = user.monthly_images_used or 0
             info += (
                 f"\n📊 <b>Free Tier Allowances:</b>\n"
-                f"🖼️ Monthly Images: <b>{images_used}/2 used</b>\n"
-                f"🎁 Free Video Tokens: <b>{free_videos}</b>\n\n"
-                "ℹ️ <i>Your 10 starter credits are reserved for future paid plan use. "
-                "As a Spark user, you get 2 FREE images &amp; 1 video token per month "
-                "(no credits needed).</i>\n\n"
+                f"🖼️ Monthly Free Images: <b>{images_used}/2 used</b>\n"
+                f"🎁 Free Video Tokens: <b>{free_videos}</b>\n"
+                f"🪙 Account Credits: <b>{user.credits or 0}</b>\n\n"
+                "ℹ️ <i>You receive 2 free photos every month. Once your free quota is used, "
+                "any remaining credits (2 credits/image) will automatically power your next generations.</i>\n\n"
                 "👉 <a href='https://afrigen.com.ng/upgrade'>Upgrade Plan</a> for unlimited Kling AI videos &amp; daily credits."
             )
         else:

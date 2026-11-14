@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 
 {% block title %}Create | Afrigen{% endblock %}
+{% block title %}Create Studio | Afrigen 2.0{% endblock %}
 
 {% block content %}
 <style>
@@ -8,17 +9,19 @@
     .workspace-container {
         display: flex;
         flex-direction: column;
-        height: calc(100vh - 72px); /* Adjust based on navbar height if any */
-        margin: -24px; /* Negate the padding from base if necessary, or just keep it */
+        height: calc(100vh - 72px);
+        /* Adjust based on navbar height if any */
+        margin: -24px;
+        /* Negate the padding from base if necessary, or just keep it */
         background: #0D1117;
     }
-    
+
     .workspace-panels {
         display: flex;
         flex-grow: 1;
         overflow: hidden;
     }
-    
+
     /* Left Panel - Type Selection */
     .panel-left {
         width: 260px;
@@ -28,6 +31,7 @@
         flex-direction: column;
         flex-shrink: 0;
     }
+
     .type-btn {
         display: flex;
         align-items: center;
@@ -42,21 +46,24 @@
         transition: all 0.2s;
         cursor: pointer;
     }
+
     .type-btn:hover {
-        background: rgba(255,255,255,0.02);
+        background: rgba(255, 255, 255, 0.02);
         color: #C9D1D9;
     }
+
     .type-btn.active {
-        background: rgba(245,166,35,0.1);
+        background: rgba(245, 166, 35, 0.1);
         color: #F5A623;
         border-left-color: #F5A623;
     }
+
     .type-icon {
         width: 24px;
         text-align: center;
         font-size: 1.1rem;
     }
-    
+
     /* Center Panel - Prompt Editor */
     .panel-center {
         flex-grow: 1;
@@ -65,6 +72,7 @@
         background: #0D1117;
         position: relative;
     }
+
     .prompt-area-wrapper {
         flex-grow: 1;
         display: flex;
@@ -74,6 +82,7 @@
         margin: 0 auto;
         width: 100%;
     }
+
     .prompt-textarea {
         flex-grow: 1;
         background: transparent;
@@ -85,9 +94,15 @@
         padding: 0;
         line-height: 1.6;
     }
-    .prompt-textarea:focus { outline: none; }
-    .prompt-textarea::placeholder { color: #484F58; }
-    
+
+    .prompt-textarea:focus {
+        outline: none;
+    }
+
+    .prompt-textarea::placeholder {
+        color: #484F58;
+    }
+
     .editor-toolbar {
         display: flex;
         justify-content: space-between;
@@ -96,7 +111,7 @@
         border-top: 1px solid #21262D;
         margin-top: 16px;
     }
-    
+
     /* Right Panel - Settings */
     .panel-right {
         width: 320px;
@@ -107,10 +122,12 @@
         flex-shrink: 0;
         overflow-y: auto;
     }
+
     .settings-group {
         padding: 24px;
         border-bottom: 1px solid #21262D;
     }
+
     .settings-title {
         color: #F0F6FC;
         font-size: 14px;
@@ -120,6 +137,7 @@
         align-items: center;
         gap: 8px;
     }
+
     .setting-label {
         color: #8B949E;
         font-size: 12px;
@@ -128,16 +146,20 @@
         margin-bottom: 8px;
         font-weight: 600;
     }
-    .form-select, .form-control {
+
+    .form-select,
+    .form-control {
         background-color: #0D1117;
         border-color: #30363D;
         color: #C9D1D9;
     }
-    .form-select:focus, .form-control:focus {
+
+    .form-select:focus,
+    .form-control:focus {
         border-color: #F5A623;
-        box-shadow: 0 0 0 0.2rem rgba(245,166,35,0.25);
+        box-shadow: 0 0 0 0.2rem rgba(245, 166, 35, 0.25);
     }
-    
+
     /* Bottom Bar */
     .workspace-footer {
         height: 72px;
@@ -149,9 +171,12 @@
         padding: 0 24px;
         flex-shrink: 0;
     }
-    
+
     /* Pill Radios */
-    .pill-radio { display: none; }
+    .pill-radio {
+        display: none;
+    }
+
     .pill-label {
         display: inline-block;
         padding: 6px 12px;
@@ -164,27 +189,41 @@
         text-align: center;
         flex: 1;
     }
-    .pill-label:hover { border-color: #8B949E; color: #C9D1D9; }
-    .pill-radio:checked + .pill-label {
+
+    .pill-label:hover {
+        border-color: #8B949E;
+        color: #C9D1D9;
+    }
+
+    .pill-radio:checked+.pill-label {
         background: #F5A623;
         border-color: #F5A623;
         color: #0D1117;
         font-weight: 600;
     }
+
     .pill-group {
         display: flex;
         flex-wrap: wrap;
         gap: 8px;
     }
+
     .ratio-pill-group .pill-label {
         min-width: 0;
         flex: 1 1 0;
     }
 
-    @media (max-width: 576px) {
+    <div class="page-container py-3">< !-- Studio Header --><div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 pb-3 border-bottom" style="border-color: var(--af-border) !important;"><div><div class="d-flex align-items-center gap-2 mb-1"><span class="badge-gold"><i class="fa-solid fa-wand-magic-sparkles text-warning me-1"></i>CREATIVE STUDIO</span><span class="text-muted small">·</span><span class="text-white small fw-bold"> {
+            {
+            current_user.credits or 0
+        }
+    }
+
+    Credits Available</span></div><h2 class="h3 fw-bold mb-0 text-white">Unified AI Creation Studio</h2></div>@media (max-width: 576px) {
         .ratio-pill-group {
             gap: 6px;
         }
+
         .ratio-pill-group .pill-label {
             padding-left: 8px;
             padding-right: 8px;
@@ -192,474 +231,906 @@
         }
     }
 
+    <div class="d-flex align-items-center gap-2"><a href="{{ url_for('movie_studio.index') }}" class="btn btn-surface btn-sm"><i class="fa-solid fa-film text-warning me-1"></i>Movie Studio (Filmmaking) &rarr;
+    </a><a href="{{ url_for('main.history') }}" class="btn btn-surface btn-sm"><i class="fa-solid fa-photo-film me-1"></i>My Creations </a></div></div>
+
     /* Progress Overlay */
     #generation-overlay {
-        display: none; position: fixed; inset: 0; background: rgba(13,17,23,0.9);
-        backdrop-filter: blur(4px); z-index: 9999; flex-direction: column;
-        align-items: center; justify-content: center;
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(13, 17, 23, 0.9);
+        backdrop-filter: blur(4px);
+        z-index: 9999;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
     }
 </style>
+<!-- Mode Selector Tabs -->
+<div class="d-flex gap-2 mb-4 overflow-auto pb-2">
+    <button class="btn btn-surface active-mode-btn" id="tab_video" onclick="switchMode('video')">
+        <i class="fa-solid fa-video text-warning me-1"></i> AI Video (Kling AI)
+    </button>
+    <button class="btn btn-surface" id="tab_image" onclick="switchMode('image')">
+        <i class="fa-solid fa-image text-warning me-1"></i> AI Photo (FLUX.1)
+    </button>
+    <button class="btn btn-surface" id="tab_voice" onclick="switchMode('voice')">
+        <i class="fa-solid fa-microphone-lines text-warning me-1"></i> AI Voiceover (Neural)
+    </button>
+    <button class="btn btn-surface" id="tab_animate" onclick="switchMode('animate')">
+        <i class="fa-solid fa-wand-magic-sparkles text-warning me-1"></i> Image to Video
+    </button>
+</div>
 
 <div class="workspace-container m-0">
     <div class="workspace-panels">
-        
-        <!-- Left Panel: Generation Types -->
-        <div class="panel-left">
-            <div class="p-4 border-bottom" style="border-color: #30363D !important;">
-                <h6 style="color: #F0F6FC; margin: 0; font-weight: 600; letter-spacing: 0.5px;">Create Workspace</h6>
-            </div>
-            
-            <div class="pt-2">
-                {% if current_user.plan == 'pro' %}
-                <button class="type-btn active" data-type="video">
-                    <span class="type-icon"><i class="fa-solid fa-clapperboard"></i></span>
-                    <div class="d-flex flex-column">
-                        <span>Video</span>
-                        <small style="color: #484F58; font-size: 11px;">Text to Video</small>
-                    </div>
-                </button>
-                {% endif %}
-                <button class="type-btn {{ '' if current_user.plan == 'pro' else 'active' }}" data-type="image">
-                    <span class="type-icon"><i class="fa-solid fa-image"></i></span>
-                    <div class="d-flex flex-column">
-                        <span>Image</span>
-                        <small style="color: #484F58; font-size: 11px;">Text to Image</small>
-                    </div>
-                </button>
-                {% if current_user.plan == 'pro' %}
-                <button class="type-btn" data-type="animate">
-                    <span class="type-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
-                    <div class="d-flex flex-column">
-                        <span>Animate</span>
-                        <small style="color: #484F58; font-size: 11px;">Image to Video</small>
-                    </div>
-                </button>
-                {% endif %}
-                <button class="type-btn" data-type="voice">
-                    <span class="type-icon"><i class="fa-solid fa-microphone"></i></span>
-                    <div class="d-flex flex-column">
-                        <span>Voice Over</span>
-                        <small style="color: #484F58; font-size: 11px;">Text to Speech</small>
-                    </div>
-                </button>
-            </div>
-        </div>
+        <!-- Studio Layout: Left Controls, Right Preview/History -->
+        <div class="creation-layout">
 
-        <!-- Center Panel: Editor -->
-        <div class="panel-center">
-            <div class="prompt-area-wrapper">
-                <h5 class="mb-4" style="color: #C9D1D9; font-weight: 400;">What would you like to create today?</h5>
-                
-                <textarea id="master_prompt" class="prompt-textarea" placeholder="Describe your idea in detail... Try to be as descriptive as possible."></textarea>
-                
-                <div class="editor-toolbar">
-                    <div class="d-flex align-items-center gap-3">
-                        <!-- Hook into existing /refine-prompt API visually -->
-                        <button type="button" class="btn btn-sm" style="background: rgba(245,166,35,0.1); color: #F5A623; border: 1px solid rgba(245,166,35,0.2);">
-                            <i class="fa-solid fa-wand-magic-sparkles"></i> Enhance Prompt
-                        </button>
-                    </div>
-                    
-                    <div style="color: #8B949E; font-size: 12px;">
-                        <span id="char_count">0</span> / 1000
-                    </div>
+            <!-- Left Panel: Generation Types -->
+            <div class="panel-left">
+                <div class="p-4 border-bottom" style="border-color: #30363D !important;">
+                    <h6 style="color: #F0F6FC; margin: 0; font-weight: 600; letter-spacing: 0.5px;">Create Workspace
+                    </h6>
                 </div>
-            </div>
-        </div>
 
-        <!-- Right Panel: Settings (Dynamic forms) -->
-        <div class="panel-right">
-            
-            {% if current_user.plan == 'pro' %}
-            <!-- Video Settings -->
-            <form id="form_video" class="settings-form" method="POST" action="{{ url_for('main.generate') }}">
-                <input type="hidden" name="prompt" class="sync-prompt">
-                <input type="hidden" name="genType" value="text">
-                
-                <div class="settings-group">
-                    <div class="settings-title"><i class="fa-solid fa-sliders"></i> Video Settings</div>
-                    
-                    <div class="mb-4">
-                        <div class="setting-label">Style Model</div>
-                        <select name="style" class="form-select mb-2">
-                            <option value="cinematic">Cinematic</option>
-                            <option value="anime">Anime</option>
-                            <option value="realistic">Realistic</option>
-                            <option value="african">African</option>
-                            <option value="social">Social Media</option>
-                        </select>
-                    </div>
-                    
-                    <div class="mb-4">
-                        <div class="setting-label">Resolution & Ratio</div>
-                        <div class="pill-group ratio-pill-group">
-                            <input type="radio" name="aspect_ratio" id="v_ratio_169" value="16:9" class="pill-radio" checked>
-                            <label for="v_ratio_169" class="pill-label">16:9</label>
-                            
-                            <input type="radio" name="aspect_ratio" id="v_ratio_916" value="9:16" class="pill-radio">
-                            <label for="v_ratio_916" class="pill-label">9:16</label>
-                            
-                            <input type="radio" name="aspect_ratio" id="v_ratio_11" value="1:1" class="pill-radio">
-                            <label for="v_ratio_11" class="pill-label">1:1</label>
-                        </div>
-                    </div>
-                    
-                    <div class="mb-4">
-                        <div class="setting-label">Duration</div>
-                        <select name="duration" class="form-select">
-                            <option value="5">5 Seconds</option>
-                            <option value="10">10 Seconds (+5 credits)</option>
-                            <option value="15">15 Seconds (+10 credits)</option>
-                            <option value="20">20 Seconds (+15 credits)</option>
-                        </select>
-                    </div>
-                    
+                <div class="pt-2">
                     {% if current_user.plan == 'pro' %}
-                    <div class="form-check mt-2" id="create_video_voiceover_option">
-                        <input class="form-check-input" type="checkbox" name="add_voiceover" id="v_add_voiceover" value="1">
-                        <label class="form-check-label" for="v_add_voiceover" style="color: #F5A623; font-size: 13px;">
-                            Include AI Voiceover
-                        </label>
-                    </div>
+                    <button class="type-btn active" data-type="video">
+                        <span class="type-icon"><i class="fa-solid fa-clapperboard"></i></span>
+                        <div class="d-flex flex-column">
+                            <span>Video</span>
+                            <small style="color: #484F58; font-size: 11px;">Text to Video</small>
+                        </div>
+                    </button>
                     {% endif %}
+                    <button class="type-btn {{ '' if current_user.plan == 'pro' else 'active' }}" data-type="image">
+                        <span class="type-icon"><i class="fa-solid fa-image"></i></span>
+                        <div class="d-flex flex-column">
+                            <span>Image</span>
+                            <small style="color: #484F58; font-size: 11px;">Text to Image</small>
+                        </div>
+                    </button>
+                    {% if current_user.plan == 'pro' %}
+                    <button class="type-btn" data-type="animate">
+                        <span class="type-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+                        <div class="d-flex flex-column">
+                            <span>Animate</span>
+                            <small style="color: #484F58; font-size: 11px;">Image to Video</small>
+                        </div>
+                    </button>
+                    {% endif %}
+                    <button class="type-btn" data-type="voice">
+                        <span class="type-icon"><i class="fa-solid fa-microphone"></i></span>
+                        <div class="d-flex flex-column">
+                            <span>Voice Over</span>
+                            <small style="color: #484F58; font-size: 11px;">Text to Speech</small>
+                        </div>
+                    </button>
                 </div>
-            </form>
-            {% endif %}
+            </div>
 
-            <!-- Image Settings -->
-            <form id="form_image" class="settings-form" style="display: {{ 'none' if current_user.plan == 'pro' else 'block' }};" method="POST" action="{{ url_for('main.generate_image') }}">
-                <input type="hidden" name="prompt" class="sync-prompt">
-                
-                <div class="settings-group">
-                    <div class="settings-title"><i class="fa-solid fa-sliders"></i> Image Settings</div>
-                    
-                    <div class="mb-4">
-                        <div class="setting-label">Art Style</div>
-                        <select name="style" class="form-select">
-                            <option value="realistic">Realistic</option>
-                            <option value="anime">Anime</option>
-                            <option value="cinematic">Cinematic</option>
-                            <option value="african">African Art</option>
-                        </select>
-                    </div>
-                    
-                    <div class="mb-4">
-                        <div class="setting-label">Aspect Ratio</div>
-                        <div class="pill-group ratio-pill-group">
-                            <input type="radio" name="aspect_ratio" id="i_ratio_169" value="16:9" class="pill-radio" checked>
-                            <label for="i_ratio_169" class="pill-label">16:9</label>
-                            
-                            <input type="radio" name="aspect_ratio" id="i_ratio_916" value="9:16" class="pill-radio">
-                            <label for="i_ratio_916" class="pill-label">9:16</label>
-                            
-                            <input type="radio" name="aspect_ratio" id="i_ratio_11" value="1:1" class="pill-radio">
-                            <label for="i_ratio_11" class="pill-label">1:1</label>
+            <!-- Center Panel: Editor -->
+            <div class="panel-center">
+                <div class="prompt-area-wrapper">
+                    <h5 class="mb-4" style="color: #C9D1D9; font-weight: 400;">What would you like to create today?</h5>
+                    <!-- Left Panel: Prompt & Configuration -->
+                    <div class="creation-panel">
+                        <!-- Prompt Textarea -->
+                        <div class="prompt-box-wrapper">
+                            <label class="form-label d-flex justify-content-between">
+                                <span>Describe your creative vision</span>
+                                <span class="text-muted small" id="char_count">0 / 1000</span>
+                            </label>
+                            <textarea id="master_prompt" class="prompt-textarea"
+                                placeholder="Describe the scene, subject, action, lighting, and environment in detail..."></textarea>
+
+                            <textarea id="master_prompt" class="prompt-textarea"
+                                placeholder="Describe your idea in detail... Try to be as descriptive as possible."></textarea>
+
+                            <div class="editor-toolbar">
+                                <div class="d-flex align-items-center gap-3">
+                                    <!-- Hook into existing /refine-prompt API visually -->
+                                    <button type="button" class="btn btn-sm"
+                                        style="background: rgba(245,166,35,0.1); color: #F5A623; border: 1px solid rgba(245,166,35,0.2);">
+                                        <i class="fa-solid fa-wand-magic-sparkles"></i> Enhance Prompt
+                                    </button>
+                                </div>
+
+                                <div style="color: #8B949E; font-size: 12px;">
+                                    <span id="char_count">0</span> / 1000
+                                </div>
+                                <div class="prompt-actions-bar">
+                                    <button type="button" class="refine-btn" onclick="enhancePrompt()">
+                                        <i class="fa-solid fa-wand-magic-sparkles"></i> Enhance Prompt with Groq AI
+                                    </button>
+                                    <span class="small text-muted" id="refine_indicator"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Panel: Settings (Dynamic forms) -->
+                        <div class="panel-right">
+
+                            {% if current_user.plan == 'pro' %}
+                            <!-- Video Settings -->
+                            <form id="form_video" class="settings-form" method="POST"
+                                action="{{ url_for('main.generate') }}">
+                                <!-- 1. Video Form -->
+                                <form id="form_video" method="POST" action="{{ url_for('main.generate') }}"
+                                    class="mode-form">
+                                    <input type="hidden" name="prompt" class="sync-prompt">
+                                    <input type="hidden" name="genType" value="text">
+
+                                    <div class="settings-group">
+                                        <div class="settings-title"><i class="fa-solid fa-sliders"></i> Video Settings
+                                        </div>
+
+                                        <div class="mb-4">
+                                            <div class="setting-label">Style Model</div>
+                                            <select name="style" class="form-select mb-2">
+                                                <option value="cinematic">Cinematic</option>
+                                                <option value="anime">Anime</option>
+                                                <option value="realistic">Realistic</option>
+                                                <option value="african">African</option>
+                                                <option value="social">Social Media</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="mb-4">
+                                            <div class="setting-label">Resolution & Ratio</div>
+                                            <div class="pill-group ratio-pill-group">
+                                                <input type="radio" name="aspect_ratio" id="v_ratio_169" value="16:9"
+                                                    class="pill-radio" checked>
+                                                <label for="v_ratio_169" class="pill-label">16:9</label>
+
+                                                <input type="radio" name="aspect_ratio" id="v_ratio_916" value="9:16"
+                                                    class="pill-radio">
+                                                <label for="v_ratio_916" class="pill-label">9:16</label>
+
+                                                <input type="radio" name="aspect_ratio" id="v_ratio_11" value="1:1"
+                                                    class="pill-radio">
+                                                <label for="v_ratio_11" class="pill-label">1:1</label>
+
+                                                <div class="param-section">
+                                                    <div class="param-title">Visual Style</div>
+                                                    <div class="style-chips-grid">
+                                                        <div class="style-chip selected"
+                                                            onclick="selectStyle(this, 'cinematic')">
+                                                            <span class="chip-name">🎬 Cinematic</span>
+                                                            <span class="chip-desc">Golden hour, 35mm film</span>
+                                                        </div>
+                                                        <div class="style-chip"
+                                                            onclick="selectStyle(this, 'realistic')">
+                                                            <span class="chip-name">🌍 Realistic</span>
+                                                            <span class="chip-desc">Authentic African daylight</span>
+                                                        </div>
+                                                        <div class="style-chip" onclick="selectStyle(this, 'african')">
+                                                            <span class="chip-name">👑 Cultural</span>
+                                                            <span class="chip-desc">Traditional Ankara &amp;
+                                                                attire</span>
+                                                        </div>
+                                                        <div class="style-chip" onclick="selectStyle(this, 'social')">
+                                                            <span class="chip-name">📱 Social Viral</span>
+                                                            <span class="chip-desc">Punchy TikTok aesthetic</span>
+                                                        </div>
+                                                        <div class="style-chip" onclick="selectStyle(this, 'anime')">
+                                                            <span class="chip-name">🎌 Anime</span>
+                                                            <span class="chip-desc">Studio Ghibli aesthetic</span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="mb-4">
+                                                        <div class="setting-label">Duration</div>
+                                                        <select name="duration" class="form-select">
+                                                            <option value="5">5 Seconds</option>
+                                                            <option value="10">10 Seconds (+5 credits)</option>
+                                                            <option value="15">15 Seconds (+10 credits)</option>
+                                                            <option value="20">20 Seconds (+15 credits)</option>
+                                                        </select>
+                                                    </div>
+
+                                                    {% if current_user.plan == 'pro' %}
+                                                    <div class="form-check mt-2" id="create_video_voiceover_option">
+                                                        <input class="form-check-input" type="checkbox"
+                                                            name="add_voiceover" id="v_add_voiceover" value="1">
+                                                        <label class="form-check-label" for="v_add_voiceover"
+                                                            style="color: #F5A623; font-size: 13px;">
+                                                            Include AI Voiceover
+                                                        </label>
+                                                    </div>
+                                                    {% endif %}
+                                                    <input type="hidden" name="style" id="video_style_input"
+                                                        value="cinematic">
+                                                </div>
+                                </form>
+                                {% endif %}
+
+                                <!-- Image Settings -->
+                                <form id="form_image" class="settings-form"
+                                    style="display: {{ 'none' if current_user.plan == 'pro' else 'block' }};"
+                                    method="POST" action="{{ url_for('main.generate_image') }}">
+                                    <input type="hidden" name="prompt" class="sync-prompt">
+
+                                    <div class="settings-group">
+                                        <div class="settings-title"><i class="fa-solid fa-sliders"></i> Image Settings
+                                        </div>
+
+                                        <div class="mb-4">
+                                            <div class="setting-label">Art Style</div>
+                                            <select name="style" class="form-select">
+                                                <option value="realistic">Realistic</option>
+                                                <option value="anime">Anime</option>
+                                                <option value="cinematic">Cinematic</option>
+                                                <option value="african">African Art</option>
+                                            </select>
+                                            <div class="row g-3 mb-3">
+                                                <div class="col-md-6">
+                                                    <div class="param-title">Aspect Ratio</div>
+                                                    <div class="ratio-selector">
+                                                        <div class="ratio-btn selected"
+                                                            onclick="selectRatio(this, '16:9')">16:9 Widescreen</div>
+                                                        <div class="ratio-btn" onclick="selectRatio(this, '9:16')">9:16
+                                                            Portrait</div>
+                                                    </div>
+                                                    <input type="hidden" name="aspect_ratio" id="video_ratio_input"
+                                                        value="16:9">
+                                                </div>
+
+                                                <div class="mb-4">
+                                                    <div class="setting-label">Aspect Ratio</div>
+                                                    <div class="pill-group ratio-pill-group">
+                                                        <input type="radio" name="aspect_ratio" id="i_ratio_169"
+                                                            value="16:9" class="pill-radio" checked>
+                                                        <label for="i_ratio_169" class="pill-label">16:9</label>
+
+                                                        <input type="radio" name="aspect_ratio" id="i_ratio_916"
+                                                            value="9:16" class="pill-radio">
+                                                        <label for="i_ratio_916" class="pill-label">9:16</label>
+
+                                                        <input type="radio" name="aspect_ratio" id="i_ratio_11"
+                                                            value="1:1" class="pill-radio">
+                                                        <label for="i_ratio_11" class="pill-label">1:1</label>
+                                                        <div class="col-md-6">
+                                                            <div class="param-title">Duration</div>
+                                                            <div class="duration-group">
+                                                                <div class="duration-pill selected"
+                                                                    onclick="selectDuration(this, '5')">5 Seconds</div>
+                                                                <div class="duration-pill"
+                                                                    onclick="selectDuration(this, '10')">10 Seconds
+                                                                </div>
+                                                            </div>
+                                                            <input type="hidden" name="duration"
+                                                                id="video_duration_input" value="5">
+                                                        </div>
+
+                                                        <div class="mb-4">
+                                                            <div class="setting-label">Seed (Optional)</div>
+                                                            <input type="number" name="seed"
+                                                                class="form-control form-control-sm"
+                                                                placeholder="Random">
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="form-check mb-4">
+                                                        <input class="form-check-input" type="checkbox"
+                                                            name="add_voiceover" id="v_add_voiceover" value="1">
+                                                        <label class="form-check-label text-white small"
+                                                            for="v_add_voiceover">
+                                                            <i class="fa-solid fa-microphone text-warning me-1"></i> Add
+                                                            Nigerian English Voiceover Narration (Neural TTS)
+                                                        </label>
+                                                    </div>
+                                </form>
+
+                                <!-- Animate Settings -->
+                                {% if current_user.plan == 'pro' %}
+                                <form id="form_animate" class="settings-form" style="display: none;" method="POST"
+                                    action="{{ url_for('main.generate_from_image') }}" enctype="multipart/form-data">
+                                    <!-- 2. Image Form -->
+                                    <form id="form_image" method="POST" action="{{ url_for('main.generate_image') }}"
+                                        class="mode-form d-none">
+                                        <input type="hidden" name="prompt" class="sync-prompt">
+
+                                        <div class="settings-group">
+                                            <div class="settings-title"><i class="fa-solid fa-sliders"></i> Animation
+                                                Settings</div>
+
+                                            {% if current_user.plan == 'pro' %}
+                                            <div class="mb-4">
+                                                <div class="setting-label">Base Image</div>
+                                                <div class="p-3 text-center mb-2"
+                                                    style="border: 1px dashed #30363D; border-radius: 8px; background: rgba(13,17,23,0.5);">
+                                                    <i class="fa-solid fa-upload fs-4 mb-2" style="color: #484F58;"></i>
+                                                    <p style="color: #8B949E; font-size: 12px; margin: 0;">Click or drag
+                                                        image here</p>
+                                                    <input type="file" name="image" id="create_animate_image_input"
+                                                        class="form-control mt-2"
+                                                        style="font-size: 12px; background: transparent;"
+                                                        accept="image/*" required>
+                                                    <div id="create_animate_image_preview" class="mt-3"
+                                                        style="display: none;">
+                                                        <img id="create_animate_image_preview_img" class="img-fluid"
+                                                            alt="Selected image preview"
+                                                            style="max-height: 220px; width: 100%; object-fit: contain; border-radius: 8px; border: 1px solid #30363D;">
+                                                        <button type="button" id="create_remove_animate_image"
+                                                            class="btn btn-sm btn-outline-warning mt-2">
+                                                            <i class="fa-solid fa-xmark"></i> Remove image
+                                                        </button>
+                                                    </div>
+
+                                                    <div class="param-section">
+                                                        <div class="param-title">Photography Style</div>
+                                                        <div class="style-chips-grid">
+                                                            <div class="style-chip selected"
+                                                                onclick="selectImageStyle(this, 'realistic')">
+                                                                <span class="chip-name">🌍 Realistic</span>
+                                                                <span class="chip-desc">Natural daylight
+                                                                    photography</span>
+                                                            </div>
+                                                        </div>
+
+                                                        <div class="mb-4">
+                                                            <div class="setting-label">Motion Intensity</div>
+                                                            <input type="range" class="form-range" min="1" max="100"
+                                                                value="50">
+                                                            <div class="d-flex justify-content-between">
+                                                                <small
+                                                                    style="color: #484F58; font-size: 10px;">Subtle</small>
+                                                                <small
+                                                                    style="color: #484F58; font-size: 10px;">Dynamic</small>
+                                                                <div class="style-chip"
+                                                                    onclick="selectImageStyle(this, 'cinematic')">
+                                                                    <span class="chip-name">🎬 Cinematic</span>
+                                                                    <span class="chip-desc">Dramatic volumetric
+                                                                        light</span>
+                                                                </div>
+                                                                <div class="style-chip"
+                                                                    onclick="selectImageStyle(this, 'social')">
+                                                                    <span class="chip-name">📱 Social Media</span>
+                                                                    <span class="chip-desc">Clean text &amp; vibrant
+                                                                        contrast</span>
+                                                                </div>
+                                                                <div class="style-chip"
+                                                                    onclick="selectImageStyle(this, 'african')">
+                                                                    <span class="chip-name">👑 African Art</span>
+                                                                    <span class="chip-desc">Rich Ankara &amp; cultural
+                                                                        majesty</span>
+                                                                </div>
+                                                            </div>
+
+                                                            <div class="mb-4">
+                                                                <div class="setting-label">Duration</div>
+                                                                <select name="duration" class="form-select">
+                                                                    <option value="5">5 Seconds</option>
+                                                                    <option value="10">10 Seconds</option>
+                                                                </select>
+                                                                <input type="hidden" name="style" id="image_style_input"
+                                                                    value="realistic">
+                                                            </div>
+
+                                                            <div class="mb-4">
+                                                                <div class="param-title">Framing &amp; Aspect Ratio
+                                                                </div>
+                                                                <div class="ratio-selector">
+                                                                    <div class="ratio-btn selected"
+                                                                        onclick="selectImageRatio(this, '1:1')">1:1
+                                                                        Square</div>
+                                                                    <div class="ratio-btn"
+                                                                        onclick="selectImageRatio(this, '16:9')">16:9
+                                                                        Landscape</div>
+                                                                    <div class="ratio-btn"
+                                                                        onclick="selectImageRatio(this, '9:16')">9:16
+                                                                        Story</div>
+                                                                </div>
+                                                                {% else %}
+                                                                <div class="alert alert-warning"
+                                                                    style="background: rgba(245,166,35,0.1); border-color: #F5A623; color: #F5A623;">
+                                                                    <i class="fa-solid fa-lock"></i> Image-to-Video is a
+                                                                    Pro feature. <a href="{{ url_for('main.upgrade') }}"
+                                                                        style="color: #F5A623; text-decoration: underline;">Upgrade</a>
+                                                                </div>
+                                                                {% endif %}
+                                                                <input type="hidden" name="aspect_ratio"
+                                                                    id="image_ratio_input" value="1:1">
+                                                            </div>
+                                    </form>
+                                    {% endif %}
+
+                                    <!-- Voice Over Settings -->
+                                    <form id="form_voice" class="settings-form" style="display: none;"
+                                        onsubmit="handleVoiceOverSubmit(event)">
+                                        <!-- 3. Voiceover Form -->
+                                        <form id="form_voice" method="POST"
+                                            action="{{ url_for('main.generate_voice') }}" class="mode-form d-none">
+                                            <input type="hidden" name="prompt" class="sync-prompt">
+
+                                            <div class="mb-3">
+                                                <label class="form-label">Nigerian Neural Voice</label>
+                                                <select name="voice" class="form-select">
+                                                    <option value="en-NG-AbeoNeural" selected>Abeo (Nigerian Male — Warm
+                                                        &amp; Confident)</option>
+                                                    <option value="en-NG-EzinneNeural">Ezinne (Nigerian Female — Clear
+                                                        &amp; Engaging)</option>
+                                                </select>
+                                            </div>
+                                        </form>
+
+                                        <!-- 4. Image-to-Video Animate Form -->
+                                        <form id="form_animate" method="POST"
+                                            action="{{ url_for('main.generate_from_image') }}"
+                                            enctype="multipart/form-data" class="mode-form d-none">
+                                            <input type="hidden" name="prompt" class="sync-prompt">
+
+                                            <div class="settings-group">
+                                                <div class="settings-title"><i class="fa-solid fa-sliders"></i> Voice
+                                                    Settings</div>
+
+                                                <div class="mb-4">
+                                                    <div class="setting-label">Voice Model</div>
+                                                    <select name="voice" class="form-select">
+                                                        <option value="ayo">Ayo (Nigerian Male)</option>
+                                                        <option value="chisom">Chisom (Nigerian Female)</option>
+                                                        <option value="kwame">Kwame (Ghanaian Male)</option>
+                                                        <option value="thabo">Thabo (South African Male)</option>
+                                                    </select>
+                                                </div>
+
+                                                <div class="mb-4">
+                                                    <div class="setting-label">Language / Accent</div>
+                                                    <select name="language" class="form-select">
+                                                        <option value="en-ng">English (Nigerian)</option>
+                                                        <option value="en-za">English (South African)</option>
+                                                        <option value="en-gh">English (Ghanaian)</option>
+                                                        <option value="sw">Swahili</option>
+                                                    </select>
+                                                </div>
+
+                                                <div class="mb-4">
+                                                    <div class="setting-label">Speed</div>
+                                                    <input type="range" class="form-range" min="0.5" max="2.0"
+                                                        step="0.1" value="1.0">
+                                                    <div class="d-flex justify-content-between">
+                                                        <small style="color: #484F58; font-size: 10px;">0.5x</small>
+                                                        <small style="color: #484F58; font-size: 10px;">1.0x</small>
+                                                        <small style="color: #484F58; font-size: 10px;">2.0x</small>
+                                                    </div>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label">Upload Source Image</label>
+                                                    <input type="file" name="image" class="form-control"
+                                                        accept="image/*" required>
+                                                    <small class="text-muted">Upload a photo to bring it to life with
+                                                        Kling AI motion.</small>
+                                                </div>
+
+                                                <div class="mb-4">
+                                                    <label class="form-label">Duration</label>
+                                                    <select name="duration" class="form-select">
+                                                        <option value="5">5 Seconds</option>
+                                                        <option value="10">10 Seconds</option>
+                                                    </select>
+                                                </div>
+                                        </form>
+
+                                        <!-- Action / Cost Bar -->
+                                        <div class="submit-action-bar">
+                                            <div class="cost-estimate">
+                                                <span>Estimated Cost:</span>
+                                                <strong id="costBadge">5 Credits</strong>
+                                            </div>
+
+                                            <button type="button" id="btnSubmitGeneration"
+                                                class="btn btn-gold btn-lg px-4" onclick="submitActiveGeneration()">
+                                                <span id="btnSubmitText">Generate Video</span>
+                                                <i class="fa-solid fa-arrow-right ms-1"></i>
+                                            </button>
+                                        </div>
                         </div>
                     </div>
-                    
-                    <div class="mb-4">
-                        <div class="setting-label">Seed (Optional)</div>
-                        <input type="number" name="seed" class="form-control form-control-sm" placeholder="Random">
-                    </div>
-                </div>
-            </form>
 
-            <!-- Animate Settings -->
-            {% if current_user.plan == 'pro' %}
-            <form id="form_animate" class="settings-form" style="display: none;" method="POST" action="{{ url_for('main.generate_from_image') }}" enctype="multipart/form-data">
-                <input type="hidden" name="prompt" class="sync-prompt">
-                
-                <div class="settings-group">
-                    <div class="settings-title"><i class="fa-solid fa-sliders"></i> Animation Settings</div>
-                    
-                    {% if current_user.plan == 'pro' %}
-                    <div class="mb-4">
-                        <div class="setting-label">Base Image</div>
-                        <div class="p-3 text-center mb-2" style="border: 1px dashed #30363D; border-radius: 8px; background: rgba(13,17,23,0.5);">
-                            <i class="fa-solid fa-upload fs-4 mb-2" style="color: #484F58;"></i>
-                            <p style="color: #8B949E; font-size: 12px; margin: 0;">Click or drag image here</p>
-                            <input type="file" name="image" id="create_animate_image_input" class="form-control mt-2" style="font-size: 12px; background: transparent;" accept="image/*" required>
-                            <div id="create_animate_image_preview" class="mt-3" style="display: none;">
-                                <img id="create_animate_image_preview_img" class="img-fluid" alt="Selected image preview"
-                                    style="max-height: 220px; width: 100%; object-fit: contain; border-radius: 8px; border: 1px solid #30363D;">
-                                <button type="button" id="create_remove_animate_image" class="btn btn-sm btn-outline-warning mt-2">
-                                    <i class="fa-solid fa-xmark"></i> Remove image
-                                </button>
+                    <!-- Bottom Footer (Action Bar) -->
+                    <div class="workspace-footer">
+                        <div class="d-flex align-items-center gap-3">
+                            <span style="color: #8B949E; font-size: 14px;">
+                                <i class="fa-solid fa-coins" style="color: #F5A623;"></i>
+                                {% if current_user.plan == 'free' %}
+                                Free image allowance: <strong style="color: #F0F6FC;">{{ [2 -
+                                    (current_user.monthly_images_used or 0), 0]|max }}</strong>
+                                {% else %}
+                                Available: <strong style="color: #F0F6FC;">{{ current_user.credits }} Credits</strong>
+                                {% endif %}
+                            </span>
+
+                            <!-- Right Panel: Live Output & Player -->
+                            <div class="output-preview-pane">
+                                <h4 class="h6 text-white mb-3"><i class="fa-solid fa-display me-2 text-warning"></i>
+                                    Preview &amp; Output</h4>
+
+                                <div class="preview-media-box" id="previewMediaBox">
+                                    <div class="d-flex flex-column align-items-center justify-content-center text-muted p-4 text-center"
+                                        id="emptyPreviewNotice">
+                                        <i class="fa-solid fa-clapperboard fs-1 text-warning mb-2"
+                                            style="opacity: 0.5;"></i>
+                                        <p class="small text-secondary mb-0">Your finished video, image, or voice track
+                                            will appear here once generated.</p>
+                                    </div>
+                                    <div class="generation-loader d-none" id="activeLoader">
+                                        <div class="spinner-gold"></div>
+                                        <h5 class="text-white mb-1" id="loaderTitle">Rendering with AI...</h5>
+                                        <p class="small text-secondary mb-0" id="loaderSubtitle">Connecting to Kling AI
+                                            engine</p>
+                                    </div>
+                                </div>
+
+                                <!-- Voiceover Audio Result Player -->
+                                <div id="voiceAudioPlayerWrap" class="d-none p-3 rounded mb-3"
+                                    style="background: var(--af-surface); border: 1px solid var(--af-border);">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <span class="small fw-bold text-white"><i
+                                                class="fa-solid fa-waveform text-warning me-1"></i> Generated
+                                            Voiceover</span>
+                                        <a id="voiceDownloadLink" href="#" target="_blank"
+                                            class="btn btn-sm btn-outline-gold py-0 px-2"
+                                            style="font-size: 11px;">Download MP3</a>
+                                    </div>
+                                    <audio id="voiceAudioPlayer" controls class="w-100"></audio>
+                                </div>
+
+                                <div class="p-3 rounded mt-auto"
+                                    style="background: var(--af-surface); border: 1px solid var(--af-border);">
+                                    <h6 class="text-white small fw-bold mb-1"><i
+                                            class="fa-solid fa-lightbulb text-warning me-1"></i> Pro Tip</h6>
+                                    <p class="small text-muted mb-0">
+                                        Include lighting (e.g., "volumetric sunlight", "neon Lagos night") and camera
+                                        movement (e.g., "slow crane shot") for the most cinematic results.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div>
+                                {% if current_user.plan == 'pro' and current_user.credits > 0 or current_user.plan ==
+                                'free' and (current_user.monthly_images_used or 0) < 2 %} <button type="button"
+                                    id="masterSubmitBtn" class="btn btn-afrigen px-5"
+                                    style="border-radius: 8px; font-weight: 600; padding: 12px 24px;">
+                                    <span id="btn-text">{{ 'Generate Video' if current_user.plan == 'pro' else 'Generate
+                                        Image' }}</span>
+                                    <span id="btn-cost"
+                                        style="opacity: 0.8; margin-left: 8px; font-weight: 400; font-size: 13px;">{{
+                                        '(5 Credits)' if current_user.plan == 'pro' else '(Free allowance)' }}</span>
+                                    </button>
+                                    {% else %}
+                                    <a href="{{ url_for('main.upgrade') }}" class="btn btn-warning px-5"
+                                        style="border-radius: 8px; font-weight: 600;">Upgrade to Generate</a>
+                                    {% endif %}
                             </div>
                         </div>
                     </div>
-                    
-                    <div class="mb-4">
-                        <div class="setting-label">Motion Intensity</div>
-                        <input type="range" class="form-range" min="1" max="100" value="50">
-                        <div class="d-flex justify-content-between">
-                            <small style="color: #484F58; font-size: 10px;">Subtle</small>
-                            <small style="color: #484F58; font-size: 10px;">Dynamic</small>
+
+                    <!-- Progress Overlay -->
+                    <div id="generation-overlay">
+                        <div
+                            style="background:#161B22; border:1px solid #30363D; border-radius:16px; padding:40px; text-align:center; width:340px; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+                            <h3 id="overlay-title" style="color:#F5A623; margin-bottom:8px; font-weight: 600;">
+                                Generating...</h3>
+                            <p id="overlay-subtitle" style="color:#8B949E; font-size:14px; margin-bottom:24px;">Please
+                                wait</p>
+                            <div
+                                style="background:#21262D; border-radius:99px; height:8px; overflow:hidden; margin-bottom:12px;">
+                                <div id="overlay-bar"
+                                    style="height:100%; width:0%; background:linear-gradient(90deg,#F5A623,#FFA114); border-radius:99px; transition:width 0.5s ease;">
+                                </div>
+                            </div>
+                            <p id="overlay-percent" style="color:#F0F6FC; font-weight:bold; font-size:22px; margin: 0;">
+                                0%</p>
                         </div>
                     </div>
-                    
-                    <div class="mb-4">
-                        <div class="setting-label">Duration</div>
-                        <select name="duration" class="form-select">
-                            <option value="5">5 Seconds</option>
-                            <option value="10">10 Seconds</option>
-                        </select>
-                    </div>
-                    {% else %}
-                    <div class="alert alert-warning" style="background: rgba(245,166,35,0.1); border-color: #F5A623; color: #F5A623;">
-                        <i class="fa-solid fa-lock"></i> Image-to-Video is a Pro feature. <a href="{{ url_for('main.upgrade') }}" style="color: #F5A623; text-decoration: underline;">Upgrade</a>
-                    </div>
-                    {% endif %}
-                </div>
-            </form>
-            {% endif %}
 
-            <!-- Voice Over Settings -->
-            <form id="form_voice" class="settings-form" style="display: none;" onsubmit="handleVoiceOverSubmit(event)">
-                <input type="hidden" name="prompt" class="sync-prompt">
-                
-                <div class="settings-group">
-                    <div class="settings-title"><i class="fa-solid fa-sliders"></i> Voice Settings</div>
-                    
-                    <div class="mb-4">
-                        <div class="setting-label">Voice Model</div>
-                        <select name="voice" class="form-select">
-                            <option value="ayo">Ayo (Nigerian Male)</option>
-                            <option value="chisom">Chisom (Nigerian Female)</option>
-                            <option value="kwame">Kwame (Ghanaian Male)</option>
-                            <option value="thabo">Thabo (South African Male)</option>
-                        </select>
-                    </div>
-                    
-                    <div class="mb-4">
-                        <div class="setting-label">Language / Accent</div>
-                        <select name="language" class="form-select">
-                            <option value="en-ng">English (Nigerian)</option>
-                            <option value="en-za">English (South African)</option>
-                            <option value="en-gh">English (Ghanaian)</option>
-                            <option value="sw">Swahili</option>
-                        </select>
-                    </div>
-                    
-                    <div class="mb-4">
-                        <div class="setting-label">Speed</div>
-                        <input type="range" class="form-range" min="0.5" max="2.0" step="0.1" value="1.0">
-                        <div class="d-flex justify-content-between">
-                            <small style="color: #484F58; font-size: 10px;">0.5x</small>
-                            <small style="color: #484F58; font-size: 10px;">1.0x</small>
-                            <small style="color: #484F58; font-size: 10px;">2.0x</small>
-                        </div>
-                    </div>
-                </div>
-            </form>
+                    <script>
+                        const creditCosts = {
+                            'video': 5,
+                            'image': 2,
+                            'animate': 10,
+                            'voice': 1
+                        };
 
-        </div>
-    </div>
-    
-    <!-- Bottom Footer (Action Bar) -->
-    <div class="workspace-footer">
-        <div class="d-flex align-items-center gap-3">
-            <span style="color: #8B949E; font-size: 14px;">
-                <i class="fa-solid fa-coins" style="color: #F5A623;"></i>
-                {% if current_user.plan == 'free' %}
-                Free image allowance: <strong style="color: #F0F6FC;">{{ [2 - (current_user.monthly_images_used or 0), 0]|max }}</strong>
-                {% else %}
-                Available: <strong style="color: #F0F6FC;">{{ current_user.credits }} Credits</strong>
-                {% endif %}
-            </span>
-        </div>
-        
-        <div>
-            {% if current_user.plan == 'pro' and current_user.credits > 0 or current_user.plan == 'free' and (current_user.monthly_images_used or 0) < 2 %}
-            <button type="button" id="masterSubmitBtn" class="btn btn-afrigen px-5" style="border-radius: 8px; font-weight: 600; padding: 12px 24px;">
-                <span id="btn-text">{{ 'Generate Video' if current_user.plan == 'pro' else 'Generate Image' }}</span>
-                <span id="btn-cost" style="opacity: 0.8; margin-left: 8px; font-weight: 400; font-size: 13px;">{{ '(5 Credits)' if current_user.plan == 'pro' else '(Free allowance)' }}</span>
-            </button>
-            {% else %}
-            <a href="{{ url_for('main.upgrade') }}" class="btn btn-warning px-5" style="border-radius: 8px; font-weight: 600;">Upgrade to Generate</a>
-            {% endif %}
-        </div>
-    </div>
-</div>
+                        const actionTexts = {
+                            'video': 'Generate Video',
+                            'image': 'Generate Image',
+                            'animate': 'Animate Image',
+                            'voice': 'Generate Voice'
+                        };
+                        let currentMode = 'video';
+                        const params = new URLSearchParams(window.location.search);
+                        if (params.get('mode')) {
+                            currentMode = params.get('mode');
+                        }
 
-<!-- Progress Overlay -->
-<div id="generation-overlay">
-  <div style="background:#161B22; border:1px solid #30363D; border-radius:16px; padding:40px; text-align:center; width:340px; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
-    <h3 id="overlay-title" style="color:#F5A623; margin-bottom:8px; font-weight: 600;">Generating...</h3>
-    <p id="overlay-subtitle" style="color:#8B949E; font-size:14px; margin-bottom:24px;">Please wait</p>
-    <div style="background:#21262D; border-radius:99px; height:8px; overflow:hidden; margin-bottom:12px;">
-      <div id="overlay-bar" style="height:100%; width:0%; background:linear-gradient(90deg,#F5A623,#FFA114); border-radius:99px; transition:width 0.5s ease;"></div>
-    </div>
-    <p id="overlay-percent" style="color:#F0F6FC; font-weight:bold; font-size:22px; margin: 0;">0%</p>
-  </div>
-</div>
+                        let activeType = '{{ "video" if current_user.plan == "pro" else "image" }}';
 
-<script>
-    const creditCosts = {
-        'video': 5,
-        'image': 2,
-        'animate': 10,
-        'voice': 1
-    };
-    
-    const actionTexts = {
-        'video': 'Generate Video',
-        'image': 'Generate Image',
-        'animate': 'Animate Image',
-        'voice': 'Generate Voice'
-    };
+                        // Character Counter
+                        const masterPrompt = document.getElementById('master_prompt');
+                        const charCount = document.getElementById('char_count');
 
-    let activeType = '{{ "video" if current_user.plan == "pro" else "image" }}';
+                        masterPrompt.addEventListener('input', function () {
+                            charCount.textContent = this.value.length;
+                            document.addEventListener("DOMContentLoaded", function () {
+                                switchMode(currentMode);
 
-    // Character Counter
-    const masterPrompt = document.getElementById('master_prompt');
-    const charCount = document.getElementById('char_count');
-    
-    masterPrompt.addEventListener('input', function() {
-        charCount.textContent = this.value.length;
-    });
+                                const masterPrompt = document.getElementById('master_prompt');
+                                masterPrompt.addEventListener('input', function () {
+                                    document.getElementById('char_count').textContent = `${this.value.length} / 1000`;
+                                });
+                            });
 
-    // Left Panel Type Switching
-    document.querySelectorAll('.type-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            // Update active state in sidebar
-            document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-            
-            // Switch Right Panel Form
-            activeType = this.dataset.type;
-            document.querySelectorAll('.settings-form').forEach(f => f.style.display = 'none');
-            document.getElementById('form_' + activeType).style.display = 'block';
-            const voiceTypeButton = document.querySelector('.type-btn[data-type="voice"]');
-            if (voiceTypeButton) voiceTypeButton.style.display = activeType === 'image' ? 'none' : '';
-            const voiceoverOption = document.getElementById('create_video_voiceover_option');
-            const voiceoverCheckbox = document.getElementById('v_add_voiceover');
-            if (voiceoverOption) voiceoverOption.style.display = activeType === 'image' ? 'none' : '';
-            if (activeType === 'image' && voiceoverCheckbox) voiceoverCheckbox.checked = false;
-            
-            // Update Bottom Button
-            document.getElementById('btn-text').textContent = actionTexts[activeType];
-            document.getElementById('btn-cost').textContent = `(${creditCosts[activeType]} Credits)`;
-        });
-    });
+                            // Left Panel Type Switching
+                            document.querySelectorAll('.type-btn').forEach(btn => {
+                                btn.addEventListener('click', function () {
+                                    // Update active state in sidebar
+                                    document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+                                    this.classList.add('active');
 
-    // Master Submit button logic
-    document.getElementById('masterSubmitBtn')?.addEventListener('click', function() {
-        let promptText = masterPrompt.value.trim();
-        if (!promptText && activeType !== 'animate') {
-            alert('Please enter a prompt to generate content.');
-            masterPrompt.focus();
-            return;
-        }
-        
-        // --- SPRINT 7: INJECT BRAND CONTEXT ---
-        if (window.BrandContext) {
-            promptText = window.BrandContext.inject(promptText);
-        }
+                                    // Switch Right Panel Form
+                                    activeType = this.dataset.type;
+                                    document.querySelectorAll('.settings-form').forEach(f => f.style.display = 'none');
+                                    document.getElementById('form_' + activeType).style.display = 'block';
+                                    const voiceTypeButton = document.querySelector('.type-btn[data-type="voice"]');
+                                    if (voiceTypeButton) voiceTypeButton.style.display = activeType === 'image' ? 'none' : '';
+                                    const voiceoverOption = document.getElementById('create_video_voiceover_option');
+                                    const voiceoverCheckbox = document.getElementById('v_add_voiceover');
+                                    if (voiceoverOption) voiceoverOption.style.display = activeType === 'image' ? 'none' : '';
+                                    if (activeType === 'image' && voiceoverCheckbox) voiceoverCheckbox.checked = false;
 
-        const activeForm = document.getElementById('form_' + activeType);
-        
-        // Sync prompt to hidden input
-        const hiddenPrompt = activeForm.querySelector('.sync-prompt');
-        if(hiddenPrompt) hiddenPrompt.value = promptText;
+                                    // Update Bottom Button
+                                    document.getElementById('btn-text').textContent = actionTexts[activeType];
+                                    document.getElementById('btn-cost').textContent = `(${creditCosts[activeType]} Credits)`;
+                                    function switchMode(mode) {
+                                        currentMode = mode;
+                                        ['video', 'image', 'voice', 'animate'].forEach(m => {
+                                            const tab = document.getElementById(`tab_${m}`);
+                                            const form = document.getElementById(`form_${m}`);
+                                            if (tab) tab.classList.remove('btn-gold', 'active-mode-btn');
+                                            if (form) form.classList.add('d-none');
+                                        });
+                                    });
 
-        // Overlay animation
-        let title = 'Generating';
-        if(activeType === 'video') title = 'Directing Video...';
-        if(activeType === 'image') title = 'Painting Image...';
-        if(activeType === 'animate') title = 'Animating Image...';
-        if(activeType === 'voice') title = 'Synthesizing Voice...';
-        
-        startProgress(title, 'Connecting to AI engines...', 20000); // UI visual only
+                                // Master Submit button logic
+                                document.getElementById('masterSubmitBtn')?.addEventListener('click', function () {
+                                    let promptText = masterPrompt.value.trim();
+                                    if (!promptText && activeType !== 'animate') {
+                                        alert('Please enter a prompt to generate content.');
+                                        masterPrompt.focus();
+                                        return;
+                                        const activeTab = document.getElementById(`tab_${mode}`);
+                                        const activeForm = document.getElementById(`form_${mode}`);
+                                        if (activeTab) activeTab.classList.add('btn-gold');
+                                        if (activeForm) activeForm.classList.remove('d-none');
 
-        if (activeType === 'voice') {
-            // Trigger Voice over placeholder submission
-            activeForm.dispatchEvent(new Event('submit'));
-        } else {
-            activeForm.requestSubmit();
-        }
-    });
+                                        const btnText = document.getElementById('btnSubmitText');
+                                        const costBadge = document.getElementById('costBadge');
+                                        if (mode === 'video') {
+                                            btnText.textContent = 'Generate Kling AI Video';
+                                            costBadge.textContent = '5 Credits';
+                                        } else if (mode === 'image') {
+                                            btnText.textContent = 'Generate FLUX Photo';
+                                            costBadge.textContent = '2 Credits (or Free Quota)';
+                                        } else if (mode === 'voice') {
+                                            btnText.textContent = 'Synthesize Voiceover';
+                                            costBadge.textContent = '1 Credit';
+                                        } else if (mode === 'animate') {
+                                            btnText.textContent = 'Animate Image';
+                                            costBadge.textContent = '10 Credits';
+                                        }
 
-    document.getElementById('form_animate')?.addEventListener('submit', async function (event) {
-        event.preventDefault();
-        const submitButton = document.getElementById('masterSubmitBtn');
-        if (submitButton) submitButton.disabled = true;
+                                        // --- SPRINT 7: INJECT BRAND CONTEXT ---
+                                        if (window.BrandContext) {
+                                            promptText = window.BrandContext.inject(promptText);
+                                        }
+                                    }
 
-        try {
-            const response = await fetch(this.action, {
-                method: 'POST',
-                body: new FormData(this),
-            });
-            let data;
-            try {
-                data = await response.json();
-            } catch {
-                throw new Error(`Animation request failed (${response.status}). Please try again.`);
-            }
-            if (!response.ok || data.success === false) {
-                throw new Error(data.error || `Animation request failed (${response.status})`);
-            }
-            window.location.href = "{{ url_for('main.dashboard') }}";
-        } catch (error) {
-            console.error('Image-to-video request failed:', error);
-            alert(`Image-to-video failed: ${error.message || error}`);
-            document.getElementById('generation-overlay').style.display = 'none';
-            if (submitButton) submitButton.disabled = false;
-        }
-    });
+                                    const activeForm = document.getElementById('form_' + activeType);
+
+                                    // Sync prompt to hidden input
+                                    const hiddenPrompt = activeForm.querySelector('.sync-prompt');
+                                    if (hiddenPrompt) hiddenPrompt.value = promptText;
+                                    function selectStyle(el, styleKey) {
+                                        el.parentElement.querySelectorAll('.style-chip').forEach(c => c.classList.remove('selected'));
+                                        el.classList.add('selected');
+                                        document.getElementById('video_style_input').value = styleKey;
+                                    }
+
+                                    // Overlay animation
+                                    let title = 'Generating';
+                                    if (activeType === 'video') title = 'Directing Video...';
+                                    if (activeType === 'image') title = 'Painting Image...';
+                                    if (activeType === 'animate') title = 'Animating Image...';
+                                    if (activeType === 'voice') title = 'Synthesizing Voice...';
+
+                                    startProgress(title, 'Connecting to AI engines...', 20000); // UI visual only
+                                    function selectRatio(el, ratio) {
+                                        el.parentElement.querySelectorAll('.ratio-btn').forEach(b => b.classList.remove('selected'));
+                                        el.classList.add('selected');
+                                        document.getElementById('video_ratio_input').value = ratio;
+                                    }
+
+                                    if (activeType === 'voice') {
+                                        // Trigger Voice over placeholder submission
+                                        activeForm.dispatchEvent(new Event('submit'));
+                                    } else {
+                                        activeForm.requestSubmit();
+                                        function selectDuration(el, dur) {
+                                            el.parentElement.querySelectorAll('.duration-pill').forEach(b => b.classList.remove('selected'));
+                                            el.classList.add('selected');
+                                            document.getElementById('video_duration_input').value = dur;
+                                            document.getElementById('costBadge').textContent = dur === '10' ? '10 Credits' : '5 Credits';
+                                        }
+
+                                        function selectImageStyle(el, styleKey) {
+                                            el.parentElement.querySelectorAll('.style-chip').forEach(c => c.classList.remove('selected'));
+                                            el.classList.add('selected');
+                                            document.getElementById('image_style_input').value = styleKey;
+                                        }
+
+                                        function selectImageRatio(el, ratio) {
+                                            el.parentElement.querySelectorAll('.ratio-btn').forEach(b => b.classList.remove('selected'));
+                                            el.classList.add('selected');
+                                            document.getElementById('image_ratio_input').value = ratio;
+                                        }
+
+                                        async function enhancePrompt() {
+                                            const promptInput = document.getElementById('master_prompt');
+                                            const indicator = document.getElementById('refine_indicator');
+                                            const val = promptInput.value.trim();
+                                            if (!val) {
+                                                window.showAfrigenAlert({ text: "Please enter a concept first to enhance.", icon: "info" });
+                                                return;
+                                            }
+                                        });
+
+                                document.getElementById('form_animate')?.addEventListener('submit', async function (event) {
+                                    event.preventDefault();
+                                    const submitButton = document.getElementById('masterSubmitBtn');
+                                    if (submitButton) submitButton.disabled = true;
+                                    indicator.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-warning"></i> Refining with AI...`;
+
+                                    try {
+                                        const response = await fetch(this.action, {
+                                            const endpoint = currentMode === 'image' ? '/refine-image-prompt' : '/refine-prompt';
+                                            const res = await fetch(endpoint, {
+                                                method: 'POST',
+                                                body: new FormData(this),
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({ prompt: val, style: 'cinematic' })
+                                            });
+                                            let data;
+                                            try {
+                                                data = await response.json();
+                                            } catch {
+                                                throw new Error(`Animation request failed (${response.status}). Please try again.`);
+                                                const data = await res.json();
+                                                if(data.refined_prompt) {
+                                                    promptInput.value = data.refined_prompt;
+                                        indicator.innerHTML = `<span class="text-success"><i class="fa-solid fa-check"></i> Refined!</span>`;
+                                    } else {
+                                        indicator.innerHTML = `<span class="text-danger">Could not refine</span>`;
+                                    }
+                                    if (!response.ok || data.success === false) {
+                                        throw new Error(data.error || `Animation request failed (${response.status})`);
+                                    }
+                                    window.location.href = "{{ url_for('main.dashboard') }}";
+                                } catch (error) {
+                                    console.error('Image-to-video request failed:', error);
+                                    alert(`Image-to-video failed: ${error.message || error}`);
+                                    document.getElementById('generation-overlay').style.display = 'none';
+                                    if (submitButton) submitButton.disabled = false;
+                                } catch (e) {
+                                    indicator.innerHTML = `<span class="text-danger">${e.message}</span>`;
+                                }
+                            });
+                        }
 
     const createAnimateImageInput = document.getElementById('create_animate_image_input');
-    const createAnimateImagePreview = document.getElementById('create_animate_image_preview');
-    const createAnimateImagePreviewImg = document.getElementById('create_animate_image_preview_img');
-    const createRemoveAnimateImage = document.getElementById('create_remove_animate_image');
-    let createAnimateImageObjectUrl = null;
+                        const createAnimateImagePreview = document.getElementById('create_animate_image_preview');
+                        const createAnimateImagePreviewImg = document.getElementById('create_animate_image_preview_img');
+                        const createRemoveAnimateImage = document.getElementById('create_remove_animate_image');
+                        let createAnimateImageObjectUrl = null;
+                        async function submitActiveGeneration() {
+                            const promptVal = document.getElementById('master_prompt').value.trim();
+                            if (!promptVal && currentMode !== 'animate') {
+                                window.showAfrigenAlert({ text: "Please enter a prompt description.", icon: "warning" });
+                                document.getElementById('master_prompt').focus();
+                                return;
+                            }
 
-    createAnimateImageInput?.addEventListener('change', function () {
-        const file = this.files?.[0];
-        if (!file) return;
-        if (createAnimateImageObjectUrl) URL.revokeObjectURL(createAnimateImageObjectUrl);
-        createAnimateImageObjectUrl = URL.createObjectURL(file);
-        createAnimateImagePreviewImg.src = createAnimateImageObjectUrl;
-        createAnimateImagePreview.style.display = 'block';
-        this.style.display = 'none';
-    });
+                            createAnimateImageInput?.addEventListener('change', function () {
+                                const file = this.files?.[0];
+                                if (!file) return;
+                                if (createAnimateImageObjectUrl) URL.revokeObjectURL(createAnimateImageObjectUrl);
+                                createAnimateImageObjectUrl = URL.createObjectURL(file);
+                                createAnimateImagePreviewImg.src = createAnimateImageObjectUrl;
+                                createAnimateImagePreview.style.display = 'block';
+                                this.style.display = 'none';
+                            });
+                            const activeForm = document.getElementById(`form_${currentMode}`);
+                            const syncInput = activeForm.querySelector('.sync-prompt');
+                            if (syncInput) syncInput.value = promptVal;
 
-    createRemoveAnimateImage?.addEventListener('click', function () {
-        createAnimateImageInput.value = '';
-        createAnimateImageInput.style.display = '';
-        createAnimateImagePreviewImg.removeAttribute('src');
-        createAnimateImagePreview.style.display = 'none';
-        if (createAnimateImageObjectUrl) URL.revokeObjectURL(createAnimateImageObjectUrl);
-        createAnimateImageObjectUrl = null;
-    });
+                            createRemoveAnimateImage?.addEventListener('click', function () {
+                                createAnimateImageInput.value = '';
+                                createAnimateImageInput.style.display = '';
+                                createAnimateImagePreviewImg.removeAttribute('src');
+                                createAnimateImagePreview.style.display = 'none';
+                                if (createAnimateImageObjectUrl) URL.revokeObjectURL(createAnimateImageObjectUrl);
+                                createAnimateImageObjectUrl = null;
+                            });
+                            // Visual Loader
+                            const emptyNotice = document.getElementById('emptyPreviewNotice');
+                            const loader = document.getElementById('activeLoader');
+                            if (emptyNotice) emptyNotice.classList.add('d-none');
+                            if (loader) loader.classList.remove('d-none');
 
-    function handleVoiceOverSubmit(e) {
-        e.preventDefault();
-        // Since there is no actual backend route for this yet, we show an alert.
-        setTimeout(() => {
-            document.getElementById('generation-overlay').style.display = 'none';
-            alert("Success! However, the standalone Voice Over API endpoint is scheduled for the next sprint. For now, you can add voiceovers directly by checking the box in the Video settings.");
-        }, 1500);
-    }
+                            function handleVoiceOverSubmit(e) {
+                                e.preventDefault();
+                                // Since there is no actual backend route for this yet, we show an alert.
+                                setTimeout(() => {
+                                    document.getElementById('generation-overlay').style.display = 'none';
+                                    alert("Success! However, the standalone Voice Over API endpoint is scheduled for the next sprint. For now, you can add voiceovers directly by checking the box in the Video settings.");
+                                }, 1500);
+                                if (currentMode === 'voice') {
+                                    // Standalone voiceover via JSON endpoint
+                                    try {
+                                        const formData = new FormData(activeForm);
+                                        const res = await fetch(activeForm.action, {
+                                            method: 'POST',
+                                            headers: { 'Accept': 'application/json' },
+                                            body: formData
+                                        });
+                                        const data = await res.json();
+                                        if (data.success && data.audio_url) {
+                                            if (loader) loader.classList.add('d-none');
+                                            const voiceWrap = document.getElementById('voiceAudioPlayerWrap');
+                                            const audioPlayer = document.getElementById('voiceAudioPlayer');
+                                            const dl = document.getElementById('voiceDownloadLink');
+                                            audioPlayer.src = data.audio_url;
+                                            dl.href = data.audio_url;
+                                            voiceWrap.classList.remove('d-none');
+                                            audioPlayer.play();
+                                            window.showAfrigenAlert({ text: "Voiceover synthesized successfully!", icon: "success" });
+                                        } else {
+                                            if (loader) loader.classList.add('d-none');
+                                            if (emptyNotice) emptyNotice.classList.remove('d-none');
+                                            window.showAfrigenAlert({ text: data.error || "Voice synthesis failed.", icon: "error" });
+                                        }
+                                    } catch (e) {
+                                        if (loader) loader.classList.add('d-none');
+                                        if (emptyNotice) emptyNotice.classList.remove('d-none');
+                                        window.showAfrigenAlert({ text: String(e), icon: "error" });
+                                    }
+                                } else {
+                                    // Standard form post for Video / Image / Animate
+                                    activeForm.submit();
+                                }
+                            }
 
-    function startProgress(title, subtitle, durationMs) {
-        const overlay = document.getElementById('generation-overlay');
-        const bar = document.getElementById('overlay-bar');
-        const percent = document.getElementById('overlay-percent');
-        
-        document.getElementById('overlay-title').textContent = title;
-        document.getElementById('overlay-subtitle').textContent = subtitle;
-        overlay.style.display = 'flex';
-        
-        let start = Date.now();
-        let interval = setInterval(() => {
-            let elapsed = Date.now() - start;
-            let p = Math.min((elapsed / durationMs) * 100, 95);
-            bar.style.width = p + '%';
-            percent.textContent = Math.floor(p) + '%';
-            if(p >= 95) clearInterval(interval);
-        }, 500);
-    }
+                            function startProgress(title, subtitle, durationMs) {
+                                const overlay = document.getElementById('generation-overlay');
+                                const bar = document.getElementById('overlay-bar');
+                                const percent = document.getElementById('overlay-percent');
 
-</script>
-{% endblock %}
+                                document.getElementById('overlay-title').textContent = title;
+                                document.getElementById('overlay-subtitle').textContent = subtitle;
+                                overlay.style.display = 'flex';
+
+                                let start = Date.now();
+                                let interval = setInterval(() => {
+                                    let elapsed = Date.now() - start;
+                                    let p = Math.min((elapsed / durationMs) * 100, 95);
+                                    bar.style.width = p + '%';
+                                    percent.textContent = Math.floor(p) + '%';
+                                    if (p >= 95) clearInterval(interval);
+                                }, 500);
+                            }
+
+                    </script>
+                    {% endblock %}

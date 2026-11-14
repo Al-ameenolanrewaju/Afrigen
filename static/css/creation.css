@@ -1,0 +1,275 @@
+/* ===================================================================
+   AFRIGEN 2.0 UNIFIED CREATION WORKSPACE STYLES
+   Prompt Editor, Parameter Controls, Generation Preview & Actions
+   =================================================================== */
+
+.creation-layout {
+    display: grid;
+    grid-template-columns: 1fr 420px;
+    gap: 2rem;
+    align-items: start;
+}
+
+@media (max-width: 1024px) {
+    .creation-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+.creation-panel {
+    background-color: var(--af-charcoal);
+    border: 1px solid var(--af-border);
+    border-radius: var(--radius-xl);
+    padding: 1.75rem;
+}
+
+/* Prompt Input Box */
+.prompt-box-wrapper {
+    position: relative;
+    margin-bottom: 1.5rem;
+}
+
+.prompt-textarea {
+    width: 100%;
+    min-height: 140px;
+    background-color: var(--af-surface);
+    border: 1px solid var(--af-border);
+    border-radius: var(--radius-lg);
+    padding: 1rem 1.25rem 3rem 1.25rem;
+    color: var(--af-white);
+    font-size: 1rem;
+    line-height: 1.5;
+    resize: vertical;
+    transition: all var(--transition-fast);
+}
+
+.prompt-textarea:focus {
+    outline: none;
+    border-color: var(--af-gold);
+    box-shadow: 0 0 0 3px rgba(233, 173, 50, 0.15);
+}
+
+.prompt-actions-bar {
+    position: absolute;
+    bottom: 0.85rem;
+    left: 1rem;
+    right: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.refine-btn {
+    background-color: var(--af-surface-hover);
+    color: var(--af-gold);
+    border: 1px solid var(--af-gold-border);
+    border-radius: var(--radius-full);
+    padding: 0.35rem 0.85rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.refine-btn:hover {
+    background-color: var(--af-gold-muted);
+    color: var(--af-gold-hover);
+}
+
+/* Option Groups & Chips */
+.param-section {
+    margin-bottom: 1.5rem;
+}
+
+.param-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--af-text-secondary);
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.style-chips-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 0.65rem;
+}
+
+.style-chip {
+    background-color: var(--af-surface);
+    border: 1px solid var(--af-border);
+    border-radius: var(--radius-md);
+    padding: 0.65rem 0.85rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    user-select: none;
+}
+
+.style-chip:hover {
+    border-color: var(--af-border-light);
+    background-color: var(--af-surface-hover);
+}
+
+.style-chip.selected {
+    border-color: var(--af-gold);
+    background-color: rgba(233, 173, 50, 0.08);
+}
+
+.style-chip .chip-name {
+    font-family: var(--font-heading);
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--af-white);
+}
+
+.style-chip .chip-desc {
+    font-size: 0.725rem;
+    color: var(--af-text-muted);
+}
+
+/* Aspect Ratio Selector */
+.ratio-selector {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.ratio-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0.75rem;
+    background-color: var(--af-surface);
+    border: 1px solid var(--af-border);
+    border-radius: var(--radius-md);
+    color: var(--af-text-secondary);
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: all var(--transition-fast);
+}
+
+.ratio-btn:hover {
+    border-color: var(--af-border-light);
+    color: var(--af-white);
+}
+
+.ratio-btn.selected {
+    border-color: var(--af-gold);
+    color: var(--af-gold);
+    background-color: rgba(233, 173, 50, 0.08);
+}
+
+/* Duration Pill Group */
+.duration-group {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.duration-pill {
+    flex: 1;
+    padding: 0.6rem;
+    text-align: center;
+    background-color: var(--af-surface);
+    border: 1px solid var(--af-border);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--af-text-secondary);
+    transition: all var(--transition-fast);
+}
+
+.duration-pill.selected {
+    border-color: var(--af-gold);
+    color: var(--af-gold);
+    background-color: rgba(233, 173, 50, 0.08);
+}
+
+/* Cost & Submit Bar */
+.submit-action-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--af-border);
+}
+
+.cost-estimate {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    color: var(--af-text-secondary);
+}
+
+.cost-estimate strong {
+    color: var(--af-gold);
+    font-size: 1.1rem;
+}
+
+/* Generation Output Preview Pane */
+.output-preview-pane {
+    background-color: var(--af-charcoal);
+    border: 1px solid var(--af-border);
+    border-radius: var(--radius-xl);
+    padding: 1.5rem;
+    min-height: 460px;
+    display: flex;
+    flex-direction: column;
+}
+
+.preview-media-box {
+    width: 100%;
+    aspect-ratio: 16/9;
+    background-color: var(--af-obsidian);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--af-border);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    margin-bottom: 1.25rem;
+}
+
+.preview-media-box video, .preview-media-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.generation-loader {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    text-align: center;
+    padding: 2rem;
+}
+
+.spinner-gold {
+    width: 48px;
+    height: 48px;
+    border: 3px solid rgba(233, 173, 50, 0.2);
+    border-top-color: var(--af-gold);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+

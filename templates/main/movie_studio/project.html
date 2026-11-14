@@ -1,0 +1,380 @@
+{% extends "base.html" %}
+
+{% block title %}{{ project.title }} — Movie Studio{% endblock %}
+
+{% block content %}
+<div class="studio-container">
+    <!-- Top Action Header -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 pb-3 border-bottom" style="border-color: var(--af-border) !important;">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <a href="{{ url_for('movie_studio.index') }}" class="btn btn-sm btn-ghost p-0 text-muted"><i class="fa-solid fa-arrow-left"></i> Projects</a>
+                <span class="text-muted">/</span>
+                <span class="badge-director">{{ project.genre }}</span>
+            </div>
+            <h2 class="h3 fw-bold mb-0 text-white">{{ project.title }}</h2>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+            <button id="btnRenderMovie" class="btn btn-gold" onclick="triggerMasterRender()">
+                <i class="fa-solid fa-film me-1"></i> Render Master Film
+            </button>
+            <a href="{{ url_for('movie_studio.index') }}" class="btn btn-surface">Exit Studio</a>
+        </div>
+    </div>
+
+    <!-- Production Tabs -->
+    <ul class="nav-tabs-custom" id="studioTab" role="tablist">
+        <button class="nav-tab-item active" id="screenplay-tab" data-bs-toggle="tab" data-bs-target="#screenplay" type="button" role="tab">
+            <i class="fa-solid fa-file-pen me-1"></i> Screenplay Writer
+        </button>
+        <button class="nav-tab-item" id="characters-tab" data-bs-toggle="tab" data-bs-target="#characters" type="button" role="tab">
+            <i class="fa-solid fa-users-viewfinder me-1"></i> Characters ({{ project.characters|length }})
+        </button>
+        <button class="nav-tab-item" id="shots-tab" data-bs-toggle="tab" data-bs-target="#shots" type="button" role="tab">
+            <i class="fa-solid fa-clapperboard me-1"></i> Shot Studio &amp; Storyboards
+        </button>
+        <button class="nav-tab-item" id="timeline-tab" data-bs-toggle="tab" data-bs-target="#timeline" type="button" role="tab">
+            <i class="fa-solid fa-sliders me-1"></i> Timeline Editor &amp; Audio
+        </button>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content pt-2" id="studioTabContent">
+        
+        <!-- 1. Screenplay Writer -->
+        <div class="tab-pane fade show active" id="screenplay" role="tabpanel">
+            <div class="row g-4">
+                <div class="col-lg-8">
+                    <div class="screenplay-paper">
+                        <div class="text-center mb-4">
+                            <h3 class="text-white fw-bold mb-1">{{ project.title|upper }}</h3>
+                            <p class="text-secondary small mb-0">Written by Afrigen Creative Intelligence</p>
+                            <p class="text-muted small">Tone: {{ project.cinematic_tone }} · Genre: {{ project.genre }}</p>
+                        </div>
+
+                        {% if project.scenes %}
+                            {% for sc in project.scenes %}
+                            <div class="mb-4">
+                                <div class="slugline">{{ sc.slugline }}</div>
+                                <p class="action-text">{{ sc.description }}</p>
+                                {% if sc.screenplay_text %}
+                                <div class="dialogue-block">
+                                    {{ sc.screenplay_text|replace('\n', '<br>')|safe }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-center text-muted py-4">No scenes generated yet. Click "Regenerate Treatment" below.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    <div class="card-surface">
+                        <h4 class="h5 mb-3 text-white">Direct Narrative Arc</h4>
+                        <div class="mb-3">
+                            <label class="form-label">Logline</label>
+                            <p class="small text-secondary">{{ project.logline or 'No logline defined.' }}</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Synopsis</label>
+                            <p class="small text-secondary" style="line-height: 1.5;">{{ project.synopsis or 'No synopsis defined.' }}</p>
+                        </div>
+                        <button class="btn btn-surface w-100 mb-2" onclick="regenerateScreenplay()">
+                            <i class="fa-solid fa-rotate me-1"></i> Rewrite Screenplay
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Character Development -->
+        <div class="tab-pane fade" id="characters" role="tabpanel">
+            <div class="d-flex align-items-center justify-content-between mb-4">
+                <h4 class="h5 mb-0 text-white">Cast &amp; Character References</h4>
+            </div>
+
+            <div class="character-grid">
+                {% for char in project.characters %}
+                <div class="character-card">
+                    <div class="character-avatar-wrap">
+                        {% if char.reference_image_url %}
+                            <img src="{{ char.reference_image_url }}" alt="{{ char.name }}">
+                        {% else %}
+                            <div class="d-flex flex-column align-items-center justify-content-center h-100 text-muted p-3 text-center">
+                                <i class="fa-solid fa-user-astronaut fs-1 mb-2 text-warning" style="opacity: 0.6;"></i>
+                                <small>No visual reference</small>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="character-body">
+                        <div class="character-name">{{ char.name }}</div>
+                        <div class="character-role">{{ char.role }}</div>
+                        <div class="character-desc mb-3">{{ char.description }}</div>
+                        <button class="btn btn-sm btn-outline-gold w-100" onclick="generatePortrait({{ char.id }})">
+                            <i class="fa-solid fa-wand-magic-sparkles me-1"></i> {% if char.reference_image_url %}Regenerate Portrait{% else %}Generate 35mm Face{% endif %}
+                        </button>
+                    </div>
+                </div>
+                {% else %}
+                <div class="col-12">
+                    <div class="empty-state">
+                        <p class="text-muted">No characters populated yet. Generate your screenplay treatment first.</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- 3. Shot Studio & Storyboard -->
+        <div class="tab-pane fade" id="shots" role="tabpanel">
+            {% for sc in project.scenes %}
+            <div class="card-surface mb-4">
+                <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom" style="border-color: var(--af-border) !important;">
+                    <div>
+                        <h4 class="h6 text-warning mb-1">SCENE {{ sc.scene_number }}: {{ sc.slugline }}</h4>
+                        <p class="small text-secondary mb-0">{{ sc.description }}</p>
+                    </div>
+                    <button class="btn btn-sm btn-surface" onclick="breakdownScene({{ sc.id }})">
+                        <i class="fa-solid fa-plus me-1"></i> Create Storyboard Shots
+                    </button>
+                </div>
+
+                <div class="row g-3">
+                    {% for shot in sc.shots %}
+                    <div class="col-md-6 col-lg-4">
+                        <div class="storyboard-frame">
+                            <div class="frame-media">
+                                {% if shot.video_url %}
+                                    <video src="{{ shot.video_url }}" controls style="width: 100%; height: 100%; object-fit: cover;"></video>
+                                {% elif shot.reference_image_url %}
+                                    <img src="{{ shot.reference_image_url }}" alt="Shot preview">
+                                {% else %}
+                                    <div class="d-flex flex-column align-items-center justify-content-center h-100 text-muted">
+                                        <i class="fa-solid fa-video-slash fs-3 text-warning mb-1" style="opacity: 0.6;"></i>
+                                        <small>Not Generated</small>
+                                    </div>
+                                {% endif %}
+                                <span class="frame-badge">Shot {{ shot.shot_number }} · {{ shot.camera_angle }}</span>
+                            </div>
+                            <div class="frame-details">
+                                <div class="frame-prompt">{{ shot.visual_prompt }}</div>
+                                <div class="d-flex align-items-center justify-content-between pt-2 border-top" style="border-color: var(--af-border) !important;">
+                                    <small class="text-muted"><i class="fa-solid fa-camera me-1"></i> {{ shot.camera_movement }}</small>
+                                    <button class="btn btn-sm btn-gold" id="btnShot_{{ shot.id }}" onclick="generateShotClip({{ shot.id }})">
+                                        {% if shot.video_url %}Regenerate Clip{% else %}Generate Video{% endif %}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="col-12">
+                        <p class="small text-muted py-2 mb-0">No visual shots generated for this scene yet. Click "Create Storyboard Shots".</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- 4. Timeline Editor & Audio -->
+        <div class="tab-pane fade" id="timeline" role="tabpanel">
+            <div class="row g-4">
+                <div class="col-lg-8">
+                    <!-- HTML5 Player -->
+                    <div class="rounded overflow-hidden mb-3" style="aspect-ratio: 16/9; background: #000; border: 1px solid var(--af-border); position: relative;">
+                        <video id="timelineMasterPlayer" style="width: 100%; height: 100%;" controls poster="{{ project.cover_image_url or '' }}">
+                            {% if project.final_video_url %}
+                            <source src="{{ project.final_video_url }}" type="video/mp4">
+                            {% endif %}
+                        </video>
+                    </div>
+
+                    <!-- Multi-Track Timeline -->
+                    <div class="timeline-editor-wrapper">
+                        <div class="timeline-toolbar">
+                            <div class="d-flex align-items-center gap-2">
+                                <button class="btn btn-sm btn-surface" onclick="playTimeline()"><i class="fa-solid fa-play"></i></button>
+                                <button class="btn btn-sm btn-surface" onclick="pauseTimeline()"><i class="fa-solid fa-pause"></i></button>
+                                <span class="timeline-timecode" id="timecodeDisplay">00:00:00:00</span>
+                            </div>
+                            <span class="small text-muted">24 FPS · 1080p · Widescreen</span>
+                        </div>
+
+                        <div class="timeline-tracks-area">
+                            <!-- Video Track -->
+                            <div class="timeline-track">
+                                <div class="timeline-track-header"><i class="fa-solid fa-video me-1"></i> Video Track</div>
+                                {% for shot in project.all_shots %}
+                                    {% if shot.video_url %}
+                                    <div class="timeline-clip" style="width: 140px;" title="Scene {{ shot.scene.scene_number }} Shot {{ shot.shot_number }}">
+                                        <i class="fa-solid fa-film"></i> Sc{{ shot.scene.scene_number }}_Sh{{ shot.shot_number }} ({{ shot.duration }}s)
+                                    </div>
+                                    {% endif %}
+                                {% else %}
+                                    <small class="text-muted ps-2">No completed video clips yet.</small>
+                                {% endfor %}
+                            </div>
+
+                            <!-- Audio Track -->
+                            <div class="timeline-track">
+                                <div class="timeline-track-header"><i class="fa-solid fa-volume-high me-1"></i> Voice Track</div>
+                                {% for audio in project.audio_tracks %}
+                                <div class="timeline-clip" style="width: 160px; background: rgba(59, 130, 246, 0.2); border-color: rgba(59, 130, 246, 0.4);">
+                                    <i class="fa-solid fa-waveform-lines"></i> {{ audio.title }}
+                                </div>
+                                {% else %}
+                                <small class="text-muted ps-2">No audio tracks created yet.</small>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    <div class="card-surface mb-3">
+                        <h4 class="h5 mb-3 text-white">Film Render Settings</h4>
+                        <div class="mb-3">
+                            <label class="form-label">Resolution</label>
+                            <input type="text" class="form-control" value="1080p High Definition (FHD)" disabled>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Frame Rate</label>
+                            <input type="text" class="form-control" value="24 FPS (Cinematic standard)" disabled>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label">Audio Mastering</label>
+                            <input type="text" class="form-control" value="Stereo 48kHz / AAC" disabled>
+                        </div>
+
+                        <button class="btn btn-gold w-100 py-3" onclick="triggerMasterRender()">
+                            <i class="fa-solid fa-wand-magic-sparkles me-2"></i> Master &amp; Export Movie
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    const projectId = {{ project.id }};
+
+    function playTimeline() {
+        const vid = document.getElementById('timelineMasterPlayer');
+        if (vid) vid.play();
+    }
+
+    function pauseTimeline() {
+        const vid = document.getElementById('timelineMasterPlayer');
+        if (vid) vid.pause();
+    }
+
+    async function regenerateScreenplay() {
+        if (!confirm("Regenerate the entire treatment & scenes?")) return;
+        window.showAfrigenAlert({ text: "Writing your screenplay with AI... Please wait.", icon: "info", toast: true });
+        try {
+            const res = await fetch(`/movie-studio/projects/${projectId}/treatment`, { method: "POST" });
+            const data = await res.json();
+            if (data.success) {
+                location.reload();
+            } else {
+                window.showAfrigenAlert({ text: data.error || "Failed to generate screenplay.", icon: "error" });
+            }
+        } catch (e) {
+            window.showAfrigenAlert({ text: String(e), icon: "error" });
+        }
+    }
+
+    async function generatePortrait(charId) {
+        window.showAfrigenAlert({ text: "Generating 35mm facial reference... Takes ~10s.", icon: "info", toast: true });
+        try {
+            const res = await fetch(`/movie-studio/projects/${projectId}/characters/${charId}/portrait`, { method: "POST" });
+            const data = await res.json();
+            if (data.success) {
+                location.reload();
+            } else {
+                window.showAfrigenAlert({ text: data.error || "Portrait generation failed.", icon: "error" });
+            }
+        } catch (e) {
+            window.showAfrigenAlert({ text: String(e), icon: "error" });
+        }
+    }
+
+    async function breakdownScene(sceneId) {
+        window.showAfrigenAlert({ text: "Breaking down scene into storyboard shots...", icon: "info", toast: true });
+        try {
+            const res = await fetch(`/movie-studio/projects/${projectId}/scenes/${sceneId}/storyboard`, { method: "POST" });
+            const data = await res.json();
+            if (data.success) {
+                location.reload();
+            } else {
+                window.showAfrigenAlert({ text: data.error || "Storyboard breakdown failed.", icon: "error" });
+            }
+        } catch (e) {
+            window.showAfrigenAlert({ text: String(e), icon: "error" });
+        }
+    }
+
+    async function generateShotClip(shotId) {
+        const btn = document.getElementById(`btnShot_${shotId}`);
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin me-1"></i> Kling Pro...`;
+        }
+        window.showAfrigenAlert({ text: "Generating cinematic video clip using Kling Pro... This takes 1-2 minutes.", icon: "info", toast: true });
+        try {
+            const res = await fetch(`/movie-studio/projects/${projectId}/shots/${shotId}/generate`, { method: "POST" });
+            const data = await res.json();
+            if (data.success) {
+                location.reload();
+            } else {
+                if (btn) { btn.disabled = false; btn.innerText = "Retry Video"; }
+                window.showAfrigenAlert({ text: data.error || "Shot generation failed.", icon: "error" });
+            }
+        } catch (e) {
+            if (btn) { btn.disabled = false; btn.innerText = "Retry Video"; }
+            window.showAfrigenAlert({ text: String(e), icon: "error" });
+        }
+    }
+
+    async function triggerMasterRender() {
+        window.showAfrigenAlert({ text: "Queuing master FFmpeg rendering job... Stitching video and audio tracks.", icon: "info", toast: true });
+        try {
+            const res = await fetch(`/movie-studio/projects/${projectId}/render`, { method: "POST" });
+            const data = await res.json();
+            if (data.success && data.job_id) {
+                pollRenderJob(data.job_id);
+            } else {
+                window.showAfrigenAlert({ text: data.error || "Rendering initiation failed.", icon: "error" });
+            }
+        } catch (e) {
+            window.showAfrigenAlert({ text: String(e), icon: "error" });
+        }
+    }
+
+    function pollRenderJob(jobId) {
+        const interval = setInterval(async () => {
+            try {
+                const res = await fetch(`/movie-studio/render-jobs/${jobId}/status`);
+                const data = await res.json();
+                if (data.success) {
+                    if (data.status === 'completed') {
+                        clearInterval(interval);
+                        window.showAfrigenAlert({ text: "🎉 Film rendered and mastered successfully!", icon: "success" });
+                        setTimeout(() => location.reload(), 1500);
+                    } else if (data.status === 'failed') {
+                        clearInterval(interval);
+                        window.showAfrigenAlert({ text: data.error_message || "Rendering failed.", icon: "error" });
+                    }
+                }
+            } catch (e) {}
+        }, 5000);
+    }
+</script>
+{% endblock %}
+

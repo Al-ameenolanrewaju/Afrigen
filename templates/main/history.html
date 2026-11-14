@@ -1,190 +1,177 @@
 {% extends "base.html" %}
 
-{% block title %}My Generations{% endblock %}
+{% block title %}My Creations | Afrigen 2.0{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-
+<div class="page-container">
     <!-- Header -->
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <div class="card p-4">
-                <div class="row align-items-center">
-                    <div class="col-md-8">
-                        <h1 style="color: #F5A623; font-size: 1.6rem;"><i class="fa-solid fa-clapperboard"></i> My Generations</h1>
-                        <p style="color: #C9D1D9;">All your AI generated content in one place!</p>
-                    </div>
-                    <div class="col-md-4 text-end">
-                        <a href="{{ url_for('main.dashboard') }}" class="btn btn-afrigen">+ Generate New</a>
-                    </div>
-                </div>
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 pb-3 border-bottom" style="border-color: var(--af-border) !important;">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="badge-gold"><i class="fa-solid fa-photo-film text-warning me-1"></i> MEDIA LIBRARY</span>
             </div>
+            <h1 class="page-title">My Creations</h1>
+            <p class="page-subtitle">Your central repository of AI-generated videos, images, and audio assets.</p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <a href="{{ url_for('main.create') }}" class="btn btn-gold">
+                <i class="fa-solid fa-plus me-1"></i> New Creation
+            </a>
         </div>
     </div>
-    {% if generations %}
-    {% set processing = generations | selectattr('status', 'equalto', 'processing') | list %}
-    {% if processing %}
-    <div class="alert mb-4" style="background: rgba(245,166,35,0.1); border: 1px solid #F5A623; border-radius: 12px; color: #F5A623;">
-        <strong><i class="fa-solid fa-clapperboard"></i> Video generating!</strong>
-        We'll send you an email at <strong>{{ current_user.email }}</strong> when it's ready.
 
+    <!-- Filter & Search Bar -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+        <!-- Category Tabs -->
+        <div class="d-flex gap-2 overflow-auto pb-1" id="filterTabs">
+            <button class="btn btn-sm btn-gold filter-tab" onclick="filterCategory('all', this)">All Media</button>
+            <button class="btn btn-sm btn-surface filter-tab" onclick="filterCategory('video', this)"><i class="fa-solid fa-video me-1"></i> Videos</button>
+            <button class="btn btn-sm btn-surface filter-tab" onclick="filterCategory('image', this)"><i class="fa-solid fa-image me-1"></i> Photos</button>
+            <button class="btn btn-sm btn-surface filter-tab" onclick="filterCategory('voice', this)"><i class="fa-solid fa-microphone-lines me-1"></i> Voiceovers</button>
+        </div>
+
+        <!-- Search Input -->
+        <div style="min-width: 240px;">
+            <input type="text" id="creationSearch" class="form-control form-control-sm" placeholder="Search prompts..." onkeyup="searchCreations(this.value)">
+        </div>
     </div>
-    {% endif %}
-    {% endif %}
-    
 
     {% if generations %}
+    <div class="row g-4" id="creationsGrid">
         {% for gen in generations %}
-        <div class="card p-4 mb-3">
-            <div class="row">
-
-                <!-- Preview -->
-                <div class="col-md-4 mb-3 mb-md-0">
+        {% set item_cat = 'voice' if gen.generation_type == 'voice' or gen.audio_url and not gen.video_url and not gen.image_url else ('image' if gen.generation_type == 'image' and not gen.video_url else 'video') %}
+        <div class="col-md-6 col-lg-4 creation-item" data-category="{{ item_cat }}" data-prompt="{{ (gen.original_prompt or '')|lower }}">
+            <div class="card-surface h-100 d-flex flex-column p-0 overflow-hidden">
+                <!-- Media Area -->
+                <div class="position-relative" style="aspect-ratio: 16/9; background: #000;">
                     {% if gen.video_url %}
-                    <video
-                        width="100%"
-                        controls
-                        playsinline
-                        preload="metadata"
-                        style="border-radius: 8px; background: #000;"
-                        src="{{ gen.video_url }}"
-                    >
-                        Your browser does not support video playback.
-                    </video>
+                        <video src="{{ gen.video_url }}" controls style="width: 100%; height: 100%; object-fit: cover;"></video>
                     {% elif gen.image_url and gen.generation_type == 'image' %}
-                    <img src="{{ gen.image_url }}" width="100%"
-                         style="border-radius: 8px; object-fit: cover; max-height: 200px;">
+                        <img src="{{ gen.image_url }}" alt="Generation" style="width: 100%; height: 100%; object-fit: cover;">
+                    {% elif gen.audio_url %}
+                        <div class="d-flex flex-column align-items-center justify-content-center h-100 p-3" style="background: linear-gradient(135deg, rgba(233,173,50,0.1) 0%, rgba(20,20,20,0.9) 100%);">
+                            <i class="fa-solid fa-waveform-lines text-warning fs-1 mb-2"></i>
+                            <audio src="{{ gen.audio_url }}" controls style="width: 90%; height: 32px;"></audio>
+                        </div>
                     {% else %}
-                    <div style="background: #21262D; border-radius: 8px; height: 150px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-                        {% if gen.status == 'failed' %}
-                        <p style="color: #E74C3C; font-size: 24px; margin: 0;"><i class="fa-solid fa-xmark"></i></p>
-                        <p style="color: #888; font-size: 13px; margin-top: 8px;">Generation Failed</p>
-                        {% else %}
-                        <p style="color: #888;">No preview</p>
-                        {% endif %}
-                    </div>
+                        <div class="d-flex flex-column align-items-center justify-content-center h-100 text-muted">
+                            {% if gen.status == 'failed' %}
+                                <i class="fa-solid fa-triangle-exclamation text-danger fs-2 mb-1"></i>
+                                <small class="text-danger">Generation Failed</small>
+                            {% else %}
+                                <i class="fa-solid fa-spinner fa-spin text-warning fs-2 mb-1"></i>
+                                <small>Rendering...</small>
+                            {% endif %}
+                        </div>
                     {% endif %}
+
+                    <span class="position-absolute top-0 start-0 m-2 badge bg-dark border border-secondary" style="font-size: 10px;">
+                        {{ gen.generation_type|upper }}
+                    </span>
+                    <span class="position-absolute top-0 end-0 m-2 badge {% if gen.status == 'completed' %}bg-success{% elif gen.status == 'failed' %}bg-danger{% else %}bg-warning text-dark{% endif %}" style="font-size: 10px;">
+                        {{ gen.status|upper }}
+                    </span>
                 </div>
 
-                <!-- Details -->
-                <div class="col-md-8">
+                <!-- Content Body -->
+                <div class="p-3 d-flex flex-column flex-grow-1">
+                    <p class="small text-white mb-2 flex-grow-1" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-weight: 500;">
+                        "{{ gen.original_prompt }}"
+                    </p>
 
-                    <!-- Type + Status badges -->
-                    <div class="d-flex gap-2 mb-2 flex-wrap">
-                        <span class="badge" style="background: #21262D; color: #F5A623;">
-                            {% if gen.fal_request_id and gen.generation_type == 'image' %}<i class="fa-solid fa-wand-magic-sparkles"></i> Image to Video
-                            {% elif gen.video_url or gen.generation_type != 'image' %}<i class="fa-solid fa-clapperboard"></i> Video
-                            {% else %}<i class="fa-solid fa-image"></i> Image{% endif %}
-                        </span>
-                        <span class="badge {% if gen.status == 'completed' %}bg-success{% elif gen.status == 'failed' %}bg-danger{% else %}bg-warning{% endif %}" style="color: white;">
-                            {{ gen.status.upper() }}
-                        </span>
-                        <small style="color: #888; align-self: center;">
-                            <i class="fa-solid fa-calendar-days"></i> {{ gen.created_at.strftime('%b %d, %Y') }}
+                    {% if gen.refined_prompt and gen.refined_prompt != gen.original_prompt %}
+                    <p class="small text-muted mb-3" style="display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; font-size: 11px;">
+                        <i class="fa-solid fa-wand-magic-sparkles text-warning me-1"></i> {{ gen.refined_prompt }}
+                    </p>
+                    {% endif %}
+
+                    <!-- Card Actions -->
+                    <div class="d-flex align-items-center justify-content-between pt-2 border-top" style="border-color: var(--af-border) !important;">
+                        <small class="text-muted" style="font-size: 11px;">
+                            {{ gen.created_at.strftime('%b %d, %Y') if gen.created_at else '' }}
                         </small>
+
+                        <div class="d-flex align-items-center gap-1">
+                            {% if gen.video_url %}
+                            <a href="{{ url_for('main.download_video_file', generation_id=gen.id) }}" class="btn btn-sm btn-outline-gold py-1 px-2" style="font-size: 11px;" title="Download">
+                                <i class="fa-solid fa-download"></i>
+                            </a>
+                            {% elif gen.image_url %}
+                            <a href="{{ url_for('main.download_image_file', generation_id=gen.id) }}" class="btn btn-sm btn-outline-gold py-1 px-2" style="font-size: 11px;" title="Download">
+                                <i class="fa-solid fa-download"></i>
+                            </a>
+                            {% elif gen.audio_url %}
+                            <a href="{{ gen.audio_url }}" target="_blank" download class="btn btn-sm btn-outline-gold py-1 px-2" style="font-size: 11px;" title="Download">
+                                <i class="fa-solid fa-download"></i>
+                            </a>
+                            {% endif %}
+
+                            {% if gen.status == 'completed' and (gen.video_url or gen.image_url) %}
+                            <button type="button" class="btn btn-sm btn-surface py-1 px-2 publish-social-trigger" style="font-size: 11px;"
+                                data-publish-text="{{ gen.refined_prompt or gen.original_prompt }}"
+                                data-media-url="{{ gen.video_url if gen.video_url else gen.image_url }}"
+                                data-media-type="{{ 'video' if gen.video_url else 'image' }}" title="Publish">
+                                <i class="fa-solid fa-share-nodes"></i>
+                            </button>
+                            {% endif %}
+
+                            {% if gen.status == 'failed' %}
+                            <form action="{{ url_for('main.retry_generation', generation_id=gen.id) }}" method="POST" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger py-1 px-2" style="font-size: 11px;">
+                                    <i class="fa-solid fa-rotate-right me-1"></i> Retry
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
                     </div>
-
-                    <!-- Prompts -->
-                    <div class="mb-2">
-                        <small style="color: #888;">Original Idea:</small>
-                        <p style="color: #C9D1D9; font-style: italic; margin: 0;">
-                            "{{ gen.original_prompt }}"
-                        </p>
-                    </div>
-
-                    {% if gen.refined_prompt %}
-                    <div class="mb-3">
-                        <small style="color: #F5A623;">AI Refined Prompt:</small>
-                        <p style="color: #F0F6FC; font-size: 13px; margin: 0;">
-                            {{ gen.refined_prompt[:150] }}...
-                        </p>
-                    </div>
-                    {% endif %}
-
-                    {% if gen.audio_url %}
-                    <div class="mb-3">
-                        <small style="color: #F5A623;"><i class="fa-solid fa-microphone"></i> AI Voiceover:</small>
-                        <audio controls class="w-100 mt-1" style="height: 36px;"
-                               src="{{ gen.audio_url }}">
-                            Your browser does not support audio.
-                        </audio>
-                    </div>
-                    {% endif %}
-
-<!-- Action Buttons -->
-<div class="d-flex gap-2 flex-wrap">
-    {% if gen.video_url %}
-    <a href="{{ url_for('main.download_video_file', generation_id=gen.id) }}" class="btn btn-outline-warning btn-sm"><i class="fa-solid fa-download"></i> Download</a>
-    {% endif %}
-
-    {% if gen.image_url and gen.generation_type == 'image' and not gen.video_url %}
-    <a href="{{ url_for('main.download_image_file', generation_id=gen.id) }}" class="btn btn-outline-warning btn-sm"><i class="fa-solid fa-download"></i> Download</a>
-    {% endif %}
-
-    {% if gen.status == 'completed' and (gen.video_url or gen.image_url) %}
-    <a href="{{ share_url_for(gen.id) }}" target="_blank" class="btn btn-outline-warning btn-sm"
-       title="Public share page with a sign-up invite — every view can become a new user"><i class="fa-solid fa-link"></i> Share</a>
-    
-    <button type="button" class="btn btn-outline-info btn-sm publish-social-trigger"
-        data-publish-text="{{ gen.refined_prompt or gen.original_prompt }}"
-        data-media-url="{{ gen.video_url if gen.video_url else gen.image_url }}"
-        data-media-type="{{ 'video' if gen.video_url else 'image' }}">
-        <i class="fa-solid fa-share-from-square"></i> Publish to Social
-    </button>
-    {% endif %}
-
-    {% if gen.status == 'failed' %}
-    <form action="{{ url_for('main.retry_generation', generation_id=gen.id) }}" method="POST" class="d-inline">
-    <button type="submit" class="btn btn-sm" style="background: #21262D; color: #F5A623; border: 1px solid #F5A623;">
-        <i class="fa-solid fa-arrows-rotate"></i> Try Again
-    </button>
-    </form>
-    {% endif %}
-</div>
-
                 </div>
             </div>
         </div>
         {% endfor %}
-
+    </div>
     {% else %}
-    <div class="card p-5 text-center">
-        <h3><i class="fa-solid fa-clapperboard"></i></h3>
-        <h4 style="color: #F5A623;">No generations yet!</h4>
-        <p style="color: #C9D1D9;">Generate your first AI video or image now!</p>
-        <a href="{{ url_for('main.dashboard') }}" class="btn btn-afrigen px-5">Generate Now <i class="fa-solid fa-rocket"></i></a>
+    <div class="empty-state">
+        <div class="empty-state-icon"><i class="fa-solid fa-photo-film"></i></div>
+        <h4 class="empty-state-title">No Media Found</h4>
+        <p class="empty-state-desc">You have not created any media yet. Explore the creation studio to generate your first asset.</p>
+        <a href="{{ url_for('main.create') }}" class="btn btn-gold">
+            <i class="fa-solid fa-plus me-1"></i> Start Creating
+        </a>
     </div>
     {% endif %}
-
 </div>
 
-<style>
-.btn-afrigen {
-    background: #F5A623;
-    color: #0D1117;
-    border: none;
-    font-weight: 600;
-}
-.btn-afrigen:hover {
-    background: #e09515;
-    color: #0D1117;
-}
-.card {
-    background: #161B22;
-    border: 1px solid #30363D;
-    border-radius: 16px;
-}
-</style>
-{% set processing = generations | selectattr('status', 'equalto', 'processing') | list %}
-{% if processing %}
 <script>
-// Auto refresh every 15 seconds while videos are processing
-setTimeout(function() {
-    window.location.reload();
-}, 15000);
+    function filterCategory(cat, btn) {
+        document.querySelectorAll('.filter-tab').forEach(b => {
+            b.classList.remove('btn-gold');
+            b.classList.add('btn-surface');
+        });
+        btn.classList.remove('btn-surface');
+        btn.classList.add('btn-gold');
+
+        document.querySelectorAll('.creation-item').forEach(el => {
+            if (cat === 'all' || el.dataset.category === cat) {
+                el.style.display = 'block';
+            } else {
+                el.style.display = 'none';
+            }
+        });
+    }
+
+    function searchCreations(term) {
+        term = term.toLowerCase().trim();
+        document.querySelectorAll('.creation-item').forEach(el => {
+            const prompt = el.dataset.prompt || '';
+            if (!term || prompt.includes(term)) {
+                el.style.display = 'block';
+            } else {
+                el.style.display = 'none';
+            }
+        });
+    }
 </script>
-{% endif %}
 
 {% include "main/_social_publish_modal.html" %}
-
 {% endblock %}

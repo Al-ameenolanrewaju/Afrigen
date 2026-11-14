@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+
+{% block title %}Afrigen Movie Studio — Production Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="badge-director"><i class="fa-solid fa-crown me-1"></i> DIRECTOR STUDIO</span>
+            </div>
+            <h1 class="page-title">Movie Production Studio</h1>
+            <p class="page-subtitle">Develop, direct, generate, and master complete AI-powered films.</p>
+        </div>
+        <div>
+            <button class="btn btn-gold" data-bs-toggle="modal" data-bs-target="#newProjectModal">
+                <i class="fa-solid fa-plus me-1"></i> New Movie Project
+            </button>
+        </div>
+    </div>
+
+    <!-- Active Projects Grid -->
+    <div class="mb-5">
+        <h3 class="mb-3">Active Movie Projects</h3>
+        {% if projects %}
+        <div class="row g-4">
+            {% for p in projects %}
+            <div class="col-md-6 col-lg-4">
+                <div class="card-surface card-interactive h-100 d-flex flex-column">
+                    <div class="mb-3 rounded overflow-hidden position-relative" style="aspect-ratio: 16/9; background: #000; border: 1px solid var(--af-border);">
+                        {% if p.cover_image_url or p.final_video_url %}
+                            {% if p.final_video_url %}
+                                <video src="{{ p.final_video_url }}" style="width: 100%; height: 100%; object-fit: cover;" muted onmouseover="this.play()" onmouseout="this.pause()"></video>
+                            {% else %}
+                                <img src="{{ p.cover_image_url }}" alt="{{ p.title }}" style="width: 100%; height: 100%; object-fit: cover;">
+                            {% endif %}
+                        {% else %}
+                            <div class="d-flex flex-column align-items-center justify-content-center h-100 text-muted">
+                                <i class="fa-solid fa-clapperboard fs-1 text-warning mb-2" style="opacity: 0.6;"></i>
+                                <small>{{ p.genre }}</small>
+                            </div>
+                        {% endif %}
+                        <span class="position-absolute top-0 end-0 m-2 badge bg-dark border border-secondary text-capitalize">
+                            {{ p.status }}
+                        </span>
+                    </div>
+
+                    <h4 class="h5 mb-1 text-white">{{ p.title }}</h4>
+                    <p class="small text-secondary mb-3 flex-grow-1" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                        {{ p.logline or 'No logline entered yet.' }}
+                    </p>
+
+                    <div class="d-flex align-items-center justify-content-between pt-3 border-top" style="border-color: var(--af-border) !important;">
+                        <small class="text-muted"><i class="fa-solid fa-clock me-1"></i> {{ p.target_duration }}s</small>
+                        <a href="{{ url_for('movie_studio.project_workspace', project_id=p.id) }}" class="btn btn-sm btn-outline-gold">
+                            Open Studio &rarr;
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon"><i class="fa-solid fa-clapperboard"></i></div>
+            <h4 class="empty-state-title">No Movie Projects Yet</h4>
+            <p class="empty-state-desc text-secondary">Start your first AI movie project. Direct full screenplays, create characters, and generate 4K scenes.</p>
+            <button class="btn btn-gold" data-bs-toggle="modal" data-bs-target="#newProjectModal">
+                <i class="fa-solid fa-wand-magic-sparkles me-1"></i> Start New Film Project
+            </button>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Recent Rendering Jobs -->
+    {% if recent_jobs %}
+    <div class="mt-5">
+        <h4 class="mb-3"><i class="fa-solid fa-film text-warning me-2"></i> Master Rendering History</h4>
+        <div class="admin-table-wrapper">
+            <table class="table-custom">
+                <thead>
+                    <tr>
+                        <th>Project</th>
+                        <th>Status</th>
+                        <th>Progress</th>
+                        <th>Created</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for job in recent_jobs %}
+                    <tr>
+                        <td class="fw-bold text-white">{{ job.project.title }}</td>
+                        <td>
+                            {% if job.status == 'completed' %}
+                                <span class="badge bg-success">Completed</span>
+                            {% elif job.status == 'processing' %}
+                                <span class="badge bg-warning text-dark"><i class="fa-solid fa-spinner fa-spin me-1"></i> Processing</span>
+                            {% else %}
+                                <span class="badge bg-danger">Failed</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2" style="width: 140px;">
+                                <div class="progress-container">
+                                    <div class="progress-bar-gold" style="width: {{ job.progress }}%;"></div>
+                                </div>
+                                <small class="text-muted">{{ job.progress }}%</small>
+                            </div>
+                        </td>
+                        <td><small class="text-muted">{{ job.created_at.strftime('%b %d, %H:%M') if job.created_at else '' }}</small></td>
+                        <td>
+                            {% if job.output_video_url %}
+                            <a href="{{ job.output_video_url }}" target="_blank" class="btn btn-sm btn-outline-gold">
+                                <i class="fa-solid fa-download me-1"></i> Download Movie
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- New Project Modal -->
+<div class="modal fade" id="newProjectModal" tabindex="-1" aria-labelledby="newProjectModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="background: var(--af-charcoal); border: 1px solid var(--af-border); color: var(--af-white);">
+            <form action="{{ url_for('movie_studio.create_project') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header" style="border-bottom: 1px solid var(--af-border);">
+                    <h5 class="modal-title fw-bold" id="newProjectModalLabel"><i class="fa-solid fa-clapperboard text-warning me-2"></i> New Movie Project</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label">Movie Title</label>
+                        <input type="text" name="title" class="form-control" placeholder="e.g., Rise of the Orixa" required>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Genre</label>
+                            <select name="genre" class="form-select">
+                                <option value="Afrofuturism">Afrofuturism</option>
+                                <option value="Nollywood Thriller">Nollywood Thriller</option>
+                                <option value="Historical Epic">Historical Epic</option>
+                                <option value="Sci-Fi Action">Sci-Fi Action</option>
+                                <option value="Drama & Romance">Drama & Romance</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Cinematic Tone & Lighting</label>
+                            <select name="cinematic_tone" class="form-select">
+                                <option value="Moody & Cinematic">Moody & Cinematic (ARRI Alexa)</option>
+                                <option value="Golden Hour Africa">Golden Hour Africa (Warm Sunlight)</option>
+                                <option value="Cyberpunk Neon">Cyberpunk Neon (Vibrant Contrast)</option>
+                                <option value="Vintage 35mm Nollywood">Vintage 35mm Nollywood Film</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Aspect Ratio</label>
+                            <select name="aspect_ratio" class="form-select">
+                                <option value="16:9">16:9 Widescreen (Landscape)</option>
+                                <option value="9:16">9:16 Vertical (Social / Mobile)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Target Duration</label>
+                            <select name="target_duration" class="form-select">
+                                <option value="30">30 Seconds (Teaser / Scene)</option>
+                                <option value="60" selected>60 Seconds (Short Film)</option>
+                                <option value="120">120 Seconds (Extended Film)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Initial Concept / Story Hook</label>
+                        <textarea name="logline" class="form-control" rows="3" placeholder="Describe the core conflict or protagonist's quest. Our AI will flesh it out into a complete screenplay!"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer" style="border-top: 1px solid var(--af-border);">
+                    <button type="button" class="btn btn-surface" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-gold"><i class="fa-solid fa-wand-magic-sparkles me-1"></i> Create &amp; Write Screenplay</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

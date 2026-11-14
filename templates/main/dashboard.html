@@ -1,522 +1,195 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard | Afrigen{% endblock %}
+{% block title %}Dashboard | Afrigen 2.0{% endblock %}
 
 {% block content %}
-<style>
-    /* Minimal Modern Scrollbar */
-    ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-    }
-
-    ::-webkit-scrollbar-track {
-        background: transparent;
-    }
-
-    ::-webkit-scrollbar-thumb {
-        background: #30363D;
-        border-radius: 4px;
-    }
-
-    ::-webkit-scrollbar-thumb:hover {
-        background: #8B949E;
-    }
-
-    /* Workspace Styling */
-    .workspace-hero {
-        padding: 40px 0;
-    }
-
-    .greeting {
-        color: #F0F6FC;
-        font-weight: 700;
-        font-size: 2.2rem;
-        letter-spacing: -0.5px;
-    }
-
-    .subtitle {
-        color: #8B949E;
-        font-size: 1.1rem;
-    }
-
-    .prompt-box {
-        background: #0D1117;
-        border: 1px solid #30363D;
-        border-radius: 16px;
-        transition: border-color 0.2s, box-shadow 0.2s;
-        overflow: hidden;
-    }
-
-    .prompt-box:focus-within {
-        border-color: #F5A623;
-        box-shadow: 0 0 0 1px #F5A623;
-    }
-
-    .prompt-textarea {
-        background: transparent !important;
-        border: none !important;
-        color: #F0F6FC !important;
-        font-size: 1.15rem !important;
-        resize: none;
-        box-shadow: none !important;
-        padding: 20px 24px;
-    }
-
-    .prompt-textarea::placeholder {
-        color: #484F58;
-    }
-
-    .quick-actions {
-        background: #161B22;
-        padding: 12px 24px;
-        border-top: 1px solid #30363D;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        flex-wrap: wrap;
-        gap: 12px;
-    }
-
-    .action-btn {
-        background: transparent;
-        border: none;
-        color: #8B949E;
-        font-weight: 500;
-        padding: 6px 12px;
-        border-radius: 8px;
-        transition: all 0.2s;
-    }
-
-    .action-btn:hover {
-        color: #F0F6FC;
-        background: rgba(255, 255, 255, 0.05);
-    }
-
-    .action-btn.active {
-        color: #F5A623;
-        background: rgba(245, 166, 35, 0.1);
-    }
-
-    /* Config Drawer */
-    .config-drawer {
-        background: #161B22;
-        border-top: 1px solid #30363D;
-        padding: 16px 24px;
-    }
-
-    .pill-radio {
-        display: none;
-    }
-
-    .pill-label {
-        display: inline-block;
-        padding: 6px 12px;
-        border-radius: 99px;
-        border: 1px solid #30363D;
-        color: #8B949E;
-        cursor: pointer;
-        font-size: 13px;
-        transition: all 0.2s;
-    }
-
-    .pill-label:hover {
-        border-color: #8B949E;
-        color: #C9D1D9;
-    }
-
-    .pill-radio:checked+.pill-label {
-        background: #F5A623;
-        border-color: #F5A623;
-        color: #0D1117;
-        font-weight: 600;
-    }
-
-    /* Cards */
-    .premium-card {
-        background: #0D1117;
-        border: 1px solid #30363D;
-        border-radius: 12px;
-        padding: 24px;
-        height: 100%;
-        transition: transform 0.2s, box-shadow 0.2s;
-    }
-
-    .premium-card:hover {
-        border-color: #484F58;
-    }
-
-    /* Grid Items */
-    .creation-card {
-        background: #161B22;
-        border: 1px solid #30363D;
-        border-radius: 12px;
-        overflow: hidden;
-        position: relative;
-    }
-
-    .creation-preview {
-        width: 100%;
-        height: 160px;
-        background: #0D1117;
-        object-fit: cover;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-bottom: 1px solid #30363D;
-    }
-
-    .badge-type {
-        position: absolute;
-        top: 10px;
-        left: 10px;
-        background: rgba(13, 17, 23, 0.8);
-        backdrop-filter: blur(4px);
-        border: 1px solid #30363D;
-        color: #C9D1D9;
-        font-size: 11px;
-        padding: 4px 8px;
-        border-radius: 6px;
-    }
-
-    .empty-state {
-        text-align: center;
-        padding: 48px 24px;
-        background: rgba(13, 17, 23, 0.5);
-        border: 1px dashed #30363D;
-        border-radius: 12px;
-    }
-
-    .empty-icon {
-        font-size: 32px;
-        color: #484F58;
-        margin-bottom: 16px;
-    }
-
-    .empty-title {
-        color: #C9D1D9;
-        font-weight: 600;
-        margin-bottom: 8px;
-    }
-
-    .empty-subtitle {
-        color: #8B949E;
-        font-size: 14px;
-    }
-
-    /* Progress Overlay */
-    #generation-overlay {
-        display: none;
-        position: fixed;
-        inset: 0;
-        background: rgba(13, 17, 23, 0.9);
-        backdrop-filter: blur(4px);
-        z-index: 9999;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .loader-box {
-        background: #161B22;
-        border: 1px solid #30363D;
-        border-radius: 16px;
-        padding: 40px;
-        text-align: center;
-        width: 340px;
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
-    }
-</style>
-
-<!-- Workspace Hero -->
-<div class="workspace-hero text-center mb-5">
-    <h1 class="greeting" id="dynamic-greeting">Welcome, {{ current_user.username }}</h1>
-    <p class="subtitle mb-4">What would you like to create today?</p>
-
-    <div class="mx-auto" style="max-width: 720px;">
-        <!-- Unified Prompt Box Container -->
-        <div class="prompt-box">
-
-            <!-- MAIN TEXTAREA (Shared visual, syncs to hidden forms) -->
-            <textarea id="master_prompt" class="form-control prompt-textarea" rows="3"
-                placeholder="Describe your idea in detail..."></textarea>
-
-            {% if current_user.plan == 'pro' %}
-            <!-- Form 1: Text to Video -->
-            <form method="POST" action="{{ url_for('main.generate') }}" id="form_video" class="workspace-form">
-                <input type="hidden" name="prompt" id="hidden_video_prompt">
-                <input type="hidden" name="genType" value="text">
-
-                <div class="config-drawer text-start">
-                    <p
-                        style="color: #8B949E; font-size: 12px; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">
-                        Video Style</p>
-                    <div class="d-flex flex-wrap gap-2 mb-3">
-                        <input type="radio" name="style" id="v_style_cinematic" value="cinematic" class="pill-radio"
-                            checked>
-                        <label for="v_style_cinematic" class="pill-label">🎬 Cinematic</label>
-
-                        <input type="radio" name="style" id="v_style_anime" value="anime" class="pill-radio">
-                        <label for="v_style_anime" class="pill-label">🎌 Anime</label>
-
-                        <input type="radio" name="style" id="v_style_realistic" value="realistic" class="pill-radio">
-                        <label for="v_style_realistic" class="pill-label">🌍 Realistic</label>
-
-                        <input type="radio" name="style" id="v_style_african" value="african" class="pill-radio">
-                        <label for="v_style_african" class="pill-label">👑 African</label>
-
-                        <input type="radio" name="style" id="v_style_social" value="social" class="pill-radio">
-                        <label for="v_style_social" class="pill-label">📱 Social</label>
-                    </div>
-
-                    <div class="mb-3">
-                        <p
-                            style="color: #8B949E; font-size: 12px; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">
-                            Duration</p>
-                        <select name="duration" class="form-select form-select-sm"
-                            style="background-color: #0D1117; border-color: #30363D; color: #C9D1D9;">
-                            <option value="5">5 seconds</option>
-                            <option value="10">10 seconds (+5 credits)</option>
-                            <option value="15">15 seconds (+10 credits)</option>
-                            <option value="20">20 seconds (+15 credits)</option>
-                        </select>
-                    </div>
-
-                    {% if current_user.plan == 'pro' %}
-                    <div class="form-check mt-2" id="video_voiceover_option">
-                        <input class="form-check-input" type="checkbox" name="add_voiceover" id="v_add_voiceover"
-                            value="1">
-                        <label class="form-check-label" for="v_add_voiceover" style="color: #F5A623; font-size: 13px;">
-                            <i class="fa-solid fa-microphone"></i> Add AI Voiceover
-                        </label>
-                    </div>
-                    {% endif %}
-                </div>
-            </form>
-            {% endif %}
-
-            <!-- Form 2: Text to Image -->
-            <form method="POST" action="{{ url_for('main.generate_image') }}" id="form_image" class="workspace-form"
-                style="display: {{ 'none' if current_user.plan == 'pro' else 'block' }};">
-                <input type="hidden" name="prompt" id="hidden_image_prompt">
-
-                <div class="config-drawer text-start">
-                    <div class="row">
-                        <div class="col-md-7 mb-3 mb-md-0">
-                            <p
-                                style="color: #8B949E; font-size: 12px; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">
-                                Art Style</p>
-                            <div class="d-flex flex-wrap gap-2">
-                                <input type="radio" name="style" id="i_style_realistic" value="realistic"
-                                    class="pill-radio" checked>
-                                <label for="i_style_realistic" class="pill-label">Realistic</label>
-
-                                <input type="radio" name="style" id="i_style_anime" value="anime" class="pill-radio">
-                                <label for="i_style_anime" class="pill-label">Anime</label>
-
-                                <input type="radio" name="style" id="i_style_cinematic" value="cinematic"
-                                    class="pill-radio">
-                                <label for="i_style_cinematic" class="pill-label">Cinematic</label>
-
-                                <input type="radio" name="style" id="i_style_african" value="african"
-                                    class="pill-radio">
-                                <label for="i_style_african" class="pill-label">African</label>
-                            </div>
-                        </div>
-                        <div class="col-md-5">
-                            <p
-                                style="color: #8B949E; font-size: 12px; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">
-                                Aspect Ratio</p>
-                            <select name="aspect_ratio" class="form-select form-select-sm"
-                                style="background-color: #0D1117; border-color: #30363D; color: #C9D1D9;">
-                                <option value="1:1">Square (1:1)</option>
-                                <option value="16:9">Landscape (16:9)</option>
-                                <option value="9:16">Portrait (9:16)</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-            </form>
-
-            <!-- Form 3: Image to Video -->
-            <form method="POST" action="{{ url_for('main.generate_from_image') }}" enctype="multipart/form-data"
-                id="form_animate" class="workspace-form" style="display: none;">
-                <input type="hidden" name="prompt" id="hidden_animate_prompt">
-
-                <div class="config-drawer text-start">
-                    {% if current_user.plan == 'pro' %}
-                    <div class="mb-3">
-                        <p
-                            style="color: #8B949E; font-size: 12px; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">
-                            Upload Base Image</p>
-                        <input type="file" name="image" id="animate_image_input" class="form-control form-control-sm"
-                            style="background-color: #0D1117; border-color: #30363D; color: #C9D1D9;" accept="image/*"
-                            required>
-                        <div id="animate_image_preview" class="mt-3" style="display: none;">
-                            <img id="animate_image_preview_img" class="img-fluid" alt="Selected image preview"
-                                style="max-height: 220px; width: 100%; object-fit: contain; border-radius: 8px; border: 1px solid #30363D;">
-                            <button type="button" id="remove_animate_image" class="btn btn-sm btn-outline-warning mt-2">
-                                <i class="fa-solid fa-xmark"></i> Remove image
-                            </button>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-6">
-                            <p
-                                style="color: #8B949E; font-size: 12px; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">
-                                Aspect Ratio</p>
-                            <select name="aspect_ratio" class="form-select form-select-sm"
-                                style="background-color: #0D1117; border-color: #30363D; color: #C9D1D9;">
-                                <option value="16:9">16:9 (Landscape)</option>
-                                <option value="9:16">9:16 (Portrait)</option>
-                                <option value="1:1">1:1 (Square)</option>
-                            </select>
-                        </div>
-                        <div class="col-6">
-                            <p
-                                style="color: #8B949E; font-size: 12px; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">
-                                Duration</p>
-                            <select name="duration" class="form-select form-select-sm"
-                                style="background-color: #0D1117; border-color: #30363D; color: #C9D1D9;">
-                                <option value="5">5 seconds</option>
-                                <option value="10">10 seconds</option>
-                            </select>
-                        </div>
-                    </div>
-                    {% else %}
-                    <div class="alert alert-warning mb-0"
-                        style="background: rgba(245,166,35,0.1); border-color: #F5A623; color: #F5A623; padding: 12px;">
-                        <i class="fa-solid fa-lock"></i> Image-to-Video is a Pro feature. <a
-                            href="{{ url_for('main.upgrade') }}"
-                            style="color: #F5A623; text-decoration: underline;">Upgrade now</a>
-                    </div>
-                    {% endif %}
-                </div>
-            </form>
-
-            <!-- Quick Actions Footer -->
-            <div class="quick-actions">
-                <div class="d-flex flex-wrap gap-2">
-                    {% if current_user.plan == 'pro' %}
-                    <button type="button" class="action-btn active" data-target="form_video">
-                        <i class="fa-solid fa-clapperboard"></i> Video
-                    </button>
-                    {% endif %}
-                    <button type="button" class="action-btn {{ '' if current_user.plan == 'pro' else 'active' }}" data-target="form_image">
-                        <i class="fa-solid fa-image"></i> Image
-                    </button>
-                    {% if current_user.plan == 'pro' %}
-                    <button type="button" class="action-btn" data-target="form_animate">
-                        <i class="fa-solid fa-wand-magic-sparkles"></i> Animate Image
-                    </button>
-                    {% endif %}
-                    {% if current_user.plan == 'pro' %}
-                    <button type="button" class="action-btn" id="btn-voiceover" data-target="form_video">
-                        <i class="fa-solid fa-microphone"></i> Voice Over
-                    </button>
-                    {% endif %}
-                </div>
-
-                <div class="d-flex align-items-center gap-3">
-                    {% if current_user.plan != 'free' %}
-                    <span style="color: #8B949E; font-size: 13px;"><i class="fa-solid fa-coins"
-                            style="color: #F5A623;"></i> {{ current_user.credits }} Credits</span>
-                    {% endif %}
-                    {% if current_user.plan == 'pro' and current_user.credits > 0 %}
-                    <button type="button" id="masterSubmitBtn" class="btn btn-afrigen px-4" style="border-radius: 8px;">
-                        Generate <i class="fa-solid fa-arrow-right ms-1"></i>
-                    </button>
-                    {% elif current_user.plan == 'free' and (current_user.monthly_images_used or 0) < 2 %}
-                    <button type="button" id="masterSubmitBtn" class="btn btn-afrigen px-4" style="border-radius: 8px;">
-                        Generate Image <i class="fa-solid fa-arrow-right ms-1"></i>
-                    </button>
-                    {% else %}
-                    <a href="{{ url_for('main.upgrade') }}" class="btn btn-outline-warning px-3"
-                        style="border-radius: 8px;">Upgrade</a>
-                    {% endif %}
-                </div>
+<div class="page-container">
+    <!-- Top Welcome Banner -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="badge-tier {% if current_user.plan == 'director' or current_user.email == 'oadedamola07@gmail.com' %}badge-director{% elif current_user.plan == 'studio' %}badge-studio{% elif current_user.plan in ['pro', 'creator'] %}badge-creator{% else %}badge-spark{% endif %}">
+                    {{ (current_user.plan or 'SPARK')|upper }} TIER
+                </span>
+                {% if telegram_linked %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 10px;">
+                    <i class="fa-brands fa-telegram"></i> BOT CONNECTED
+                </span>
+                {% endif %}
             </div>
+            <h1 class="page-title">Welcome back, {{ current_user.username }}</h1>
+            <p class="page-subtitle">Your AI creative production studio is ready.</p>
+        </div>
 
+        <div class="d-flex align-items-center gap-2">
+            <a href="{{ url_for('main.create') }}" class="btn btn-gold">
+                <i class="fa-solid fa-plus me-1"></i> New Creation
+            </a>
+            {% if current_user.plan != 'director' and current_user.email != 'oadedamola07@gmail.com' %}
+            <a href="{{ url_for('main.upgrade') }}" class="btn btn-surface">
+                <i class="fa-solid fa-crown text-warning me-1"></i> Upgrade
+            </a>
+            {% endif %}
         </div>
     </div>
-</div>
 
-<div class="row g-4 mb-5">
-    <!-- Left Column: Recent Creations -->
-    <div class="col-lg-8">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h4 style="color: #F0F6FC; font-weight: 600; margin: 0;">Recent Creations</h4>
-            <a href="{{ url_for('main.history') }}" style="color: #8B949E; font-size: 14px; text-decoration: none;">View
-                all <i class="fa-solid fa-chevron-right fs-6"></i></a>
+    <!-- Metrics Grid -->
+    <div class="metrics-grid-4">
+        <div class="metric-card">
+            <div class="metric-icon-box"><i class="fa-solid fa-coins"></i></div>
+            <div>
+                <div class="metric-val">{{ current_user.credits or 0 }}</div>
+                <div class="metric-label">Available Credits</div>
+            </div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-icon-box" style="color: #60A5FA;"><i class="fa-solid fa-photo-film"></i></div>
+            <div>
+                <div class="metric-val">{{ total_generations }}</div>
+                <div class="metric-label">Total Creations</div>
+            </div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-icon-box" style="color: #34D399;"><i class="fa-solid fa-circle-check"></i></div>
+            <div>
+                <div class="metric-val">{{ completed_generations }}</div>
+                <div class="metric-label">Completed Renders</div>
+            </div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-icon-box" style="color: #F87171;"><i class="fa-solid fa-film"></i></div>
+            <div>
+                <div class="metric-val">
+                    {% if current_user.plan == 'director' or current_user.email == 'oadedamola07@gmail.com' %}
+                        ACTIVE
+                    {% else %}
+                        LOCKED
+                    {% endif %}
+                </div>
+                <div class="metric-label">Movie Studio Access</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Creation Launchpad -->
+    <div class="mb-5">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <h3 class="h5 mb-0 text-white">Creative Launchpad</h3>
+            <span class="text-muted small">Select a workspace to start creating</span>
+        </div>
+
+        <div class="quick-tools-grid">
+            <a href="{{ url_for('main.create') }}?mode=video" class="quick-tool-card">
+                <div>
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <i class="fa-solid fa-video text-warning fs-4"></i>
+                        <span class="badge-gold">Kling AI</span>
+                    </div>
+                    <h4>AI Video Generator</h4>
+                    <p>Cinematic 5s &amp; 10s text-to-video clips with African visual styling.</p>
+                </div>
+                <div class="d-flex align-items-center text-warning small fw-bold pt-2">
+                    <span>Direct Shot &rarr;</span>
+                </div>
+            </a>
+
+            <a href="{{ url_for('main.create') }}?mode=image" class="quick-tool-card">
+                <div>
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <i class="fa-solid fa-image text-warning fs-4"></i>
+                        <span class="badge bg-secondary border border-secondary" style="font-size: 10px;">FLUX.1</span>
+                    </div>
+                    <h4>AI Photo Studio</h4>
+                    <p>Hyper-realistic 8K photography, authentic melanin portraits &amp; fashion.</p>
+                </div>
+                <div class="d-flex align-items-center text-warning small fw-bold pt-2">
+                    <span>Generate Photo &rarr;</span>
+                </div>
+            </a>
+
+            <a href="{{ url_for('movie_studio.index') }}" class="quick-tool-card" style="border-color: var(--af-gold-border);">
+                <div>
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <i class="fa-solid fa-film text-warning fs-4"></i>
+                        <span class="badge-director">DIRECTOR</span>
+                    </div>
+                    <h4>Movie Studio</h4>
+                    <p>Multi-scene screenplay writer, character dossiers &amp; master film rendering.</p>
+                </div>
+                <div class="d-flex align-items-center text-warning small fw-bold pt-2">
+                    <span>Open Filmmaking Studio &rarr;</span>
+                </div>
+            </a>
+
+            <a href="{{ url_for('main.saved_prompts') }}" class="quick-tool-card">
+                <div>
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <i class="fa-solid fa-wand-magic-sparkles text-warning fs-4"></i>
+                        <span class="badge bg-secondary border border-secondary" style="font-size: 10px;">Groq</span>
+                    </div>
+                    <h4>Prompt Lab</h4>
+                    <p>Transform rough ideas into cinematic camera-directed prompts.</p>
+                </div>
+                <div class="d-flex align-items-center text-warning small fw-bold pt-2">
+                    <span>Refine Prompt &rarr;</span>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Recent Creations Gallery -->
+    <div class="mb-5">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <h3 class="h5 mb-0 text-white">Recent Creations</h3>
+            <a href="{{ url_for('main.history') }}" class="btn btn-sm btn-ghost">View All ({{ total_generations }}) &rarr;</a>
         </div>
 
         {% if recent_generations %}
-        <div class="row g-3">
-            {% for gen in recent_generations[:4] %}
-            <div class="col-md-6">
-                <div class="creation-card h-100 d-flex flex-column">
-                    <div class="creation-preview">
-                        {% if gen.fal_request_id and gen.generation_type == 'image' %}
-                        <span class="badge-type"><i class="fa-solid fa-wand-magic-sparkles"></i> Image to Video</span>
-                        {% elif gen.video_url or gen.generation_type != 'image' %}
-                        <span class="badge-type"><i class="fa-solid fa-clapperboard"></i> Video</span>
-                        {% else %}
-                        <span class="badge-type"><i class="fa-solid fa-image"></i> Image</span>
-                        {% endif %}
-
-                        {% if gen.status == 'processing' %}
-                        <span class="badge-type"><i class="fa-solid fa-circle-notch fa-spin"></i> Animating...</span>
-                        {% endif %}
-
+        <div class="row g-4">
+            {% for gen in recent_generations %}
+            <div class="col-md-6 col-lg-3">
+                <div class="card-surface h-100 d-flex flex-column p-0 overflow-hidden">
+                    <div class="position-relative" style="aspect-ratio: 16/9; background: #000;">
                         {% if gen.video_url %}
-                        <video width="100%" height="100%" style="object-fit: cover;" muted onmouseover="this.play()"
-                            onmouseout="this.pause()">
-                            <source src="{{ gen.video_url }}" type="video/mp4">
-                        </video>
+                            <video src="{{ gen.video_url }}" style="width: 100%; height: 100%; object-fit: cover;" muted onmouseover="this.play()" onmouseout="this.pause()"></video>
                         {% elif gen.image_url %}
-                        <img src="{{ gen.image_url }}" width="100%" height="100%" style="object-fit: cover;">
+                            <img src="{{ gen.image_url }}" alt="Preview" style="width: 100%; height: 100%; object-fit: cover;">
                         {% else %}
-                        <div class="text-center" style="color: #484F58;">
-                            {% if gen.status == 'failed' %}
-                            <i class="fa-solid fa-triangle-exclamation fs-3 mb-2"
-                                style="color: #E74C3C;"></i><br><small>Failed</small>
-                            {% elif gen.status == 'processing' %}
-                            <i class="fa-solid fa-circle-notch fa-spin fs-3 mb-2"
-                                style="color: #F5A623;"></i><br><small>Generating</small>
-                            {% else %}
-                            <i class="fa-solid fa-image fs-3 mb-2"></i><br><small>No preview</small>
-                            {% endif %}
-                        </div>
-                        {% endif %}
-                    </div>
-                    <div class="p-3 flex-grow-1 d-flex flex-column">
-                        <p
-                            style="color: #C9D1D9; font-size: 13px; line-height: 1.4; margin-bottom: 12px; flex-grow: 1;">
-                            "{{ gen.original_prompt[:60] }}{% if gen.original_prompt|length > 60 %}...{% endif %}"
-                        </p>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span style="color: #8B949E; font-size: 11px;">{{ gen.created_at.strftime('%b %d') }} • -{{
-                                gen.credit_cost }} cr</span>
-                            <div class="btn-group">
-                                <button class="btn btn-sm btn-link text-decoration-none" style="color: #8B949E;"
-                                    title="Duplicate Prompt"
-                                    onclick="duplicatePrompt(this.getAttribute('data-prompt'))" data-prompt="{{ gen.original_prompt }}"><i
-                                        class="fa-regular fa-copy"></i></button>
-                                {% if gen.video_url %}
-                                <a href="{{ url_for('main.download_video', generation_id=gen.id) }}"
-                                    class="btn btn-sm btn-link text-decoration-none" style="color: #8B949E;"
-                                    title="Download"><i class="fa-solid fa-download"></i></a>
-                                {% elif gen.image_url %}
-                                <a href="{{ url_for('main.download_image_file', generation_id=gen.id) }}"
-                                    class="btn btn-sm btn-link text-decoration-none" style="color: #8B949E;"
-                                    title="Download"><i class="fa-solid fa-download"></i></a>
-                                {% endif %}
-                                {% if gen.video_url %}
-                                <a href="{{ gen.video_url }}" target="_blank" rel="noopener"
-                                    class="btn btn-sm btn-link text-decoration-none" style="color: #F5A623;"
-                                    title="Open generated video">Watch</a>
+                            <div class="d-flex flex-column align-items-center justify-content-center h-100 text-muted">
+                                {% if gen.status == 'failed' %}
+                                    <i class="fa-solid fa-triangle-exclamation text-danger fs-3 mb-1"></i>
+                                    <small class="text-danger">Failed</small>
+                                {% else %}
+                                    <i class="fa-solid fa-spinner fa-spin text-warning fs-3 mb-1"></i>
+                                    <small>Processing</small>
                                 {% endif %}
                             </div>
+                        {% endif %}
+
+                        <span class="position-absolute top-0 start-0 m-2 badge bg-dark border border-secondary" style="font-size: 10px;">
+                            {{ gen.generation_type|upper }}
+                        </span>
+                    </div>
+
+                    <div class="p-3 d-flex flex-column flex-grow-1">
+                        <p class="small text-secondary mb-3 flex-grow-1" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                            {{ gen.original_prompt }}
+                        </p>
+                        
+                        <div class="d-flex align-items-center justify-content-between pt-2 border-top" style="border-color: var(--af-border) !important;">
+                            <small class="text-muted">{{ gen.created_at.strftime('%b %d') if gen.created_at else '' }}</small>
+                            {% if gen.video_url %}
+                                <a href="{{ gen.video_url }}" target="_blank" class="btn btn-sm btn-outline-gold py-1 px-2" style="font-size: 11px;">
+                                    <i class="fa-solid fa-play me-1"></i> Watch
+                                </a>
+                            {% elif gen.image_url %}
+                                <a href="{{ gen.image_url }}" target="_blank" class="btn btn-sm btn-outline-gold py-1 px-2" style="font-size: 11px;">
+                                    <i class="fa-solid fa-eye me-1"></i> View
+                                </a>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -525,334 +198,34 @@
         </div>
         {% else %}
         <div class="empty-state">
-            <i class="fa-solid fa-layer-group empty-icon"></i>
-            <h5 class="empty-title">No creations yet</h5>
-            <p class="empty-subtitle">Your generated videos and images will appear here.</p>
+            <div class="empty-state-icon"><i class="fa-solid fa-photo-film"></i></div>
+            <h4 class="empty-state-title">Your Studio is Fresh</h4>
+            <p class="empty-state-desc">You haven't generated any media yet. Type an idea to direct your first video or photo.</p>
+            <a href="{{ url_for('main.create') }}" class="btn btn-gold">
+                <i class="fa-solid fa-plus me-1"></i> Create First Media
+            </a>
         </div>
         {% endif %}
     </div>
 
-    <!-- Right Column: Projects & Activity -->
-    <div class="col-lg-4 d-flex flex-column gap-4">
-
-        <!-- Recent Projects -->
-        <div>
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h4 style="color: #F0F6FC; font-weight: 600; margin: 0;">Projects</h4>
+    <!-- Telegram Bot Integration Banner -->
+    {% if not telegram_linked %}
+    <div class="card-surface d-flex flex-wrap align-items-center justify-content-between gap-3 p-4" style="border-color: #2AABEE;">
+        <div class="d-flex align-items-center gap-3">
+            <div style="width: 48px; height: 48px; border-radius: 50%; background: rgba(42, 171, 238, 0.15); display: flex; align-items: center; justify-content: center; color: #2AABEE; font-size: 24px;">
+                <i class="fa-brands fa-telegram"></i>
             </div>
-            <div class="premium-card p-4 text-center d-flex flex-column justify-content-center"
-                style="min-height: 180px;">
-                <i class="fa-regular fa-folder-open mb-3" style="font-size: 28px; color: #484F58;"></i>
-                <h6 style="color: #C9D1D9; font-weight: 500;">Organize your workspace</h6>
-                <p style="color: #8B949E; font-size: 13px; margin-bottom: 16px;">Group your generations into folders.
-                </p>
+            <div>
+                <h5 class="text-white mb-1">Create on the Go with Telegram</h5>
+                <p class="text-secondary small mb-0">Record voice notes and generate videos or photos directly inside Telegram.</p>
             </div>
-        </div>
-
-        <!-- Activity Feed -->
-        <div class="flex-grow-1">
-            <h4 style="color: #F0F6FC; font-weight: 600; margin-bottom: 16px;">Activity Feed</h4>
-            <div class="premium-card p-3">
-                <div class="d-flex align-items-start mb-3 pb-3" style="border-bottom: 1px solid #21262D;">
-                    <div
-                        style="width: 32px; height: 32px; border-radius: 8px; background: rgba(245,166,35,0.1); color: #F5A623; display: flex; align-items: center; justify-content: center; margin-right: 12px; flex-shrink: 0;">
-                        <i class="fa-solid fa-right-to-bracket fs-6"></i>
-                    </div>
-                    <div>
-                        <p style="color: #C9D1D9; font-size: 13px; margin: 0; font-weight: 500;">Logged In</p>
-                        <p style="color: #8B949E; font-size: 11px; margin: 0;">Just now</p>
-                    </div>
-                </div>
-
-                {% if recent_generations %}
-                <div class="d-flex align-items-start mb-3 pb-3" style="border-bottom: 1px solid #21262D;">
-                    <div
-                        style="width: 32px; height: 32px; border-radius: 8px; background: rgba(126,231,135,0.1); color: #7ee787; display: flex; align-items: center; justify-content: center; margin-right: 12px; flex-shrink: 0;">
-                        <i class="fa-solid fa-wand-magic-sparkles fs-6"></i>
-                    </div>
-                    <div>
-                        <p style="color: #C9D1D9; font-size: 13px; margin: 0; font-weight: 500;">Generated {{ 'Image' if
-                            recent_generations[0].generation_type == 'image' else 'Video' }}</p>
-                        <p style="color: #8B949E; font-size: 11px; margin: 0;">{{
-                            recent_generations[0].created_at.strftime('%I:%M %p') }}</p>
-                    </div>
-                </div>
-                {% endif %}
-
-                <div class="d-flex align-items-start">
-                    <div
-                        style="width: 32px; height: 32px; border-radius: 8px; background: rgba(88,166,255,0.1); color: #58a6ff; display: flex; align-items: center; justify-content: center; margin-right: 12px; flex-shrink: 0;">
-                        <i class="fa-solid fa-envelope-open-text fs-6"></i>
-                    </div>
-                    <div>
-                        <p style="color: #C9D1D9; font-size: 13px; margin: 0; font-weight: 500;">Newsletter Published
-                        </p>
-                        <p style="color: #8B949E; font-size: 11px; margin: 0;">Last week</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-    </div>
-</div>
-
-<!-- Telegram Banner -->
-<div class="premium-card p-3 mb-5 d-flex justify-content-between align-items-center flex-wrap gap-3"
-    style="background: rgba(13,17,23,0.8); border: 1px solid rgba(42, 171, 238, 0.25); border-radius: 12px;">
-    <div class="d-flex align-items-center gap-3">
-        <div
-            style="width: 48px; height: 48px; border-radius: 12px; background: linear-gradient(135deg, #2AABEE 0%, #229ED9 100%); color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 12px rgba(42, 171, 238, 0.3);">
-            <i class="fa-brands fa-telegram"></i>
         </div>
         <div>
-            <h6 style="color: #F0F6FC; margin: 0; font-weight: 600;">Generate on Telegram Bot (@{{ telegram_bot_username or 'AfrigenBot' }})</h6>
-            <p style="color: #8B949E; font-size: 13px; margin: 0;">Create videos, photos, and voice notes directly in Telegram using your credits.</p>
+            <a href="https://t.me/{{ telegram_bot_username }}" target="_blank" class="btn btn-surface text-white" style="border-color: #2AABEE;">
+                <i class="fa-brands fa-telegram text-info me-1"></i> Connect Telegram Bot
+            </a>
         </div>
     </div>
-    {% if telegram_linked %}
-    <span class="badge"
-        style="background: rgba(126,231,135,0.1); color: #7ee787; border: 1px solid rgba(126,231,135,0.4); padding: 8px 14px; font-size: 13px;">
-        <i class="fa-solid fa-circle-check"></i> Connected
-    </span>
-    {% else %}
-    <button id="tgConnectBtn" class="btn btn-sm px-3 py-2 fw-semibold" style="background: #2AABEE; color: #FFFFFF; border-radius: 8px;"
-        onclick="generateTelegramCode()">
-        <i class="fa-brands fa-telegram"></i> Connect Telegram
-    </button>
     {% endif %}
 </div>
-
-<!-- Progress Overlay -->
-<div id="generation-overlay">
-    <div class="loader-box">
-        <h3 id="overlay-title" style="color:#F5A623; margin-bottom:8px; font-weight: 600;">Generating...</h3>
-        <p id="overlay-subtitle" style="color:#8B949E; font-size:14px; margin-bottom:24px;">Please wait</p>
-        <div style="background:#21262D; border-radius:99px; height:8px; overflow:hidden; margin-bottom:12px;">
-            <div id="overlay-bar"
-                style="height:100%; width:0%; background:linear-gradient(90deg,#F5A623,#FFA114); border-radius:99px; transition:width 0.5s ease;">
-            </div>
-        </div>
-        <p id="overlay-percent" style="color:#F0F6FC; font-weight:bold; font-size:22px; margin: 0;">0%</p>
-    </div>
-</div>
-
-{% if recent_generations | selectattr('status', 'equalto', 'processing') | list %}
-<script>
-    setTimeout(function () {
-        window.location.reload();
-    }, 10000);
-</script>
-{% endif %}
-
-<script>
-
-    // 1. Dynamic Greeting
-    const hour = new Date().getHours();
-    const greetingEl = document.getElementById('dynamic-greeting');
-    let greeting = 'Good evening';
-    if (hour < 12) greeting = 'Good morning';
-    else if (hour < 18) greeting = 'Good afternoon';
-    greetingEl.innerHTML = `${greeting}, {{ current_user.username }}`;
-
-    // 2. Form Switching Logic
-    let activeFormId = '{{ "form_video" if current_user.plan == "pro" else "form_image" }}';
-
-    document.querySelectorAll('.action-btn').forEach(btn => {
-        btn.addEventListener('click', function () {
-            // Update active button state
-            document.querySelectorAll('.action-btn').forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-
-            // Check if Voice Over button was clicked
-            if (this.id === 'btn-voiceover') {
-                const voCheck = document.getElementById('v_add_voiceover');
-                if (voCheck) voCheck.checked = true;
-            }
-
-            // Hide all forms, show target form
-            document.querySelectorAll('.workspace-form').forEach(f => f.style.display = 'none');
-            activeFormId = this.dataset.target;
-            document.getElementById(activeFormId).style.display = 'block';
-            const voiceoverButton = document.getElementById('btn-voiceover');
-            if (voiceoverButton) voiceoverButton.style.display = activeFormId === 'form_image' ? 'none' : '';
-            const voiceoverOption = document.getElementById('video_voiceover_option');
-            const voiceoverCheckbox = document.getElementById('v_add_voiceover');
-            if (voiceoverOption) voiceoverOption.style.display = activeFormId === 'form_image' ? 'none' : '';
-            if (activeFormId === 'form_image' && voiceoverCheckbox) voiceoverCheckbox.checked = false;
-        });
-    });
-
-    const animateImageInput = document.getElementById('animate_image_input');
-    const animateImagePreview = document.getElementById('animate_image_preview');
-    const animateImagePreviewImg = document.getElementById('animate_image_preview_img');
-    const removeAnimateImage = document.getElementById('remove_animate_image');
-    let animateImageObjectUrl = null;
-
-    animateImageInput?.addEventListener('change', function () {
-        const file = this.files?.[0];
-        if (!file) return;
-        if (animateImageObjectUrl) URL.revokeObjectURL(animateImageObjectUrl);
-        animateImageObjectUrl = URL.createObjectURL(file);
-        animateImagePreviewImg.src = animateImageObjectUrl;
-        animateImagePreview.style.display = 'block';
-        this.style.display = 'none';
-    });
-    removeAnimateImage?.addEventListener('click', function () {
-        animateImageInput.value = '';
-        animateImageInput.style.display = '';
-        animateImagePreviewImg.removeAttribute('src');
-        animateImagePreview.style.display = 'none';
-        if (animateImageObjectUrl) URL.revokeObjectURL(animateImageObjectUrl);
-        animateImageObjectUrl = null;
-    });
-
-    // 3. Master Submit Logic
-    document.getElementById('form_video')?.addEventListener('submit', async function (event) {
-        event.preventDefault();
-        const submitButton = document.getElementById('masterSubmitBtn');
-        if (submitButton) submitButton.disabled = true;
-
-        try {
-            const response = await fetch(this.action, {
-                method: 'POST',
-                body: new FormData(this),
-            });
-            if (!response.ok) {
-                throw new Error(`Generation request failed (${response.status})`);
-            }
-            const data = await response.json();
-            if (data.success === false) {
-                alert("Generation failed: " + data.error);
-                document.getElementById('generation-overlay').style.display = 'none';
-                if (submitButton) submitButton.disabled = false;
-                return;
-            }
-            window.location.href = "{{ url_for('main.dashboard') }}";
-        } catch (error) {
-            console.error('Video generation request failed:', error);
-            alert("Error: " + error);
-            document.getElementById('generation-overlay').style.display = 'none';
-            if (submitButton) submitButton.disabled = false;
-        }
-    });
-
-    document.getElementById('form_animate')?.addEventListener('submit', async function (event) {
-        event.preventDefault();
-        const submitButton = document.getElementById('masterSubmitBtn');
-        if (submitButton) submitButton.disabled = true;
-
-        try {
-            const response = await fetch(this.action, {
-                method: 'POST',
-                body: new FormData(this),
-            });
-            let data;
-            try {
-                data = await response.json();
-            } catch {
-                throw new Error(`Animation request failed (${response.status}). Please try again.`);
-            }
-            if (!response.ok || data.success === false) {
-                throw new Error(data.error || `Animation request failed (${response.status})`);
-            }
-            window.location.href = "{{ url_for('main.dashboard') }}";
-        } catch (error) {
-            console.error('Image-to-video request failed:', error);
-            alert(`Image-to-video failed: ${error.message || error}`);
-            document.getElementById('generation-overlay').style.display = 'none';
-            if (submitButton) submitButton.disabled = false;
-        }
-    });
-
-    document.getElementById('masterSubmitBtn')?.addEventListener('click', function () {
-        const masterPrompt = document.getElementById('master_prompt').value;
-        if (!masterPrompt.trim() && activeFormId !== 'form_animate') {
-            alert('Please describe what you want to create.');
-            return;
-        }
-
-        // Sync prompt to the active hidden form input
-        const activeForm = document.getElementById(activeFormId);
-        const hiddenPrompt = activeForm.querySelector('input[name="prompt"]');
-        if (hiddenPrompt) hiddenPrompt.value = masterPrompt;
-
-        // Start Progress Overlay
-        if (activeFormId === 'form_video') {
-            startProgress('Directing Video', 'AI is preparing the scene...', 45000); // 45 sec estimate
-        } else if (activeFormId === 'form_image') {
-            startProgress('Painting Image', 'Applying styles...', 15000); // 15 sec estimate
-        } else if (activeFormId === 'form_animate') {
-            startProgress('Animating Image', 'Adding motion...', 45000);
-        }
-
-        activeForm.requestSubmit();
-    });
-
-    // Helper: Duplicate Prompt
-    function duplicatePrompt(text) {
-        document.getElementById('master_prompt').value = text;
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    // 4. Progress Overlay Function
-    function startProgress(title, subtitle, durationMs) {
-        const overlay = document.getElementById('generation-overlay');
-        const bar = document.getElementById('overlay-bar');
-        const percent = document.getElementById('overlay-percent');
-
-        document.getElementById('overlay-title').textContent = title;
-        document.getElementById('overlay-subtitle').textContent = subtitle;
-        overlay.style.display = 'flex';
-
-        let start = Date.now();
-        let interval = setInterval(() => {
-            let elapsed = Date.now() - start;
-            let p = Math.min((elapsed / durationMs) * 100, 95); // Cap at 95% until complete
-            bar.style.width = p + '%';
-            percent.textContent = Math.floor(p) + '%';
-            if (p >= 95) clearInterval(interval);
-        }, 500);
-    }
-
-    async function generateTelegramCode() {
-        const connectButton = document.getElementById('tgConnectBtn');
-        if (connectButton) connectButton.disabled = true;
-        try {
-            const response = await fetch("{{ url_for('telegram.connect_code') }}", {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
-            });
-            const data = await response.json();
-            if (!data.success) {
-                if (connectButton) connectButton.disabled = false;
-                return alert('Could not generate a Telegram connection code.');
-            }
-            if (connectButton) {
-                connectButton.textContent = 'Code: ' + data.code;
-            }
-            Swal.fire({
-                title: 'Connect to @' + data.bot_username,
-                html: '<div style="margin: 15px 0;"><p style="color: #8B949E; margin-bottom: 8px;">Your one-time connection code is:</p><strong style="font-size: 32px; letter-spacing: 4px; color: #F5A623;">' + data.code + '</strong></div>' +
-                      '<p style="color: #8B949E; font-size: 14px; margin-bottom: 15px;">Open Telegram and send this code to our bot, or click below:</p>' +
-                      '<a href="' + data.start_url + '" target="_blank" class="btn" style="background: #2AABEE; color: #fff; padding: 10px 20px; font-weight: 600; text-decoration: none; border-radius: 8px; display: inline-block;"><i class="fa-brands fa-telegram"></i> Open Bot with Code</a>',
-                confirmButtonText: 'Done',
-                background: '#161B22',
-                color: '#F0F6FC',
-                confirmButtonColor: '#F5A623'
-            });
-            const poll = setInterval(async () => {
-                const status = await fetch("{{ url_for('telegram.link_status') }}").then(r => r.json());
-                if (status.linked) {
-                    clearInterval(poll);
-                    await Swal.fire({ title: 'Telegram Connected!', text: 'Your account is now ready for video and photo generation on Telegram.', icon: 'success', background: '#161B22', color: '#F0F6FC' });
-                    window.location.reload();
-                }
-            }, 3000);
-            setTimeout(() => clearInterval(poll), 300000);
-        } catch (e) {
-            if (connectButton) connectButton.disabled = false;
-            alert('Error generating Telegram connection code.');
-        }
-    }
-</script>
 {% endblock %}

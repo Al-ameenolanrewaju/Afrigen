@@ -1,0 +1,65 @@
+/* ===================================================================
+   AFRIGEN 2.0 ADMIN DASHBOARD STYLES
+   Executive SaaS Analytics, Telemetry, User Table & Provider Health
+   =================================================================== */
+
+.admin-header-badge {
+    background: linear-gradient(135deg, rgba(233, 173, 50, 0.2) 0%, rgba(245, 138, 25, 0.2) 100%);
+    color: var(--af-gold);
+    border: 1px solid var(--af-gold-border);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.25rem 0.65rem;
+    border-radius: var(--radius-sm);
+}
+
+.admin-table-wrapper {
+    background-color: var(--af-charcoal);
+    border: 1px solid var(--af-border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.table-custom {
+    width: 100%;
+    margin-bottom: 0;
+    color: var(--af-text-primary);
+    border-collapse: collapse;
+}
+
+.table-custom th {
+    background-color: var(--af-surface);
+    color: var(--af-text-muted);
+    font-family: var(--font-heading);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid var(--af-border);
+}
+
+.table-custom td {
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid var(--af-surface);
+    font-size: 0.875rem;
+    vertical-align: middle;
+}
+
+.table-custom tr:hover td {
+    background-color: var(--af-surface-hover);
+}
+
+.health-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.health-dot.ok { background-color: var(--af-success); box-shadow: 0 0 8px var(--af-success); }
+.health-dot.warning { background-color: var(--af-warning); box-shadow: 0 0 8px var(--af-warning); }
+.health-dot.error { background-color: var(--af-danger); box-shadow: 0 0 8px var(--af-danger); }
+

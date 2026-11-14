@@ -913,3 +913,202 @@ class Notification(db.Model):
 
     def __repr__(self):
         return f'<Notification {self.id} {self.type}>'
+
+
+# =====================================================================
+# AFRIGEN 2.0 — MOVIE STUDIO (AI FILMMAKING PRODUCTION ENVIRONMENT)
+# Gated strictly to Director Tier (Tier 3)
+# =====================================================================
+
+class MovieProject(db.Model):
+    __tablename__ = 'movie_projects'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+
+    title = db.Column(db.String(255), nullable=False, default="Untitled Movie")
+    logline = db.Column(db.Text, nullable=True)
+    synopsis = db.Column(db.Text, nullable=True)
+    genre = db.Column(db.String(100), default="Afrofuturism")
+    cinematic_tone = db.Column(db.String(100), default="Moody & Cinematic")
+    aspect_ratio = db.Column(db.String(20), default="16:9")
+    target_duration = db.Column(db.Integer, default=60) # In seconds
+    visual_style = db.Column(db.String(100), default="cinematic")
+    status = db.Column(db.String(50), default="draft") # draft, storyboarding, generating, ready_to_render, rendering, completed
+    final_video_url = db.Column(db.String(500), nullable=True)
+    cover_image_url = db.Column(db.String(500), nullable=True)
+    settings_json = db.Column(db.Text, nullable=True) # JSON configurations
+
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+    user = db.relationship('User', backref=db.backref('movie_projects', cascade='all, delete-orphan'))
+
+    def __repr__(self):
+        return f"<MovieProject {self.title}>"
+
+
+class MovieCharacter(db.Model):
+    __tablename__ = 'movie_characters'
+
+    id = db.Column(db.Integer, primary_key=True)
+    project_id = db.Column(db.Integer, db.ForeignKey('movie_projects.id'), nullable=False, index=True)
+
+    name = db.Column(db.String(120), nullable=False)
+    role = db.Column(db.String(100), default="Protagonist") # Protagonist, Antagonist, Supporting, Narrator
+    description = db.Column(db.Text, nullable=True)
+    personality = db.Column(db.Text, nullable=True)
+    physical_appearance = db.Column(db.Text, nullable=True)
+    clothing = db.Column(db.Text, nullable=True)
+    voice_attributes = db.Column(db.String(120), nullable=True)
+    reference_image_url = db.Column(db.String(500), nullable=True)
+    notes = db.Column(db.Text, nullable=True)
+
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    project = db.relationship('MovieProject', backref=db.backref('characters', cascade='all, delete-orphan'))
+
+    def __repr__(self):
+        return f"<MovieCharacter {self.name}>"
+
+
+class MovieScene(db.Model):
+    __tablename__ = 'movie_scenes'
+
+    id = db.Column(db.Integer, primary_key=True)
+    project_id = db.Column(db.Integer, db.ForeignKey('movie_projects.id'), nullable=False, index=True)
+
+    scene_number = db.Column(db.Integer, default=1)
+    title = db.Column(db.String(255), default="Scene")
+    slugline = db.Column(db.String(255), default="INT. ROOM - DAY")
+    location = db.Column(db.String(150), nullable=True)
+    time_of_day = db.Column(db.String(50), default="DAY")
+    description = db.Column(db.Text, nullable=True)
+    screenplay_text = db.Column(db.Text, nullable=True)
+    order = db.Column(db.Integer, default=0)
+
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    project = db.relationship('MovieProject', backref=db.backref('scenes', cascade='all, delete-orphan', order_by='MovieScene.order'))
+
+    def __repr__(self):
+        return f"<MovieScene {self.scene_number}: {self.title}>"
+
+
+class MovieShot(db.Model):
+    __tablename__ = 'movie_shots'
+
+    id = db.Column(db.Integer, primary_key=True)
+    scene_id = db.Column(db.Integer, db.ForeignKey('movie_scenes.id'), nullable=False, index=True)
+    project_id = db.Column(db.Integer, db.ForeignKey('movie_projects.id'), nullable=False, index=True)
+
+    shot_number = db.Column(db.Integer, default=1)
+    visual_prompt = db.Column(db.Text, nullable=False)
+    refined_prompt = db.Column(db.Text, nullable=True)
+    camera_angle = db.Column(db.String(100), default="Wide Shot")
+    camera_movement = db.Column(db.String(100), default="Slow Push-In")
+    lighting = db.Column(db.String(100), default="Volumetric Golden")
+    duration = db.Column(db.String(10), default="5")
+    reference_image_url = db.Column(db.String(500), nullable=True)
+    video_url = db.Column(db.String(500), nullable=True)
+    status = db.Column(db.String(50), default="draft") # draft, generating, completed, failed
+    fal_request_id = db.Column(db.String(100), nullable=True)
+    error_message = db.Column(db.Text, nullable=True)
+    order = db.Column(db.Integer, default=0)
+
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    scene = db.relationship('MovieScene', backref=db.backref('shots', cascade='all, delete-orphan', order_by='MovieShot.order'))
+    project = db.relationship('MovieProject', backref=db.backref('all_shots', cascade='all, delete-orphan'))
+
+    def __repr__(self):
+        return f"<MovieShot {self.shot_number} in Scene {self.scene_id}>"
+
+
+class StoryboardFrame(db.Model):
+    __tablename__ = 'storyboard_frames'
+
+    id = db.Column(db.Integer, primary_key=True)
+    shot_id = db.Column(db.Integer, db.ForeignKey('movie_shots.id'), nullable=True, index=True)
+    scene_id = db.Column(db.Integer, db.ForeignKey('movie_scenes.id'), nullable=False, index=True)
+    project_id = db.Column(db.Integer, db.ForeignKey('movie_projects.id'), nullable=False, index=True)
+
+    image_url = db.Column(db.String(500), nullable=False)
+    visual_description = db.Column(db.Text, nullable=True)
+    caption = db.Column(db.Text, nullable=True)
+    is_approved = db.Column(db.Boolean, default=False)
+    order = db.Column(db.Integer, default=0)
+
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    project = db.relationship('MovieProject', backref=db.backref('storyboards', cascade='all, delete-orphan', order_by='StoryboardFrame.order'))
+
+    def __repr__(self):
+        return f"<StoryboardFrame {self.id}>"
+
+
+class MovieAudioTrack(db.Model):
+    __tablename__ = 'movie_audio_tracks'
+
+    id = db.Column(db.Integer, primary_key=True)
+    project_id = db.Column(db.Integer, db.ForeignKey('movie_projects.id'), nullable=False, index=True)
+
+    track_type = db.Column(db.String(50), default="narration") # dialogue, narration, music, sfx
+    title = db.Column(db.String(200), default="Audio Track")
+    audio_url = db.Column(db.String(500), nullable=False)
+    script_text = db.Column(db.Text, nullable=True)
+    voice_id = db.Column(db.String(100), default="en-NG-AbeoNeural")
+    start_time = db.Column(db.Float, default=0.0)
+    duration = db.Column(db.Float, default=0.0)
+    volume = db.Column(db.Float, default=1.0)
+
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    project = db.relationship('MovieProject', backref=db.backref('audio_tracks', cascade='all, delete-orphan'))
+
+    def __repr__(self):
+        return f"<MovieAudioTrack {self.title}>"
+
+
+class MovieTimeline(db.Model):
+    __tablename__ = 'movie_timelines'
+
+    id = db.Column(db.Integer, primary_key=True)
+    project_id = db.Column(db.Integer, db.ForeignKey('movie_projects.id'), nullable=False, unique=True)
+
+    timeline_data = db.Column(db.Text, nullable=True) # JSON representation of tracks, clips, transitions
+    duration = db.Column(db.Float, default=0.0)
+    fps = db.Column(db.Integer, default=24)
+    resolution = db.Column(db.String(20), default="1080p")
+    aspect_ratio = db.Column(db.String(20), default="16:9")
+
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+    project = db.relationship('MovieProject', backref=db.backref('timeline', uselist=False, cascade='all, delete-orphan'))
+
+    def __repr__(self):
+        return f"<MovieTimeline for Project {self.project_id}>"
+
+
+class MovieRenderJob(db.Model):
+    __tablename__ = 'movie_render_jobs'
+
+    id = db.Column(db.Integer, primary_key=True)
+    project_id = db.Column(db.Integer, db.ForeignKey('movie_projects.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+
+    status = db.Column(db.String(50), default="pending") # pending, processing, completed, failed
+    progress = db.Column(db.Integer, default=0) # 0 to 100
+    output_video_url = db.Column(db.String(500), nullable=True)
+    error_message = db.Column(db.Text, nullable=True)
+    settings_json = db.Column(db.Text, nullable=True)
+
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    completed_at = db.Column(db.DateTime, nullable=True)
+
+    project = db.relationship('MovieProject', backref=db.backref('render_jobs', cascade='all, delete-orphan'))
+    user = db.relationship('User', backref=db.backref('movie_render_jobs', cascade='all, delete-orphan'))
+
+    def __repr__(self):
+        return f"<MovieRenderJob {self.id} {self.status}>"
+

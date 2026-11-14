@@ -1,418 +1,381 @@
 {% extends "base.html" %}
 
-{% block title %}Afrigen{% endblock %}
+{% block title %}Afrigen AI 2.0 — Africa Creates. AI Generates.{% endblock %}
+
+{% block meta_description %}Create cinematic videos, stunning images, professional voiceovers, and powerful marketing content with AI. The creative production platform built for Africa and beyond.{% endblock %}
 
 {% block content %}
 
-<!-- HERO -->
-<section class="hero-section" style="overflow: hidden;">
-    <div class="glow-orb" style="width: 520px; height: 520px; background: rgba(245,166,35,0.22); top: -180px; left: 50%; transform: translateX(-50%);"></div>
-    <div class="glow-orb" style="width: 360px; height: 360px; background: rgba(120,90,255,0.16); bottom: -160px; left: -80px;"></div>
-    <div class="glow-orb" style="width: 320px; height: 320px; background: rgba(255,138,0,0.14); top: 40px; right: -100px;"></div>
-    <div class="container" style="position: relative; z-index: 1;">
-        <div class="mb-4 reveal">
-            <span class="pill">🇳🇬 Built for African Creators</span>
+<!-- 1. PREMIUM CINEMATIC HERO -->
+<section class="hero-section">
+    <div class="hero-glow"></div>
+    <div class="hero-content">
+        <div class="hero-badge">
+            <span class="badge-gold">
+                <i class="fa-solid fa-sparkles text-warning me-1"></i> AFRIGEN 2.0 IS LIVE · CINEMATIC AI PRODUCTION
+            </span>
         </div>
-        <h1 class="hero-title reveal" style="margin-bottom: 22px;">
-            Turn Your Ideas Into<br>
-            <span class="text-gradient">Stunning AI Videos</span>
+        
+        <h1 class="hero-headline">
+            Your Imagination.<br>
+            <span class="gradient-text">Our Creative Intelligence.</span>
         </h1>
-        <p class="hero-description reveal">
-            No camera. No studio. No technical skills. Just describe your idea and Afrigen generates professional videos for Pro creators in seconds.
+        
+        <p class="hero-subtext">
+            Create cinematic videos, stunning images, professional voiceovers, and powerful marketing content with AI. Powered by Kling AI, Flux, and authentic African cultural intelligence.
         </p>
-        <div class="reveal d-flex flex-wrap justify-content-center gap-3">
-        {% if current_user.is_authenticated %}
-        <a href="{{ url_for('main.dashboard') }}" class="btn btn-afrigen btn-lg px-5">
-            Go to Dashboard <i class="fa-solid fa-rocket"></i>
+
+        <div class="hero-cta-group">
+            {% if current_user.is_authenticated %}
+            <a href="{{ url_for('main.dashboard') }}" class="btn btn-gold btn-lg">
+                <i class="fa-solid fa-clapperboard me-2"></i> Launch Dashboard
+            </a>
+            <a href="{{ url_for('movie_studio.index') }}" class="btn btn-surface btn-lg">
+                <i class="fa-solid fa-film text-warning me-2"></i> Movie Studio
+            </a>
+            {% else %}
+            <a href="{{ url_for('auth.register') }}" class="btn btn-gold btn-lg">
+                <span>Start Creating</span>
+                <i class="fa-solid fa-arrow-right ms-2" style="font-size: 0.85rem;"></i>
+            </a>
+            <a href="#showcase" class="btn btn-surface btn-lg">
+                <span>Explore Afrigen</span>
+                <i class="fa-solid fa-chevron-down ms-2" style="font-size: 0.85rem;"></i>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Hero Media Preview Showcase -->
+    <div class="hero-media-wrapper mt-4">
+        <div class="position-relative" style="aspect-ratio: 16/9; background: #000;">
+            <video src="https://fal.media/files/monkey/aQe3wZ6wzYpU7jK1xL3rQ.mp4" autoplay loop muted playsinline style="width: 100%; height: 100%; object-fit: cover;"></video>
+            <div class="position-absolute bottom-0 start-0 end-0 p-4 d-flex align-items-center justify-content-between" style="background: linear-gradient(0deg, rgba(9,9,9,0.9) 0%, transparent 100%);">
+                <div class="text-start">
+                    <span class="badge-tier badge-director mb-1">CINEMATIC 4K</span>
+                    <h5 class="text-white mb-0">"The Golden King of Benin" · Kling AI Pro</h5>
+                </div>
+                <span class="badge-gold"><i class="fa-solid fa-circle text-success me-1" style="font-size: 6px;"></i> 24 FPS</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 2. PRODUCT SUITE SHOWCASE -->
+<section id="showcase" class="section-wrapper">
+    <div class="section-header">
+        <div class="section-kicker">Unified Production Environment</div>
+        <h2 class="section-title">Everything You Need to Direct &amp; Scale</h2>
+        <p class="section-desc">From solo African creators to high-volume marketing agencies and film directors.</p>
+    </div>
+
+    <div class="feature-grid-3">
+        <!-- AI Video -->
+        <div class="feature-card">
+            <div class="feature-icon-box"><i class="fa-solid fa-video"></i></div>
+            <h4 class="text-white mb-2">AI Video Generator</h4>
+            <p class="text-secondary small mb-3">Turn prompts into 10-second cinematic video clips using Fal Kling AI with physics continuity and smooth camera motions.</p>
+            <a href="{{ url_for('main.create') }}?mode=video" class="btn btn-sm btn-outline-gold">Direct Video &rarr;</a>
+        </div>
+
+        <!-- AI Image -->
+        <div class="feature-card">
+            <div class="feature-icon-box"><i class="fa-solid fa-image"></i></div>
+            <h4 class="text-white mb-2">Photorealistic Image Studio</h4>
+            <p class="text-secondary small mb-3">FLUX.1 Dev powered 8K African photography, portraiture, Ankara fashion, and vibrant social media visuals.</p>
+            <a href="{{ url_for('main.create') }}?mode=image" class="btn btn-sm btn-outline-gold">Generate Photos &rarr;</a>
+        </div>
+
+        <!-- Movie Studio -->
+        <div class="feature-card" style="border-color: var(--af-gold-border);">
+            <div class="feature-icon-box" style="background: var(--af-gold-muted);"><i class="fa-solid fa-film text-warning"></i></div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <h4 class="text-white mb-0">Movie Studio</h4>
+                <span class="badge-director" style="font-size: 9px;">NEW</span>
+            </div>
+            <p class="text-secondary small mb-3">AI screenplay writing, character dossiers, storyboarding, shot-by-shot generation, and FFmpeg master movie rendering.</p>
+            <a href="{{ url_for('movie_studio.index') }}" class="btn btn-sm btn-gold">Enter Studio &rarr;</a>
+        </div>
+
+        <!-- Voiceover -->
+        <div class="feature-card">
+            <div class="feature-icon-box"><i class="fa-solid fa-microphone-lines"></i></div>
+            <h4 class="text-white mb-2">Nigerian Voiceover Studio</h4>
+            <p class="text-secondary small mb-3">High-speed Neural TTS with authentic Nigerian English voices (Abeo &amp; Ezinne). Perfect for narration and ad copy.</p>
+            <a href="{{ url_for('main.create') }}?mode=voice" class="btn btn-sm btn-outline-gold">Synthesize Audio &rarr;</a>
+        </div>
+
+        <!-- Prompt Refiner -->
+        <div class="feature-card">
+            <div class="feature-icon-box"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+            <h4 class="text-white mb-2">Prompt Lab</h4>
+            <p class="text-secondary small mb-3">State-of-the-art Groq prompt engineer that enhances raw concepts with camera direction, lighting, and cultural fidelity.</p>
+            <a href="{{ url_for('main.saved_prompts') }}" class="btn btn-sm btn-outline-gold">Refine Ideas &rarr;</a>
+        </div>
+
+        <!-- Marketing & Campaigns -->
+        <div class="feature-card">
+            <div class="feature-icon-box"><i class="fa-solid fa-bullhorn"></i></div>
+            <h4 class="text-white mb-2">Campaigns &amp; Automations</h4>
+            <p class="text-secondary small mb-3">Generate cross-platform marketing campaigns, blogs, newsletters, and social distribution schedules automatically.</p>
+            <a href="{{ url_for('main.campaigns') }}" class="btn btn-sm btn-outline-gold">Build Campaigns &rarr;</a>
+        </div>
+    </div>
+</section>
+
+<!-- 3. INTERACTIVE PROMPT PLAYGROUND -->
+<section class="section-wrapper" style="background: var(--af-charcoal); border-top: 1px solid var(--af-border); border-bottom: 1px solid var(--af-border);">
+    <div class="section-header">
+        <div class="section-kicker">Interactive Prompt Playground</div>
+        <h2 class="section-title">See How Afrigen Enhances Your Ideas</h2>
+        <p class="section-desc">Type any simple concept and watch our prompt intelligence transform it into a director's brief.</p>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card-surface p-4">
+                <div class="mb-3">
+                    <label class="form-label">Your Rough Idea</label>
+                    <input type="text" id="demoPromptInput" class="form-control" value="An African woman in an Ankara gown walking through futuristic Lagos market" placeholder="Enter your prompt idea...">
+                </div>
+
+                <div class="d-flex flex-wrap gap-2 mb-4">
+                    <button class="btn btn-sm btn-gold" onclick="refineDemoPrompt('cinematic')"><i class="fa-solid fa-wand-magic-sparkles me-1"></i> Cinematic</button>
+                    <button class="btn btn-sm btn-surface" onclick="refineDemoPrompt('realistic')">🌍 Realistic</button>
+                    <button class="btn btn-sm btn-surface" onclick="refineDemoPrompt('african')">👑 African Cultural</button>
+                    <button class="btn btn-sm btn-surface" onclick="refineDemoPrompt('social')">📱 TikTok Viral</button>
+                </div>
+
+                <div class="p-3 rounded" style="background: var(--af-surface); border: 1px solid var(--af-border);">
+                    <small class="text-muted d-block mb-1 text-uppercase fw-bold" style="font-size: 11px;">Refined Output (Director Prompt):</small>
+                    <p id="demoRefinedOutput" class="text-white mb-0 small" style="font-family: monospace; line-height: 1.6;">
+                        "A majestic cinematic slow tracking shot of a stunning Nigerian woman in an intricate vibrant royal Ankara gown walking gracefully through a bustling futuristic Lagos night market. Neon holograms reflecting on rain-slicked pavement, volumetric golden hour mist, shot on 35mm ARRI Alexa 65, masterwork cinematography, 4k."
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 4. SUBSCRIPTION PLANS -->
+<section id="pricing" class="section-wrapper">
+    <div class="section-header">
+        <div class="section-kicker">Transparent Pricing</div>
+        <h2 class="section-title">Plans for Every Stage of Production</h2>
+        <p class="section-desc">From our free Spark tier to Hollywood-grade Director production suites.</p>
+    </div>
+
+    <div class="pricing-grid">
+        <!-- Spark -->
+        <div class="pricing-card">
+            <div class="pricing-plan-name">Spark</div>
+            <p class="text-muted small">For testing the waters</p>
+            <div class="pricing-price">
+                <span>₦0</span>
+                <span class="pricing-period">/ month</span>
+            </div>
+            <ul class="pricing-features-list">
+                <li><i class="fa-solid fa-check"></i> 2 free photos monthly</li>
+                <li><i class="fa-solid fa-check"></i> 1 free video token</li>
+                <li><i class="fa-solid fa-check"></i> Telegram bot access</li>
+                <li><i class="fa-solid fa-check"></i> AI prompt refiner</li>
+            </ul>
+            <a href="{{ url_for('auth.register') }}" class="btn btn-surface w-100">Start Free</a>
+        </div>
+
+        <!-- Creator -->
+        <div class="pricing-card">
+            <div class="pricing-plan-name">Creator</div>
+            <p class="text-muted small">For solo digital creators</p>
+            <div class="pricing-price">
+                <span>₦10,000</span>
+                <span class="pricing-period">/ month</span>
+            </div>
+            <ul class="pricing-features-list">
+                <li><i class="fa-solid fa-check"></i> 100 monthly credits</li>
+                <li><i class="fa-solid fa-check"></i> Kling AI 10s video generation</li>
+                <li><i class="fa-solid fa-check"></i> Unlimited image generation</li>
+                <li><i class="fa-solid fa-check"></i> Free Nigerian AI voiceovers</li>
+                <li><i class="fa-solid fa-check"></i> Full commercial license</li>
+            </ul>
+            <a href="{{ url_for('main.upgrade') }}" class="btn btn-surface w-100">Upgrade to Creator</a>
+        </div>
+
+        <!-- Studio -->
+        <div class="pricing-card">
+            <div class="pricing-plan-name">Studio</div>
+            <p class="text-muted small">For agencies and media teams</p>
+            <div class="pricing-price">
+                <span>₦25,000</span>
+                <span class="pricing-period">/ month</span>
+            </div>
+            <ul class="pricing-features-list">
+                <li><i class="fa-solid fa-check"></i> 300 monthly credits</li>
+                <li><i class="fa-solid fa-check"></i> Image-to-Video unlocked</li>
+                <li><i class="fa-solid fa-check"></i> Marketing campaign automation</li>
+                <li><i class="fa-solid fa-check"></i> Priority rendering queue</li>
+                <li><i class="fa-solid fa-check"></i> Brand Kit integration</li>
+            </ul>
+            <a href="{{ url_for('main.upgrade') }}" class="btn btn-surface w-100">Upgrade to Studio</a>
+        </div>
+
+        <!-- Director -->
+        <div class="pricing-card featured">
+            <div class="position-absolute top-0 end-0 m-3">
+                <span class="badge-director"><i class="fa-solid fa-crown me-1"></i> FLAGSHIP</span>
+            </div>
+            <div class="pricing-plan-name text-warning">Director</div>
+            <p class="text-muted small">Full AI Film Production Suite</p>
+            <div class="pricing-price">
+                <span>₦60,000</span>
+                <span class="pricing-period">/ month</span>
+            </div>
+            <ul class="pricing-features-list">
+                <li><i class="fa-solid fa-check text-warning"></i> <strong>Full Movie Studio Access</strong></li>
+                <li><i class="fa-solid fa-check text-warning"></i> <strong>1,000 monthly credits</strong></li>
+                <li><i class="fa-solid fa-check"></i> Kling Pro cinematic scene engine</li>
+                <li><i class="fa-solid fa-check"></i> AI Screenplay &amp; Character dossiers</li>
+                <li><i class="fa-solid fa-check"></i> Multi-shot FFmpeg master rendering</li>
+                <li><i class="fa-solid fa-check"></i> Dedicated account director</li>
+            </ul>
+            <a href="{{ url_for('main.upgrade') }}" class="btn btn-gold w-100">Join as Director</a>
+        </div>
+    </div>
+</section>
+
+<!-- 5. AUTHENTIC CREATOR TESTIMONIALS -->
+<section class="section-wrapper" style="background: var(--af-charcoal);">
+    <div class="section-header">
+        <div class="section-kicker">Community Stories</div>
+        <h2 class="section-title">Directed by Creators Like You</h2>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="card-surface h-100">
+                <p class="text-secondary italic mb-3">"I produced a 60-second animated teaser for my Nigerian comic book in under two hours. The visual consistency and melanin tones are world class."</p>
+                <div class="d-flex align-items-center gap-2">
+                    <div class="user-avatar" style="width: 32px; height: 32px; font-size: 12px;">AO</div>
+                    <div>
+                        <strong class="text-white d-block small">Adebayo O.</strong>
+                        <small class="text-muted">Graphic Novelist, Lagos</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card-surface h-100">
+                <p class="text-secondary italic mb-3">"The Nigerian AI voiceovers saved us hundreds of thousands in studio time. Our clients love the authenticity of our social ads."</p>
+                <div class="d-flex align-items-center gap-2">
+                    <div class="user-avatar" style="width: 32px; height: 32px; font-size: 12px; background: #10B981;">CN</div>
+                    <div>
+                        <strong class="text-white d-block small">Chioma N.</strong>
+                        <small class="text-muted">Agency Lead, Abuja</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card-surface h-100">
+                <p class="text-secondary italic mb-3">"Having a Telegram bot that lets me record voice notes and receive 10-second videos directly in chat is unmatched."</p>
+                <div class="d-flex align-items-center gap-2">
+                    <div class="user-avatar" style="width: 32px; height: 32px; font-size: 12px; background: #3B82F6;">KA</div>
+                    <div>
+                        <strong class="text-white d-block small">Kwame A.</strong>
+                        <small class="text-muted">Digital Creator, Accra</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 6. FAQ ACCORDION -->
+<section class="section-wrapper">
+    <div class="section-header">
+        <div class="section-kicker">Frequently Asked Questions</div>
+        <h2 class="section-title">Everything You Need to Know</h2>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="accordion" id="faqAccordion">
+                <div class="accordion-item mb-3" style="background: var(--af-charcoal); border: 1px solid var(--af-border); border-radius: var(--radius-md); overflow: hidden;">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed text-white" type="button" data-bs-toggle="collapse" data-bs-target="#faq1" style="background: var(--af-charcoal);">
+                            What makes Afrigen different from other AI generators?
+                        </button>
+                    </h2>
+                    <div id="faq1" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                        <div class="accordion-body text-secondary small">
+                            Afrigen is purpose-built to honor and amplify African culture, natural melanin skin tones, authentic attire, and local environments. It combines high-end models like Kling AI with proprietary prompt refiners and Nigerian neural voice synthesis.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion-item mb-3" style="background: var(--af-charcoal); border: 1px solid var(--af-border); border-radius: var(--radius-md); overflow: hidden;">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed text-white" type="button" data-bs-toggle="collapse" data-bs-target="#faq2" style="background: var(--af-charcoal);">
+                            What is the Movie Studio and who has access?
+                        </button>
+                    </h2>
+                    <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                        <div class="accordion-body text-secondary small">
+                            Movie Studio is an AI filmmaking production suite that lets you write screenplays, design character dossiers, generate visual storyboards, direct multi-shot scenes using Kling Pro, and master finished MP4 movies via an automated FFmpeg timeline engine. It is exclusively available to Director subscribers.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion-item mb-3" style="background: var(--af-charcoal); border: 1px solid var(--af-border); border-radius: var(--radius-md); overflow: hidden;">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed text-white" type="button" data-bs-toggle="collapse" data-bs-target="#faq3" style="background: var(--af-charcoal);">
+                            Can I use generated media for commercial purposes?
+                        </button>
+                    </h2>
+                    <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                        <div class="accordion-body text-secondary small">
+                            Yes! All content generated on paid plans (Creator, Studio, Director) comes with full commercial rights for use in client projects, advertisements, social campaigns, and film releases.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 7. FINAL CALL TO ACTION -->
+<section class="section-wrapper text-center" style="background: linear-gradient(180deg, var(--af-charcoal) 0%, var(--af-obsidian) 100%);">
+    <div class="max-w-600 mx-auto">
+        <h2 class="display-6 fw-bold text-white mb-3">Africa Creates. AI Generates.</h2>
+        <p class="text-secondary mb-4">Join thousands of creators shaping the future of African digital media.</p>
+        <a href="{{ url_for('auth.register') }}" class="btn btn-gold btn-lg">
+            <i class="fa-solid fa-wand-magic-sparkles me-2"></i> Start Directing Today
         </a>
-        {% else %}
-        <a href="{{ url_for('auth.register') }}" class="btn btn-afrigen btn-lg px-5">
-            Start Free <i class="fa-solid fa-earth-africa"></i>
-        </a>
-        <a href="{{ url_for('auth.login') }}" class="btn btn-outline-warning btn-lg px-4">
-            Login
-        </a>
-        {% endif %}
-        </div>
-
-        <!-- Real Stats -->
-        <div class="row justify-content-center mt-5 reveal">
-            <div class="col-4 col-md-3">
-                <h3 class="text-gradient" style="font-weight: 800; font-size: 2rem;">{{ total_users }}+</h3>
-                <p style="color: var(--text-dim); font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em;">Creators</p>
-            </div>
-            <div class="col-4 col-md-3">
-                <h3 class="text-gradient" style="font-weight: 800; font-size: 2rem;">{{ total_generations }}+</h3>
-                <p style="color: var(--text-dim); font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em;">Videos Generated</p>
-            </div>
-            <div class="col-4 col-md-3">
-                <h3 class="text-gradient" style="font-weight: 800; font-size: 2rem;">₦0</h3>
-                <p style="color: var(--text-dim); font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em;">To Start</p>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- FREE PROMPT REFINER -->
-<section style="padding: 80px 0; background: #161B22;">
-    <div class="container">
-        <div class="text-center mb-5 reveal">
-            <span class="pill">FREE — No Account Needed</span>
-            <h2 style="margin-top: 18px; font-weight: 700;">Try Our AI Prompt Refiner</h2>
-            <p style="color: var(--text-muted);">Type a rough idea, get a professional cinematic prompt instantly</p>
-        </div>
-
-        <div class="row justify-content-center">
-            <div class="col-md-8">
-                <div class="card p-4">
-
-                    <!-- Type Selector -->
-                    <div class="mb-4">
-                        <div class="row">
-                            <div class="col-6">
-                                <input type="radio" name="promptType" id="type_video" value="video" class="btn-check" checked onchange="updateStyles()">
-                                <label for="type_video" class="btn w-100" style="border: 2px solid #30363D; color: #F0F6FC;"><i class="fa-solid fa-clapperboard"></i> Video Prompt</label>
-                            </div>
-                            <div class="col-6">
-                                <input type="radio" name="promptType" id="type_image" value="image" class="btn-check" onchange="updateStyles()">
-                                <label for="type_image" class="btn w-100" style="border: 2px solid #30363D; color: #F0F6FC;"><i class="fa-solid fa-image"></i> Image Prompt</label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Video Styles -->
-                    <div id="videoStyles" class="mb-3">
-                        <label class="form-label">Video Style</label>
-                        <div class="row">
-                            <div class="col-6 col-md-4 mb-2">
-                                <input type="radio" name="style" id="cinematic" value="cinematic" class="btn-check" checked>
-                                <label for="cinematic" class="btn w-100" style="border: 2px solid #30363D; color: #F0F6FC;"><i class="fa-solid fa-clapperboard"></i> Cinematic</label>
-                            </div>
-                            <div class="col-6 col-md-4 mb-2">
-                                <input type="radio" name="style" id="anime" value="anime" class="btn-check">
-                                <label for="anime" class="btn w-100" style="border: 2px solid #30363D; color: #F0F6FC;"><i class="fa-solid fa-torii-gate"></i> Anime</label>
-                            </div>
-                            <div class="col-6 col-md-4 mb-2">
-                                <input type="radio" name="style" id="realistic" value="realistic" class="btn-check">
-                                <label for="realistic" class="btn w-100" style="border: 2px solid #30363D; color: #F0F6FC;"><i class="fa-solid fa-earth-africa"></i> Realistic</label>
-                            </div>
-                            <div class="col-6 col-md-4 mb-2">
-                                <input type="radio" name="style" id="african" value="african" class="btn-check">
-                                <label for="african" class="btn w-100" style="border: 2px solid #30363D; color: #F0F6FC;"><i class="fa-solid fa-crown"></i> African</label>
-                            </div>
-                            <div class="col-6 col-md-4 mb-2">
-                                <input type="radio" name="style" id="social" value="social" class="btn-check">
-                                <label for="social" class="btn w-100" style="border: 2px solid #30363D; color: #F0F6FC;"><i class="fa-solid fa-mobile-screen-button"></i> Social Media</label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Image Styles -->
-                    <div id="imageStyles" class="mb-3" style="display:none;">
-                        <label class="form-label">Image Style</label>
-                        <div class="row">
-                            <div class="col-6 col-md-4 mb-2">
-                                <input type="radio" name="imgStyle" id="img_realistic" value="realistic" class="btn-check" checked>
-                                <label for="img_realistic" class="btn w-100" style="border: 2px solid #30363D; color: #F0F6FC;"><i class="fa-solid fa-camera"></i> Realistic</label>
-                            </div>
-                            <div class="col-6 col-md-4 mb-2">
-                                <input type="radio" name="imgStyle" id="img_cinematic" value="cinematic" class="btn-check">
-                                <label for="img_cinematic" class="btn w-100" style="border: 2px solid #30363D; color: #F0F6FC;"><i class="fa-solid fa-clapperboard"></i> Cinematic</label>
-                            </div>
-                            <div class="col-6 col-md-4 mb-2">
-                                <input type="radio" name="imgStyle" id="img_african" value="african" class="btn-check">
-                                <label for="img_african" class="btn w-100" style="border: 2px solid #30363D; color: #F0F6FC;"><i class="fa-solid fa-crown"></i> African</label>
-                            </div>
-                            <div class="col-6 col-md-4 mb-2">
-                                <input type="radio" name="imgStyle" id="img_anime" value="anime" class="btn-check">
-                                <label for="img_anime" class="btn w-100" style="border: 2px solid #30363D; color: #F0F6FC;"><i class="fa-solid fa-torii-gate"></i> Anime</label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Prompt Input -->
-                    <div class="mb-3">
-                        <label class="form-label" id="promptLabel">Your Video Idea</label>
-                        <textarea id="userPrompt" class="form-control" rows="3"
-                            placeholder="e.g. A Nigerian businessman walking in Lagos at sunset..."></textarea>
-                    </div>
-
-                    <button onclick="refineAny()" class="btn btn-afrigen px-4 w-100">
-                        Refine My Prompt <i class="fa-solid fa-robot"></i>
-                    </button>
-
-                    <!-- Loading -->
-                    <div id="loadingState" style="display:none;" class="mt-3 text-center">
-                        <p style="color: #F5A623;"><i class="fa-solid fa-hourglass-half"></i> AI is refining your prompt...</p>
-                    </div>
-
-                    <!-- Result -->
-                    <div id="refinedResult" style="display:none;" class="mt-4">
-                        <label class="form-label" style="color: #F5A623;"><i class="fa-solid fa-wand-magic-sparkles"></i> AI Refined Prompt:</label>
-                        <div id="refinedText" class="p-3" style="background: #21262D; border-radius: 8px; color: #F0F6FC; border-left: 3px solid #F5A623;"></div>
-                        <div class="mt-3 d-flex gap-2">
-                            <button onclick="copyPrompt()" class="btn btn-outline-warning flex-fill"><i class="fa-solid fa-clipboard"></i> Copy</button>
-                            <a href="{{ url_for('auth.register') }}" class="btn btn-afrigen flex-fill"><i class="fa-solid fa-clapperboard"></i> Generate Now!</a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- HOW IT WORKS -->
-<section style="padding: 80px 0;">
-    <div class="container">
-        <h2 class="text-center mb-2 reveal" style="font-weight: 700;">How It Works</h2>
-        <p class="text-center mb-5" style="color: var(--text-muted);">Three steps to your first AI video</p>
-        <div class="row text-center reveal">
-            <div class="col-md-4 mb-4">
-                <div class="card p-4" style="border-color: #30363D;">
-                    <div style="font-size: 48px; margin-bottom: 16px;"><i class="fa-solid fa-pen"></i></div>
-                    <h4 style="color: #F5A623;">1. Describe Your Idea</h4>
-                    <p style="color: #888;">Type your idea in plain English or Pidgin. No technical knowledge needed.</p>
-                </div>
-            </div>
-            <div class="col-md-4 mb-4">
-                <div class="card p-4" style="border-color: #30363D;">
-                    <div style="font-size: 48px; margin-bottom: 16px;"><i class="fa-solid fa-robot"></i></div>
-                    <h4 style="color: #F5A623;">2. AI Refines It</h4>
-                    <p style="color: #888;">Claude AI transforms your rough idea into a professional cinematic prompt automatically.</p>
-                </div>
-            </div>
-            <div class="col-md-4 mb-4">
-                <div class="card p-4" style="border-color: #30363D;">
-                    <div style="font-size: 48px; margin-bottom: 16px;"><i class="fa-solid fa-clapperboard"></i></div>
-                    <h4 style="color: #F5A623;">3. Download & Share</h4>
-                    <p style="color: #888;">Get your video in seconds. Share directly to TikTok, YouTube, or Instagram.</p>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- FEATURES -->
-<section style="padding: 80px 0; background: #161B22;">
-    <div class="container">
-        <h2 class="text-center mb-2 reveal" style="font-weight: 700;">Why Choose Afrigen?</h2>
-        <p class="text-center mb-5" style="color: #888;">Everything African creators need in one platform</p>
-        <div class="row">
-            <div class="col-md-4 mb-4">
-                <div class="card p-4">
-                    <h4 style="color: #F5A623;"><i class="fa-solid fa-earth-africa"></i> Built For Africa</h4>
-                    <p style="color: #888;">Unlike other AI tools, Afrigen understands African culture, languages and aesthetics. Your content looks authentically African.</p>
-                </div>
-            </div>
-            <div class="col-md-4 mb-4">
-                <div class="card p-4">
-                    <h4 style="color: #F5A623;"><i class="fa-solid fa-sack-dollar"></i> Affordable</h4>
-                    <p style="color: #888;">Professional video ads cost ₦50,000–₦500,000. with afrigen, get quality video at low cost</p>
-                </div>
-            </div>
-            <div class="col-md-4 mb-4">
-                <div class="card p-4">
-                    <h4 style="color: #F5A623;"><i class="fa-solid fa-bolt"></i> Instant Results</h4>
-                    <p style="color: #888;">Generate professional videos in seconds. No cameraman, no studio, no location fees needed.</p>
-                </div>
-            </div>
-            <div class="col-md-4 mb-4">
-                <div class="card p-4">
-                    <h4 style="color: #F5A623;"><i class="fa-solid fa-palette"></i> Multiple Styles</h4>
-                    <p style="color: #888;">Cinematic, Anime, Realistic, African, Social Media — pick the style that fits your brand.</p>
-                </div>
-            </div>
-            <div class="col-md-4 mb-4">
-                <div class="card p-4">
-                    <h4 style="color: #F5A623;"><i class="fa-solid fa-mobile-screen-button"></i> Multi-Platform</h4>
-                    <p style="color: #888;">Videos optimized for YouTube, TikTok, Instagram and Facebook. Multiple aspect ratios supported.</p>
-                </div>
-            </div>
-            <div class="col-md-4 mb-4">
-                <div class="card p-4">
-                    <h4 style="color: #F5A623;"><i class="fa-solid fa-robot"></i> Telegram Bot</h4>
-                    <p style="color: #888;">Refine prompts on the go with our Telegram bot. Available 24/7 even without the app.</p>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- TESTIMONIALS -->
-<section style="padding: 80px 0;">
-    <div class="container">
-        <h2 class="text-center mb-2 reveal" style="font-weight: 700;">What Creators Say</h2>
-        <p class="text-center mb-5" style="color: #888;">African creators already using Afrigen</p>
-        <div class="row">
-            <div class="col-md-4 mb-4">
-                <div class="card p-4" style="border-color: #30363D;">
-                    <p style="color: #C9D1D9; font-style: italic;">"I used to spend ₦80,000 on video ads. Now I generate them in seconds with Afrigen. Game changer!"</p>
-                    <div class="mt-3 d-flex align-items-center gap-2">
-                        <div style="width: 40px; height: 40px; background: #F5A623; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #0D1117;">A</div>
-                        <div>
-                            <p style="color: #F5A623; margin: 0; font-size: 14px;">Adebayo O.</p>
-                            <p style="color: #888; margin: 0; font-size: 12px;">Small Business Owner, Lagos</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4 mb-4">
-                <div class="card p-4" style="border-color: #30363D;">
-                    <p style="color: #C9D1D9; font-style: italic;">"The African style videos are incredible. Finally an AI that actually understands our culture!"</p>
-                    <div class="mt-3 d-flex align-items-center gap-2">
-                        <div style="width: 40px; height: 40px; background: #27AE60; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #fff;">C</div>
-                        <div>
-                            <p style="color: #F5A623; margin: 0; font-size: 14px;">Chioma N.</p>
-                            <p style="color: #888; margin: 0; font-size: 12px;">Content Creator, Abuja</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4 mb-4">
-                <div class="card p-4" style="border-color: #30363D;">
-                    <p style="color: #C9D1D9; font-style: italic;">"My TikTok engagement went up 300% after I started using Afrigen for my content. Highly recommend!"</p>
-                    <div class="mt-3 d-flex align-items-center gap-2">
-                        <div style="width: 40px; height: 40px; background: #2AABEE; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #fff;">K</div>
-                        <div>
-                            <p style="color: #F5A623; margin: 0; font-size: 14px;">Kwame A.</p>
-                            <p style="color: #888; margin: 0; font-size: 12px;">Influencer, Accra</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- PRICING -->
-<section style="padding: 80px 0; background: #161B22;">
-    <div class="container">
-        <h2 class="text-center mb-2 reveal" style="font-weight: 700;">Simple Pricing</h2>
-        <p class="text-center mb-5" style="color: #888;">No hidden fees. Cancel anytime.</p>
-        <div class="row justify-content-center">
-            <div class="col-md-4 mb-4">
-                <div class="card p-4 text-center">
-                    <h3 style="color: #F0F6FC;">Free</h3>
-                    <div class="price-amount" style="color: #F5A623; font-size: 2.2rem; font-weight: 800;">₦0</div>
-                    <p style="color: #888;">2 free images, lifetime</p>
-                    <hr style="border-color: #30363D;">
-                    <ul style="list-style: none; padding: 0; color: #C9D1D9; text-align: left;">
-                        <li class="mb-2"><i class="fa-solid fa-xmark" style="color:#E74C3C;"></i> Video generation requires Pro</li>
-                        <li class="mb-2"><i class="fa-solid fa-circle-check" style="color:#27AE60;"></i> 2 images lifetime</li>
-                        <li class="mb-2"><i class="fa-solid fa-lock" style="color:#F5A623;"></i> Pro video styles</li>
-                        <li class="mb-2"><i class="fa-solid fa-circle-check" style="color:#27AE60;"></i> AI prompt refiner</li>
-                        <li class="mb-2"><i class="fa-solid fa-circle-check" style="color:#27AE60;"></i> Telegram bot access</li>
-                        <li class="mb-2" style="color: #555;"><i class="fa-solid fa-xmark"></i> Image to video</li>
-                        <li class="mb-2" style="color: #555;"><i class="fa-solid fa-xmark"></i> AI voiceover</li>
-                        <li class="mb-2" style="color: #555;"><i class="fa-solid fa-xmark"></i> Direct download</li>
-                    </ul>
-                    <a href="{{ url_for('auth.register') }}" class="btn btn-outline-warning w-100 mt-3">Get Started Free</a>
-                </div>
-            </div>
-            <div class="col-md-4 mb-4">
-                <div class="card p-4 text-center" style="border-color: #F5A623; position: relative;">
-                    <div style="position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: #F5A623; color: #0D1117; padding: 4px 16px; border-radius: 99px; font-size: 12px; font-weight: bold;">
-                        MOST POPULAR
-                    </div>
-                    <h3 style="color: #F0F6FC;">Pro</h3>
-                    <div class="price-amount" style="color: #F5A623; font-size: 2.2rem; font-weight: 800;">₦10,000</div>
-                    <p style="color: #888;">per month</p>
-                    <hr style="border-color: #30363D;">
-                    <ul style="list-style: none; padding: 0; color: #C9D1D9; text-align: left;">
-                        <li class="mb-2"><i class="fa-solid fa-circle-check" style="color:#27AE60;"></i> Up to 20 videos per month</li>
-                        <li class="mb-2"><i class="fa-solid fa-circle-check" style="color:#27AE60;"></i> 50 images per month</li>
-                        <li class="mb-2"><i class="fa-solid fa-circle-check" style="color:#27AE60;"></i> 100 credits/month</li>
-                        <li class="mb-2"><i class="fa-solid fa-circle-check" style="color:#27AE60;"></i> All video styles</li>
-                        <li class="mb-2"><i class="fa-solid fa-circle-check" style="color:#27AE60;"></i> Image to video (10 credits)</li>
-                        <li class="mb-2"><i class="fa-solid fa-circle-check" style="color:#27AE60;"></i> AI voiceover</li>
-                        <li class="mb-2"><i class="fa-solid fa-circle-check" style="color:#27AE60;"></i> Priority support</li>
-                        <li class="mb-2"><i class="fa-solid fa-circle-check" style="color:#27AE60;"></i> Direct download (no ads)</li>
-                    </ul>
-                    <a href="{{ url_for('auth.register') }}" class="btn btn-afrigen w-100 mt-3">Get Pro <i class="fa-solid fa-star"></i></a>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- CTA -->
-<section style="padding: 80px 0; text-align: center;">
-    <div class="container">
-        <h2 style="color: #F0F6FC; font-weight: 700; font-size: clamp(1.8rem, 4vw, 2.5rem);">
-            Ready To Create? <i class="fa-solid fa-rocket"></i>
-        </h2>
-        <p style="color: #888; font-size: 18px; margin: 20px auto; max-width: 500px;">
-            Join African creators already using Afrigen to make stunning content.
-        </p>
-        {% if not current_user.is_authenticated %}
-        <a href="{{ url_for('auth.register') }}" class="btn btn-afrigen btn-lg px-5 me-3">
-            Start Free Today <i class="fa-solid fa-earth-africa"></i>
-        </a>
-        <a href="https://t.me/AfrigenBot" target="_blank" class="btn btn-outline-warning btn-lg px-4">
-            Try Bot First <i class="fa-brands fa-telegram"></i>
-        </a>
-        {% endif %}
     </div>
 </section>
 
 <script>
-function updateStyles() {
-    const type = document.querySelector('input[name="promptType"]:checked').value;
-    const label = document.getElementById('promptLabel');
-    if (type === 'video') {
-        document.getElementById('videoStyles').style.display = 'block';
-        document.getElementById('imageStyles').style.display = 'none';
-        label.innerText = 'Your Video Idea';
-        document.getElementById('userPrompt').placeholder = 'e.g. A Nigerian businessman walking in Lagos at sunset...';
-    } else {
-        document.getElementById('videoStyles').style.display = 'none';
-        document.getElementById('imageStyles').style.display = 'block';
-        label.innerText = 'Your Image Idea';
-        document.getElementById('userPrompt').placeholder = 'e.g. A Yoruba queen wearing traditional beads at golden hour...';
-    }
-}
+    async function refineDemoPrompt(style) {
+        const input = document.getElementById('demoPromptInput').value;
+        const output = document.getElementById('demoRefinedOutput');
+        if (!input) return;
+        output.innerText = "Refining prompt with AI intelligence... ✨";
 
-async function refineAny() {
-    const prompt = document.getElementById('userPrompt').value;
-    const type = document.querySelector('input[name="promptType"]:checked').value;
-    if (!prompt) { alert('Please enter your idea!'); return; }
-
-    document.getElementById('loadingState').style.display = 'block';
-    document.getElementById('refinedResult').style.display = 'none';
-
-    try {
-        let url, style;
-        if (type === 'video') {
-            style = document.querySelector('input[name="style"]:checked').value;
-            url = '/refine-prompt';
-        } else {
-            style = document.querySelector('input[name="imgStyle"]:checked').value;
-            url = '/refine-image-prompt';
+        try {
+            const res = await fetch('/refine-prompt', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: input, style: style })
+            });
+            const data = await res.json();
+            if (data.refined_prompt) {
+                output.innerText = `"${data.refined_prompt}"`;
+            } else {
+                output.innerText = "Could not refine prompt. Please try again.";
+            }
+        } catch (e) {
+            output.innerText = `Error: ${e.message}`;
         }
-
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({prompt, style})
-        });
-        const data = await response.json();
-        if (data.refined) {
-            document.getElementById('refinedText').innerText = data.refined;
-            document.getElementById('refinedResult').style.display = 'block';
-        } else {
-            alert('Error: ' + data.error);
-        }
-    } catch(e) {
-        alert('Something went wrong! Please try again.');
-    } finally {
-        document.getElementById('loadingState').style.display = 'none';
     }
-}
-
-function copyPrompt() {
-    navigator.clipboard.writeText(document.getElementById('refinedText').innerText);
-    alert('Prompt copied!');
-}
 </script>
-
 {% endblock %}

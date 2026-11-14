@@ -1,0 +1,134 @@
+/* ===================================================================
+   AFRIGEN 2.0 RESPONSIVE STYLES
+   Mobile Navigation Drawer, Bottom Quick Action Bar, Breakpoint Tweaks
+   =================================================================== */
+
+/* Mobile Bottom Navigation Bar */
+.mobile-bottom-nav {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: var(--mobile-nav-height);
+    background-color: rgba(14, 14, 14, 0.95);
+    backdrop-filter: blur(16px);
+    border-top: 1px solid var(--af-border);
+    z-index: 1000;
+    justify-content: space-around;
+    align-items: center;
+    padding: 0 0.5rem;
+}
+
+.mobile-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.2rem;
+    color: var(--af-text-muted);
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-decoration: none;
+    padding: 0.35rem 0.5rem;
+    border-radius: var(--radius-sm);
+    transition: color var(--transition-fast);
+}
+
+.mobile-nav-item i {
+    font-size: 1.25rem;
+}
+
+.mobile-nav-item.active {
+    color: var(--af-gold);
+}
+
+.mobile-nav-item.center-action {
+    background: linear-gradient(135deg, var(--af-gold) 0%, var(--af-orange) 100%);
+    color: #000 !important;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    margin-top: -16px;
+    box-shadow: var(--shadow-gold);
+}
+
+.mobile-nav-item.center-action i {
+    font-size: 1.4rem;
+}
+
+/* Mobile Drawer Overlay */
+.mobile-drawer-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    z-index: 998;
+}
+
+.mobile-drawer-overlay.active {
+    display: block;
+}
+
+/* Responsive Media Queries */
+@media (max-width: 991px) {
+    .app-sidebar {
+        transform: translateX(-100%);
+        box-shadow: none;
+    }
+
+    .app-sidebar.drawer-open {
+        transform: translateX(0);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .app-main {
+        margin-left: 0 !important;
+        padding-bottom: var(--mobile-nav-height);
+    }
+
+    .mobile-bottom-nav {
+        display: flex;
+    }
+
+    .app-header {
+        padding: 0 1rem;
+    }
+
+    .header-search {
+        display: none;
+    }
+
+    .hero-headline {
+        font-size: 2.25rem;
+    }
+
+    .hero-subtext {
+        font-size: 1.05rem;
+    }
+
+    .footer-container {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .page-container {
+        padding: 1.25rem 1rem;
+    }
+
+    .hero-cta-group {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .hero-cta-group .btn {
+        width: 100%;
+    }
+}
+

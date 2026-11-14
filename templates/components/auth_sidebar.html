@@ -1,115 +1,253 @@
+{% set user_tier = 0 %}
+{% if current_user.plan in ['pro', 'creator'] %}
+  {% set user_tier = 1 %}
+{% elif current_user.plan == 'studio' %}
+  {% set user_tier = 2 %}
+{% elif current_user.plan == 'director' or current_user.email == 'oadedamola07@gmail.com' %}
+  {% set user_tier = 3 %}
+{% endif %}
+
 <!-- Desktop Sidebar -->
-<div class="d-none d-lg-flex flex-column flex-shrink-0 p-3" style="width: 260px; background: #161B22; border-right: 1px solid #30363D; min-height: 100vh;">
-    <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-decoration-none">
-        <span class="fs-4 text-gradient"><i class="fa-solid fa-clapperboard"></i> Afrigen</span>
-    </a>
-    
-    <!-- Brand Switcher -->
-    <div class="mt-4 mb-2 px-2">
-        <small style="color: #8B949E; font-size: 11px; text-transform: uppercase; font-weight: 600;">Active Brand</small>
-        <select id="desktopBrandSwitcher" class="form-select form-select-sm mt-1" style="background: #0D1117; border: 1px solid #30363D; color: #F0F6FC; cursor: pointer;">
+<aside class="app-sidebar d-none d-lg-flex" id="desktopSidebar">
+    <!-- Sidebar Header -->
+    <div class="sidebar-header">
+        <a href="{{ url_for('main.dashboard') }}" class="sidebar-logo">
+            <i class="fa-solid fa-clapperboard text-warning"></i>
+            <span>Afrigen <span style="color: var(--af-gold); font-size: 0.85em;">2.0</span></span>
+        </a>
+    </div>
+
+    <!-- Active Brand Kit Switcher -->
+    <div class="px-3 pt-3 pb-2">
+        <div class="d-flex align-items-center justify-content-between mb-1">
+            <span class="sidebar-section-title p-0" style="font-size: 0.65rem;">BRAND KIT</span>
+            <a href="{{ url_for('main.brands') }}" class="text-warning small" style="font-size: 0.75rem;" title="Manage Brands"><i class="fa-solid fa-gear"></i></a>
+        </div>
+        <select id="desktopBrandSwitcher" class="form-select form-select-sm" style="background: var(--af-obsidian); border-color: var(--af-border); color: var(--af-white); font-size: 0.8rem;">
             <option value="">Personal Workspace</option>
         </select>
     </div>
 
-    <hr style="border-color: #30363D;">
-    <ul class="nav flex-column mb-auto gap-2">
-        <li><a class="nav-link" href="{{ url_for('main.dashboard') }}" style="color: #F0F6FC;"><i class="fa-solid fa-house"></i> Home</a></li>
-        <li><a class="nav-link" href="{{ url_for('main.create') }}" style="color: #F0F6FC;"><i class="fa-solid fa-plus"></i> Create</a></li>
-        <li><a class="nav-link" href="{{ url_for('main.saved_prompts') }}" style="color: #F0F6FC;"><i class="fa-solid fa-bookmark"></i> Saved Prompts</a></li>
-        <li><a class="nav-link" href="{{ url_for('main.brands') }}" style="color: #F0F6FC;"><i class="fa-solid fa-crown text-warning"></i> Brands</a></li>
-        <li><a class="nav-link" href="{{ url_for('main.history') }}" style="color: #F0F6FC;"><i class="fa-solid fa-clock-rotate-left"></i> History</a></li>
-        <li><a class="nav-link" href="{{ url_for('main.analytics') }}" style="color: #F0F6FC;"><i class="fa-solid fa-chart-line"></i> Analytics</a></li>
-        <li><a class="nav-link" href="{{ url_for('main.referral') }}" style="color: #F0F6FC;"><i class="fa-solid fa-gift"></i> Invite & Earn</a></li>
-        <li>
-            <a class="nav-link" href="{{ url_for('main.campaigns') }}" style="color: #F0F6FC;"><i class="fa-solid fa-bullhorn"></i> Campaigns</a>
-        </li>
-        <li>
-            <a class="nav-link" href="{{ url_for('main.automations') }}" style="color: #F0F6FC;"><i class="fa-solid fa-bolt text-warning"></i> Automations</a>
-        </li>
-        <li>
-        </li>
-        <li><a class="nav-link" href="{{ url_for('main.assistant') }}" style="color: #F0F6FC;"><i class="fa-solid fa-robot"></i> AI Assistant</a></li>
-        <li>
-            <a class="nav-link d-flex align-items-center justify-content-between" href="{{ url_for('main.download_app') }}" style="color: #F0F6FC;">
-                <span><i class="fa-solid fa-mobile-screen-button text-warning me-2"></i> Install App</span>
-                <span class="badge" style="background: rgba(245, 166, 35, 0.15); color: #F5A623; border: 1px solid rgba(245, 166, 35, 0.3); font-size: 10px;">PWA</span>
-            </a>
-        </li>
-        <li><hr style="border-color: #30363D;"></li>
-        <li><a class="nav-link" href="{{ url_for('main.upgrade') }}" style="color: #F0F6FC;"><i class="fa-solid fa-credit-card"></i> Billing</a></li>
-        <li><a class="nav-link" href="{{ url_for('main.connected_accounts') }}" style="color: #F0F6FC;"><i class="fa-solid fa-plug"></i> Connected Accounts</a></li>
-        <li><a class="nav-link" href="{{ url_for('main.settings') }}" style="color: #F0F6FC;"><i class="fa-solid fa-gear"></i> Settings</a></li>
-        <li><a class="nav-link" href="{{ url_for('main.profile') }}" style="color: #F0F6FC;"><i class="fa-solid fa-user"></i> Profile</a></li>
-        {% if current_user.email == 'oadedamola07@gmail.com' %}
-        <li><a class="nav-link" href="{{ url_for('main.admin') }}" style="color: #F5A623;"><i class="fa-solid fa-shield"></i> Admin</a></li>
-        {% endif %}
-        <li><a class="nav-link" href="{{ url_for('auth.logout') }}" style="color: #E74C3C;"><i class="fa-solid fa-right-from-bracket"></i> Logout</a></li>
-    </ul>
-</div>
-
-<!-- Mobile navbar (shown only on small screens) -->
-<nav class="navbar navbar-dark d-lg-none px-3 py-2 border-bottom" style="border-color: #30363D !important; background: #0D1117;">
-    <div class="container-fluid p-0 d-flex align-items-center justify-content-between">
-        <a class="navbar-brand d-flex align-items-center gap-2 m-0" href="/">
-            <i class="fa-solid fa-clapperboard text-warning"></i>
-            <span class="text-gradient fw-bold">Afrigen</span>
-        </a>
-        <div class="d-flex align-items-center gap-2">
-            <button id="notifBellBtnMobile" class="btn btn-sm position-relative text-white p-0 rounded-circle d-flex align-items-center justify-content-center" type="button" data-bs-toggle="offcanvas" data-bs-target="#notifOffcanvas" style="width: 36px; height: 36px; background: #161B22; border: 1px solid #30363D;" title="Notifications">
-                <i class="fa-solid fa-bell" style="font-size: 14px; color: #C9D1D9;"></i>
-                <span id="notifBadgeMobile" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display: none; font-size: 9px; padding: 2px 5px;">0</span>
-            </button>
-            <button class="navbar-toggler p-1 border-0" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasAuthNav">
-                <span class="navbar-toggler-icon" style="width: 22px; height: 22px;"></span>
-            </button>
-        </div>
-    </div>
-</nav>
-
-<!-- Offcanvas Sidebar (mobile auth) -->
-<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasAuthNav"
-     style="background: #161B22; border-left: 1px solid #30363D; width: 260px;">
-    <div class="offcanvas-header" style="border-bottom: 1px solid #30363D;">
-        <h5 style="color: #F5A623;"><i class="fa-solid fa-clapperboard"></i> Afrigen</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
-    </div>
-    <div class="offcanvas-body">
-        
-        <!-- Mobile Brand Switcher -->
-        <div class="mb-4">
-            <small style="color: #8B949E; font-size: 11px; text-transform: uppercase; font-weight: 600;">Active Brand</small>
-            <select id="mobileBrandSwitcher" class="form-select form-select-sm mt-1" style="background: #0D1117; border: 1px solid #30363D; color: #F0F6FC; cursor: pointer;">
-                <option value="">Personal Workspace</option>
-            </select>
-        </div>
-
-        <ul class="nav flex-column gap-2">
-            <li><a class="nav-link" href="{{ url_for('main.dashboard') }}" style="color: #F0F6FC;"><i class="fa-solid fa-house"></i> Home</a></li>
-            <li><a class="nav-link" href="{{ url_for('main.create') }}" style="color: #F0F6FC;"><i class="fa-solid fa-plus"></i> Create</a></li>
-            <li><a class="nav-link" href="{{ url_for('main.saved_prompts') }}" style="color: #F0F6FC;"><i class="fa-solid fa-bookmark"></i> Saved Prompts</a></li>
-            <li><a class="nav-link" href="{{ url_for('main.brands') }}" style="color: #F0F6FC;"><i class="fa-solid fa-crown text-warning"></i> Brands</a></li>
-            <li><a class="nav-link" href="{{ url_for('main.history') }}" style="color: #F0F6FC;"><i class="fa-solid fa-clock-rotate-left"></i> History</a></li>
-            <li><a class="nav-link" href="{{ url_for('main.analytics') }}" style="color: #F0F6FC;"><i class="fa-solid fa-chart-line"></i> Analytics</a></li>
-            <li><a class="nav-link" href="{{ url_for('main.referral') }}" style="color: #F0F6FC;"><i class="fa-solid fa-gift"></i> Invite & Earn</a></li>
-            <li><a class="nav-link" href="{{ url_for('main.campaigns') }}" style="color: #F0F6FC;"><i class="fa-solid fa-bullhorn"></i> Campaigns</a></li>
-            <li><a class="nav-link" href="{{ url_for('main.automations') }}" style="color: #F0F6FC;"><i class="fa-solid fa-bolt text-warning"></i> Automations</a></li>
-            <li><a class="nav-link" href="{{ url_for('main.assistant') }}" style="color: #F0F6FC;"><i class="fa-solid fa-robot"></i> AI Assistant</a></li>
-            <li>
-                <a class="nav-link d-flex align-items-center justify-content-between" href="{{ url_for('main.download_app') }}" style="color: #F0F6FC;">
-                    <span><i class="fa-solid fa-mobile-screen-button text-warning me-2"></i> Install App</span>
-                    <span class="badge" style="background: rgba(245, 166, 35, 0.15); color: #F5A623; border: 1px solid rgba(245, 166, 35, 0.3); font-size: 10px;">PWA</span>
+    <!-- Navigation List -->
+    <div class="sidebar-scroll">
+        <!-- OVERVIEW -->
+        <div class="sidebar-section-title">OVERVIEW</div>
+        <ul class="sidebar-nav">
+            <li class="sidebar-nav-item">
+                <a class="sidebar-nav-link {% if request.endpoint == 'main.dashboard' %}active{% endif %}" href="{{ url_for('main.dashboard') }}">
+                    <i class="fa-solid fa-house"></i> Dashboard
                 </a>
             </li>
-            <li><hr style="border-color: #30363D;"></li>
-            <li><a class="nav-link" href="{{ url_for('main.upgrade') }}" style="color: #F0F6FC;"><i class="fa-solid fa-credit-card"></i> Billing</a></li>
-            <li><a class="nav-link" href="{{ url_for('main.connected_accounts') }}" style="color: #F0F6FC;"><i class="fa-solid fa-plug"></i> Connected Accounts</a></li>
-            <li><a class="nav-link" href="{{ url_for('main.settings') }}" style="color: #F0F6FC;"><i class="fa-solid fa-gear"></i> Settings</a></li>
-            <li><a class="nav-link" href="{{ url_for('main.profile') }}" style="color: #F0F6FC;"><i class="fa-solid fa-user"></i> Profile</a></li>
+        </ul>
+
+        <!-- CREATE -->
+        <div class="sidebar-section-title">CREATE</div>
+        <ul class="sidebar-nav">
+            <li class="sidebar-nav-item">
+                <a class="sidebar-nav-link {% if request.endpoint == 'main.create' and request.args.get('mode') != 'image' %}active{% endif %}" href="{{ url_for('main.create') }}?mode=video">
+                    <i class="fa-solid fa-video"></i> AI Video
+                </a>
+            </li>
+            <li class="sidebar-nav-item">
+                <a class="sidebar-nav-link {% if request.endpoint == 'main.create' and request.args.get('mode') == 'image' %}active{% endif %}" href="{{ url_for('main.create') }}?mode=image">
+                    <i class="fa-solid fa-image"></i> AI Image
+                </a>
+            </li>
+            <li class="sidebar-nav-item">
+                <a class="sidebar-nav-link" href="{{ url_for('main.create') }}?mode=voice">
+                    <i class="fa-solid fa-microphone-lines"></i> AI Voiceover
+                </a>
+            </li>
+            <li class="sidebar-nav-item">
+                <a class="sidebar-nav-link" href="{{ url_for('main.create') }}?mode=writing">
+                    <i class="fa-solid fa-feather-pointed"></i> AI Writing
+                </a>
+            </li>
+            <li class="sidebar-nav-item">
+                <a class="sidebar-nav-link {% if request.endpoint == 'main.saved_prompts' %}active{% endif %}" href="{{ url_for('main.saved_prompts') }}">
+                    <i class="fa-solid fa-wand-magic-sparkles text-warning"></i> Prompt Lab
+                </a>
+            </li>
+        </ul>
+
+        <!-- WORKSPACE -->
+        <div class="sidebar-section-title">WORKSPACE</div>
+        <ul class="sidebar-nav">
+            <li class="sidebar-nav-item">
+                <a class="sidebar-nav-link {% if request.endpoint == 'main.history' %}active{% endif %}" href="{{ url_for('main.history') }}">
+                    <i class="fa-solid fa-photo-film"></i> My Creations
+                </a>
+            </li>
+            <li class="sidebar-nav-item">
+                <a class="sidebar-nav-link {% if request.endpoint == 'main.brands' %}active{% endif %}" href="{{ url_for('main.brands') }}">
+                    <i class="fa-solid fa-palette text-warning"></i> Brand Kit
+                </a>
+            </li>
+        </ul>
+
+        <!-- PRODUCTION -->
+        <div class="sidebar-section-title">PRODUCTION</div>
+        <ul class="sidebar-nav">
+            <li class="sidebar-nav-item">
+                <a class="sidebar-nav-link {% if 'movie_studio' in request.endpoint %}active{% endif %}" href="{{ url_for('movie_studio.index') }}">
+                    <i class="fa-solid fa-film text-warning"></i>
+                    <span>Movie Studio</span>
+                    {% if user_tier < 3 %}
+                    <span class="badge-locked"><i class="fa-solid fa-lock"></i> DIRECTOR</span>
+                    {% else %}
+                    <span class="badge-gold ms-auto" style="font-size: 0.65rem;">PRO</span>
+                    {% endif %}
+                </a>
+            </li>
+        </ul>
+
+        <!-- GROWTH -->
+        <div class="sidebar-section-title">GROWTH</div>
+        <ul class="sidebar-nav">
+            <li class="sidebar-nav-item">
+                <a class="sidebar-nav-link {% if request.endpoint == 'main.campaigns' %}active{% endif %}" href="{{ url_for('main.campaigns') }}">
+                    <i class="fa-solid fa-bullhorn"></i> Campaigns
+                </a>
+            </li>
+            <li class="sidebar-nav-item">
+                <a class="sidebar-nav-link {% if request.endpoint == 'main.automations' %}active{% endif %}" href="{{ url_for('main.automations') }}">
+                    <i class="fa-solid fa-bolt text-warning"></i> Automations
+                </a>
+            </li>
+            <li class="sidebar-nav-item">
+                <a class="sidebar-nav-link {% if request.endpoint == 'main.connected_accounts' %}active{% endif %}" href="{{ url_for('main.connected_accounts') }}">
+                    <i class="fa-solid fa-plug"></i> Connected Accounts
+                </a>
+            </li>
+            <li class="sidebar-nav-item">
+                <a class="sidebar-nav-link {% if request.endpoint == 'main.referral' %}active{% endif %}" href="{{ url_for('main.referral') }}">
+                    <i class="fa-solid fa-gift"></i> Invite &amp; Earn
+                </a>
+            </li>
+        </ul>
+
+        <!-- ACCOUNT -->
+        <div class="sidebar-section-title">ACCOUNT</div>
+        <ul class="sidebar-nav">
+            <li class="sidebar-nav-item">
+                <a class="sidebar-nav-link {% if request.endpoint == 'main.upgrade' %}active{% endif %}" href="{{ url_for('main.upgrade') }}">
+                    <i class="fa-solid fa-credit-card"></i> Subscription &amp; Credits
+                </a>
+            </li>
+            <li class="sidebar-nav-item">
+                <a class="sidebar-nav-link {% if request.endpoint == 'main.settings' %}active{% endif %}" href="{{ url_for('main.settings') }}">
+                    <i class="fa-solid fa-gear"></i> Settings
+                </a>
+            </li>
+            <li class="sidebar-nav-item">
+                <a class="sidebar-nav-link" href="{{ url_for('main.docs') }}">
+                    <i class="fa-solid fa-circle-question"></i> Help &amp; Support
+                </a>
+            </li>
             {% if current_user.email == 'oadedamola07@gmail.com' %}
-            <li><a class="nav-link" href="{{ url_for('main.admin') }}" style="color: #F5A623;"><i class="fa-solid fa-shield"></i> Admin</a></li>
+            <li class="sidebar-nav-item">
+                <a class="sidebar-nav-link text-warning" href="{{ url_for('main.admin') }}">
+                    <i class="fa-solid fa-shield"></i> Administration
+                </a>
+            </li>
             {% endif %}
-            <li><a class="nav-link" href="{{ url_for('auth.logout') }}" style="color: #E74C3C;"><i class="fa-solid fa-right-from-bracket"></i> Logout</a></li>
+            <li class="sidebar-nav-item">
+                <a class="sidebar-nav-link text-danger" href="{{ url_for('auth.logout') }}">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i> Sign Out
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <!-- Sidebar Footer -->
+    <div class="sidebar-footer">
+        <div class="user-plan-card">
+            <div class="user-plan-header">
+                <span class="badge-tier {% if user_tier == 3 %}badge-director{% elif user_tier == 2 %}badge-studio{% elif user_tier == 1 %}badge-creator{% else %}badge-spark{% endif %}">
+                    {{ current_user.plan or 'SPARK' }}
+                </span>
+                <span class="small fw-bold text-white">{{ current_user.credits or 0 }} Credits</span>
+            </div>
+            {% if user_tier < 3 %}
+            <a href="{{ url_for('main.upgrade') }}" class="btn btn-gold btn-sm w-100 mt-2" style="font-size: 0.75rem; padding: 0.35rem;">
+                <i class="fa-solid fa-crown me-1"></i> Upgrade Plan
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</aside>
+
+<!-- Mobile Navigation Header -->
+<header class="d-flex d-lg-none align-items-center justify-content-between px-3 py-2 border-bottom" style="background: var(--af-charcoal); border-color: var(--af-border) !important; position: sticky; top: 0; z-index: 1000;">
+    <a href="{{ url_for('main.dashboard') }}" class="d-flex align-items-center gap-2 text-decoration-none">
+        <i class="fa-solid fa-clapperboard text-warning fs-5"></i>
+        <span class="fw-bold text-white fs-5">Afrigen</span>
+    </a>
+
+    <div class="d-flex align-items-center gap-2">
+        <button id="notifBellBtnMobile" class="btn btn-sm position-relative text-white p-0 rounded-circle d-flex align-items-center justify-content-center" type="button" data-bs-toggle="offcanvas" data-bs-target="#notifOffcanvas" style="width: 36px; height: 36px; background: var(--af-surface); border: 1px solid var(--af-border);" title="Notifications">
+            <i class="fa-solid fa-bell" style="font-size: 14px; color: var(--af-gold);"></i>
+            <span id="notifBadgeMobile" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display: none; font-size: 9px; padding: 2px 5px;">0</span>
+        </button>
+        <button class="btn btn-sm btn-surface p-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileDrawer">
+            <i class="fa-solid fa-bars fs-5"></i>
+        </button>
+    </div>
+</header>
+
+<!-- Mobile Drawer -->
+<div class="offcanvas offcanvas-start" tabindex="-1" id="mobileDrawer" style="background: var(--af-charcoal); border-right: 1px solid var(--af-border); width: 280px;">
+    <div class="offcanvas-header border-bottom" style="border-color: var(--af-border) !important;">
+        <h5 class="text-white fw-bold mb-0"><i class="fa-solid fa-clapperboard text-warning me-2"></i> Afrigen AI 2.0</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body p-3">
+        <div class="user-plan-card mb-3">
+            <div class="d-flex align-items-center justify-content-between">
+                <span class="badge-tier badge-gold">{{ current_user.plan or 'SPARK' }}</span>
+                <span class="small fw-bold text-white">{{ current_user.credits or 0 }} Credits</span>
+            </div>
+            {% if user_tier < 3 %}
+            <a href="{{ url_for('main.upgrade') }}" class="btn btn-gold btn-sm w-100 mt-2">Upgrade</a>
+            {% endif %}
+        </div>
+
+        <ul class="nav flex-column gap-1">
+            <li><a class="nav-link text-white py-2" href="{{ url_for('main.dashboard') }}"><i class="fa-solid fa-house me-2"></i> Dashboard</a></li>
+            <li><a class="nav-link text-white py-2" href="{{ url_for('main.create') }}?mode=video"><i class="fa-solid fa-video me-2"></i> AI Video</a></li>
+            <li><a class="nav-link text-white py-2" href="{{ url_for('main.create') }}?mode=image"><i class="fa-solid fa-image me-2"></i> AI Image</a></li>
+            <li><a class="nav-link text-white py-2" href="{{ url_for('movie_studio.index') }}"><i class="fa-solid fa-film text-warning me-2"></i> Movie Studio</a></li>
+            <li><a class="nav-link text-white py-2" href="{{ url_for('main.history') }}"><i class="fa-solid fa-photo-film me-2"></i> My Creations</a></li>
+            <li><a class="nav-link text-white py-2" href="{{ url_for('main.brands') }}"><i class="fa-solid fa-palette text-warning me-2"></i> Brand Kit</a></li>
+            <li><a class="nav-link text-white py-2" href="{{ url_for('main.campaigns') }}"><i class="fa-solid fa-bullhorn me-2"></i> Campaigns</a></li>
+            <li><a class="nav-link text-white py-2" href="{{ url_for('main.automations') }}"><i class="fa-solid fa-bolt text-warning me-2"></i> Automations</a></li>
+            <li><hr style="border-color: var(--af-border);"></li>
+            <li><a class="nav-link text-white py-2" href="{{ url_for('main.upgrade') }}"><i class="fa-solid fa-credit-card me-2"></i> Subscription</a></li>
+            <li><a class="nav-link text-white py-2" href="{{ url_for('main.settings') }}"><i class="fa-solid fa-gear me-2"></i> Settings</a></li>
+            <li><a class="nav-link text-danger py-2" href="{{ url_for('auth.logout') }}"><i class="fa-solid fa-arrow-right-from-bracket me-2"></i> Logout</a></li>
         </ul>
     </div>
 </div>
+
+<!-- Mobile Bottom Quick Navigation Bar -->
+<nav class="mobile-bottom-nav d-flex d-lg-none">
+    <a href="{{ url_for('main.dashboard') }}" class="mobile-nav-item {% if request.endpoint == 'main.dashboard' %}active{% endif %}">
+        <i class="fa-solid fa-house"></i>
+        <span>Home</span>
+    </a>
+    <a href="{{ url_for('main.history') }}" class="mobile-nav-item {% if request.endpoint == 'main.history' %}active{% endif %}">
+        <i class="fa-solid fa-photo-film"></i>
+        <span>Creations</span>
+    </a>
+    <a href="{{ url_for('main.create') }}" class="mobile-nav-item center-action" title="Create">
+        <i class="fa-solid fa-plus"></i>
+    </a>
+    <a href="{{ url_for('movie_studio.index') }}" class="mobile-nav-item {% if 'movie_studio' in request.endpoint %}active{% endif %}">
+        <i class="fa-solid fa-film"></i>
+        <span>Studio</span>
+    </a>
+    <a href="{{ url_for('main.upgrade') }}" class="mobile-nav-item {% if request.endpoint == 'main.upgrade' %}active{% endif %}">
+        <i class="fa-solid fa-crown"></i>
+        <span>Plan</span>
+    </a>
+</nav>

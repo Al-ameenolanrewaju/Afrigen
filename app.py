@@ -28,6 +28,7 @@ from routes.auth import auth
 from routes.api import api
 from routes.campaigns import campaigns_bp
 from routes.telegram import telegram_bp
+from routes.movie_studio import movie_studio_bp
 from services.credits import refund_video
 from constants import (
     FACEBOOK_URL, TWITTER_URL, INSTAGRAM_URL, LINKEDIN_URL, TELEGRAM_URL
@@ -177,11 +178,21 @@ def ensure_legacy_schema_columns():
                 WebsiteVisit.__table__.create(bind=db.engine, checkfirst=True)
             if not inspector.has_table('telegram_users'):
                 TelegramUser.__table__.create(bind=db.engine, checkfirst=True)
-            from models import Notification, NewsletterCampaign
+            from models import (
+                Notification, NewsletterCampaign, MovieProject, MovieCharacter,
+                MovieScene, MovieShot, StoryboardFrame, MovieAudioTrack,
+                MovieTimeline, MovieRenderJob
+            )
             if not inspector.has_table('notifications'):
                 Notification.__table__.create(bind=db.engine, checkfirst=True)
             if not inspector.has_table('newsletter_campaigns'):
                 NewsletterCampaign.__table__.create(bind=db.engine, checkfirst=True)
+            for movie_table in (
+                MovieProject, MovieCharacter, MovieScene, MovieShot,
+                StoryboardFrame, MovieAudioTrack, MovieTimeline, MovieRenderJob
+            ):
+                if not inspector.has_table(movie_table.__tablename__):
+                    movie_table.__table__.create(bind=db.engine, checkfirst=True)
             if db.engine.dialect.name != 'postgresql':
                 return
 
@@ -462,6 +473,7 @@ app.register_blueprint(auth, url_prefix='/auth')
 app.register_blueprint(api, url_prefix='/api/v1')
 app.register_blueprint(campaigns_bp, url_prefix='/api/campaigns')
 app.register_blueprint(telegram_bp)
+app.register_blueprint(movie_studio_bp)
 
 
 @app.context_processor

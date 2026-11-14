@@ -79,10 +79,13 @@ def video_gate(user, style, extended=False, duration="5"):
 
     plan = getattr(user, 'plan', 'free') or 'free'
 
-    # Spark / free tier — check free video allowance
+    # Spark / free tier — check free video allowance first, or available credits
     if not is_paid_plan(plan):
         if (getattr(user, 'free_video_allowance', 0) or 0) > 0:
             return (True, None, 0)
+        # If free user has enough credits (e.g. from bonus, admin grant, or referral), allow generation
+        if (user.credits or 0) >= cost:
+            return (True, None, cost)
         return (False, "Video generation is a Pro feature. Upgrade to create videos!", cost)
 
     # Paid tiers — check credits
@@ -99,10 +102,14 @@ def image_gate(user):
 
     # Spark / free tier
     if not is_paid_plan(plan):
-        if (user.monthly_images_used or 0) >= FREE_TOTAL_IMAGES:
-            return (False,
-                    "You've used your 2 free images. Upgrade to Pro for more!")
-        return (True, None)
+        # 1. Use monthly free images first (up to 2)
+        if (user.monthly_images_used or 0) < FREE_TOTAL_IMAGES:
+            return (True, None)
+        # 2. If 2 free images have been used, check if user has credits available (e.g. starting credits or referral)
+        if (user.credits or 0) >= IMAGE_COST:
+            return (True, None)
+        return (False,
+                "You've used your 2 free images and have insufficient credits. Upgrade to Creator or Pro for more!")
 
     # Paid tiers — check credits or fallback_credits
     if (user.credits or 0) >= IMAGE_COST:
@@ -118,13 +125,12 @@ def record_credit_change(user, delta, reason):
 
 
 def charge_video(user, cost, reason="Video generation"):
-    """Record a successful video generation for a paid user or free user with free video allowance."""
+    """Record a successful video generation for a paid user or free user with free video allowance / credits."""
     plan = getattr(user, 'plan', 'free') or 'free'
 
-    if not is_paid_plan(plan):
-        if (getattr(user, 'free_video_allowance', 0) or 0) > 0:
-            user.free_video_allowance = max(0, user.free_video_allowance - 1)
-            record_credit_change(user, 0, f"Free video allowance used (Remaining: {user.free_video_allowance})")
+    if not is_paid_plan(plan) and (getattr(user, 'free_video_allowance', 0) or 0) > 0 and cost == 0:
+        user.free_video_allowance = max(0, user.free_video_allowance - 1)
+        record_credit_change(user, 0, f"Free video allowance used (Remaining: {user.free_video_allowance})")
         return
 
     ok, err = deduct_credits_atomic(user.id, cost, reason)
@@ -158,7 +164,7 @@ def charge_image_to_video(user, reason="Image-to-video generation"):
 def refund_video(user, cost, reason="Video generation refund"):
     """Refund a failed video generation exactly once."""
     plan = getattr(user, 'plan', 'free') or 'free'
-    if not is_paid_plan(plan):
+    if not is_paid_plan(plan) and cost == 0:
         user.free_video_allowance = (getattr(user, 'free_video_allowance', 0) or 0) + 1
         record_credit_change(user, 0, reason)
     else:
@@ -167,12 +173,14 @@ def refund_video(user, cost, reason="Video generation refund"):
 
 
 def charge_image(user, reason="Image generation"):
-    """Record a successful image generation (free: bump counter, paid: spend credits)."""
+    """Record a successful image generation (free: bump counter if free allowance available, otherwise spend credits)."""
     plan = getattr(user, 'plan', 'free') or 'free'
     if not is_paid_plan(plan):
-        user.monthly_images_used = (user.monthly_images_used or 0) + 1
-    else:
-        ok, err = deduct_credits_atomic(user.id, IMAGE_COST, reason)
-        if not ok:
-            user.credits = max(0, (user.credits or 0) - IMAGE_COST)
-            record_credit_change(user, -IMAGE_COST, reason)
+        if (user.monthly_images_used or 0) < FREE_TOTAL_IMAGES:
+            user.monthly_images_used = (user.monthly_images_used or 0) + 1
+            return
+
+    ok, err = deduct_credits_atomic(user.id, IMAGE_COST, reason)
+    if not ok:
+        user.credits = max(0, (user.credits or 0) - IMAGE_COST)
+        record_credit_change(user, -IMAGE_COST, reason)

@@ -318,10 +318,11 @@ def refine_image_prompt(user_prompt, style="realistic", user=None):
     IMAGE_STYLE_PROMPTS = {
         "realistic": """You are an expert realistic photography prompt engineer for Afrigen.
         Transform the idea into a 100% photorealistic photography prompt:
-        - True-to-life 35mm photography, natural daylight, crisp lens focus, natural skin textures and pores.
-        - STRICTLY FORBIDDEN: cartoon, 3D animation, Pixar, stylized, CGI, plastic, digital illustration.
-        - Authentic African representation: Subjects MUST be African (West African / Nigerian skin tone, natural African features).
-        - Natural realistic setting (Lagos urban street, African studio, or vibrant outdoor scenery).
+        - The subject MUST be a real, living African human being (Nigerian / West African skin tones, natural hair, realistic facial anatomy with real skin pores and micro-textures).
+        - Shot on 35mm DSLR lens (Sony A7R V / Canon EOS 5D), f/2.8, natural ambient daylight or studio lighting, crisp optical focus.
+        - ABSOLUTELY FORBIDDEN: 3D render, Pixar, cartoon, Disney, anime, CGI, plastic doll, airbrushed, digital art, stylized illustration.
+        - Realistic setting (authentic African urban streets, home, office, or outdoor market).
+        - If a sign, poster, or banner is mentioned, describe the subject holding an authentic cardboard poster facing forward, with the requested text prominently and legibly displayed in bold lettering.
         Return ONLY the final prompt paragraph.""" + TEXT_RULES,
 
         "social": """You are an expert social media and viral creator prompt engineer for Afrigen.

@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Afrigen Movie Studio — Exclusive AI Filmmaking{% endblock %}
+
+{% block content %}
+<div class="container py-5 text-center">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card-surface card-gold-glow p-5 text-center">
+                <div class="mb-4">
+                    <span class="badge-gold px-3 py-2" style="font-size: 0.85rem;">
+                        <i class="fa-solid fa-lock text-warning me-1"></i> DIRECTOR TIER EXCLUSIVE
+                    </span>
+                </div>
+                
+                <h1 class="display-5 fw-bold mb-3">
+                    Unlock <span style="color: var(--af-gold);">Afrigen Movie Studio</span>
+                </h1>
+                
+                <p class="lead text-secondary mb-4">
+                    The world's first AI-powered cinematic production studio dedicated to African cinema, Hollywood-grade visual storytelling, and multi-scene film production.
+                </p>
+
+                <!-- Feature Matrix -->
+                <div class="row g-3 text-start my-4">
+                    <div class="col-md-6">
+                        <div class="p-3 rounded" style="background: var(--af-surface); border: 1px solid var(--af-border);">
+                            <h6 class="text-white mb-2"><i class="fa-solid fa-file-pen text-warning me-2"></i> AI Screenplay Writer</h6>
+                            <p class="small text-secondary mb-0">Generate complete three-act treatments, sluglines, scene breakdowns, and character dialogue.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3 rounded" style="background: var(--af-surface); border: 1px solid var(--af-border);">
+                            <h6 class="text-white mb-2"><i class="fa-solid fa-users-viewfinder text-warning me-2"></i> Character Dossier & Consistency</h6>
+                            <p class="small text-secondary mb-0">Build consistent character references with photorealistic 35mm facial profiles and costume lock.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3 rounded" style="background: var(--af-surface); border: 1px solid var(--af-border);">
+                            <h6 class="text-white mb-2"><i class="fa-solid fa-clapperboard text-warning me-2"></i> Multi-Shot Kling Pro Generator</h6>
+                            <p class="small text-secondary mb-0">Direct camera angles, movement, volumetric lighting, and high-definition video generation per shot.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3 rounded" style="background: var(--af-surface); border: 1px solid var(--af-border);">
+                            <h6 class="text-white mb-2"><i class="fa-solid fa-film text-warning me-2"></i> Master Timeline & FFmpeg Stitcher</h6>
+                            <p class="small text-secondary mb-0">Arrange scenes on an HTML5 timeline, overlay Nigerian voiceovers, and export mastered MP4 films.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex flex-column flex-sm-row justify-content-center gap-3 mt-4">
+                    <a href="{{ url_for('main.upgrade') }}" class="btn btn-gold btn-lg">
+                        <i class="fa-solid fa-crown me-2"></i> Upgrade to Director Plan
+                    </a>
+                    <a href="{{ url_for('main.dashboard') }}" class="btn btn-surface btn-lg">
+                        <i class="fa-solid fa-arrow-left me-2"></i> Back to Dashboard
+                    </a>
+                </div>
+
+                <div class="mt-4 pt-3 border-top" style="border-color: var(--af-border) !important;">
+                    <small class="text-muted">
+                        Already subscribed to Director? <a href="{{ url_for('main.upgrade') }}" class="text-warning">Refresh your subscription session</a>.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
