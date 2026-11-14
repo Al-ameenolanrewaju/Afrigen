@@ -7,7 +7,7 @@ from datetime import datetime, timezone, timedelta
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any
 
-from flask import current_app
+from flask import current_app, has_app_context
 from models import db, ProviderHealth, ProviderLog
 
 
@@ -51,9 +51,11 @@ class GroqAdapter(ProviderAdapter):
             return self._available_model
 
         preferred_models = (
-            'openai/gpt-oss-20b',
+            'qwen/qwen3.8-27b',
+            'openai/gpt-oss-120b',
             'llama-3.3-70b-versatile',
             'llama-3.1-8b-instant',
+            'openai/gpt-oss-20b',
         )
         models = (client or self._get_client()).models.list().data
         available = {model.id for model in models}
@@ -369,6 +371,8 @@ class ProviderManager:
         self.fallback_chain = ["Groq", "Gemini", "OpenRouter"]
 
     def _get_health(self, provider_name: str) -> ProviderHealth:
+        if not has_app_context():
+            return None
         health = ProviderHealth.query.filter_by(provider=provider_name).first()
         if not health:
             health = ProviderHealth(provider=provider_name, status="healthy")
@@ -377,7 +381,11 @@ class ProviderManager:
         return health
 
     def _update_health(self, provider_name: str, success: bool, latency: float, error_msg: str = None):
+        if not has_app_context():
+            return
         health = self._get_health(provider_name)
+        if not health:
+            return
         previous_status = health.status
         if success:
             health.success_count += 1
@@ -410,6 +418,8 @@ class ProviderManager:
         db.session.commit()
 
     def _log_request(self, task_type, provider_name, latency, fallback_triggered, success, error_msg=None):
+        if not has_app_context():
+            return
         log = ProviderLog(
             task_type=task_type,
             provider_used=provider_name,

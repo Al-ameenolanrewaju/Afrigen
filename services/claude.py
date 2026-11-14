@@ -42,7 +42,18 @@ STYLE_PROMPTS = {
     - Fast paced and dynamic
     - Perfect for TikTok/Instagram/Facebook
     - African content creators style
-    Keep under 200 words. Return ONLY the prompt."""
+    Keep under 200 words. Return ONLY the prompt.""",
+
+    "movie": """You are an elite Hollywood-level cinematic scene prompt engineer for Afrigen's Movie Scene Studio.
+    Transform the idea into a premium feature-film quality scene prompt:
+    - Anamorphic lens, 2.39:1 aspect ratio cinematic framing, shallow depth of field
+    - Dramatic Nollywood/Hollywood lighting — practical light sources, volumetric God rays
+    - Rich African setting, production design, authentic costumes and props
+    - Detailed camera movement (slow crane push-in, tracking shot, etc.)
+    - Film-grade color grading description (teal-orange Hollywood grade, warm Nollywood palette)
+    - Single cohesive scene with clear dramatic tension and emotional arc
+    - Ultra high quality: "shot on ARRI Alexa 65, 4K, film grain, masterwork cinematography"
+    Keep under 220 words. OUTPUT FORMAT: Single paragraph only. Return ONLY the prompt."""
 }
 
 VIDEO_FIDELITY_RULES = """
@@ -146,14 +157,16 @@ def get_model_prompt_rules(model_name="fal-ai/kling-video/v1/standard/text-to-vi
     duration = str(duration or "5")
 
     if "kling" in model_name:
+        is_pro = "pro" in model_name
         duration_hint = {
             "5": "Keep the scene clear and cinematic with a smooth beginning and end.",
             "10": "Maintain cinematic continuity and a believable subject arc across the full shot.",
             "15": "Keep the camera steady and the subject consistent to preserve flow over a longer duration.",
             "20": "Use a simple, coherent, slowly evolving scene to preserve visual continuity across a long clip.",
         }.get(duration, "Keep the shot stable and coherent across time.")
+        quality_note = "premium Kling Pro" if is_pro else "premium Kling"
         return (
-            "You are refining a prompt for the premium Kling model. "
+            f"You are refining a prompt for the {quality_note} model. "
             "Use cinematic continuity, smooth camera motion, and a believable subject arc. "
             "Keep one main subject and one clear action. Avoid crowded compositions, scene jumps, duplicate objects, and unstable motion. "
             f"{duration_hint} "
@@ -253,39 +266,70 @@ def refine_prompt(
             "movement, natural lighting, rich visual detail, and a consistent mood."
         )
 
-    return response
+    return _clean_refined_prompt(response)
+
+
+def _clean_refined_prompt(text: str) -> str:
+    """Extract raw prompt from conversational LLM output if needed."""
+    if not text:
+        return ""
+    cleaned = text.strip()
+    import re
+    # If the model output has "Prompt:" or "> **Prompt:**"
+    match = re.search(r'(?:> \*\*Prompt:\*\*|\*\*Prompt:\*\*|Prompt:)\s*([^\n\r]+(?:\n[^\n\r#]+)*)', cleaned, re.IGNORECASE)
+    if match:
+        extracted = match.group(1).strip()
+        if len(extracted) > 30:
+            cleaned = extracted
+    elif "option 1" in cleaned.lower():
+        lines = cleaned.splitlines()
+        opt1_lines = []
+        capture = False
+        for line in lines:
+            if "option 1" in line.lower():
+                capture = True
+                continue
+            if capture:
+                if line.startswith("#") or "option 2" in line.lower():
+                    break
+                if line.strip():
+                    opt1_lines.append(line.strip().lstrip('>').strip())
+        if opt1_lines:
+            cleaned = " ".join(opt1_lines)
+
+    # Strip surrounding quotes
+    if (cleaned.startswith('"') and cleaned.endswith('"')) or (cleaned.startswith("'") and cleaned.endswith("'")):
+        cleaned = cleaned[1:-1].strip()
+    return cleaned
 
 
 def refine_image_prompt(user_prompt, style="realistic", user=None):
-    """Refine prompt for image generation"""
+    """Refine prompt for image generation with authentic African representation and exact text preservation."""
 
-    # Shared rules appended to every style. The critical one is TEXT
-    # PRESERVATION: image models garble text, and the refiner must never
-    # paraphrase or drop words the user wants printed (flyers, billboards,
-    # posters, signs, logos).
     TEXT_RULES = """
 
-    CRITICAL RULES FOR ANY TEXT, WORDS, OR LETTERING IN THE IMAGE
-    (flyers, billboards, posters, signs, banners, logos, labels):
-    - Copy the user's exact words VERBATIM. Never paraphrase, translate,
-      shorten, or invent new wording. Keep their spelling and punctuation.
-    - Wrap every piece of on-image text in double quotes in your prompt,
-      e.g. the text reads "GRAND OPENING - 50% OFF".
-    - Explicitly describe that text as: large, BOLD, high-contrast, sharp,
-      perfectly legible, correctly spelled, centered and well-spaced.
-    - If the user gives several lines, keep them as separate lines and state
-      which is the headline (biggest, boldest) vs. smaller supporting text.
-    - Do NOT add extra words, slogans, or captions the user did not write."""
+    CRITICAL RULES FOR ANY TEXT, WORDS, OR LETTERING IN THE IMAGE:
+    - Copy the user's exact words VERBATIM in quotes, e.g. text reads "Afrigen Ai is cooking, stay tune".
+    - Never omit, paraphrase, or change the capitalization/spelling.
+    - Explicitly state that the text is written in large, BOLD, high-contrast, perfectly legible lettering on the sign/poster.
+    - If a poster/placard is requested, describe the subject physically holding a crisp, clean rectangular poster directly facing the viewer.
+    - OUTPUT FORMAT: Output ONLY the final prompt in a single paragraph. Absolutely NO conversation, NO 'Option 1', NO headings, NO intro remarks."""
 
     IMAGE_STYLE_PROMPTS = {
-        "realistic": """You are an expert image prompt engineer.
-        Transform the idea into a detailed realistic image prompt with:
-        - Photorealistic details
-        - Lighting description
-        - Camera settings (lens, aperture)
-        - African cultural elements where relevant
-        - Ultra high definition quality
-        Keep under 150 words. Return ONLY the prompt.""" + TEXT_RULES,
+        "realistic": """You are an expert realistic photography prompt engineer for Afrigen.
+        Transform the idea into a 100% photorealistic photography prompt:
+        - True-to-life 35mm photography, natural daylight, crisp lens focus, natural skin textures and pores.
+        - STRICTLY FORBIDDEN: cartoon, 3D animation, Pixar, stylized, CGI, plastic, digital illustration.
+        - Authentic African representation: Subjects MUST be African (West African / Nigerian skin tone, natural African features).
+        - Natural realistic setting (Lagos urban street, African studio, or vibrant outdoor scenery).
+        Return ONLY the final prompt paragraph.""" + TEXT_RULES,
+
+        "social": """You are an expert social media and viral creator prompt engineer for Afrigen.
+        Transform the idea into an eye-catching, high-converting image prompt tailored for Instagram, TikTok, and social feeds:
+        - High energy, vivid contrast, punchy composition, crisp detail.
+        - Authentic African creator aesthetic, modern contemporary fashion.
+        - Bold, ultra-clear lettering on any signs or posters.
+        Return ONLY the final prompt paragraph.""" + TEXT_RULES,
 
         "artistic": """You are an expert artistic image prompt engineer.
         Transform the idea into a detailed artistic prompt with:
@@ -293,40 +337,33 @@ def refine_image_prompt(user_prompt, style="realistic", user=None):
         - Color palette
         - African artistic elements
         - Mood and atmosphere
-        Keep under 150 words. Return ONLY the prompt.""" + TEXT_RULES,
+        Return ONLY the prompt paragraph.""" + TEXT_RULES,
 
         "cinematic": """You are an expert cinematic image prompt engineer.
         Transform the idea into a cinematic still image prompt with:
-        - Movie still quality
-        - Dramatic lighting
-        - African cinematic aesthetic
-        - Professional photography details
-        Keep under 150 words. Return ONLY the prompt.""" + TEXT_RULES,
+        - Movie still quality, 35mm film aesthetic
+        - Dramatic volumetric lighting
+        - African cinematic aesthetic, deep contrast
+        Return ONLY the prompt paragraph.""" + TEXT_RULES,
 
         "african": """You are an expert African art prompt engineer.
         Transform the idea into a rich African aesthetic image prompt with:
-        - Traditional African patterns and clothing
-        - African landscapes and settings
-        - Cultural elements (Yoruba, Igbo, Hausa etc.)
-        - Vibrant African colors
-        Keep under 150 words. Return ONLY the prompt.""" + TEXT_RULES,
+        - Traditional African patterns, Ankara or modern African urban wear
+        - African landscapes and cultural richness
+        - Vibrant rich colors
+        Return ONLY the prompt paragraph.""" + TEXT_RULES,
 
         "anime": """You are an expert anime image prompt engineer.
-        Transform the idea into a detailed anime style prompt with:
-        - Japanese anime aesthetic
-        - Vibrant colors
-        - African characters in anime style
-        - Dynamic composition
-        Keep under 150 words. Return ONLY the prompt.""" + TEXT_RULES
+        Transform the idea into a detailed anime style prompt with African characters in anime aesthetic.
+        Return ONLY the prompt paragraph.""" + TEXT_RULES
     }
 
     system_message = IMAGE_STYLE_PROMPTS.get(style, IMAGE_STYLE_PROMPTS["realistic"])
 
     user_message = (
         "Rewrite the following idea as one complete, detailed image-generation "
-        "prompt. It must be at least 40 words and include the subject, setting, "
-        "composition, lighting, colors, and mood. Never return keywords or a "
-        "fragment. Preserve the user's subject and intent:\n\n" + (user_prompt or "")
+        "prompt. It must include the subject, setting, composition, lighting, colors, and mood. "
+        "Output ONLY the prompt text, absolutely nothing else:\n\n" + (user_prompt or "")
     )
     try:
         response = provider_manager.generate_text(
@@ -336,8 +373,9 @@ def refine_image_prompt(user_prompt, style="realistic", user=None):
                 {"role": "user", "content": user_message}
             ],
             user=user,
-            max_tokens=2048
+            max_tokens=800
         )
+        response = _clean_refined_prompt(response)
     except Exception as exc:
         print("IMAGE PROMPT REFINEMENT ERROR:", str(exc))
         response = ""
@@ -349,24 +387,22 @@ def refine_image_prompt(user_prompt, style="realistic", user=None):
                 messages=[
                     {"role": "system", "content": system_message},
                     {"role": "user", "content": (
-                        "Your previous answer was incomplete. Return ONLY one "
-                        "complete image prompt of at least 40 words. Include the "
-                        "original subject exactly; add setting, composition, lighting, "
-                        "colors, and mood. Original idea:\n\n" + (user_prompt or "")
+                        "Return ONLY one complete image prompt paragraph without any options or explanation. Original idea:\n\n" + (user_prompt or "")
                     )}
                 ],
                 user=user,
-                max_tokens=2048
+                max_tokens=800
             )
+            response = _clean_refined_prompt(response)
         except Exception as exc:
             print("IMAGE PROMPT RETRY ERROR:", str(exc))
             response = ""
 
     if not _refinement_is_usable(user_prompt, response):
         response = (
-            f"{(user_prompt or '').strip()}. Create a highly detailed {style} image "
-            "with a clear composition, natural lighting, rich colors, realistic "
-            "textures, strong subject focus, and a polished professional finish."
+            f"A photorealistic 35mm candid photograph of an African {(user_prompt or '').strip()}. "
+            "Sharp focus, natural daylight, authentic rich melanin skin tones, realistic textures, "
+            "vibrant African environment, cinematic composition, 8k resolution."
         )
 
-    return response
+    return _clean_refined_prompt(response)

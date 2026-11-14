@@ -66,3 +66,4 @@ def test_scheduled_promo_jobs_exist():
     from app import autopost_promo_morning_job, autopost_promo_evening_job
     assert callable(autopost_promo_morning_job)
     assert callable(autopost_promo_evening_job)
+

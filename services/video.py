@@ -77,8 +77,11 @@ def generate_video(
 LTX_MODEL = "fal-ai/ltx-video"
 ANIMATEDIFF_MODEL = "fal-ai/fast-animatediff/text-to-video"
 KLING_T2V_MODEL = "fal-ai/kling-video/v1/standard/text-to-video"
+KLING_PRO_MODEL = "fal-ai/kling-video/v1/pro/text-to-video"  # Movie Scene Studio
 
 ANIMATEDIFF_STYLES = {"anime", "social"}
+# Styles that use Kling Pro for maximum cinematic quality (Director/Studio tier)
+KLING_PRO_STYLES = {"movie"}
 
 # Credit pricing. Premium Kling videos cost more than the cheaper AnimateDiff path.
 KLING_VIDEO_COST = 10
@@ -123,6 +126,11 @@ def text_to_video_cost(style, extended=False, duration="5"):
             return int(duration)
         return cheap_video_cost
 
+    # Movie Scene Studio uses Kling Pro — premium pricing (1.5x multiplier)
+    if style in KLING_PRO_STYLES:
+        base = math.ceil(int(duration) * kling_credits_per_second)
+        return math.ceil(base * 1.5)
+
     if duration in {"10", "15", "20"}:
         return math.ceil(int(duration) * kling_credits_per_second)
     if extended:
@@ -152,16 +160,19 @@ def _build_t2v_request(prompt, style, aspect_ratio, extended, duration="5"):
 
     if style in ANIMATEDIFF_STYLES:
         model = ANIMATEDIFF_MODEL
+    elif style in KLING_PRO_STYLES:
+        # Movie Scene Studio: Kling Pro for maximum cinematic quality
+        model = KLING_PRO_MODEL
     else:
         # Standardize on Kling AI for cinematic, realistic, and African video generation.
         model = KLING_T2V_MODEL
 
     arguments = {"prompt": prompt}
 
-    if model in (ANIMATEDIFF_MODEL, KLING_T2V_MODEL):
+    if model in (ANIMATEDIFF_MODEL, KLING_T2V_MODEL, KLING_PRO_MODEL):
         arguments["aspect_ratio"] = aspect_ratio if aspect_ratio in ("16:9", "9:16", "1:1") else "16:9"
         arguments["duration"] = "10" if (extended or duration in {"10", "15", "20"}) else "5"
-        if model == KLING_T2V_MODEL:
+        if model in (KLING_T2V_MODEL, KLING_PRO_MODEL):
             arguments["negative_prompt"] = (
                 "blurry, distorted faces, deformed anatomy, low quality, warped, "
                 "glitch, pixelated, amateur, oversaturated, text watermark"
@@ -495,7 +506,7 @@ def generate_image(prompt, style="realistic", aspect_ratio="1:1", provider="hugg
         "anime": "fal-ai/flux/dev",
         "cinematic": "fal-ai/flux-pro/v1.1",
         "african": "fal-ai/flux/dev",
-        "social": "fal-ai/flux/schnell"
+        "social": "fal-ai/flux/dev"
     }
 
     model = MODELS.get(style, MODELS["realistic"])
@@ -525,10 +536,13 @@ def generate_image(prompt, style="realistic", aspect_ratio="1:1", provider="hugg
     payload = {
         "prompt": prompt,
         "image_size": image_size,
-        "num_inference_steps": 30,
-        "guidance_scale": 7.5,
         "num_images": 1
     }
+    if "schnell" in model:
+        payload["num_inference_steps"] = 4
+    else:
+        payload["num_inference_steps"] = 28
+        payload["guidance_scale"] = 7.5
 
     last_error = None
 
