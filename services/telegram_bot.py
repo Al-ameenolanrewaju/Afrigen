@@ -518,7 +518,7 @@ class TelegramBotService:
                 f"🪙 Account Credits: <b>{user.credits or 0}</b>\n\n"
                 "ℹ️ <i>You receive 2 free photos every month. Once your free quota is used, "
                 "any remaining credits (2 credits/image) will automatically power your next generations.</i>\n\n"
-                "👉 <a href='https://afrigen.com.ng/upgrade'>Upgrade Plan</a> for unlimited Kling AI videos &amp; daily credits."
+                "👉 <a href='https://afrigen.com.ng/upgrade'>Upgrade Plan</a> for expanded video access and daily credits."
             )
         else:
             info += f"🪙 <b>Credits:</b> {user.credits or 0}\n"
@@ -552,7 +552,7 @@ class TelegramBotService:
         if tier >= 2:
             help_text += (
                 "<b>🎥 Movie Scene Studio:</b> Generate long-form cinematic scenes "
-                "using Kling Pro. Available via Styles menu.\n\n"
+                "using Afrigen Movie Engine. Available via Styles menu.\n\n"
             )
         help_text += "<i>Africa Creates, AI Generates 🌍</i>"
         self.send_message(chat_id, help_text, reply_markup=self.main_menu_keyboard(user))
@@ -891,8 +891,8 @@ class TelegramBotService:
                 )
                 return
 
-        # 3. Paid users get interactive duration + voiceover choice for video
-        if mode == "video" and extended:
+        # 3. Interactive duration + voiceover choice for video
+        if mode == "video":
             self._store_pending(tg_user.id, {
                 "step": "await_duration",
                 "prompt": user_prompt,
@@ -1072,8 +1072,8 @@ class TelegramBotService:
                 except Exception as e:
                     logger.warning("Text overlay error: %s", e)
 
-            # Voiceover (paid users who opted in)
-            if voiceover and is_paid_plan(user.plan):
+            # Voiceover (if opted in)
+            if voiceover:
                 try:
                     if status_msg_id:
                         self.edit_message_text(

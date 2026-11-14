@@ -188,8 +188,36 @@ def test_standalone_voiceover_route(monkeypatch):
         assert res.status_code == 200
         data = res.get_json()
         assert data.get("success") is True
-        assert data.get("audio_url") == "https://fal.media/files/mock_voiceover.mp3"
+        assert data.get("audio_url") in ("https://fal.media/files/mock_voiceover.mp3", f"/media/generation/{data['generation_id']}/audio")
 
         # Check Generation record
         gen = Generation.query.filter_by(id=data["generation_id"]).first()
         assert gen is not None
+        assert gen.audio_url == "https://fal.media/files/mock_voiceover.mp3"
+
+
+def test_404_error_page_renders_with_null_endpoint():
+    client = app.test_client()
+    with app.app_context():
+        # Anonymous 404
+        res = client.get("/non-existent-endpoint-xyz-123")
+        assert res.status_code == 404
+        assert b"404" in res.data
+
+        # Authenticated 404 (renders base.html with auth_sidebar.html)
+        director_u = User.query.filter_by(email="director_test@afrigen.com").first()
+        if not director_u:
+            director_u = User(
+                username="director_tester",
+                email="director_test@afrigen.com",
+                password=generate_password_hash("pass123"),
+                plan="director"
+            )
+            db.session.add(director_u)
+            db.session.commit()
+
+        client.post("/auth/login", data={"email": "director_test@afrigen.com", "password": "pass123"}, follow_redirects=True)
+        res_auth = client.get("/non-existent-endpoint-authenticated-456")
+        assert res_auth.status_code == 404
+        assert b"404" in res_auth.data
+

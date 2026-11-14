@@ -95,17 +95,17 @@
 
 /* Cards & Surfaces */
 .card-surface {
-    background-color: var(--af-charcoal);
-    border: 1px solid var(--af-border);
-    border-radius: var(--radius-lg);
+    background-color: var(--af-slate, #182233);
+    border: 1px solid var(--af-border, #354154);
+    border-radius: var(--radius-lg, 14px);
     padding: 1.5rem;
     transition: border-color var(--transition-fast), transform var(--transition-fast);
 }
 
 .card-elevated {
-    background-color: var(--af-surface);
-    border: 1px solid var(--af-border);
-    border-radius: var(--radius-lg);
+    background-color: var(--af-surface, #202B3B);
+    border: 1px solid var(--af-border, #354154);
+    border-radius: var(--radius-lg, 14px);
     padding: 1.5rem;
     box-shadow: var(--shadow-md);
 }
@@ -125,7 +125,7 @@
     display: block;
     font-size: 0.85rem;
     font-weight: 500;
-    color: var(--af-text-secondary);
+    color: var(--af-text-secondary, #A5AFBF);
     margin-bottom: 0.4rem;
 }
 
@@ -137,20 +137,20 @@
     font-size: 0.95rem;
     font-weight: 400;
     line-height: 1.5;
-    color: var(--af-text-primary);
-    background-color: var(--af-charcoal);
+    color: var(--af-text-primary, #F5F1E8);
+    background-color: var(--af-slate, #182233);
     background-clip: padding-box;
-    border: 1px solid var(--af-border);
-    border-radius: var(--radius-md);
+    border: 1px solid var(--af-border, #354154);
+    border-radius: var(--radius-md, 10px);
     transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .form-control:focus, .form-select:focus {
-    color: var(--af-white);
-    background-color: var(--af-charcoal);
-    border-color: var(--af-gold);
+    color: var(--af-white, #F5F1E8);
+    background-color: var(--af-slate, #182233);
+    border-color: var(--af-gold, #D6AD65);
     outline: 0;
-    box-shadow: 0 0 0 3px rgba(233, 173, 50, 0.15);
+    box-shadow: 0 0 0 3px rgba(214, 173, 101, 0.15);
 }
 
 .form-control::placeholder {

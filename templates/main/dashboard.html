@@ -1,231 +1,315 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard | Afrigen 2.0{% endblock %}
+{% block title %}Dashboard | Afrigen{% endblock %}
 
 {% block content %}
-<div class="page-container">
-    <!-- Top Welcome Banner -->
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
-        <div>
-            <div class="d-flex align-items-center gap-2 mb-1">
-                <span class="badge-tier {% if current_user.plan == 'director' or current_user.email == 'oadedamola07@gmail.com' %}badge-director{% elif current_user.plan == 'studio' %}badge-studio{% elif current_user.plan in ['pro', 'creator'] %}badge-creator{% else %}badge-spark{% endif %}">
-                    {{ (current_user.plan or 'SPARK')|upper }} TIER
+<div class="dash-container">
+    <!-- Top Welcome Section -->
+    <section class="dash-header-section">
+        <div class="dash-title-group">
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <span class="badge-plan-pill">
+                    <i class="fa-solid fa-crown text-warning me-1"></i>{{ (current_user.plan or 'SPARK')|upper }} TIER
                 </span>
                 {% if telegram_linked %}
-                <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 10px;">
-                    <i class="fa-brands fa-telegram"></i> BOT CONNECTED
+                <span class="badge-token-pill" style="font-size: 0.68rem; padding: 0.2rem 0.55rem;">
+                    <i class="fa-brands fa-telegram me-1"></i> BOT LINKED
                 </span>
                 {% endif %}
             </div>
-            <h1 class="page-title">Welcome back, {{ current_user.username }}</h1>
-            <p class="page-subtitle">Your AI creative production studio is ready.</p>
+            <h1>Welcome back, {{ current_user.username }}</h1>
+            <p>Your unified creative production suite is primed and ready.</p>
         </div>
 
-        <div class="d-flex align-items-center gap-2">
-            <a href="{{ url_for('main.create') }}" class="btn btn-gold">
-                <i class="fa-solid fa-plus me-1"></i> New Creation
+        <div class="dash-actions-group">
+            <a href="{{ url_for('main.create') }}" class="btn-primary-action">
+                <i class="fa-solid fa-plus"></i>
+                <span>Create New</span>
             </a>
-            {% if current_user.plan != 'director' and current_user.email != 'oadedamola07@gmail.com' %}
-            <a href="{{ url_for('main.upgrade') }}" class="btn btn-surface">
-                <i class="fa-solid fa-crown text-warning me-1"></i> Upgrade
+            <a href="{{ url_for('movie_studio.index') }}" class="btn-secondary-action">
+                <i class="fa-solid fa-film text-warning"></i>
+                <span>Movie Studio</span>
             </a>
-            {% endif %}
         </div>
-    </div>
+    </section>
 
-    <!-- Metrics Grid -->
-    <div class="metrics-grid-4">
-        <div class="metric-card">
-            <div class="metric-icon-box"><i class="fa-solid fa-coins"></i></div>
-            <div>
-                <div class="metric-val">{{ current_user.credits or 0 }}</div>
-                <div class="metric-label">Available Credits</div>
+    <!-- Account & Usage Statistics (4 Balanced Metrics) -->
+    <section class="metrics-row" aria-label="Account Overview Metrics">
+        <!-- Metric 1: Available Credits -->
+        <div class="stat-metric-card">
+            <div class="stat-icon-wrapper stat-icon-gold">
+                <i class="fa-solid fa-coins"></i>
+            </div>
+            <div class="stat-details">
+                <span class="stat-value">{{ current_user.credits or 0 }}</span>
+                <span class="stat-label">Available Credits</span>
             </div>
         </div>
 
-        <div class="metric-card">
-            <div class="metric-icon-box" style="color: #60A5FA;"><i class="fa-solid fa-photo-film"></i></div>
-            <div>
-                <div class="metric-val">{{ total_generations }}</div>
-                <div class="metric-label">Total Creations</div>
+        <!-- Metric 2: Total Creations -->
+        <div class="stat-metric-card">
+            <div class="stat-icon-wrapper stat-icon-blue">
+                <i class="fa-solid fa-photo-film"></i>
+            </div>
+            <div class="stat-details">
+                <span class="stat-value">{{ total_generations }}</span>
+                <span class="stat-label">Total Creations</span>
             </div>
         </div>
 
-        <div class="metric-card">
-            <div class="metric-icon-box" style="color: #34D399;"><i class="fa-solid fa-circle-check"></i></div>
-            <div>
-                <div class="metric-val">{{ completed_generations }}</div>
-                <div class="metric-label">Completed Renders</div>
+        <!-- Metric 3: Completed Renders -->
+        <div class="stat-metric-card">
+            <div class="stat-icon-wrapper stat-icon-teal">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <div class="stat-details">
+                <span class="stat-value">{{ completed_generations }}</span>
+                <span class="stat-label">Completed Renders</span>
             </div>
         </div>
 
-        <div class="metric-card">
-            <div class="metric-icon-box" style="color: #F87171;"><i class="fa-solid fa-film"></i></div>
-            <div>
-                <div class="metric-val">
-                    {% if current_user.plan == 'director' or current_user.email == 'oadedamola07@gmail.com' %}
+        <!-- Metric 4: Movie Studio Access -->
+        <div class="stat-metric-card">
+            <div class="stat-icon-wrapper stat-icon-amber">
+                <i class="fa-solid fa-clapperboard"></i>
+            </div>
+            <div class="stat-details">
+                <span class="stat-value">
+                    {% if is_director or current_user.email == 'oadedamola07@gmail.com' %}
                         ACTIVE
                     {% else %}
-                        LOCKED
+                        DIRECTOR
                     {% endif %}
-                </div>
-                <div class="metric-label">Movie Studio Access</div>
+                </span>
+                <span class="stat-label">Movie Studio Access</span>
             </div>
         </div>
-    </div>
+    </section>
 
-    <!-- Quick Creation Launchpad -->
-    <div class="mb-5">
-        <div class="d-flex align-items-center justify-content-between mb-3">
-            <h3 class="h5 mb-0 text-white">Creative Launchpad</h3>
-            <span class="text-muted small">Select a workspace to start creating</span>
+    <!-- Creative Workspace Tools -->
+    <section class="mb-5">
+        <div class="dash-section-header">
+            <div>
+                <h2 class="dash-section-title">Creative Workspace</h2>
+                <span class="dash-section-sub">Select an AI production studio to start generating</span>
+            </div>
         </div>
 
-        <div class="quick-tools-grid">
-            <a href="{{ url_for('main.create') }}?mode=video" class="quick-tool-card">
+        <div class="workspace-tools-grid">
+            <!-- Tool 1: AI Video Studio -->
+            <a href="{{ url_for('main.create') }}?mode=video" class="tool-studio-card">
                 <div>
-                    <div class="d-flex align-items-center justify-content-between mb-2">
-                        <i class="fa-solid fa-video text-warning fs-4"></i>
-                        <span class="badge-gold">Kling AI</span>
+                    <div class="tool-card-top">
+                        <div class="tool-icon-frame" style="background: rgba(232, 168, 62, 0.12); color: var(--af-amber, #E8A83E);">
+                            <i class="fa-solid fa-video"></i>
+                        </div>
+                        <span class="tool-provider-badge">Afrigen Video Engine</span>
                     </div>
-                    <h4>AI Video Generator</h4>
-                    <p>Cinematic 5s &amp; 10s text-to-video clips with African visual styling.</p>
+                    <div class="tool-card-body">
+                        <h3>AI Video Studio</h3>
+                        <p>Generate cinematic 5s &amp; 10s video clips with authentic African lighting, camera motions, and scenery.</p>
+                    </div>
                 </div>
-                <div class="d-flex align-items-center text-warning small fw-bold pt-2">
-                    <span>Direct Shot &rarr;</span>
+                <div class="tool-card-action">
+                    <span>Direct Video Shot</span>
+                    <i class="fa-solid fa-arrow-right"></i>
                 </div>
             </a>
 
-            <a href="{{ url_for('main.create') }}?mode=image" class="quick-tool-card">
+            <!-- Tool 2: AI Photo Studio -->
+            <a href="{{ url_for('main.create') }}?mode=image" class="tool-studio-card">
                 <div>
-                    <div class="d-flex align-items-center justify-content-between mb-2">
-                        <i class="fa-solid fa-image text-warning fs-4"></i>
-                        <span class="badge bg-secondary border border-secondary" style="font-size: 10px;">FLUX.1</span>
+                    <div class="tool-card-top">
+                        <div class="tool-icon-frame" style="background: rgba(59, 130, 246, 0.12); color: #60A5FA;">
+                            <i class="fa-solid fa-image"></i>
+                        </div>
+                        <span class="tool-provider-badge">Afrigen Image Engine</span>
                     </div>
-                    <h4>AI Photo Studio</h4>
-                    <p>Hyper-realistic 8K photography, authentic melanin portraits &amp; fashion.</p>
+                    <div class="tool-card-body">
+                        <h3>AI Photo Studio</h3>
+                        <p>35mm DSLR optical realism, natural melanin portraits, high-fashion visuals, and crisp legible lettering.</p>
+                    </div>
                 </div>
-                <div class="d-flex align-items-center text-warning small fw-bold pt-2">
-                    <span>Generate Photo &rarr;</span>
+                <div class="tool-card-action">
+                    <span>Generate Photo</span>
+                    <i class="fa-solid fa-arrow-right"></i>
                 </div>
             </a>
 
-            <a href="{{ url_for('movie_studio.index') }}" class="quick-tool-card" style="border-color: var(--af-gold-border);">
+            <!-- Tool 3: Flagship Movie Studio -->
+            <a href="{{ url_for('movie_studio.index') }}" class="tool-studio-card flagship-card">
                 <div>
-                    <div class="d-flex align-items-center justify-content-between mb-2">
-                        <i class="fa-solid fa-film text-warning fs-4"></i>
-                        <span class="badge-director">DIRECTOR</span>
+                    <div class="tool-card-top">
+                        <div class="tool-icon-frame" style="background: rgba(214, 173, 101, 0.16); color: var(--af-gold, #D6AD65);">
+                            <i class="fa-solid fa-film"></i>
+                        </div>
+                        <span class="tool-provider-badge badge-director-gold">FLAGSHIP</span>
                     </div>
-                    <h4>Movie Studio</h4>
-                    <p>Multi-scene screenplay writer, character dossiers &amp; master film rendering.</p>
+                    <div class="tool-card-body">
+                        <h3>Movie Production Studio</h3>
+                        <p>Multi-scene screenplay writing, character consistency dossiers, cinematic shots, and automated movie rendering.</p>
+                    </div>
                 </div>
-                <div class="d-flex align-items-center text-warning small fw-bold pt-2">
-                    <span>Open Filmmaking Studio &rarr;</span>
+                <div class="tool-card-action">
+                    <span>Open Film Suite</span>
+                    <i class="fa-solid fa-arrow-right"></i>
                 </div>
             </a>
 
-            <a href="{{ url_for('main.saved_prompts') }}" class="quick-tool-card">
+            <!-- Tool 4: AI Voiceover -->
+            <a href="{{ url_for('main.create') }}?mode=voice" class="tool-studio-card">
                 <div>
-                    <div class="d-flex align-items-center justify-content-between mb-2">
-                        <i class="fa-solid fa-wand-magic-sparkles text-warning fs-4"></i>
-                        <span class="badge bg-secondary border border-secondary" style="font-size: 10px;">Groq</span>
+                    <div class="tool-card-top">
+                        <div class="tool-icon-frame" style="background: rgba(72, 169, 154, 0.12); color: var(--af-teal, #48A99A);">
+                            <i class="fa-solid fa-microphone-lines"></i>
+                        </div>
+                        <span class="tool-provider-badge">Neural TTS</span>
                     </div>
-                    <h4>Prompt Lab</h4>
-                    <p>Transform rough ideas into cinematic camera-directed prompts.</p>
+                    <div class="tool-card-body">
+                        <h3>AI Voiceover Studio</h3>
+                        <p>Nigerian English neural narration, expressive character dialogues, and standalone audio mastering.</p>
+                    </div>
                 </div>
-                <div class="d-flex align-items-center text-warning small fw-bold pt-2">
-                    <span>Refine Prompt &rarr;</span>
+                <div class="tool-card-action">
+                    <span>Synthesize Voice</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </div>
+            </a>
+
+            <!-- Tool 5: AI Writing & Scriptwriting -->
+            <a href="{{ url_for('main.create') }}?mode=writing" class="tool-studio-card">
+                <div>
+                    <div class="tool-card-top">
+                        <div class="tool-icon-frame" style="background: rgba(168, 85, 247, 0.12); color: #C084FC;">
+                            <i class="fa-solid fa-feather-pointed"></i>
+                        </div>
+                        <span class="tool-provider-badge">Afrigen Intelligence</span>
+                    </div>
+                    <div class="tool-card-body">
+                        <h3>AI Copy &amp; Scripts</h3>
+                        <p>Develop video treatments, marketing campaigns, TikTok voiceover scripts, and production outlines.</p>
+                    </div>
+                </div>
+                <div class="tool-card-action">
+                    <span>Draft Script</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </div>
+            </a>
+
+            <!-- Tool 6: Prompt Lab -->
+            <a href="{{ url_for('main.saved_prompts') }}" class="tool-studio-card">
+                <div>
+                    <div class="tool-card-top">
+                        <div class="tool-icon-frame" style="background: rgba(234, 179, 8, 0.12); color: #FACC15;">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        </div>
+                        <span class="tool-provider-badge">Afrigen Intelligence</span>
+                    </div>
+                    <div class="tool-card-body">
+                        <h3>Prompt Engineering Lab</h3>
+                        <p>Refine raw ideas into high-fidelity cinematic camera directions with lighting and composition rules.</p>
+                    </div>
+                </div>
+                <div class="tool-card-action">
+                    <span>Refine Prompts</span>
+                    <i class="fa-solid fa-arrow-right"></i>
                 </div>
             </a>
         </div>
-    </div>
+    </section>
 
     <!-- Recent Creations Gallery -->
-    <div class="mb-5">
-        <div class="d-flex align-items-center justify-content-between mb-3">
-            <h3 class="h5 mb-0 text-white">Recent Creations</h3>
-            <a href="{{ url_for('main.history') }}" class="btn btn-sm btn-ghost">View All ({{ total_generations }}) &rarr;</a>
+    <section class="mb-5">
+        <div class="dash-section-header">
+            <div>
+                <h2 class="dash-section-title">Recent Creations</h2>
+                <span class="dash-section-sub">Latest visual renders produced in your studio</span>
+            </div>
+            <a href="{{ url_for('main.history') }}" class="btn-media-view" style="padding: 0.35rem 0.75rem;">
+                View All ({{ total_generations }}) &rarr;
+            </a>
         </div>
 
         {% if recent_generations %}
-        <div class="row g-4">
+        <div class="recent-media-grid">
             {% for gen in recent_generations %}
-            <div class="col-md-6 col-lg-3">
-                <div class="card-surface h-100 d-flex flex-column p-0 overflow-hidden">
-                    <div class="position-relative" style="aspect-ratio: 16/9; background: #000;">
-                        {% if gen.video_url %}
-                            <video src="{{ gen.video_url }}" style="width: 100%; height: 100%; object-fit: cover;" muted onmouseover="this.play()" onmouseout="this.pause()"></video>
-                        {% elif gen.image_url %}
-                            <img src="{{ gen.image_url }}" alt="Preview" style="width: 100%; height: 100%; object-fit: cover;">
-                        {% else %}
-                            <div class="d-flex flex-column align-items-center justify-content-center h-100 text-muted">
-                                {% if gen.status == 'failed' %}
-                                    <i class="fa-solid fa-triangle-exclamation text-danger fs-3 mb-1"></i>
-                                    <small class="text-danger">Failed</small>
-                                {% else %}
-                                    <i class="fa-solid fa-spinner fa-spin text-warning fs-3 mb-1"></i>
-                                    <small>Processing</small>
-                                {% endif %}
-                            </div>
-                        {% endif %}
-
-                        <span class="position-absolute top-0 start-0 m-2 badge bg-dark border border-secondary" style="font-size: 10px;">
-                            {{ gen.generation_type|upper }}
-                        </span>
-                    </div>
-
-                    <div class="p-3 d-flex flex-column flex-grow-1">
-                        <p class="small text-secondary mb-3 flex-grow-1" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
-                            {{ gen.original_prompt }}
-                        </p>
-                        
-                        <div class="d-flex align-items-center justify-content-between pt-2 border-top" style="border-color: var(--af-border) !important;">
-                            <small class="text-muted">{{ gen.created_at.strftime('%b %d') if gen.created_at else '' }}</small>
-                            {% if gen.video_url %}
-                                <a href="{{ gen.video_url }}" target="_blank" class="btn btn-sm btn-outline-gold py-1 px-2" style="font-size: 11px;">
-                                    <i class="fa-solid fa-play me-1"></i> Watch
-                                </a>
-                            {% elif gen.image_url %}
-                                <a href="{{ gen.image_url }}" target="_blank" class="btn btn-sm btn-outline-gold py-1 px-2" style="font-size: 11px;">
-                                    <i class="fa-solid fa-eye me-1"></i> View
-                                </a>
+            <article class="media-project-card">
+                <div class="media-preview-box">
+                    {% if gen.video_url %}
+                        <video src="{{ generation_media_url(gen.id, 'video') }}" style="width: 100%; height: 100%; object-fit: cover;" muted onmouseover="this.play()" onmouseout="this.pause()"></video>
+                    {% elif gen.image_url %}
+                        <img src="{{ generation_media_url(gen.id, 'image') }}" alt="Generation preview" loading="lazy">
+                    {% else %}
+                        <div class="d-flex flex-column align-items-center justify-content-center h-100 text-muted" style="color: var(--af-text-muted);">
+                            {% if gen.status == 'failed' %}
+                                <i class="fa-solid fa-triangle-exclamation text-danger fs-4 mb-1"></i>
+                                <small class="text-danger">Failed</small>
+                            {% else %}
+                                <i class="fa-solid fa-spinner fa-spin text-warning fs-4 mb-1"></i>
+                                <small>Rendering</small>
                             {% endif %}
                         </div>
+                    {% endif %}
+
+                    <span class="media-type-tag">
+                        {{ gen.generation_type|upper }}
+                    </span>
+                </div>
+
+                <div class="media-card-body">
+                    <p class="media-prompt-text" title="{{ gen.original_prompt }}">
+                        {{ gen.original_prompt }}
+                    </p>
+                    
+                    <div class="media-card-meta">
+                        <span class="media-date">{{ gen.created_at.strftime('%b %d, %Y') if gen.created_at else 'Recent' }}</span>
+                        {% if gen.video_url %}
+                            <a href="{{ generation_media_url(gen.id, 'video') }}" target="_blank" rel="noopener noreferrer" class="btn-media-view">
+                                <i class="fa-solid fa-play me-1"></i> Watch
+                            </a>
+                        {% elif gen.image_url %}
+                            <a href="{{ generation_media_url(gen.id, 'image') }}" target="_blank" rel="noopener noreferrer" class="btn-media-view">
+                                <i class="fa-solid fa-eye me-1"></i> View
+                            </a>
+                        {% endif %}
                     </div>
                 </div>
-            </div>
+            </article>
             {% endfor %}
         </div>
         {% else %}
-        <div class="empty-state">
-            <div class="empty-state-icon"><i class="fa-solid fa-photo-film"></i></div>
-            <h4 class="empty-state-title">Your Studio is Fresh</h4>
-            <p class="empty-state-desc">You haven't generated any media yet. Type an idea to direct your first video or photo.</p>
-            <a href="{{ url_for('main.create') }}" class="btn btn-gold">
-                <i class="fa-solid fa-plus me-1"></i> Create First Media
+        <div class="dash-empty-box">
+            <div class="dash-empty-icon">
+                <i class="fa-solid fa-photo-film"></i>
+            </div>
+            <h4>Your Studio Library is Empty</h4>
+            <p>You haven't produced any creative media yet. Start with a prompt to direct your first video, photo, or film project.</p>
+            <a href="{{ url_for('main.create') }}" class="btn-primary-action">
+                <i class="fa-solid fa-plus me-1"></i> Create First Project
             </a>
         </div>
         {% endif %}
-    </div>
+    </section>
 
-    <!-- Telegram Bot Integration Banner -->
+    <!-- Telegram Creation Banner (if not linked) -->
     {% if not telegram_linked %}
-    <div class="card-surface d-flex flex-wrap align-items-center justify-content-between gap-3 p-4" style="border-color: #2AABEE;">
-        <div class="d-flex align-items-center gap-3">
-            <div style="width: 48px; height: 48px; border-radius: 50%; background: rgba(42, 171, 238, 0.15); display: flex; align-items: center; justify-content: center; color: #2AABEE; font-size: 24px;">
+    <section class="telegram-banner-box">
+        <div class="telegram-banner-info">
+            <div class="telegram-logo-circle">
                 <i class="fa-brands fa-telegram"></i>
             </div>
             <div>
-                <h5 class="text-white mb-1">Create on the Go with Telegram</h5>
-                <p class="text-secondary small mb-0">Record voice notes and generate videos or photos directly inside Telegram.</p>
+                <h5>Create Everywhere with the Afrigen Telegram Bot</h5>
+                <p>Send voice notes or text ideas directly to your Telegram bot to generate videos and photos on the go.</p>
             </div>
         </div>
         <div>
-            <a href="https://t.me/{{ telegram_bot_username }}" target="_blank" class="btn btn-surface text-white" style="border-color: #2AABEE;">
-                <i class="fa-brands fa-telegram text-info me-1"></i> Connect Telegram Bot
+            <a href="https://t.me/{{ telegram_bot_username }}" target="_blank" rel="noopener noreferrer" class="btn-telegram-connect">
+                <i class="fa-brands fa-telegram"></i>
+                <span>Connect @{{ telegram_bot_username }}</span>
             </a>
         </div>
-    </div>
+    </section>
     {% endif %}
 </div>
 {% endblock %}

@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% set is_video = gen.video_url %}
-{% set media_url = gen.video_url if is_video else gen.image_url %}
+{% set media_url = url_for('main.public_share_media', token=share_token, media_type='video' if is_video else 'image', _external=True) %}
 {% set kind = 'video' if is_video else 'image' %}
 
 {% block title %}Watch this AI {{ kind }} made on Afrigen{% endblock %}
@@ -11,11 +11,11 @@
 <meta property="og:title" content="An AI {{ kind }} made on Afrigen">
 <meta property="og:description" content="{{ gen.original_prompt[:150] }}">
 {% if gen.image_url %}
-<meta property="og:image" content="{{ gen.image_url }}">
-<meta name="twitter:image" content="{{ gen.image_url }}">
+<meta property="og:image" content="{{ url_for('main.public_share_media', token=share_token, media_type='image', _external=True) }}">
+<meta name="twitter:image" content="{{ url_for('main.public_share_media', token=share_token, media_type='image', _external=True) }}">
 {% endif %}
 {% if is_video %}
-<meta property="og:video" content="{{ gen.video_url }}">
+<meta property="og:video" content="{{ url_for('main.public_share_media', token=share_token, media_type='video', _external=True) }}">
 <meta property="og:type" content="video.other">
 {% endif %}
 <meta property="og:url" content="{{ request.url }}">
@@ -32,11 +32,11 @@
             <div class="card p-3 p-md-4 mb-4 text-center" style="border-color: #27AE60;">
                 {% if is_video %}
                 <video width="100%" controls autoplay loop playsinline style="border-radius: 10px;">
-                    <source src="{{ gen.video_url }}" type="video/mp4">
+                    <source src="{{ media_url }}" type="video/mp4">
                     Your browser does not support video.
                 </video>
                 {% else %}
-                <img src="{{ gen.image_url }}" class="img-fluid" style="border-radius: 10px;" alt="AI generated image">
+                <img src="{{ media_url }}" class="img-fluid" style="border-radius: 10px;" alt="AI generated image">
                 {% endif %}
             </div>
 

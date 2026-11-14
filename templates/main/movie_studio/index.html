@@ -30,9 +30,9 @@
                     <div class="mb-3 rounded overflow-hidden position-relative" style="aspect-ratio: 16/9; background: #000; border: 1px solid var(--af-border);">
                         {% if p.cover_image_url or p.final_video_url %}
                             {% if p.final_video_url %}
-                                <video src="{{ p.final_video_url }}" style="width: 100%; height: 100%; object-fit: cover;" muted onmouseover="this.play()" onmouseout="this.pause()"></video>
+                                <video src="{{ url_for('movie_studio.movie_media', asset_type='project-video', asset_id=p.id) }}" style="width: 100%; height: 100%; object-fit: cover;" muted onmouseover="this.play()" onmouseout="this.pause()"></video>
                             {% else %}
-                                <img src="{{ p.cover_image_url }}" alt="{{ p.title }}" style="width: 100%; height: 100%; object-fit: cover;">
+                                <img src="{{ url_for('movie_studio.movie_media', asset_type='project-cover', asset_id=p.id) }}" alt="{{ p.title }}" style="width: 100%; height: 100%; object-fit: cover;">
                             {% endif %}
                         {% else %}
                             <div class="d-flex flex-column align-items-center justify-content-center h-100 text-muted">
@@ -64,7 +64,7 @@
         <div class="empty-state">
             <div class="empty-state-icon"><i class="fa-solid fa-clapperboard"></i></div>
             <h4 class="empty-state-title">No Movie Projects Yet</h4>
-            <p class="empty-state-desc text-secondary">Start your first AI movie project. Direct full screenplays, create characters, and generate 4K scenes.</p>
+            <p class="empty-state-desc text-secondary">Start your first AI movie project. Direct screenplays, develop characters, and create cinematic scenes.</p>
             <button class="btn btn-gold" data-bs-toggle="modal" data-bs-target="#newProjectModal">
                 <i class="fa-solid fa-wand-magic-sparkles me-1"></i> Start New Film Project
             </button>
@@ -111,7 +111,7 @@
                         <td><small class="text-muted">{{ job.created_at.strftime('%b %d, %H:%M') if job.created_at else '' }}</small></td>
                         <td>
                             {% if job.output_video_url %}
-                            <a href="{{ job.output_video_url }}" target="_blank" class="btn btn-sm btn-outline-gold">
+                            <a href="{{ url_for('movie_studio.movie_media', asset_type='job', asset_id=job.id) }}" class="btn btn-sm btn-outline-gold">
                                 <i class="fa-solid fa-download me-1"></i> Download Movie
                             </a>
                             {% endif %}

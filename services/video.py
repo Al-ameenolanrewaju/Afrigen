@@ -6,6 +6,12 @@ import tempfile
 import requests
 import fal_client
 from huggingface_hub import InferenceClient
+from services.ai_products import (
+    IMAGE_MODEL_REGISTRY,
+    VIDEO_MODEL_REGISTRY,
+    customer_error,
+    redact_secrets,
+)
 
 os.environ["FAL_KEY"] = os.environ.get("FAL_KEY", "")
 
@@ -54,30 +60,30 @@ def generate_video(
         except Exception as e:
             error_str = str(e)
             last_error = error_str
-            print(f"Attempt {attempt} failed: {error_str}")
+            print(f"Video attempt {attempt} failed: {redact_secrets(error_str)}")
 
             # Don't retry on balance/auth errors
             if "Exhausted balance" in error_str or "403" in error_str or "401" in error_str:
                 return {
                     "success": False,
-                    "error": "Account balance exhausted. Please add credits at fal.ai/dashboard/billing"
+                    "error": customer_error("video")
                 }
 
             if attempt < MAX_RETRIES:
                 print(f"Retrying in {RETRY_DELAY} seconds...")
                 time.sleep(RETRY_DELAY)
 
-    return {"success": False, "error": f"Failed after {MAX_RETRIES} attempts. Last error: {last_error}"}
+    return {"success": False, "error": customer_error("video")}
 
 
 # Text-to-video models, by length capability:
 #   LTX 2.3 clean-plate - free-user default model for short, clean video output.
 #   AnimateDiff         - frame count up to 32 @ 8fps (~4s); uses video_size, not aspect_ratio.
 #   Kling t2v pro       - real duration control: "5" or "10" seconds.
-LTX_MODEL = "fal-ai/ltx-video"
-ANIMATEDIFF_MODEL = "fal-ai/fast-animatediff/text-to-video"
-KLING_T2V_MODEL = "fal-ai/kling-video/v1/standard/text-to-video"
-KLING_PRO_MODEL = "fal-ai/kling-video/v1/pro/text-to-video"  # Movie Scene Studio
+LTX_MODEL = VIDEO_MODEL_REGISTRY["text_to_video"]["legacy_fast"]
+ANIMATEDIFF_MODEL = VIDEO_MODEL_REGISTRY["text_to_video"]["fast"]
+KLING_T2V_MODEL = VIDEO_MODEL_REGISTRY["text_to_video"]["standard"]
+KLING_PRO_MODEL = VIDEO_MODEL_REGISTRY["text_to_video"]["professional"]
 
 ANIMATEDIFF_STYLES = {"anime", "social"}
 # Styles that use Kling Pro for maximum cinematic quality (Director/Studio tier)
@@ -171,7 +177,7 @@ def _build_t2v_request(prompt, style, aspect_ratio, extended, duration="5"):
 
     if model in (ANIMATEDIFF_MODEL, KLING_T2V_MODEL, KLING_PRO_MODEL):
         arguments["aspect_ratio"] = aspect_ratio if aspect_ratio in ("16:9", "9:16", "1:1") else "16:9"
-        arguments["duration"] = "10" if (extended or duration in {"10", "15", "20"}) else "5"
+        arguments["duration"] = "10" if str(duration) in {"10", "15", "20"} else "5"
         if model in (KLING_T2V_MODEL, KLING_PRO_MODEL):
             arguments["negative_prompt"] = (
                 "blurry, distorted faces, deformed anatomy, low quality, warped, "
@@ -212,15 +218,15 @@ def generate_video_async(prompt, style="cinematic", aspect_ratio="16:9", webhook
             f"fal_request_id={fal_request_id}"
         )
         if not fal_request_id:
-            return {"success": False, "error": "Fal accepted the request without returning a request ID."}
+            return {"success": False, "error": customer_error("video")}
         return {"success": True, "request_id": fal_request_id}
     except Exception as e:
         error_str = str(e)
         print(
             f"FAL submission request_id={request_id} status=unknown_error "
-            f"model={model} error={error_str}"
+            f"model={model} error={redact_secrets(error_str)}"
         )
-        return {"success": False, "error": f"Fal submission failed or is unknown: {error_str}"}
+        return {"success": False, "error": customer_error("video")}
 
 
 def generate_video_from_image(image_url, prompt, duration="5", aspect_ratio="16:9", allow_fal=False):
@@ -234,10 +240,7 @@ def generate_video_from_image(image_url, prompt, duration="5", aspect_ratio="16:
     if aspect_ratio not in ("16:9", "9:16", "1:1"):
         aspect_ratio = "16:9"
 
-    models = [
-        "fal-ai/kling-video/v3/pro/image-to-video",
-        "fal-ai/kling-video/v3/standard/image-to-video",
-    ]
+    models = VIDEO_MODEL_REGISTRY["image_to_video"]
 
     for model in models:
         last_error = None
@@ -265,7 +268,7 @@ def generate_video_from_image(image_url, prompt, duration="5", aspect_ratio="16:
             except Exception as e:
                 error_str = str(e)
                 last_error = error_str
-                print(f"{model} attempt {attempt} failed: {error_str}")
+                print(f"Video model attempt {attempt} failed: {redact_secrets(error_str)}")
 
                 if "Exhausted balance" in error_str or "403" in error_str or "401" in error_str:
                     print(f"Model unavailable for this request ({model}). Trying next fallback model.")
@@ -280,7 +283,7 @@ def generate_video_from_image(image_url, prompt, duration="5", aspect_ratio="16:
                     time.sleep(RETRY_DELAY)
 
     if last_error:
-        raise Exception(f"Image-to-video generation failed for all models. Last error: {last_error}")
+        raise RuntimeError(customer_error("video"))
 
     return None
 
@@ -321,11 +324,12 @@ def generate_video_from_image_async(
         if not request_id:
             return {
                 "success": False,
-                "error": "Fal accepted the request without returning a request ID.",
+                "error": customer_error("video"),
             }
         return {"success": True, "request_id": request_id}
     except Exception as exc:
-        return {"success": False, "error": f"Fal image-to-video submission failed: {exc}"}
+        print(f"Image-to-video submission failed: {redact_secrets(str(exc))}")
+        return {"success": False, "error": customer_error("video")}
 
 
 def add_text_overlay(video_url, text):
@@ -501,15 +505,7 @@ def generate_image(prompt, style="realistic", aspect_ratio="1:1", provider="hugg
     if provider == "huggingface":
         return _generate_image_huggingface(prompt, aspect_ratio)
 
-    MODELS = {
-        "realistic": "fal-ai/flux/dev",
-        "anime": "fal-ai/flux/dev",
-        "cinematic": "fal-ai/flux-pro/v1.1",
-        "african": "fal-ai/flux/dev",
-        "social": "fal-ai/flux/dev"
-    }
-
-    model = MODELS.get(style, MODELS["realistic"])
+    model = IMAGE_MODEL_REGISTRY.get(style, IMAGE_MODEL_REGISTRY["realistic"])
 
     api_key = os.environ.get('FAL_KEY_ID')
     if not api_key:
@@ -519,7 +515,7 @@ def generate_image(prompt, style="realistic", aspect_ratio="1:1", provider="hugg
         print("ERROR: FAL_KEY_ID environment variable not set")
         return {
             "success": False,
-            "error": "API key not configured. Please set FAL_KEY_ID environment variable."
+            "error": customer_error("image")
         }
 
     size_map = {
@@ -553,10 +549,10 @@ def generate_image(prompt, style="realistic", aspect_ratio="1:1", provider="hugg
             print(f"Response status: {response.status_code}")
 
             if response.status_code == 401:
-                return {"success": False, "error": "Invalid API key."}
+                return {"success": False, "error": customer_error("image")}
 
             elif response.status_code == 403:
-                return {"success": False, "error": "Account balance exhausted. Please add credits at fal.ai/dashboard/billing"}
+                return {"success": False, "error": customer_error("image")}
 
             response.raise_for_status()
             result = response.json()
@@ -576,19 +572,19 @@ def generate_image(prompt, style="realistic", aspect_ratio="1:1", provider="hugg
 
         except requests.exceptions.RequestException as e:
             last_error = str(e)
-            print(f"HTTP ERROR on attempt {attempt}: {last_error}")
+            print(f"Image generation HTTP error on attempt {attempt}: {redact_secrets(last_error)}")
             if attempt < MAX_RETRIES:
                 print(f"Retrying in {RETRY_DELAY} seconds...")
                 time.sleep(RETRY_DELAY)
 
         except Exception as e:
             last_error = str(e)
-            print(f"ERROR on attempt {attempt}: {last_error}")
+            print(f"Image generation error on attempt {attempt}: {redact_secrets(last_error)}")
             if attempt < MAX_RETRIES:
                 print(f"Retrying in {RETRY_DELAY} seconds...")
                 time.sleep(RETRY_DELAY)
 
-    return {"success": False, "error": f"Failed after {MAX_RETRIES} attempts. Last error: {last_error}"}
+    return {"success": False, "error": customer_error("image")}
 
 
 def _generate_image_huggingface(prompt, aspect_ratio):
@@ -601,7 +597,7 @@ def _generate_image_huggingface(prompt, aspect_ratio):
     if not token:
         return {
             "success": False,
-            "error": "Hugging Face API token is not configured. Please set HF_TOKEN.",
+            "error": customer_error("image"),
         }
 
     model = os.environ.get("HF_IMAGE_MODEL", "black-forest-labs/FLUX.1-schnell")
@@ -647,20 +643,20 @@ def _generate_image_huggingface(prompt, aspect_ratio):
             }
         except Exception as error:
             last_error = str(error)
-            print(f"HUGGING FACE IMAGE ERROR on attempt {attempt}: {last_error}")
+            print(f"Image generation error on attempt {attempt}: {redact_secrets(last_error)}")
             error_text = last_error.lower()
             
             # Non-retryable errors
             if "401" in error_text or "unauthorized" in error_text or "invalid token" in error_text:
-                return {"success": False, "error": "Invalid Hugging Face API token."}
+                return {"success": False, "error": customer_error("image")}
             if "403" in error_text or "permission" in error_text:
-                return {"success": False, "error": "The Hugging Face token cannot use this image model."}
+                return {"success": False, "error": customer_error("image")}
             if "model" in error_text and ("not found" in error_text or "unsupported" in error_text):
-                return {"success": False, "error": f"The Hugging Face image model is unavailable: {model}."}
+                return {"success": False, "error": customer_error("image")}
             
             # Retryable errors (network, DNS, timeout, rate limit)
             if attempt < MAX_RETRIES:
                 print(f"Retrying in {RETRY_DELAY} seconds...")
                 time.sleep(RETRY_DELAY)
     
-    return {"success": False, "error": "Hugging Face image generation is temporarily unavailable. Please try again."}
+    return {"success": False, "error": customer_error("image")}

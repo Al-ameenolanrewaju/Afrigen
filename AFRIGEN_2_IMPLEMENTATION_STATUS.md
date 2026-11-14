@@ -1,7 +1,7 @@
 # Afrigen 2.0 Transformation — Implementation Report
 
 **Tagline:** "Africa Creates. AI Generates."  
-**Platform Status:** Operational & Fully Tested (40/40 Passing Tests)  
+**Platform Status:** Core platform previously reported operational; Afrigen 2.0 page-by-page redesign and responsive verification remain in progress.
 **Date:** November 2026  
 
 ---
@@ -68,7 +68,7 @@ Unified tabbed creative interface supporting all creative media workflows:
 ---
 
 ## 3. Verification & Test Suite
-All 40 automated tests pass without errors:
+The previous status recorded 40 automated tests passing. The full suite was rerun for this update and now reports 42 passing tests.
 - `tests/test_movie_studio_and_entitlements.py` (4/4 passed)
 - `tests/test_free_video_allowance.py` (3/3 passed)
 - `tests/test_image_to_video_submission.py` (2/2 passed)
@@ -79,3 +79,26 @@ All 40 automated tests pass without errors:
 - `tests/test_subscription_tiers_and_quota.py` (5/5 passed)
 - `tests/test_telegram_webhook.py` (6/6 passed)
 - `tests/test_website_visits.py` (4/4 passed)
+
+## 4. Notification Centre and Page Coverage Update (2026-11-14)
+
+- Added [PAGE_INVENTORY.md](./PAGE_INVENTORY.md): 157 registered Flask route rules,
+  6 blueprints, 69 Jinja templates, and 62 page templates, including currently
+  unlinked templates and API/action routes.
+- Redesigned notification access and history across the authenticated and admin
+  shells: one visible bell per responsive layout, desktop dropdown, mobile bottom
+  sheet, category filtering, unread counts, mark-one/read-all actions, paginated
+  searchable history, and loading/empty/error states.
+- Preserved existing notification records and user ownership; retained the existing
+  unread API array response and added paginated history and mark-all endpoints.
+- Targeted validation: `tests/test_notifications_ui.py` — **1 passed**. It covers the
+  history page render, owner isolation, status/category filtering, mark-read and
+  mark-all actions.
+- Full regression suite: `python -m pytest -q` — **42 passed** (five existing
+  Flask-Login `datetime.utcnow()` deprecation warnings).
+- Responsive browser checks at 320, 360, 390, 430px, tablet and desktop; admin and
+  all-tier browser checks; and the full test suite are still outstanding.
+- Coverage snapshot: 1 of 62 pages redesigned and with targeted route/template tests;
+  61 pages remain pending full review/redesign/testing. No pages were merged or
+  deprecated, and no page has been declared intentionally retained after review.
+  Afrigen 2.0 is **not complete**.

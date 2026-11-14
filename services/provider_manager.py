@@ -9,6 +9,17 @@ from typing import List, Dict, Any
 
 from flask import current_app, has_app_context
 from models import db, ProviderHealth, ProviderLog
+from services.ai_products import (
+    TEXT_PROVIDER_FALLBACKS,
+    TEXT_TASK_ROUTING,
+    customer_error,
+    redact_secrets,
+    sanitize_generated_text,
+)
+
+
+class AIProviderError(RuntimeError):
+    """Safe error raised after provider diagnostics have been recorded internally."""
 
 
 class ProviderAdapter(ABC):
@@ -356,19 +367,8 @@ class ProviderManager:
             "Anthropic": AnthropicAdapter(),
         }
 
-        self.task_mappings = {
-            "Prompt Refinement": "Groq",
-            "AI Assistant": "Groq",
-            "Quick Chat": "Groq",
-            "Blog Writing": "Groq",
-            "Newsletter": "Groq",
-            "Long-form Writing": "Groq",
-            "Campaign": "Groq",
-            "Audio Script": "Groq",
-            "Default": "Groq"
-        }
-
-        self.fallback_chain = ["Groq", "Gemini", "OpenRouter"]
+        self.task_mappings = TEXT_TASK_ROUTING
+        self.fallback_chain = list(TEXT_PROVIDER_FALLBACKS)
 
     def _get_health(self, provider_name: str) -> ProviderHealth:
         if not has_app_context():
@@ -454,31 +454,6 @@ class ProviderManager:
             self.task_mappings["Default"],
         )
 
-        user_keys = {}
-        if user is not None:
-            from utils.encryption import decrypt_token
-
-            for credential in user.service_credentials:
-                if credential.service_type != "ai" or not credential.encrypted_key:
-                    continue
-                decrypted_key = decrypt_token(credential.encrypted_key)
-                if decrypted_key:
-                    user_keys[credential.provider.lower()] = decrypted_key
-
-        preferred_provider = (getattr(user, "default_ai_provider", None) or "").lower()
-        provider_aliases = {
-            "groq": "Groq",
-            "gemini": "Gemini",
-            "openai": "OpenAI",
-            "anthropic": "Anthropic",
-        }
-        preferred_provider_name = provider_aliases.get(preferred_provider)
-        if preferred_provider_name and (
-            preferred_provider in ("groq", "gemini")
-            or preferred_provider in user_keys
-        ):
-            primary_provider_name = preferred_provider_name
-
         attempt_sequence = [primary_provider_name]
         for p in self.fallback_chain:
             if p not in attempt_sequence:
@@ -510,17 +485,13 @@ class ProviderManager:
 
             start_time = time.time()
             try:
-                result = adapter.generate(
-                    messages,
-                    api_key=user_keys.get(provider_name.lower()),
-                    **kwargs,
-                )
+                result = adapter.generate(messages, **kwargs)
                 latency = time.time() - start_time
 
                 self._update_health(provider_name, success=True, latency=latency)
                 self._log_request(task_type, provider_name, latency, fallback_triggered, success=True)
 
-                return result
+                return sanitize_generated_text(result)
             except Exception as e:
                 latency = time.time() - start_time
                 error_msg = str(e)
@@ -534,6 +505,7 @@ class ProviderManager:
                     except Exception:
                         pass
 
+                error_msg = redact_secrets(error_msg)
                 self._update_health(provider_name, success=False, latency=latency, error_msg=error_msg)
                 self._log_request(task_type, provider_name, latency, fallback_triggered, success=False,
                                   error_msg=error_msg)
@@ -543,10 +515,9 @@ class ProviderManager:
                 print(f"[ProviderManager] {provider_name} failed: {error_msg}. Falling back...")
 
         if last_error is None:
-            skipped = ", ".join(skipped_providers) or "none"
-            raise Exception(f"All AI providers were unavailable. Skipped: {skipped}")
+            raise AIProviderError(customer_error("text"))
 
-        raise Exception(f"All AI providers failed. Last error: {last_error}")
+        raise AIProviderError(customer_error("text"))
 
 
 provider_manager = ProviderManager()

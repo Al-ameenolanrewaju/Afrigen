@@ -23,6 +23,7 @@ from models import (
 )
 from services.provider_manager import provider_manager
 from services.video import generate_image, generate_video, generate_video_from_image
+from services.ai_products import customer_error, redact_secrets
 from services.audio import generate_voiceover
 
 logger = logging.getLogger(__name__)
@@ -114,9 +115,9 @@ def generate_screenplay_treatment(project: MovieProject):
         return True, "Screenplay treatment generated successfully!"
 
     except Exception as exc:
-        logger.exception("Screenplay generation failed: %s", exc)
+        logger.error("Screenplay generation failed: %s", redact_secrets(str(exc)))
         db.session.rollback()
-        return False, str(exc)
+        return False, customer_error("movie")
 
 
 # ---------------------------------------------------------------------
@@ -133,7 +134,7 @@ def generate_character_portrait_asset(character_id: int):
     prompt = (
         f"Cinematic close-up portrait of {char.name}, an African {char.role.lower()}. "
         f"{char.physical_appearance or char.description or 'Authentic rich melanin skin, dignified features'}. "
-        f"Style: {project.visual_style}, {project.cinematic_tone}. Natural studio lighting, 35mm film still, photorealistic, 8K."
+        f"Style: {project.visual_style}, {project.cinematic_tone}. Natural studio lighting, cinematic portrait composition."
     )
 
     try:
@@ -144,8 +145,8 @@ def generate_character_portrait_asset(character_id: int):
             return True, res["image_url"]
         return False, res.get("error", "Image generation failed")
     except Exception as e:
-        logger.error("Character portrait generation error: %s", e)
-        return False, str(e)
+        logger.error("Character portrait generation error: %s", redact_secrets(str(e)))
+        return False, customer_error("image")
 
 
 # ---------------------------------------------------------------------
@@ -216,9 +217,9 @@ def create_scene_shots_and_storyboards(scene_id: int):
         db.session.commit()
         return True, f"Created {len(shot_list)} shots for Scene {scene.scene_number}"
     except Exception as exc:
-        logger.exception("Storyboard creation failed: %s", exc)
+        logger.error("Storyboard creation failed: %s", redact_secrets(str(exc)))
         db.session.rollback()
-        return False, str(exc)
+        return False, customer_error("movie")
 
 
 # ---------------------------------------------------------------------
@@ -234,7 +235,7 @@ def generate_shot_video_clip(shot_id: int):
     project = shot.project
     full_prompt = (
         f"{shot.visual_prompt}. Camera: {shot.camera_angle}, {shot.camera_movement}. "
-        f"Lighting: {shot.lighting}. Style: {project.visual_style}, cinematic masterwork, ARRI Alexa 65 4k."
+        f"Lighting: {shot.lighting}. Style: {project.visual_style}, cinematic composition."
     )
 
     shot.status = "generating"
@@ -258,14 +259,15 @@ def generate_shot_video_clip(shot_id: int):
             return True, shot.video_url
         else:
             shot.status = "failed"
-            shot.error_message = res.get("error", "Video generation failed")
+            shot.error_message = customer_error("video")
             db.session.commit()
-            return False, shot.error_message
+            return False, customer_error("video")
     except Exception as exc:
         shot.status = "failed"
-        shot.error_message = str(exc)
+        shot.error_message = customer_error("video")
         db.session.commit()
-        return False, str(exc)
+        logger.error("Movie shot generation failed: %s", redact_secrets(str(exc)))
+        return False, customer_error("video")
 
 
 # ---------------------------------------------------------------------
@@ -363,7 +365,7 @@ def start_movie_render_job(project_id: int, user_id: int, app_instance=None):
                 if proc.returncode != 0 or not os.path.exists(output_file):
                     logger.error("FFmpeg concat failed: %s", proc.stderr)
                     job.status = "failed"
-                    job.error_message = f"Movie rendering failed: {proc.stderr[:300]}"
+                    job.error_message = customer_error("movie")
                     db.session.commit()
                     return
 
@@ -395,9 +397,9 @@ def start_movie_render_job(project_id: int, user_id: int, app_instance=None):
                 db.session.commit()
 
             except Exception as exc:
-                logger.exception("Movie render error: %s", exc)
+                logger.error("Movie render failed: %s", redact_secrets(str(exc)))
                 job.status = "failed"
-                job.error_message = str(exc)
+                job.error_message = customer_error("movie")
                 db.session.commit()
             finally:
                 # Cleanup temp dir

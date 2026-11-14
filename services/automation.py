@@ -51,6 +51,17 @@ def _workflow_to_dict(workflow):
 
 
 def _asset_to_dict(asset):
+    from flask import url_for
+    from services.ai_products import product_label_for_provider, sanitize_generated_text
+
+    media_url = (
+        url_for("main.workflow_asset_media", asset_id=asset.legacy_id)
+        if asset.file_url or asset.thumbnail_url else None
+    )
+    metadata = _decode_json(asset.meta_data, {})
+    if isinstance(metadata, dict) and metadata.get("provider"):
+        metadata["provider"] = product_label_for_provider(metadata["provider"])
+
     return {
         "id": asset.legacy_id,
         "workflow_id": asset.workflow.legacy_id if asset.workflow else None,
@@ -59,14 +70,14 @@ def _asset_to_dict(asset):
         "asset_type": asset.asset_type,
         "type": asset.asset_type,
         "title": asset.title,
-        "content": asset.content,
-        "file_url": asset.file_url,
-        "url": asset.file_url,
-        "thumbnail_url": asset.thumbnail_url,
-        "provider_used": asset.provider_used,
+        "content": sanitize_generated_text(asset.content),
+        "file_url": media_url,
+        "url": media_url,
+        "thumbnail_url": media_url if asset.thumbnail_url else None,
+        "provider_used": product_label_for_provider(asset.provider_used),
         "created_at": asset.created_at.isoformat() if asset.created_at else None,
         "generation_time": asset.generation_time,
-        "metadata": _decode_json(asset.meta_data, {}),
+        "metadata": metadata,
         "storage": "database",
     }
 
@@ -81,7 +92,10 @@ def _run_to_dict(run):
         "nodes_executed": _decode_json(run.nodes_executed, []),
         "credits_used": run.credits_used or 0,
         "assets": [_asset_to_dict(asset) for asset in run.assets],
-        "error": run.error,
+        "error": (
+            "This automation couldn't be completed. Please try again."
+            if run.error else None
+        ),
         "completed_at": run.completed_at.isoformat() if run.completed_at else None,
     }
 

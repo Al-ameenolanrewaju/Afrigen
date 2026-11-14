@@ -1,10 +1,13 @@
-from flask import Blueprint, request, jsonify
+import logging
+
+from flask import Blueprint, request, jsonify, url_for, abort
 from flask_login import login_required, current_user
 from models import db, Campaign, CampaignTask, CampaignAsset, TaskStatus, CampaignStatus, Brand
 from services.workflow_planner import workflow_planner
 from services.workflow_executor import workflow_executor
 
 campaigns_bp = Blueprint('campaigns', __name__)
+logger = logging.getLogger(__name__)
 
 @campaigns_bp.route('/', methods=['POST'])
 @login_required
@@ -109,19 +112,27 @@ def get_campaign(campaign_id):
             "status": t.status,
             "progress": t.progress,
             "priority": t.priority,
-            "error_message": t.error_message,
+            "error_message": (
+                "This campaign step couldn't be completed. Please try again."
+                if t.error_message else None
+            ),
         })
 
     assets_data = []
     for a in assets:
+        media_url = (
+            url_for('campaigns.campaign_asset_media', asset_id=a.id)
+            if a.file_url or a.thumbnail_url else None
+        )
+        from services.ai_products import sanitize_generated_text
         assets_data.append({
             "id": a.id,
             "task_id": a.task_id,
             "asset_type": a.asset_type,
             "title": a.title,
-            "content": a.content,
-            "file_url": a.file_url,
-            "thumbnail_url": a.thumbnail_url,
+            "content": sanitize_generated_text(a.content),
+            "file_url": media_url,
+            "thumbnail_url": media_url if a.thumbnail_url else None,
             "created_at": a.created_at.isoformat() if a.created_at else None
         })
 
@@ -156,6 +167,31 @@ def get_campaign(campaign_id):
         "tasks": tasks_data,
         "assets": assets_data
     })
+
+
+@campaigns_bp.route('/assets/<int:asset_id>/media')
+@login_required
+def campaign_asset_media(asset_id):
+    asset = CampaignAsset.query.get_or_404(asset_id)
+    if not asset.campaign or asset.campaign.user_id != current_user.id:
+        abort(404)
+    media_url = asset.file_url or asset.thumbnail_url
+    content_type = {
+        'image': 'image/jpeg',
+        'video': 'video/mp4',
+        'voice': 'audio/mpeg',
+    }.get(asset.asset_type)
+    if not media_url or not content_type:
+        abort(404)
+
+    from services.ai_products import customer_error
+    from services.media_proxy import MediaProxyError, proxy_media
+    try:
+        return proxy_media(media_url, f'afrigen-campaign-{asset.id}', content_type)
+    except MediaProxyError:
+        logger.exception('Campaign media proxy failed')
+        product = 'video' if content_type.startswith('video/') else 'image'
+        return customer_error(product), 502, {'Content-Type': 'text/plain; charset=utf-8'}
 
 
 @campaigns_bp.route('/<int:campaign_id>/retry', methods=['POST'])

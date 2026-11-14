@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Create | Afrigen{% endblock %}
-{% block title %}Create Studio | Afrigen 2.0{% endblock %}
+{% block title %}Create Studio | Afrigen{% endblock %}
 
 {% block content %}
 <style>
@@ -247,13 +246,18 @@
         justify-content: center;
     }
 </style>
+<div class="d-flex justify-content-end mb-3">
+    <a class="btn btn-surface btn-sm" href="{{ url_for('main.saved_prompts') }}">
+        <i class="fa-solid fa-wand-magic-sparkles me-1" aria-hidden="true"></i> Prompt Lab
+    </a>
+</div>
 <!-- Mode Selector Tabs -->
 <div class="d-flex gap-2 mb-4 overflow-auto pb-2">
     <button class="btn btn-surface active-mode-btn" id="tab_video" onclick="switchMode('video')">
-        <i class="fa-solid fa-video text-warning me-1"></i> AI Video (Kling AI)
+        <i class="fa-solid fa-video text-warning me-1"></i> AI Video
     </button>
     <button class="btn btn-surface" id="tab_image" onclick="switchMode('image')">
-        <i class="fa-solid fa-image text-warning me-1"></i> AI Photo (FLUX.1)
+        <i class="fa-solid fa-image text-warning me-1"></i> AI Photo
     </button>
     <button class="btn btn-surface" id="tab_voice" onclick="switchMode('voice')">
         <i class="fa-solid fa-microphone-lines text-warning me-1"></i> AI Voiceover (Neural)
@@ -343,7 +347,7 @@
                                 </div>
                                 <div class="prompt-actions-bar">
                                     <button type="button" class="refine-btn" onclick="enhancePrompt()">
-                                        <i class="fa-solid fa-wand-magic-sparkles"></i> Enhance Prompt with Groq AI
+                                        <i class="fa-solid fa-wand-magic-sparkles"></i> Enhance with Afrigen Intelligence
                                     </button>
                                     <span class="small text-muted" id="refine_indicator"></span>
                                 </div>
@@ -702,7 +706,7 @@
                                                     <input type="file" name="image" class="form-control"
                                                         accept="image/*" required>
                                                     <small class="text-muted">Upload a photo to bring it to life with
-                                                        Kling AI motion.</small>
+                                                        cinematic motion.</small>
                                                 </div>
 
                                                 <div class="mb-4">
@@ -759,8 +763,7 @@
                                     <div class="generation-loader d-none" id="activeLoader">
                                         <div class="spinner-gold"></div>
                                         <h5 class="text-white mb-1" id="loaderTitle">Rendering with AI...</h5>
-                                        <p class="small text-secondary mb-0" id="loaderSubtitle">Connecting to Kling AI
-                                            engine</p>
+                                        <p class="small text-secondary mb-0" id="loaderSubtitle">Preparing your video</p>
                                     </div>
                                 </div>
 
@@ -910,7 +913,7 @@
                                         const btnText = document.getElementById('btnSubmitText');
                                         const costBadge = document.getElementById('costBadge');
                                         if (mode === 'video') {
-                                            btnText.textContent = 'Generate Kling AI Video';
+                                            btnText.textContent = 'Generate Video';
                                             costBadge.textContent = '5 Credits';
                                         } else if (mode === 'image') {
                                             btnText.textContent = 'Generate FLUX Photo';

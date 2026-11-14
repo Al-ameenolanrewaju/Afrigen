@@ -1,6 +1,7 @@
 import os
 import re
 from services.provider_manager import provider_manager
+from services.ai_products import VIDEO_MODEL_REGISTRY
 
 STYLE_PROMPTS = {
     "cinematic": """You are an expert cinematic video prompt engineer. 
@@ -148,7 +149,8 @@ def extract_on_screen_text(user_prompt):
         return ""
 
 
-def get_model_prompt_rules(model_name="fal-ai/kling-video/v1/standard/text-to-video", duration="5"):
+def get_model_prompt_rules(model_name=None, duration="5"):
+    model_name = model_name or VIDEO_MODEL_REGISTRY["text_to_video"]["standard"]
     """Return model-specific instructions for prompt generation.
 
     Optimized for Kling AI to generate high-fidelity, physically consistent, cinematic video.
@@ -208,7 +210,7 @@ def get_model_prompt_rules(model_name="fal-ai/kling-video/v1/standard/text-to-vi
 def refine_prompt(
     user_prompt,
     style="cinematic",
-    model_name="fal-ai/kling-video/v1/standard/text-to-video",
+    model_name=None,
     duration="5",
     user=None,
 ):

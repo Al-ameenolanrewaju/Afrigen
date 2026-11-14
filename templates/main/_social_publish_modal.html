@@ -33,7 +33,7 @@
 </div>
 
 <script>
-let socialPublishState = { text: '', mediaUrl: '', mediaType: 'video' };
+let socialPublishState = { text: '', mediaUrl: '', mediaType: 'video', generationId: '' };
 let socialPublishInProgress = false;
 
 function showSocialPublishAlert(message, type) {
@@ -60,12 +60,17 @@ async function readPublishResponse(response) {
     return data;
 }
 
-async function openSocialPublishModal(text, mediaUrl, mediaType) {
+async function openSocialPublishModal(text, mediaUrl, mediaType, generationId) {
     if (!window.bootstrap || !document.getElementById('socialPublishModal')) {
         window.alert('The publishing window could not load. Please refresh the page and try again.');
         return;
     }
-    socialPublishState = { text: text || '', mediaUrl: mediaUrl || '', mediaType: mediaType || 'video' };
+    socialPublishState = {
+        text: text || '',
+        mediaUrl: mediaUrl || '',
+        mediaType: mediaType || 'video',
+        generationId: generationId || ''
+    };
     socialPublishInProgress = false;
     document.getElementById('socialPublishText').value = socialPublishState.text;
     document.getElementById('socialPublishAlert').className = 'alert d-none';
@@ -134,7 +139,8 @@ function initializeSocialPublishModal() {
                 action,
                 scheduled_for: action === 'schedule' ? new Date(scheduledFor).toISOString() : null,
                 text: document.getElementById('socialPublishText').value,
-                media_url: socialPublishState.mediaUrl,
+                media_url: socialPublishState.generationId ? null : socialPublishState.mediaUrl,
+                generation_id: socialPublishState.generationId || null,
                 media_type: socialPublishState.mediaType,
                 title: 'Created with Afrigen'
             })
@@ -162,7 +168,8 @@ document.addEventListener('click', event => {
     openSocialPublishModal(
         trigger.dataset.publishText,
         trigger.dataset.mediaUrl,
-        trigger.dataset.mediaType
+        trigger.dataset.mediaType,
+        trigger.dataset.generationId
     );
 });
 

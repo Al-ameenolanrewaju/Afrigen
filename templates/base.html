@@ -77,7 +77,7 @@ content="Generate campaigns, blogs, social media content, videos, and visuals wi
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome 6 (icons that replaced the old emojis) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    <!-- Afrigen 2.0 Modular Design System -->
+    <!-- Afrigen Modular Design System -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/design-system.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/public.css') }}">
@@ -87,89 +87,15 @@ content="Generate campaigns, blogs, social media content, videos, and visuals wi
     <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/responsive.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/notifications.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-dashboard.css') }}">
     <style>
-        .navbar-brand { color: var(--accent) !important; }
-        .copilot-launcher {
-            position: fixed;
-            right: 24px;
-            bottom: 24px;
-            z-index: 1040;
-            width: 62px;
-            height: 62px;
-            border: 1px solid rgba(255, 207, 92, 0.7);
-            border-radius: 50%;
-            background: radial-gradient(circle at 35% 30%, #FFE49A 0%, #F5A623 42%, #B95718 100%);
-            color: #1A1206;
-            box-shadow: 0 12px 30px rgba(245, 166, 35, 0.3), 0 0 0 6px rgba(245, 166, 35, 0.07);
-            font-size: 21px;
-            transition: transform 0.25s ease, box-shadow 0.25s ease;
-        }
-        .copilot-launcher::before {
-            content: "";
-            position: absolute;
-            inset: -7px;
-            border: 1px solid rgba(255, 207, 92, 0.28);
-            border-left-color: transparent;
-            border-radius: 50%;
-            animation: copilot-orbit 7s linear infinite;
-        }
-        .copilot-launcher::after {
-            content: "COPILOT";
-            position: absolute;
-            right: 68px;
-            top: 50%;
-            transform: translate(8px, -50%);
-            padding: 5px 9px;
-            border: 1px solid var(--border-strong);
-            border-radius: 6px;
-            background: var(--elevated);
-            color: var(--accent-2);
-            font-size: 10px;
-            font-weight: 800;
-            letter-spacing: 0.12em;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.2s ease, transform 0.2s ease;
-        }
-        .copilot-launcher i { position: relative; z-index: 1; }
-        @keyframes copilot-orbit { to { transform: rotate(360deg); } }
-        .copilot-launcher:hover,
-        .copilot-launcher:focus-visible {
-            transform: translateY(-4px) scale(1.06);
-            box-shadow: 0 16px 38px rgba(245, 166, 35, 0.48), 0 0 0 8px rgba(245, 166, 35, 0.1);
-        }
-        .copilot-launcher:hover::after,
-        .copilot-launcher:focus-visible::after {
-            opacity: 1;
-            transform: translate(0, -50%);
-        }
-        .copilot-modal-content {
-            height: min(76vh, 720px);
-            overflow: hidden;
-            background: var(--surface);
-            border: 1px solid var(--border-strong);
-        }
-        .copilot-modal-content .modal-header {
-            background: var(--surface-2);
-            color: var(--text);
-            border-bottom: 1px solid var(--border);
-        }
-        .copilot-frame {
-            display: block;
-            width: 100%;
-            height: calc(min(76vh, 720px) - 58px);
-            border: 0;
-        }
+        .navbar-brand { color: var(--af-gold, #D6AD65) !important; }
         @media (min-width: 992px) {
             .navbar-toggler { display: none !important; }
         }
-        @media (max-width: 576px) {
-            .copilot-launcher { right: 16px; bottom: 16px; }
-            .copilot-modal-content { height: 90vh; }
-            .copilot-frame { height: calc(90vh - 58px); }
-        }
     </style>
-    <!-- Brand Middleware (Sprint 7) -->
+    <!-- Brand Middleware -->
     <script src="{{ url_for('static', filename='js/brand_middleware.js') }}"></script>
     <!-- Google AdSense -->
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7147056850651801"
@@ -184,56 +110,57 @@ content="Generate campaigns, blogs, social media content, videos, and visuals wi
     {% block og_meta %}{% endblock %}
 </head>
 <body>
-{% if current_user.is_authenticated and not request.args.get('embedded') %}
-<button class="copilot-launcher" type="button" data-bs-toggle="modal" data-bs-target="#copilotModal" aria-label="Open Afrigen AI assistant" title="Open Afrigen AI assistant">
-    <i class="fa-solid fa-wand-magic-sparkles"></i>
-</button>
-<div class="modal fade" id="copilotModal" tabindex="-1" aria-labelledby="copilotModalTitle" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content copilot-modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="copilotModalTitle"><i class="fa-solid fa-wand-magic-sparkles"></i> Afrigen Creative Copilot</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-0">
-                <iframe src="{{ url_for('main.assistant', embedded=1) }}" title="Afrigen AI Assistant" class="copilot-frame"></iframe>
-            </div>
-        </div>
-    </div>
-</div>
-{% endif %}
 {% if current_user.is_authenticated %}
-<div class="d-flex flex-column flex-lg-row min-vh-100">
+<div class="app-shell">
     {% if not request.args.get('embedded') %}
     {% include 'components/auth_sidebar.html' %}
     {% endif %}
     
-    <div class="flex-grow-1 d-flex flex-column" style="min-width: 0;">
+    <div class="app-main">
         {% if not request.args.get('embedded') %}
-        <header class="d-flex align-items-center justify-content-between px-3 px-lg-4 py-2 border-bottom" style="background: #0D1117; border-color: #30363D !important; min-height: 52px;">
-            <div class="d-flex align-items-center gap-2">
-                <span class="badge rounded-pill px-2 py-1" style="background: rgba(245, 166, 35, 0.15); color: #F5A623; border: 1px solid rgba(245, 166, 35, 0.35); text-transform: uppercase; font-size: 11px; font-weight: 600; letter-spacing: 0.5px;">
-                    <i class="fa-solid fa-crown me-1 text-warning" style="font-size: 10px;"></i>{{ current_user.plan or 'SPARK' }}
-                </span>
-                <span class="text-muted d-none d-sm-inline" style="font-size: 13px;">
-                    Credits: <strong style="color: #F0F6FC;">{{ current_user.credits or 0 }}</strong>
+        <header class="app-topbar">
+            <div class="topbar-left">
+                <a href="{{ url_for('main.dashboard') }}" class="mobile-topbar-logo d-lg-none">
+                    <span class="sidebar-logo-icon" style="width: 24px; height: 24px; font-size: 0.75rem;"><i class="fa-solid fa-clapperboard"></i></span>
+                    <span>Afrigen</span>
+                </a>
+                <span class="badge-plan-pill d-none d-sm-inline-flex">
+                    <i class="fa-solid fa-crown me-1 text-warning"></i>{{ (current_user.plan or 'SPARK')|upper }}
                 </span>
                 {% if current_user.free_video_allowance %}
-                <span class="badge rounded-pill d-none d-md-inline" style="background: rgba(59, 130, 246, 0.15); color: #60A5FA; border: 1px solid rgba(59, 130, 246, 0.3); font-size: 11px;">
+                <span class="badge-token-pill d-none d-md-inline-flex">
                     <i class="fa-solid fa-video me-1"></i> {{ current_user.free_video_allowance }} Free Video{% if current_user.free_video_allowance > 1 %}s{% endif %}
                 </span>
                 {% endif %}
             </div>
-            <div class="d-flex align-items-center gap-2">
+
+            <div class="topbar-right">
+                <div class="credits-pill">
+                    <i class="fa-solid fa-coins" style="color: var(--af-gold, #D6AD65);"></i>
+                    <span><strong>{{ current_user.credits or 0 }}</strong> credits</span>
+                </div>
+
                 {% if current_user.plan in ['free', 'spark', None] %}
-                <a href="{{ url_for('main.upgrade') }}" class="btn btn-sm text-dark fw-bold d-none d-sm-inline-flex align-items-center gap-1" style="background: #F5A623; border-radius: 6px; font-size: 12px; padding: 4px 12px;">
+                <a href="{{ url_for('main.upgrade') }}" class="btn-topbar-upgrade">
                     <i class="fa-solid fa-arrow-up-right-from-square"></i> Upgrade
                 </a>
                 {% endif %}
-                <button id="notifBellBtn" class="btn btn-sm position-relative text-white p-0 rounded-circle d-flex align-items-center justify-content-center" type="button" data-bs-toggle="offcanvas" data-bs-target="#notifOffcanvas" style="width: 36px; height: 36px; background: #161B22; border: 1px solid #30363D; transition: all 0.2s;" title="Notifications">
-                    <i class="fa-solid fa-bell" style="font-size: 14px; color: #C9D1D9;"></i>
-                    <span id="notifBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display: none; font-size: 9px; padding: 2px 5px;">0</span>
+
+                <!-- Mobile Notification Bell (No hamburger button on mobile) -->
+                <button class="d-none" aria-label="Open navigation menu" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileDrawer" style="display: none !important;"></button>
+                <button id="notifBellBtnMobile" class="notification-trigger d-inline-flex d-lg-none" type="button" data-notification-trigger aria-controls="notificationPanel" aria-expanded="false" aria-label="Notifications">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" width="18" height="18"><path fill="none" stroke="currentColor" stroke-width="2" d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path fill="none" stroke="currentColor" stroke-width="2" d="M10 21h4"/></svg>
+                    <span id="notifBadgeMobile" class="notification-badge" data-notification-badge></span>
                 </button>
+                <!-- Desktop Notification Bell -->
+                <button id="notifBellBtn" class="notification-trigger d-none d-lg-inline-flex" type="button" data-notification-trigger aria-controls="notificationPanel" aria-expanded="false" aria-label="Notifications">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" width="18" height="18"><path fill="none" stroke="currentColor" stroke-width="2" d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path fill="none" stroke="currentColor" stroke-width="2" d="M10 21h4"/></svg>
+                    <span id="notifBadge" class="notification-badge" data-notification-badge></span>
+                </button>
+
+                <a href="{{ url_for('main.profile') }}" class="user-avatar-pill" title="Profile Settings">
+                    <span>{{ current_user.username[:1]|upper }}</span>
+                </a>
             </div>
         </header>
         {% endif %}
@@ -241,7 +168,7 @@ content="Generate campaigns, blogs, social media content, videos, and visuals wi
     {% include 'components/public_navbar.html' %}
 {% endif %}
 
-        <div class="container mt-4 flex-grow-1{% if request.args.get('embedded') %} embedded-container{% endif %}">
+        <main class="{% if current_user.is_authenticated %}app-content-body{% else %}container mt-4 flex-grow-1{% endif %}{% if request.args.get('embedded') %} embedded-container{% endif %}">
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
                     <script>
@@ -259,7 +186,7 @@ content="Generate campaigns, blogs, social media content, videos, and visuals wi
             {% endwith %}
 
             {% block content %}{% endblock %}
-        </div>
+        </main>
         
         {% block footer %}{% endblock %}
         {% include 'components/footer.html' %}
@@ -342,20 +269,11 @@ content="Generate campaigns, blogs, social media content, videos, and visuals wi
             els.forEach(function (el) { io.observe(el); });
         })();
     </script>
-    <!-- In-App Notifications Drawer -->
-    <div class="offcanvas offcanvas-end" tabindex="-1" id="notifOffcanvas" style="background: #0D1117; color: #F0F6FC; border-left: 1px solid #30363D; width: 360px;">
-        <div class="offcanvas-header border-bottom" style="border-color: #30363D !important;">
-            <h5 class="offcanvas-title" style="color: #F5A623; font-size: 16px;"><i class="fa-solid fa-bell me-2"></i> Notifications</h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
-        </div>
-        <div class="offcanvas-body p-0">
-            <div id="notifList" class="list-group list-group-flush" style="background: transparent;">
-                <div class="p-4 text-center text-muted" style="font-size: 14px;">No new notifications.</div>
-            </div>
-        </div>
-    </div>
+    {% if current_user.is_authenticated and not request.args.get('embedded') %}
+    {% include 'components/notification_center.html' %}
+    {% endif %}
 
-    <!-- PWA & Notifications Script -->
+    <!-- PWA registration -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
@@ -364,59 +282,7 @@ content="Generate campaigns, blogs, social media content, videos, and visuals wi
                 });
             });
         }
-
-        async function fetchNotifications() {
-            try {
-                const res = await fetch('/api/notifications');
-                if (!res.ok) return;
-                const data = await res.json();
-                const badge = document.getElementById('notifBadge');
-                const badgeMobile = document.getElementById('notifBadgeMobile');
-                const list = document.getElementById('notifList');
-                if (!list) return;
-
-                const updateBadge = function(el, count) {
-                    if (!el) return;
-                    if (count > 0) {
-                        el.textContent = count;
-                        el.style.display = 'inline-block';
-                    } else {
-                        el.style.display = 'none';
-                    }
-                };
-
-                if (Array.isArray(data) && data.length > 0) {
-                    updateBadge(badge, data.length);
-                    updateBadge(badgeMobile, data.length);
-                    list.innerHTML = data.map(function(n) {
-                        return '<div class="list-group-item p-3 border-bottom" style="background: #161B22; color: #F0F6FC; border-color: #30363D !important;">' +
-                            '<div class="d-flex justify-content-between align-items-start mb-1">' +
-                                '<strong style="color: #F5A623; font-size: 14px;">' + (n.title || 'Notification') + '</strong>' +
-                                '<button class="btn btn-sm text-muted p-0 ms-2" onclick="markNotifRead(' + n.id + ')" title="Mark as read" style="line-height:1; font-size:16px;">&times;</button>' +
-                            '</div>' +
-                            '<p class="mb-1" style="font-size: 13px; color: #C9D1D9;">' + (n.message || '') + '</p>' +
-                            (n.link ? '<a href="' + n.link + '" class="btn btn-sm btn-link p-0 text-decoration-none mt-1 d-inline-block" style="color: #58a6ff; font-size: 12px;">View &rarr;</a>' : '') +
-                        '</div>';
-                    }).join('');
-                } else {
-                    updateBadge(badge, 0);
-                    updateBadge(badgeMobile, 0);
-                    list.innerHTML = '<div class="p-4 text-center text-muted" style="font-size: 14px;">No new notifications.</div>';
-                }
-            } catch (e) {}
-        }
-
-        async function markNotifRead(id) {
-            try {
-                await fetch('/api/notifications/' + id + '/read', { method: 'POST' });
-                fetchNotifications();
-            } catch (e) {}
-        }
-
-        if (document.getElementById('notifBellBtn') || document.getElementById('notifBellBtnMobile')) {
-            fetchNotifications();
-            setInterval(fetchNotifications, 60000);
-        }
     </script>
+    <script src="{{ url_for('static', filename='js/notifications.js') }}" defer></script>
 </body>
 </html>

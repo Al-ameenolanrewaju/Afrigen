@@ -337,6 +337,18 @@ def dashboard():
         user_id=current_user.id
     ).order_by(Generation.created_at.desc()).limit(4).all()
 
+    recent_movie_projects = []
+    try:
+        from models import MovieProject
+        recent_movie_projects = MovieProject.query.filter_by(
+            user_id=current_user.id
+        ).order_by(MovieProject.updated_at.desc()).limit(3).all()
+    except Exception:
+        db.session.rollback()
+
+    from services.entitlements import can_access_movie_studio
+    is_director = can_access_movie_studio(current_user)
+
     try:
         telegram_linked = TelegramUser.query.filter_by(user_id=current_user.id).first() is not None
     except Exception:
@@ -349,6 +361,8 @@ def dashboard():
         total_generations=total_generations,
         completed_generations=completed_generations,
         recent_generations=recent_generations,
+        recent_movie_projects=recent_movie_projects,
+        is_director=is_director,
         telegram_linked=telegram_linked,
         telegram_bot_username=telegram_bot_username,
     )
@@ -698,7 +712,9 @@ def refine_prompt_free():
         refined = refine_prompt(prompt, 'cinematic', user=user)
         return jsonify({"refined": refined})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        logger.exception("Afrigen Intelligence prompt refinement failed")
+        from services.ai_products import customer_error
+        return jsonify({"error": customer_error('text')}), 500
 
 
 @main.route('/refine-image-prompt', methods=['POST'])
@@ -713,7 +729,9 @@ def refine_image_prompt_free():
         refined = refine_image_prompt(prompt, style, user=user)
         return jsonify({"refined": refined})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        logger.exception("Afrigen Image Engine prompt refinement failed")
+        from services.ai_products import customer_error
+        return jsonify({"error": customer_error('text')}), 500
 
 
 @main.route('/generate-from-image', methods=['POST'])
@@ -895,7 +913,7 @@ def generate_image():
 
         return redirect(url_for(
             'main.image_result',
-            image_url=image,
+            generation_id=generation.id,
             refined=refined,
             original=prompt,
             share_url=share_url_for(generation.id)
@@ -958,7 +976,16 @@ def generate_voice():
         db.session.commit()
 
         if request.is_json:
-            return jsonify({"success": True, "audio_url": audio_url, "script": script, "generation_id": generation.id})
+            return jsonify({
+                "success": True,
+                "audio_url": url_for(
+                    'main.generation_media',
+                    generation_id=generation.id,
+                    media_type='audio',
+                ),
+                "script": script,
+                "generation_id": generation.id,
+            })
 
         flash("Voiceover synthesized successfully!", "success")
         return redirect(url_for('main.history'))
@@ -966,9 +993,10 @@ def generate_voice():
     except Exception as e:
         db.session.rollback()
         logger.error("Voice generation error: %s", e)
+        from services.ai_products import customer_error
         if request.is_json:
-            return jsonify({"success": False, "error": str(e)}), 500
-        flash(f"Voiceover generation failed: {str(e)}", "danger")
+            return jsonify({"success": False, "error": customer_error('voice')}), 500
+        flash(customer_error('voice'), "danger")
         return redirect(url_for('main.create'))
 
 
@@ -1071,6 +1099,15 @@ def share_url_for(gen_id):
     return url_for('main.public_share', token=make_share_token(gen_id), _external=True)
 
 
+@main.app_template_global('generation_media_url')
+def generation_media_url(gen_id, media_type):
+    return url_for(
+        'main.generation_media',
+        generation_id=gen_id,
+        media_type=media_type,
+    )
+
+
 @main.route('/v/<token>')
 def public_share(token):
     """Public, no-login page for a single completed generation: shows the clip/
@@ -1084,7 +1121,7 @@ def public_share(token):
     gen = Generation.query.get(gen_id)
     if not gen or gen.status != 'completed' or not (gen.video_url or gen.image_url):
         abort(404)
-    return render_template('main/share.html', gen=gen)
+    return render_template('main/share.html', gen=gen, share_token=token)
 
 
 @main.route('/result/video')
@@ -1101,8 +1138,18 @@ def video_result():
 @main.route('/result/image')
 @login_required
 def image_result():
+    generation_id = request.args.get('generation_id', type=int)
+    generation = Generation.query.filter_by(
+        id=generation_id,
+        user_id=current_user.id,
+    ).first() if generation_id else None
+    image_url = (
+        generation_media_url(generation.id, 'image')
+        if generation and generation.image_url
+        else ''
+    )
     return render_template('main/image_result.html',
-        image_url=request.args.get('image_url', ''),
+        image_url=image_url,
         original=request.args.get('original', ''),
         refined=request.args.get('refined', ''),
         share_url=request.args.get('share_url', '')
@@ -1972,12 +2019,12 @@ def download_video(generation_id):
         return redirect(url_for('main.history'))
 
     if current_user.plan == 'pro':
-        return redirect(generation.video_url)
+        return redirect(url_for('main.download_video_file', generation_id=generation.id))
 
     if not generation.ad_watched:
         return redirect(url_for('main.watch_ad', generation_id=generation.id))
 
-    return redirect(generation.video_url)
+    return redirect(url_for('main.download_video_file', generation_id=generation.id))
 
 
 @main.route('/watch-ad/<int:generation_id>')
@@ -3015,7 +3062,7 @@ def fal_webhook():
             from services.email import send_video_ready_email
             email_sent = send_video_ready_email(
                 user.email, user.username,
-                generation.original_prompt, generation.video_url
+                generation.original_prompt, share_url_for(generation.id)
             )
             print(f"EMAIL webhook_request_id={request_id} type=video_ready status={'sent' if email_sent else 'failed'}")
         except Exception as e:
@@ -3176,11 +3223,30 @@ def _notification_category(notification):
 
 
 def _serialize_notification(notification):
+    from urllib.parse import urlparse
+    from services.ai_products import sanitize_generated_text
+
+    link = notification.link
+    if link:
+        parsed_link = urlparse(link)
+        if parsed_link.netloc:
+            request_host = (urlparse(request.host_url).hostname or '').lower()
+            if (parsed_link.hostname or '').lower() == request_host:
+                link = parsed_link.path or '/'
+                if parsed_link.query:
+                    link += '?' + parsed_link.query
+                if parsed_link.fragment:
+                    link += '#' + parsed_link.fragment
+            else:
+                link = None
+        elif not link.startswith('/') or link.startswith('//'):
+            link = None
+
     return {
         'id': notification.id,
-        'title': notification.title,
-        'message': notification.message,
-        'link': notification.link,
+        'title': sanitize_generated_text(notification.title),
+        'message': sanitize_generated_text(notification.message),
+        'link': link,
         'type': notification.type,
         'category': _notification_category(notification),
         'is_read': notification.is_read,
@@ -3241,6 +3307,9 @@ def api_notification_history():
         query = query.filter(text.like('%' + escaped_search.lower() + '%', escape='\\'))
 
     total = query.count()
+    page_count = (total + per_page - 1) // per_page
+    if page_count and page > page_count:
+        page = page_count
     notifications_page = query.order_by(
         Notification.created_at.desc(), Notification.id.desc()
     ).offset((page - 1) * per_page).limit(per_page).all()
@@ -3253,7 +3322,7 @@ def api_notification_history():
         'unread_count': unread_count,
         'page': page,
         'per_page': per_page,
-        'pages': (total + per_page - 1) // per_page,
+        'pages': page_count,
     })
 
 
@@ -3347,17 +3416,15 @@ def download_video_file(generation_id):
         flash('Video not available.', 'danger')
         return redirect(url_for('main.history'))
 
-    # Free users must watch an ad before downloading. Pro users skip the gate.
-    if current_user.plan == 'free' and not generation.ad_watched:
+    as_attachment = request.args.get('inline') != '1'
+    if as_attachment and current_user.plan == 'free' and not generation.ad_watched:
         return redirect(url_for('main.watch_ad', generation_id=generation.id))
 
-    # Stream the video file from FAL
-    response = http_requests.get(generation.video_url, stream=True)
-    from flask import Response
-    return Response(
-        response.iter_content(chunk_size=8192),
-        content_type='video/mp4',
-        headers={'Content-Disposition': f'attachment; filename="afrigen-video-{generation_id}.mp4"'}
+    return _proxy_generated_media(
+        generation.video_url,
+        f'afrigen-video-{generation_id}.mp4',
+        'video/mp4',
+        as_attachment=as_attachment,
     )
 
 
@@ -3371,12 +3438,73 @@ def download_image_file(generation_id):
         flash('Image not available.', 'danger')
         return redirect(url_for('main.history'))
 
-    response = http_requests.get(generation.image_url, stream=True)
-    from flask import Response
-    return Response(
-        response.iter_content(chunk_size=8192),
-        content_type='image/jpeg',
-        headers={'Content-Disposition': f'attachment; filename="afrigen-image-{generation_id}.jpg"'}
+    return _proxy_generated_media(
+        generation.image_url,
+        f'afrigen-image-{generation_id}.jpg',
+        'image/jpeg',
+        as_attachment=request.args.get('inline') != '1',
+    )
+
+
+def _proxy_generated_media(url, filename, content_type, as_attachment=False):
+    from services.media_proxy import MediaProxyError, proxy_media
+    from services.ai_products import customer_error
+
+    try:
+        return proxy_media(url, filename, content_type, as_attachment=as_attachment)
+    except MediaProxyError:
+        logger.exception('Generated media proxy failed')
+        product = (
+            'video' if content_type.startswith('video/')
+            else 'voice' if content_type.startswith('audio/')
+            else 'image'
+        )
+        return customer_error(product), 502, {'Content-Type': 'text/plain; charset=utf-8'}
+
+
+@main.route('/media/generation/<int:generation_id>/<media_type>')
+@login_required
+def generation_media(generation_id, media_type):
+    generation = Generation.query.filter_by(
+        id=generation_id,
+        user_id=current_user.id,
+    ).first_or_404()
+    media = {
+        'video': (generation.video_url, 'video/mp4'),
+        'image': (generation.image_url, 'image/jpeg'),
+        'audio': (generation.audio_url, 'audio/mpeg'),
+    }.get(media_type)
+    if not media or not media[0]:
+        abort(404)
+    return _proxy_generated_media(
+        media[0],
+        f'afrigen-{media_type}-{generation_id}',
+        media[1],
+        as_attachment=request.args.get('download') == '1',
+    )
+
+
+@main.route('/v/<token>/media/<media_type>')
+def public_share_media(token, media_type):
+    from services.share import load_share_token
+
+    generation_id = load_share_token(token)
+    if generation_id is None:
+        abort(404)
+    generation = Generation.query.get(generation_id)
+    if not generation or generation.status != 'completed':
+        abort(404)
+
+    media = {
+        'video': (generation.video_url, 'video/mp4'),
+        'image': (generation.image_url, 'image/jpeg'),
+    }.get(media_type)
+    if not media or not media[0]:
+        abort(404)
+    return _proxy_generated_media(
+        media[0],
+        f'afrigen-{media_type}-{generation_id}',
+        media[1],
     )
 
 # --- RECREATED MISSING ROUTES ---
@@ -3455,6 +3583,30 @@ def campaigns():
 def automations():
     return render_template('main/automations.html')
 
+
+@main.route('/automations/assets/<asset_id>/media')
+@login_required
+def workflow_asset_media(asset_id):
+    from models import WorkflowAsset
+
+    asset = WorkflowAsset.query.filter_by(legacy_id=asset_id).first_or_404()
+    if not asset.workflow or asset.workflow.user_id != current_user.id:
+        abort(404)
+    media_url = asset.file_url or asset.thumbnail_url
+    content_type = {
+        'image': 'image/jpeg',
+        'video': 'video/mp4',
+        'voice': 'audio/mpeg',
+    }.get(asset.asset_type)
+    if not media_url or not content_type:
+        abort(404)
+    return _proxy_generated_media(
+        media_url,
+        f'afrigen-automation-{asset.legacy_id}',
+        content_type,
+    )
+
+
 @main.route('/automations/<log_id>')
 @login_required
 def automation_run_details(log_id):
@@ -3504,10 +3656,26 @@ def publish_generated_content():
     data = request.get_json(silent=True) or {}
     provider = (data.get('provider') or '').strip().lower()
     media_url = (data.get('media_url') or '').strip()
+    generation_id = data.get('generation_id')
+    if generation_id:
+        media_type = data.get('media_type')
+        if media_type not in ('video', 'image'):
+            return jsonify({'ok': False, 'error': 'Choose a supported media type.'}), 400
+        generation = Generation.query.filter_by(
+            id=generation_id,
+            user_id=current_user.id,
+            status='completed',
+        ).first()
+        if not generation:
+            return jsonify({'ok': False, 'error': 'Creation not found.'}), 404
+        media_url = generation.video_url if media_type == 'video' else generation.image_url
+        if not media_url:
+            return jsonify({'ok': False, 'error': 'Media is not available.'}), 404
     if not provider or not media_url:
         return jsonify({'ok': False, 'error': 'A provider and media URL are required.'}), 400
     if not _is_safe_media_url(media_url):
         return jsonify({'ok': False, 'error': 'The media URL is not allowed.'}), 400
+    data['media_url'] = media_url
     if provider == 'facebook':
         return jsonify({
             'ok': False,
@@ -3605,10 +3773,9 @@ def save_service_credential():
     
     service_type = request.form.get("service_type")
     provider_target = request.form.get("provider_target")
-    
-    if not provider_target:
-        flash("No provider specified", "danger")
-        return redirect(url_for('main.settings'))
+    allowed_email_targets = {'smtp', 'resend', 'mailgun', 'sendgrid'}
+    if service_type != 'email' or provider_target not in allowed_email_targets:
+        abort(404)
         
     cred = ServiceCredential.query.filter_by(user_id=current_user.id, provider=provider_target).first()
     if not cred:

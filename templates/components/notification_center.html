@@ -1,0 +1,33 @@
+<div class="notification-overlay" data-notification-overlay hidden aria-hidden="true">
+    <section id="notificationPanel" class="notification-panel" role="dialog" aria-modal="false" aria-labelledby="notificationPanelTitle" tabindex="-1">
+        <header class="notification-panel-header">
+            <div>
+                <p class="notification-eyebrow">YOUR ACCOUNT</p>
+                <h2 id="notificationPanelTitle">Notifications</h2>
+                <p class="notification-unread-line"><span data-notification-unread>0</span> unread</p>
+            </div>
+            <button type="button" class="notification-close" data-notification-close aria-label="Close notifications">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m18 6-12 12M6 6l12 12"/></svg>
+            </button>
+        </header>
+        <div class="notification-panel-actions">
+            <span class="notification-section-label">Recent activity</span>
+            <button type="button" class="notification-text-action" data-notification-mark-all>Mark all as read</button>
+        </div>
+        <div class="notification-category-row" role="group" aria-label="Filter notifications by category">
+            <button type="button" class="notification-filter is-active" data-notification-category="all" aria-pressed="true">All</button>
+            <button type="button" class="notification-filter" data-notification-category="general" aria-pressed="false">General</button>
+            <button type="button" class="notification-filter" data-notification-category="generation" aria-pressed="false">Generation</button>
+            <button type="button" class="notification-filter" data-notification-category="billing" aria-pressed="false">Billing</button>
+            <button type="button" class="notification-filter" data-notification-category="security" aria-pressed="false">Security</button>
+            <button type="button" class="notification-filter" data-notification-category="movie_studio" aria-pressed="false">Movie Studio</button>
+        </div>
+        <div class="notification-panel-content">
+            <p class="notification-state" data-notification-state role="status" aria-live="polite">Loading notifications…</p>
+            <div class="notification-list" data-notification-list></div>
+        </div>
+        <footer class="notification-panel-footer">
+            <a href="{{ url_for('main.notifications') }}">View all notifications <span aria-hidden="true">→</span></a>
+        </footer>
+    </section>
+</div>

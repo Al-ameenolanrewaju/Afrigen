@@ -101,7 +101,7 @@
                 <div class="character-card">
                     <div class="character-avatar-wrap">
                         {% if char.reference_image_url %}
-                            <img src="{{ char.reference_image_url }}" alt="{{ char.name }}">
+                            <img src="{{ url_for('movie_studio.movie_media', asset_type='character', asset_id=char.id) }}" alt="{{ char.name }}">
                         {% else %}
                             <div class="d-flex flex-column align-items-center justify-content-center h-100 text-muted p-3 text-center">
                                 <i class="fa-solid fa-user-astronaut fs-1 mb-2 text-warning" style="opacity: 0.6;"></i>
@@ -114,7 +114,7 @@
                         <div class="character-role">{{ char.role }}</div>
                         <div class="character-desc mb-3">{{ char.description }}</div>
                         <button class="btn btn-sm btn-outline-gold w-100" onclick="generatePortrait({{ char.id }})">
-                            <i class="fa-solid fa-wand-magic-sparkles me-1"></i> {% if char.reference_image_url %}Regenerate Portrait{% else %}Generate 35mm Face{% endif %}
+                            <i class="fa-solid fa-wand-magic-sparkles me-1"></i> {% if char.reference_image_url %}Regenerate Portrait{% else %}Generate Portrait{% endif %}
                         </button>
                     </div>
                 </div>
@@ -148,9 +148,9 @@
                         <div class="storyboard-frame">
                             <div class="frame-media">
                                 {% if shot.video_url %}
-                                    <video src="{{ shot.video_url }}" controls style="width: 100%; height: 100%; object-fit: cover;"></video>
+                                    <video src="{{ url_for('movie_studio.movie_media', asset_type='shot-video', asset_id=shot.id) }}" controls style="width: 100%; height: 100%; object-fit: cover;"></video>
                                 {% elif shot.reference_image_url %}
-                                    <img src="{{ shot.reference_image_url }}" alt="Shot preview">
+                                    <img src="{{ url_for('movie_studio.movie_media', asset_type='shot-image', asset_id=shot.id) }}" alt="Shot preview">
                                 {% else %}
                                     <div class="d-flex flex-column align-items-center justify-content-center h-100 text-muted">
                                         <i class="fa-solid fa-video-slash fs-3 text-warning mb-1" style="opacity: 0.6;"></i>
@@ -186,9 +186,9 @@
                 <div class="col-lg-8">
                     <!-- HTML5 Player -->
                     <div class="rounded overflow-hidden mb-3" style="aspect-ratio: 16/9; background: #000; border: 1px solid var(--af-border); position: relative;">
-                        <video id="timelineMasterPlayer" style="width: 100%; height: 100%;" controls poster="{{ project.cover_image_url or '' }}">
+                        <video id="timelineMasterPlayer" style="width: 100%; height: 100%;" controls poster="{{ url_for('movie_studio.movie_media', asset_type='project-cover', asset_id=project.id) if project.cover_image_url else '' }}">
                             {% if project.final_video_url %}
-                            <source src="{{ project.final_video_url }}" type="video/mp4">
+                            <source src="{{ url_for('movie_studio.movie_media', asset_type='project-video', asset_id=project.id) }}" type="video/mp4">
                             {% endif %}
                         </video>
                     </div>
@@ -324,9 +324,9 @@
         const btn = document.getElementById(`btnShot_${shotId}`);
         if (btn) {
             btn.disabled = true;
-            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin me-1"></i> Kling Pro...`;
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin me-1"></i> Afrigen Movie Engine...`;
         }
-        window.showAfrigenAlert({ text: "Generating cinematic video clip using Kling Pro... This takes 1-2 minutes.", icon: "info", toast: true });
+        window.showAfrigenAlert({ text: "Afrigen Movie Engine is generating your cinematic clip. This may take a few minutes.", icon: "info", toast: true });
         try {
             const res = await fetch(`/movie-studio/projects/${projectId}/shots/${shotId}/generate`, { method: "POST" });
             const data = await res.json();

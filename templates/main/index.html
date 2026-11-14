@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Afrigen AI 2.0 — Africa Creates. AI Generates.{% endblock %}
+{% block title %}Afrigen AI — Africa Creates. AI Generates.{% endblock %}
 
 {% block meta_description %}Create cinematic videos, stunning images, professional voiceovers, and powerful marketing content with AI. The creative production platform built for Africa and beyond.{% endblock %}
 
@@ -12,7 +12,7 @@
     <div class="hero-content">
         <div class="hero-badge">
             <span class="badge-gold">
-                <i class="fa-solid fa-sparkles text-warning me-1"></i> AFRIGEN 2.0 IS LIVE · CINEMATIC AI PRODUCTION
+                <i class="fa-solid fa-sparkles text-warning me-1"></i> CINEMATIC AI PRODUCTION PLATFORM
             </span>
         </div>
         
@@ -22,7 +22,7 @@
         </h1>
         
         <p class="hero-subtext">
-            Create cinematic videos, stunning images, professional voiceovers, and powerful marketing content with AI. Powered by Kling AI, Flux, and authentic African cultural intelligence.
+            Create cinematic videos, stunning images, professional voiceovers, and powerful marketing content with Afrigen's creative tools and authentic African cultural intelligence.
         </p>
 
         <div class="hero-cta-group">
@@ -49,13 +49,13 @@
     <!-- Hero Media Preview Showcase -->
     <div class="hero-media-wrapper mt-4">
         <div class="position-relative" style="aspect-ratio: 16/9; background: #000;">
-            <video src="https://fal.media/files/monkey/aQe3wZ6wzYpU7jK1xL3rQ.mp4" autoplay loop muted playsinline style="width: 100%; height: 100%; object-fit: cover;"></video>
+            <img src="{{ url_for('static', filename='launch/hero2.jpg') }}" alt="Cinematic African-inspired creative preview" style="width: 100%; height: 100%; object-fit: cover;">
             <div class="position-absolute bottom-0 start-0 end-0 p-4 d-flex align-items-center justify-content-between" style="background: linear-gradient(0deg, rgba(9,9,9,0.9) 0%, transparent 100%);">
                 <div class="text-start">
-                    <span class="badge-tier badge-director mb-1">CINEMATIC 4K</span>
-                    <h5 class="text-white mb-0">"The Golden King of Benin" · Kling AI Pro</h5>
+                    <span class="badge-tier badge-director mb-1">AFRIGEN MOVIE ENGINE</span>
+                    <h5 class="text-white mb-0">A cinematic story, created with Afrigen</h5>
                 </div>
-                <span class="badge-gold"><i class="fa-solid fa-circle text-success me-1" style="font-size: 6px;"></i> 24 FPS</span>
+                <span class="badge-gold"><i class="fa-solid fa-circle text-success me-1" style="font-size: 6px;"></i> CREATIVE PREVIEW</span>
             </div>
         </div>
     </div>
@@ -74,7 +74,7 @@
         <div class="feature-card">
             <div class="feature-icon-box"><i class="fa-solid fa-video"></i></div>
             <h4 class="text-white mb-2">AI Video Generator</h4>
-            <p class="text-secondary small mb-3">Turn prompts into 10-second cinematic video clips using Fal Kling AI with physics continuity and smooth camera motions.</p>
+            <p class="text-secondary small mb-3">Turn creative prompts into cinematic video clips with deliberate motion and camera direction.</p>
             <a href="{{ url_for('main.create') }}?mode=video" class="btn btn-sm btn-outline-gold">Direct Video &rarr;</a>
         </div>
 
@@ -82,7 +82,7 @@
         <div class="feature-card">
             <div class="feature-icon-box"><i class="fa-solid fa-image"></i></div>
             <h4 class="text-white mb-2">Photorealistic Image Studio</h4>
-            <p class="text-secondary small mb-3">FLUX.1 Dev powered 8K African photography, portraiture, Ankara fashion, and vibrant social media visuals.</p>
+            <p class="text-secondary small mb-3">Create detailed African-inspired photography, portraiture, Ankara fashion, and vibrant social media visuals.</p>
             <a href="{{ url_for('main.create') }}?mode=image" class="btn btn-sm btn-outline-gold">Generate Photos &rarr;</a>
         </div>
 
@@ -109,7 +109,7 @@
         <div class="feature-card">
             <div class="feature-icon-box"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
             <h4 class="text-white mb-2">Prompt Lab</h4>
-            <p class="text-secondary small mb-3">State-of-the-art Groq prompt engineer that enhances raw concepts with camera direction, lighting, and cultural fidelity.</p>
+            <p class="text-secondary small mb-3">Afrigen Intelligence enhances raw concepts with camera direction, lighting, and cultural fidelity.</p>
             <a href="{{ url_for('main.saved_prompts') }}" class="btn btn-sm btn-outline-gold">Refine Ideas &rarr;</a>
         </div>
 
@@ -193,7 +193,7 @@
             </div>
             <ul class="pricing-features-list">
                 <li><i class="fa-solid fa-check"></i> 100 monthly credits</li>
-                <li><i class="fa-solid fa-check"></i> Kling AI 10s video generation</li>
+                <li><i class="fa-solid fa-check"></i> Cinematic video generation</li>
                 <li><i class="fa-solid fa-check"></i> Unlimited image generation</li>
                 <li><i class="fa-solid fa-check"></i> Free Nigerian AI voiceovers</li>
                 <li><i class="fa-solid fa-check"></i> Full commercial license</li>
@@ -233,7 +233,7 @@
             <ul class="pricing-features-list">
                 <li><i class="fa-solid fa-check text-warning"></i> <strong>Full Movie Studio Access</strong></li>
                 <li><i class="fa-solid fa-check text-warning"></i> <strong>1,000 monthly credits</strong></li>
-                <li><i class="fa-solid fa-check"></i> Kling Pro cinematic scene engine</li>
+                <li><i class="fa-solid fa-check"></i> Premium cinematic scene generation</li>
                 <li><i class="fa-solid fa-check"></i> AI Screenplay &amp; Character dossiers</li>
                 <li><i class="fa-solid fa-check"></i> Multi-shot FFmpeg master rendering</li>
                 <li><i class="fa-solid fa-check"></i> Dedicated account director</li>
@@ -308,7 +308,7 @@
                     </h2>
                     <div id="faq1" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
                         <div class="accordion-body text-secondary small">
-                            Afrigen is purpose-built to honor and amplify African culture, natural melanin skin tones, authentic attire, and local environments. It combines high-end models like Kling AI with proprietary prompt refiners and Nigerian neural voice synthesis.
+                            Afrigen is purpose-built to honor and amplify African culture, natural melanin skin tones, authentic attire, and local environments. Afrigen Intelligence and our creative engines support video, image, writing, and Nigerian voice workflows.
                         </div>
                     </div>
                 </div>
@@ -321,7 +321,7 @@
                     </h2>
                     <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
                         <div class="accordion-body text-secondary small">
-                            Movie Studio is an AI filmmaking production suite that lets you write screenplays, design character dossiers, generate visual storyboards, direct multi-shot scenes using Kling Pro, and master finished MP4 movies via an automated FFmpeg timeline engine. It is exclusively available to Director subscribers.
+                            Movie Studio is an AI filmmaking production suite that lets you write screenplays, design character dossiers, generate visual storyboards, direct multi-shot scenes, and render finished movies. It is exclusively available to Director subscribers.
                         </div>
                     </div>
                 </div>

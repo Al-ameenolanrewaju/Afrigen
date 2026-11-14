@@ -1,47 +1,65 @@
 /* ===================================================================
-   AFRIGEN 2.0 DESIGN SYSTEM — CINEMATIC LUXURY
-   Brand Palette:
-   - Obsidian black:   #090909
-   - Deep charcoal:    #141414
-   - Elevated surface: #1C1C1C
-   - Afrigen gold:     #E9AD32
-   - Warm orange:      #F58A19
-   - Soft white:       #F4F1EA
-   - Secondary text:   #A5A5A5
-   - Muted borders:    #303030
+   AFRIGEN DESIGN SYSTEM — CINEMATIC LUXURY WORKSPACE
+   Balanced Palette:
+   - Midnight navy:         #111827
+   - Deep slate:            #182233
+   - Elevated surface:      #202B3B
+   - Warm ivory:            #F5F1E8
+   - Muted text:            #A5AFBF
+   - Refined champagne gold:#D6AD65
+   - Soft amber:            #E8A83E
+   - Muted teal:            #48A99A
+   - Subtle borders:        #354154
    =================================================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap');
 
 :root {
     /* Color Palette */
-    --af-obsidian: #090909;
-    --af-charcoal: #141414;
-    --af-surface: #1C1C1C;
-    --af-surface-hover: #262626;
-    --af-surface-elevated: #242424;
+    --af-navy: #111827;
+    --af-slate: #182233;
+    --af-surface: #202B3B;
+    --af-surface-hover: #263346;
+    --af-surface-elevated: #28374B;
     
-    --af-gold: #E9AD32;
-    --af-gold-hover: #f3b944;
-    --af-gold-muted: rgba(233, 173, 50, 0.15);
-    --af-gold-border: rgba(233, 173, 50, 0.35);
+    /* Legacy aliases mapped to new palette */
+    --af-obsidian: #111827;
+    --af-charcoal: #182233;
+    
+    /* Champagne Gold (Selective & Premium) */
+    --af-gold: #D6AD65;
+    --af-gold-hover: #E2BD78;
+    --af-gold-muted: rgba(214, 173, 101, 0.12);
+    --af-gold-border: rgba(214, 173, 101, 0.35);
 
-    --af-orange: #F58A19;
-    --af-orange-muted: rgba(245, 138, 25, 0.15);
+    /* Functional Accents */
+    --af-amber: #E8A83E;
+    --af-amber-muted: rgba(232, 168, 62, 0.12);
+    --af-amber-border: rgba(232, 168, 62, 0.3);
 
-    --af-white: #F4F1EA;
-    --af-text-primary: #F4F1EA;
-    --af-text-secondary: #A5A5A5;
-    --af-text-muted: #737373;
+    --af-teal: #48A99A;
+    --af-teal-muted: rgba(72, 169, 154, 0.12);
+    --af-teal-border: rgba(72, 169, 154, 0.3);
 
-    --af-border: #303030;
-    --af-border-light: #3D3D3D;
-    --af-border-focus: #E9AD32;
+    --af-blue: #3B82F6;
+    --af-blue-muted: rgba(59, 130, 246, 0.12);
+
+    /* Typography Colors */
+    --af-ivory: #F5F1E8;
+    --af-white: #F5F1E8;
+    --af-text-primary: #F5F1E8;
+    --af-text-secondary: #A5AFBF;
+    --af-text-muted: #8591A5;
+
+    /* Borders */
+    --af-border: #354154;
+    --af-border-light: #44536A;
+    --af-border-focus: #D6AD65;
 
     --af-success: #10B981;
     --af-danger: #EF4444;
-    --af-warning: #F59E0B;
-    --af-info: #3B82F6;
+    --af-warning: #E8A83E;
+    --af-info: #48A99A;
 
     /* Typography */
     --font-heading: 'Manrope', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -50,24 +68,23 @@
     /* Radii */
     --radius-sm: 6px;
     --radius-md: 10px;
-    --radius-lg: 16px;
-    --radius-xl: 24px;
+    --radius-lg: 14px;
+    --radius-xl: 20px;
     --radius-full: 9999px;
 
     /* Shadows */
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
-    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
-    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.7);
-    --shadow-gold: 0 0 20px rgba(233, 173, 50, 0.2);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.35);
+    --shadow-lg: 0 10px 28px rgba(0, 0, 0, 0.5);
+    --shadow-gold: 0 0 20px rgba(214, 173, 101, 0.18);
 
     /* Transitions */
     --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
     --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
 
     /* Layout Spacing */
-    --sidebar-width: 260px;
-    --sidebar-collapsed-width: 76px;
-    --header-height: 70px;
+    --sidebar-width: 250px;
+    --header-height: 60px;
     --mobile-nav-height: 64px;
 }
 
@@ -77,7 +94,7 @@
 }
 
 html, body {
-    background-color: var(--af-obsidian);
+    background-color: var(--af-navy);
     color: var(--af-text-primary);
     font-family: var(--font-body);
     font-size: 15px;

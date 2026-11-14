@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}My Creations | Afrigen 2.0{% endblock %}
+{% block title %}My Creations | Afrigen{% endblock %}
 
 {% block content %}
 <div class="page-container">
@@ -45,13 +45,13 @@
                 <!-- Media Area -->
                 <div class="position-relative" style="aspect-ratio: 16/9; background: #000;">
                     {% if gen.video_url %}
-                        <video src="{{ gen.video_url }}" controls style="width: 100%; height: 100%; object-fit: cover;"></video>
+                        <video src="{{ generation_media_url(gen.id, 'video') }}" controls style="width: 100%; height: 100%; object-fit: cover;"></video>
                     {% elif gen.image_url and gen.generation_type == 'image' %}
-                        <img src="{{ gen.image_url }}" alt="Generation" style="width: 100%; height: 100%; object-fit: cover;">
+                        <img src="{{ generation_media_url(gen.id, 'image') }}" alt="Generation" style="width: 100%; height: 100%; object-fit: cover;">
                     {% elif gen.audio_url %}
                         <div class="d-flex flex-column align-items-center justify-content-center h-100 p-3" style="background: linear-gradient(135deg, rgba(233,173,50,0.1) 0%, rgba(20,20,20,0.9) 100%);">
                             <i class="fa-solid fa-waveform-lines text-warning fs-1 mb-2"></i>
-                            <audio src="{{ gen.audio_url }}" controls style="width: 90%; height: 32px;"></audio>
+                            <audio src="{{ generation_media_url(gen.id, 'audio') }}" controls style="width: 90%; height: 32px;"></audio>
                         </div>
                     {% else %}
                         <div class="d-flex flex-column align-items-center justify-content-center h-100 text-muted">
@@ -101,7 +101,7 @@
                                 <i class="fa-solid fa-download"></i>
                             </a>
                             {% elif gen.audio_url %}
-                            <a href="{{ gen.audio_url }}" target="_blank" download class="btn btn-sm btn-outline-gold py-1 px-2" style="font-size: 11px;" title="Download">
+                            <a href="{{ generation_media_url(gen.id, 'audio') }}?download=1" download class="btn btn-sm btn-outline-gold py-1 px-2" style="font-size: 11px;" title="Download">
                                 <i class="fa-solid fa-download"></i>
                             </a>
                             {% endif %}
@@ -109,7 +109,7 @@
                             {% if gen.status == 'completed' and (gen.video_url or gen.image_url) %}
                             <button type="button" class="btn btn-sm btn-surface py-1 px-2 publish-social-trigger" style="font-size: 11px;"
                                 data-publish-text="{{ gen.refined_prompt or gen.original_prompt }}"
-                                data-media-url="{{ gen.video_url if gen.video_url else gen.image_url }}"
+                                data-generation-id="{{ gen.id }}"
                                 data-media-type="{{ 'video' if gen.video_url else 'image' }}" title="Publish">
                                 <i class="fa-solid fa-share-nodes"></i>
                             </button>

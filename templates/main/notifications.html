@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Notifications{% endblock %}
+
+{% block content %}
+<main class="notification-page" data-notification-history data-page="1" data-category="all" data-status="all">
+    <div class="notification-page-heading">
+        <div>
+            <p class="notification-eyebrow">YOUR ACCOUNT</p>
+            <h1>Notifications</h1>
+            <p>Updates about your creations, account and Afrigen workspace.</p>
+        </div>
+        <span class="notification-page-count" data-notification-summary aria-live="polite">Loading…</span>
+    </div>
+
+    <section class="notification-history-card" aria-label="Notification history">
+        <div class="notification-history-toolbar">
+            <div class="notification-status-filters" data-notification-status-filters role="group" aria-label="Filter by read status">
+                <button type="button" class="notification-filter is-active" data-notification-status="all" aria-pressed="true">All</button>
+                <button type="button" class="notification-filter" data-notification-status="unread" aria-pressed="false">Unread</button>
+                <button type="button" class="notification-filter" data-notification-status="read" aria-pressed="false">Read</button>
+            </div>
+            <form class="notification-search" data-notification-search role="search">
+                <label class="visually-hidden" for="notificationSearch">Search notifications</label>
+                <input id="notificationSearch" class="form-control" type="search" maxlength="100" placeholder="Search notifications">
+                <button class="btn" type="submit">Search</button>
+            </form>
+            <button type="button" class="notification-text-action" data-notification-mark-all>Mark all as read</button>
+        </div>
+        <div class="notification-category-row" data-notification-category-filters role="group" aria-label="Filter by category">
+            <button type="button" class="notification-filter is-active" data-notification-category="all" aria-pressed="true">All categories</button>
+            <button type="button" class="notification-filter" data-notification-category="general" aria-pressed="false">General</button>
+            <button type="button" class="notification-filter" data-notification-category="generation" aria-pressed="false">Generation</button>
+            <button type="button" class="notification-filter" data-notification-category="billing" aria-pressed="false">Billing</button>
+            <button type="button" class="notification-filter" data-notification-category="security" aria-pressed="false">Security</button>
+            <button type="button" class="notification-filter" data-notification-category="movie_studio" aria-pressed="false">Movie Studio</button>
+        </div>
+        <p class="notification-state is-visible" data-notification-state role="status" aria-live="polite">Loading notifications…</p>
+        <div class="notification-list" data-notification-list></div>
+        <nav class="notification-pagination" aria-label="Notification history pages">
+            <button type="button" class="btn" data-notification-previous disabled>Previous</button>
+            <span data-notification-page-label>Page 0 of 0</span>
+            <button type="button" class="btn" data-notification-next disabled>Next</button>
+        </nav>
+    </section>
+</main>
+{% endblock %}
