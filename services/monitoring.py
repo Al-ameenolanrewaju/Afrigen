@@ -22,6 +22,7 @@ from monitoring_models import (
     MonitoringIncident,
     MonitoringIncidentEvent,
     MonitoringSnapshot,
+    ensure_monitoring_tables,
 )
 
 
@@ -623,6 +624,7 @@ def run_monitoring_cycle(now=None):
     global _SCHEMA_WARNING_EMITTED
     now = now or _utcnow()
     try:
+        ensure_monitoring_tables(db.engine)
         inspector = db.inspect(db.engine)
         required_tables = {
             "monitoring_snapshots",
@@ -631,12 +633,7 @@ def run_monitoring_cycle(now=None):
             "monitoring_daily_reports",
         }
         if not required_tables.issubset(set(inspector.get_table_names())):
-            if not _SCHEMA_WARNING_EMITTED:
-                current_app.logger.warning(
-                    "Admin monitoring schema is unavailable; apply database migrations before collecting checks."
-                )
-                _SCHEMA_WARNING_EMITTED = True
-            return []
+            ensure_monitoring_tables(db.engine)
     except Exception as exc:
         if not _SCHEMA_WARNING_EMITTED:
             current_app.logger.error("Could not inspect monitoring schema (%s)", type(exc).__name__)

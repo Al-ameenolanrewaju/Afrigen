@@ -71,3 +71,17 @@ class MonitoringDailyReport(db.Model):
     facts = db.Column(db.JSON, nullable=False, default=dict)
     recommendations = db.Column(db.JSON, nullable=False, default=list)
     generated_at = db.Column(db.DateTime, nullable=False, default=_utcnow)
+
+
+def ensure_monitoring_tables(engine=None):
+    """Ensure all monitoring tables exist in the database without requiring a separate migration."""
+    try:
+        if engine is None:
+            engine = db.engine
+        inspector = db.inspect(engine)
+        for model in (MonitoringSnapshot, MonitoringIncident, MonitoringIncidentEvent, MonitoringDailyReport):
+            if not inspector.has_table(model.__tablename__):
+                model.__table__.create(bind=engine, checkfirst=True)
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).warning("ensure_monitoring_tables check: %s", exc)

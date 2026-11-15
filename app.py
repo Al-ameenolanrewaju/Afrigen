@@ -233,6 +233,8 @@ def ensure_legacy_schema_columns():
             ):
                 if not inspector.has_table(movie_table.__tablename__):
                     movie_table.__table__.create(bind=db.engine, checkfirst=True)
+            from monitoring_models import ensure_monitoring_tables
+            ensure_monitoring_tables(db.engine)
             if db.engine.dialect.name != 'postgresql':
                 return
 

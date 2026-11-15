@@ -1258,60 +1258,85 @@ def history():
 @main.route('/admin/command-centre')
 @admin_required
 def admin_command_centre():
-    from flask import render_template, request
+    from flask import current_app, flash, render_template, request
     from monitoring_models import (
         MonitoringDailyReport,
         MonitoringIncident,
         MonitoringIncidentEvent,
         MonitoringSnapshot,
+        ensure_monitoring_tables,
     )
     from sqlalchemy import case
 
+    ensure_monitoring_tables(db.engine)
+
     page = max(1, request.args.get("page", 1, type=int))
-    incidents = (
-        MonitoringIncident.query
-        .order_by(
-            case(
-                (MonitoringIncident.severity == "critical", 0),
-                (MonitoringIncident.severity == "warning", 1),
-                else_=2,
-            ),
-            MonitoringIncident.last_seen_at.desc(),
+    try:
+        incidents = (
+            MonitoringIncident.query
+            .order_by(
+                case(
+                    (MonitoringIncident.severity == "critical", 0),
+                    (MonitoringIncident.severity == "warning", 1),
+                    else_=2,
+                ),
+                MonitoringIncident.last_seen_at.desc(),
+            )
+            .paginate(page=page, per_page=25, error_out=False)
         )
-        .paginate(page=page, per_page=25, error_out=False)
-    )
-    snapshots = (
-        MonitoringSnapshot.query
-        .order_by(MonitoringSnapshot.observed_at.desc())
-        .limit(100)
-        .all()
-    )
-    latest_by_monitor = {}
-    for snapshot in snapshots:
-        latest_by_monitor.setdefault(snapshot.monitor_key, snapshot)
-    incident_ids = [incident.id for incident in incidents.items]
-    incident_events = {}
-    if incident_ids:
-        events = (
-            MonitoringIncidentEvent.query
-            .filter(MonitoringIncidentEvent.incident_id.in_(incident_ids))
-            .order_by(MonitoringIncidentEvent.created_at.desc())
-            .limit(250)
+        snapshots = (
+            MonitoringSnapshot.query
+            .order_by(MonitoringSnapshot.observed_at.desc())
+            .limit(100)
             .all()
         )
-        for event in events:
-            items = incident_events.setdefault(event.incident_id, [])
-            if len(items) < 5:
-                items.append(event)
+        latest_by_monitor = {}
+        for snapshot in snapshots:
+            latest_by_monitor.setdefault(snapshot.monitor_key, snapshot)
+        incident_ids = [incident.id for incident in incidents.items]
+        incident_events = {}
+        if incident_ids:
+            events = (
+                MonitoringIncidentEvent.query
+                .filter(MonitoringIncidentEvent.incident_id.in_(incident_ids))
+                .order_by(MonitoringIncidentEvent.created_at.desc())
+                .limit(250)
+                .all()
+            )
+            for event in events:
+                items = incident_events.setdefault(event.incident_id, [])
+                if len(items) < 5:
+                    items.append(event)
+        daily_report = MonitoringDailyReport.query.order_by(
+            MonitoringDailyReport.report_date.desc()
+        ).first()
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.warning("Could not query monitoring tables: %s", exc)
+
+        class EmptyPagination:
+            items = []
+            pages = 1
+            page = 1
+            has_prev = False
+            has_next = False
+            prev_num = 1
+            next_num = 1
+            total = 0
+
+        incidents = EmptyPagination()
+        snapshots = []
+        latest_by_monitor = {}
+        incident_events = {}
+        daily_report = None
+
     return render_template(
         "main/command_centre.html",
         monitor_snapshots=sorted(latest_by_monitor.values(), key=lambda item: item.monitor_key),
         monitoring_incidents=incidents,
         incident_events=incident_events,
         recent_monitoring_snapshots=snapshots[:25],
-        daily_report=MonitoringDailyReport.query.order_by(
-            MonitoringDailyReport.report_date.desc()
-        ).first(),
+        daily_report=daily_report,
     )
 
 
@@ -3816,61 +3841,7 @@ def automations():
 @main.route('/social-automation')
 @login_required
 def social_automation_dashboard():
-    """Autonomous marketing engine dashboard with calendar, queue, analytics, and controls."""
-    from models import (
-        SocialPost, SocialCampaign, SocialMediaAsset, SocialPublishingJob,
-        SocialAnalytics, ConnectedAccount
-    )
-    from services.social_engine import get_or_create_settings
-    from services.social_analytics import analyze_marketing_performance
-
-    settings = get_or_create_settings(current_user.id)
-    posts = (
-        SocialPost.query.filter_by(user_id=current_user.id)
-        .order_by(SocialPost.created_at.desc())
-        .limit(60)
-        .all()
-    )
-    scheduled_posts = [p for p in posts if p.status in ('scheduled', 'publishing', 'retry_pending')]
-    published_posts = [p for p in posts if p.status == 'published']
-    failed_posts = [p for p in posts if p.status == 'failed']
-
-    # Creative Studio assets
-    media_assets = (
-        SocialMediaAsset.query.filter_by(user_id=current_user.id)
-        .order_by(SocialMediaAsset.created_at.desc())
-        .limit(30)
-        .all()
-    )
-
-    # Connected accounts
-    fb_acc = ConnectedAccount.query.filter_by(user_id=current_user.id, provider='facebook', status='connected').first()
-    li_acc = ConnectedAccount.query.filter_by(user_id=current_user.id, provider='linkedin', status='connected').first()
-
-    analysis = analyze_marketing_performance(current_user.id)
-    campaigns = SocialCampaign.query.filter_by(user_id=current_user.id).order_by(SocialCampaign.created_at.desc()).all()
-
-    # Parse pillar ratios
-    import json
-    try:
-        pillar_ratios = json.loads(settings.pillar_ratios_json) if settings.pillar_ratios_json else {}
-    except Exception:
-        pillar_ratios = {}
-
-    return render_template(
-        'main/social_automation.html',
-        settings=settings,
-        posts=posts,
-        scheduled_posts=scheduled_posts,
-        published_posts=published_posts,
-        failed_posts=failed_posts,
-        media_assets=media_assets,
-        fb_acc=fb_acc,
-        li_acc=li_acc,
-        analysis=analysis,
-        campaigns=campaigns,
-        pillar_ratios=pillar_ratios,
-    )
+    abort(404)
 
 
 @main.route('/social-automation/generate', methods=['POST'])
