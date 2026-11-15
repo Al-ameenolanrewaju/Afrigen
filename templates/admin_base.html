@@ -450,6 +450,11 @@
                     <i class="fa-solid fa-border-all"></i> Overview
                 </a>
             </li>
+            <li>
+                <a href="{{ url_for('main.admin_command_centre') }}" class="admin-nav-item {% if request.endpoint == 'main.admin_command_centre' %}active{% endif %}">
+                    <i class="fa-solid fa-gauge-high" style="color: #F5A623;"></i> Command Centre
+                </a>
+            </li>
         </ul>
 
         <div class="admin-nav-section mt-3">GROWTH & CAMPAIGNS</div>

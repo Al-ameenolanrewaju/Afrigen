@@ -162,6 +162,12 @@
                     <span>Admin Panel</span>
                 </a>
             </li>
+            <li class="sidebar-nav-item">
+                <a class="sidebar-nav-link" href="{{ url_for('main.admin_command_centre') }}" style="color: #60A5FA;">
+                    <i class="fa-solid fa-gauge-high"></i>
+                    <span>Command Centre</span>
+                </a>
+            </li>
             {% endif %}
             <li class="sidebar-nav-item">
                 <a class="sidebar-nav-link text-danger" href="{{ url_for('auth.logout') }}">
