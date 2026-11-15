@@ -1,0 +1,233 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Command Centre{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <p class="text-uppercase small mb-1" style="color: var(--af-gold); letter-spacing: .12em;">Afrigen operations</p>
+            <h1 class="h3 mb-1">Command Centre</h1>
+            <p class="text-muted mb-0">Persisted platform checks and incidents from recorded application activity.</p>
+        </div>
+        <form method="post" action="{{ url_for('main.refresh_command_centre') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-warning">
+                <i class="fa-solid fa-rotate me-2" aria-hidden="true"></i>Run checks now
+            </button>
+        </form>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="status">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endwith %}
+
+    <section aria-labelledby="daily-report-heading" class="mb-5">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+            <div>
+                <h2 id="daily-report-heading" class="h5 mb-1">Daily intelligence report</h2>
+                <p class="text-muted small mb-0">UTC-day facts from recorded application data; provider costs are estimates, not invoices.</p>
+            </div>
+            <form method="post" action="{{ url_for('main.generate_command_centre_daily_report') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-outline-warning btn-sm">Generate report</button>
+            </form>
+        </div>
+        {% if daily_report %}
+            <div class="card border-secondary">
+                <div class="card-header d-flex flex-wrap justify-content-between gap-2">
+                    <strong>{{ daily_report.report_date.strftime('%Y-%m-%d') }} (UTC)</strong>
+                    <span class="text-muted small">Generated {{ daily_report.generated_at.strftime('%Y-%m-%d %H:%M UTC') }}</span>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-6 col-lg-3"><span class="text-muted small d-block">Signups</span><strong>{{ daily_report.facts.user_signups.value }}</strong></div>
+                        <div class="col-6 col-lg-3"><span class="text-muted small d-block">Completed / failed generations</span><strong>{{ daily_report.facts.generation_activity.completed }} / {{ daily_report.facts.generation_activity.failed }}</strong></div>
+                        <div class="col-6 col-lg-3"><span class="text-muted small d-block">Recorded payment revenue</span><strong>NGN {{ daily_report.facts.payment_activity.recorded_revenue_ngn }}</strong><span class="small text-muted d-block">{{ daily_report.facts.payment_activity.payment_records }} payment records</span></div>
+                        <div class="col-6 col-lg-3"><span class="text-muted small d-block">Recorded generation costs</span><strong>USD {{ daily_report.facts.generation_cost.recorded_usd }}</strong></div>
+                        <div class="col-6 col-lg-3"><span class="text-muted small d-block">Provider cost estimate</span><strong>{{ daily_report.facts.provider_cost.recorded_estimate }}</strong><span class="small text-muted d-block">Not an invoice</span></div>
+                        <div class="col-6 col-lg-3"><span class="text-muted small d-block">Active incidents</span><strong>{{ daily_report.facts.active_incidents.count }}</strong><span class="small text-muted d-block">{{ daily_report.facts.active_incidents.critical }} critical</span></div>
+                    </div>
+                    {% if daily_report.recommendations %}
+                        <hr>
+                        <h3 class="h6">Recommended administrator actions</h3>
+                        <ul class="mb-0">
+                            {% for item in daily_report.recommendations %}
+                                <li><span class="badge text-bg-{{ 'danger' if item.priority == 'critical' else 'warning' }} me-1">{{ item.priority | title }}</span>{{ item.action }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted small mb-0 mt-3">No active incidents generated recommendations for this report.</p>
+                    {% endif %}
+                </div>
+            </div>
+        {% else %}
+            <div class="alert alert-secondary mb-0">No daily report has been generated yet.</div>
+        {% endif %}
+    </section>
+
+    <section aria-labelledby="monitor-status-heading" class="mb-5">
+        <div class="d-flex justify-content-between align-items-end mb-3">
+            <div>
+                <h2 id="monitor-status-heading" class="h5 mb-1">Platform health</h2>
+                <p class="text-muted small mb-0">Checks run every minute when the application scheduler is enabled.</p>
+            </div>
+            {% if monitor_snapshots %}
+                <span class="text-muted small">Latest check {{ (monitor_snapshots | map(attribute='observed_at') | max).strftime('%Y-%m-%d %H:%M:%S UTC') }}</span>
+            {% else %}
+                <span class="text-muted small">No monitoring history yet</span>
+            {% endif %}
+        </div>
+
+        <div class="row g-3">
+            {% for snapshot in monitor_snapshots %}
+                <div class="col-12 col-md-6 col-xl-4">
+                    <article class="card h-100 border-secondary">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                                <h3 class="h6 mb-0">{{ snapshot.monitor_key.replace('_', ' ') | title }}</h3>
+                                <span class="badge text-bg-{{ 'success' if snapshot.status == 'healthy' else 'warning' if snapshot.status == 'warning' else 'danger' if snapshot.status == 'critical' else 'secondary' }}">
+                                    {{ snapshot.status | title }}
+                                </span>
+                            </div>
+                            <p class="mb-2">{{ snapshot.summary }}</p>
+                            <small class="text-muted">Observed {{ snapshot.observed_at.strftime('%Y-%m-%d %H:%M:%S UTC') }}</small>
+                            {% if snapshot.metrics %}
+                                <dl class="row small mt-3 mb-0">
+                                    {% for key, value in snapshot.metrics.items() %}
+                                        <dt class="col-7 text-muted">{{ key.replace('_', ' ') | title }}</dt>
+                                        <dd class="col-5 text-end mb-1">{{ value }}</dd>
+                                    {% endfor %}
+                                </dl>
+                            {% endif %}
+                        </div>
+                    </article>
+                </div>
+            {% else %}
+                <div class="col-12">
+                    <div class="alert alert-secondary mb-0">Run the checks to collect the first monitoring snapshot.</div>
+                </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section aria-labelledby="incident-heading" class="mb-5">
+        <div class="mb-3">
+            <h2 id="incident-heading" class="h5 mb-1">Incident centre</h2>
+            <p class="text-muted small mb-0">Incidents are deduplicated by monitor. Prompts and private user content are not stored; credit-review incidents retain internal account IDs for authorized investigation.</p>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-dark table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th scope="col">Incident</th>
+                        <th scope="col">Severity</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">First / last seen</th>
+                        <th scope="col">Occurrences</th>
+                        <th scope="col">Investigation</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for incident in monitoring_incidents.items %}
+                        <tr>
+                            <td>
+                                <strong>{{ incident.title }}</strong>
+                                <div class="small text-muted">{{ incident.source.replace('_', ' ') | title }}</div>
+                                <div class="small mt-1">Suggested action: {{ incident.recommendation }}</div>
+                                {% if incident_events.get(incident.id) %}
+                                    <details class="small mt-2">
+                                        <summary>Recent timeline ({{ incident_events[incident.id] | length }})</summary>
+                                        <ol class="mt-2 mb-0 ps-3">
+                                            {% for event in incident_events[incident.id] %}
+                                                <li class="mb-2">
+                                                    <strong>{{ event.event_type.replace('_', ' ') | title }}</strong>
+                                                    <span class="text-muted">{{ event.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</span>
+                                                    {% if event.note %}<div>{{ event.note }}</div>{% endif %}
+                                                    {% if event.actor_user_id %}<div class="text-muted">Administrator #{{ event.actor_user_id }}</div>{% endif %}
+                                                    {% if event.details %}
+                                                        <details class="mt-1">
+                                                            <summary class="text-muted">Event details</summary>
+                                                            <pre class="small text-wrap mt-1 mb-0" style="white-space: pre-wrap; overflow-wrap: anywhere; max-height: 12rem; overflow: auto;">{{ event.details | tojson(indent=2) }}</pre>
+                                                        </details>
+                                                    {% endif %}
+                                                </li>
+                                            {% endfor %}
+                                        </ol>
+                                    </details>
+                                {% endif %}
+                            </td>
+                            <td>{{ incident.severity | title }}</td>
+                            <td>{{ incident.status | title }}</td>
+                            <td class="small">
+                                {{ incident.first_seen_at.strftime('%Y-%m-%d %H:%M UTC') }}<br>
+                                {{ incident.last_seen_at.strftime('%Y-%m-%d %H:%M UTC') }}
+                            </td>
+                            <td>{{ incident.occurrences }}</td>
+                            <td>
+                                <form method="post" action="{{ url_for('main.update_command_centre_incident', incident_id=incident.id) }}" class="d-flex flex-column gap-2" style="min-width: 220px;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <label class="visually-hidden" for="incident-status-{{ incident.id }}">Incident status</label>
+                                    <select id="incident-status-{{ incident.id }}" name="status" class="form-select form-select-sm">
+                                        {% for status in ['open', 'investigating', 'identified', 'resolving', 'resolved', 'closed'] %}
+                                            <option value="{{ status }}" {% if incident.status == status %}selected{% endif %}>{{ status | title }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <label class="visually-hidden" for="incident-assignee-{{ incident.id }}">Assigned administrator</label>
+                                    <input id="incident-assignee-{{ incident.id }}" class="form-control form-control-sm" name="assigned_to" maxlength="255" placeholder="Assign to (email)" value="{{ incident.assigned_to or '' }}">
+                                    <label class="visually-hidden" for="incident-note-{{ incident.id }}">Investigation note</label>
+                                    <textarea id="incident-note-{{ incident.id }}" class="form-control form-control-sm" name="administrator_note" maxlength="4000" rows="2" placeholder="Investigation note">{{ incident.administrator_note or '' }}</textarea>
+                                    <button class="btn btn-sm btn-outline-warning align-self-start" type="submit">Save investigation</button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="6" class="text-center text-muted py-4">No incidents recorded.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if monitoring_incidents.pages > 1 %}
+            <nav aria-label="Incident pages" class="d-flex justify-content-between align-items-center">
+                <span class="small text-muted">Page {{ monitoring_incidents.page }} of {{ monitoring_incidents.pages }} ({{ monitoring_incidents.total }} incidents)</span>
+                <div class="btn-group">
+                    {% if monitoring_incidents.has_prev %}
+                        <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('main.admin_command_centre', page=monitoring_incidents.prev_num) }}">Previous</a>
+                    {% endif %}
+                    {% if monitoring_incidents.has_next %}
+                        <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('main.admin_command_centre', page=monitoring_incidents.next_num) }}">Next</a>
+                    {% endif %}
+                </div>
+            </nav>
+        {% endif %}
+    </section>
+
+    <section aria-labelledby="history-heading">
+        <h2 id="history-heading" class="h5 mb-3">Recent monitoring history</h2>
+        <div class="table-responsive">
+            <table class="table table-dark table-sm align-middle">
+                <thead>
+                    <tr><th scope="col">Time (UTC)</th><th scope="col">Monitor</th><th scope="col">Status</th><th scope="col">Result</th></tr>
+                </thead>
+                <tbody>
+                    {% for snapshot in recent_monitoring_snapshots %}
+                        <tr>
+                            <td class="text-nowrap">{{ snapshot.observed_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                            <td>{{ snapshot.monitor_key.replace('_', ' ') | title }}</td>
+                            <td>{{ snapshot.status | title }}</td>
+                            <td>{{ snapshot.summary }}</td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="4" class="text-center text-muted py-3">Monitoring history will appear after the first check.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endblock %}

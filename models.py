@@ -42,6 +42,13 @@ def generate_referral_code():
 
 db = SQLAlchemy()
 
+from monitoring_models import (
+    MonitoringDailyReport,
+    MonitoringIncident,
+    MonitoringIncidentEvent,
+    MonitoringSnapshot,
+)
+
 class User(UserMixin, db.Model):
     __tablename__ = "users"
 
@@ -61,7 +68,7 @@ class User(UserMixin, db.Model):
 
     monthly_images_used = db.Column(db.Integer, default=0)
     last_image_reset = db.Column(db.Date, nullable=True)
-    free_video_allowance = db.Column(db.Integer, default=0)
+    free_video_allowance = db.Column(db.Integer, default=0, nullable=False)
 
     monthly_free_images_left = db.Column(db.Integer, default=2)
     monthly_free_videos_left = db.Column(db.Integer, default=1)
@@ -309,7 +316,7 @@ class TelegramUser(db.Model):
     __tablename__ = "telegram_users"
 
     id = db.Column(db.Integer, primary_key=True)
-    telegram_id = db.Column(db.String(50), unique=True, nullable=False, index=True)
+    telegram_id = db.Column(db.String(50), unique=True, nullable=False)
 
     username = db.Column(db.String(80), nullable=True)
     first_name = db.Column(db.String(80), nullable=True)
@@ -1264,7 +1271,7 @@ class SocialAnalytics(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
-    post_id = db.Column(db.Integer, db.ForeignKey('social_posts.id'), nullable=False, unique=True, index=True)
+    post_id = db.Column(db.Integer, db.ForeignKey('social_posts.id'), nullable=False, unique=True)
     platform = db.Column(db.String(50), nullable=False, index=True)
     remote_post_id = db.Column(db.String(255), nullable=True)
 
@@ -1291,7 +1298,7 @@ class SocialAutomationSettings(db.Model):
     __tablename__ = 'social_automation_settings'
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, unique=True, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, unique=True)
 
     enabled = db.Column(db.Boolean, default=True)
     emergency_paused = db.Column(db.Boolean, default=False)

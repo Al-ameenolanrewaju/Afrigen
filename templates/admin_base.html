@@ -574,6 +574,7 @@
         <div class="offcanvas-body">
             <h6>Administration</h6>
             <a href="{{ url_for('main.admin') }}" {% if request.endpoint == 'main.admin' %}aria-current="page"{% endif %}><i class="fa-solid fa-border-all"></i>Overview</a>
+            <a href="{{ url_for('main.admin_command_centre') }}" {% if request.endpoint == 'main.admin_command_centre' %}aria-current="page"{% endif %}><i class="fa-solid fa-gauge-high"></i>Command Centre</a>
             <a href="{{ url_for('main.admin_promo_campaigns') }}" {% if request.endpoint == 'main.admin_promo_campaigns' %}aria-current="page"{% endif %}><i class="fa-solid fa-bullhorn"></i>AI Promo Campaigns</a>
             <a href="{{ url_for('main.admin_newsletter_campaigns') }}" {% if request.endpoint and 'newsletter' in request.endpoint %}aria-current="page"{% endif %}><i class="fa-solid fa-envelope"></i>Daily Newsletter</a>
             <a href="{{ url_for('main.admin_newsletter') }}" {% if request.endpoint == 'main.admin_newsletter' %}aria-current="page"{% endif %}><i class="fa-solid fa-pen-to-square"></i>Newsletter editor</a>

@@ -121,12 +121,6 @@
         <div class="sidebar-section-title">GROWTH</div>
         <ul class="sidebar-nav">
             <li class="sidebar-nav-item">
-                <a class="sidebar-nav-link {% if request.endpoint == 'main.social_automation_dashboard' %}active{% endif %}" href="{{ url_for('main.social_automation_dashboard') }}">
-                    <i class="fa-solid fa-share-nodes"></i>
-                    <span>Social Engine</span>
-                </a>
-            </li>
-            <li class="sidebar-nav-item">
                 <a class="sidebar-nav-link {% if request.endpoint == 'main.campaigns' %}active{% endif %}" href="{{ url_for('main.campaigns') }}">
                     <i class="fa-solid fa-bullhorn"></i>
                     <span>Campaigns</span>

@@ -22,10 +22,16 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 # Copy application codebase
 COPY . .
+RUN groupadd --system afrigen && useradd --system --gid afrigen afrigen && \
+    mkdir -p /app/logs /app/static/uploads && \
+    chown afrigen:afrigen /app /app/logs /app/static/uploads
 
 # Expose default port
 EXPOSE 5000
 
-# Run migrations and start Gunicorn web server
-CMD ["sh", "-c", "flask db upgrade && gunicorn app:app --workers 1 --threads 8 --timeout 180 --bind 0.0.0.0:5000"]
+# Run schema migrations as a one-off release step, not concurrently in web replicas.
+USER afrigen
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+    CMD curl --fail --silent http://127.0.0.1:5000/healthz || exit 1
+CMD ["gunicorn", "app:app", "--workers", "1", "--threads", "8", "--timeout", "180", "--bind", "0.0.0.0:5000"]
 

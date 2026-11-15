@@ -5,6 +5,7 @@ services:
     buildCommand: pip install -r requirements.txt
     preDeployCommand: flask db upgrade
     startCommand: gunicorn app:app --workers 1 --threads 8 --timeout 180
+    healthCheckPath: /healthz
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.10

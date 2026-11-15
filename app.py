@@ -19,8 +19,11 @@ from authlib.integrations.flask_client import OAuth
 from werkzeug.middleware.proxy_fix import ProxyFix
 from urllib.parse import urlparse
 from datetime import datetime, timezone
+from sqlalchemy import text
 
 from models import db, User, Generation, SavedPrompt, Referral, WebsiteVisit, TelegramUser
+# Register monitoring-query indexes before Flask-Migrate reads model metadata.
+import monitoring_indexes
 from config import DevelopmentConfig, ProductionConfig, TestingConfig
 from extensions import csrf, limiter
 from routes.main import main, is_admin_user
@@ -30,6 +33,7 @@ from routes.campaigns import campaigns_bp
 from routes.telegram import telegram_bp
 from routes.movie_studio import movie_studio_bp
 from services.credits import refund_video
+from services.monitoring import generate_daily_intelligence_report, run_monitoring_cycle
 from constants import (
     FACEBOOK_URL, TWITTER_URL, INSTAGRAM_URL, LINKEDIN_URL, TELEGRAM_URL
 )
@@ -62,9 +66,12 @@ pytest_mode = (
     or any("pytest" in arg.lower() for arg in sys.argv)
     or os.environ.get("PYTEST_CURRENT_TEST") is not None
 )
+is_flask_db_command = any(argument.lower() == "db" for argument in sys.argv[1:])
 app.config.from_object(TestingConfig if pytest_mode else (ProductionConfig if is_production else DevelopmentConfig))
 if is_production and not app.config.get("SECRET_KEY"):
     raise RuntimeError("SECRET_KEY must be configured in production.")
+if is_production and not app.config.get("SQLALCHEMY_DATABASE_URI"):
+    raise RuntimeError("DATABASE_URL must be configured in production.")
 limiter.init_app(app)
 csrf.init_app(app)
 
@@ -152,10 +159,39 @@ oauth = OAuth(app)
 scheduler = APScheduler()
 enable_scheduler = (
     not pytest_mode
+    and not is_flask_db_command
     and os.environ.get("ENABLE_SCHEDULER", "true").lower() in ("1", "true", "yes")
 )
 if enable_scheduler:
     scheduler.init_app(app)
+    def run_monitoring_cycle_job():
+        with app.app_context():
+            run_monitoring_cycle()
+
+    def generate_daily_intelligence_report_job():
+        with app.app_context():
+            generate_daily_intelligence_report()
+
+    scheduler.add_job(
+        id="monitoring_cycle",
+        func=run_monitoring_cycle_job,
+        trigger="interval",
+        seconds=60,
+        replace_existing=True,
+        coalesce=True,
+        max_instances=1,
+    )
+    scheduler.add_job(
+        id="monitoring_daily_report",
+        func=generate_daily_intelligence_report_job,
+        trigger="cron",
+        hour=0,
+        minute=5,
+        timezone="UTC",
+        replace_existing=True,
+        coalesce=True,
+        max_instances=1,
+    )
     scheduler.start()
 
 
@@ -239,20 +275,23 @@ def ensure_legacy_schema_columns():
         logging.getLogger('app').warning("Could not repair legacy DB schema columns: %s", exc)
 
 
-ensure_legacy_schema_columns()
+if not is_flask_db_command:
+    ensure_legacy_schema_columns()
 
 from services.newsletter import sync_all_users_to_subscribers
 from services.webhook_tasks import start_webhook_worker
 migrate = Migrate(app, db)
 
-with app.app_context():
-    try:
-        if db.inspect(db.engine).has_table('users'):
-            sync_all_users_to_subscribers()
-    except Exception:
-        pass
+if not is_flask_db_command:
+    with app.app_context():
+        try:
+            if db.inspect(db.engine).has_table('users'):
+                sync_all_users_to_subscribers()
+        except Exception:
+            pass
 
-start_webhook_worker(app)
+if not is_flask_db_command:
+    start_webhook_worker(app)
 login_manager = LoginManager(app)
 login_manager.login_view = "auth.login"
 
@@ -526,6 +565,29 @@ def server_error(e):
 @app.errorhandler(403)
 def forbidden(e):
     return render_template("errors/403.html"), 403
+
+
+@app.route("/healthz", methods=["GET"])
+def healthz():
+    try:
+        required_tables = {
+            "users",
+            "generations",
+            "monitoring_snapshots",
+            "monitoring_incidents",
+            "monitoring_incident_events",
+            "monitoring_daily_reports",
+        }
+        available_tables = set(db.inspect(db.engine).get_table_names())
+        if not required_tables.issubset(available_tables):
+            app.logger.error("Readiness check found required application tables missing.")
+            return jsonify(status="unhealthy", dependency="schema"), 503
+        db.session.execute(text("SELECT 1"))
+    except Exception as exc:
+        db.session.rollback()
+        app.logger.error("Readiness database check failed (%s)", type(exc).__name__)
+        return jsonify(status="unhealthy", dependency="database"), 503
+    return jsonify(status="ok"), 200
 
 
 @app.route('/favicon.ico')

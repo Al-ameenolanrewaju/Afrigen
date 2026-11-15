@@ -775,6 +775,7 @@ def disconnect_provider(provider):
     return redirect(url_for('main.connected_accounts'))
 
 @main.route('/refine-prompt', methods=['POST'])
+@csrf.exempt
 def refine_prompt_free():
     data = request.get_json() or {}
     prompt = data.get('prompt')
@@ -792,6 +793,7 @@ def refine_prompt_free():
 
 
 @main.route('/refine-image-prompt', methods=['POST'])
+@csrf.exempt
 def refine_image_prompt_free():
     data = request.get_json() or {}
     prompt = data.get('prompt')
@@ -1251,6 +1253,113 @@ def history():
         user_id=current_user.id
     ).order_by(Generation.created_at.desc()).all()
     return render_template('main/history.html', generations=generations)
+
+
+@main.route('/admin/command-centre')
+@admin_required
+def admin_command_centre():
+    from flask import render_template, request
+    from monitoring_models import (
+        MonitoringDailyReport,
+        MonitoringIncident,
+        MonitoringIncidentEvent,
+        MonitoringSnapshot,
+    )
+    from sqlalchemy import case
+
+    page = max(1, request.args.get("page", 1, type=int))
+    incidents = (
+        MonitoringIncident.query
+        .order_by(
+            case(
+                (MonitoringIncident.severity == "critical", 0),
+                (MonitoringIncident.severity == "warning", 1),
+                else_=2,
+            ),
+            MonitoringIncident.last_seen_at.desc(),
+        )
+        .paginate(page=page, per_page=25, error_out=False)
+    )
+    snapshots = (
+        MonitoringSnapshot.query
+        .order_by(MonitoringSnapshot.observed_at.desc())
+        .limit(100)
+        .all()
+    )
+    latest_by_monitor = {}
+    for snapshot in snapshots:
+        latest_by_monitor.setdefault(snapshot.monitor_key, snapshot)
+    incident_ids = [incident.id for incident in incidents.items]
+    incident_events = {}
+    if incident_ids:
+        events = (
+            MonitoringIncidentEvent.query
+            .filter(MonitoringIncidentEvent.incident_id.in_(incident_ids))
+            .order_by(MonitoringIncidentEvent.created_at.desc())
+            .limit(250)
+            .all()
+        )
+        for event in events:
+            items = incident_events.setdefault(event.incident_id, [])
+            if len(items) < 5:
+                items.append(event)
+    return render_template(
+        "main/command_centre.html",
+        monitor_snapshots=sorted(latest_by_monitor.values(), key=lambda item: item.monitor_key),
+        monitoring_incidents=incidents,
+        incident_events=incident_events,
+        recent_monitoring_snapshots=snapshots[:25],
+        daily_report=MonitoringDailyReport.query.order_by(
+            MonitoringDailyReport.report_date.desc()
+        ).first(),
+    )
+
+
+@main.route('/admin/command-centre/refresh', methods=['POST'])
+@admin_required
+def refresh_command_centre():
+    from flask import flash, redirect, url_for
+    from services.monitoring import run_monitoring_cycle
+
+    results = run_monitoring_cycle()
+    flash("Monitoring refresh completed: {} checks recorded.".format(len(results)), "success")
+    return redirect(url_for("main.admin_command_centre"))
+
+
+@main.route('/admin/command-centre/incidents/<int:incident_id>', methods=['POST'])
+@admin_required
+def update_command_centre_incident(incident_id):
+    from flask import abort, flash, redirect, request, url_for
+    from monitoring_models import MonitoringIncident
+    from services.monitoring import update_monitoring_incident
+
+    incident = db.session.get(MonitoringIncident, incident_id)
+    if incident is None:
+        abort(404)
+    try:
+        update_monitoring_incident(
+            incident,
+            status=request.form.get("status", "open"),
+            assigned_to=request.form.get("assigned_to"),
+            note=request.form.get("administrator_note"),
+            actor_user_id=current_user.id,
+        )
+    except ValueError as exc:
+        flash(str(exc), "danger")
+        return redirect(url_for("main.admin_command_centre"))
+    flash("Incident updated.", "success")
+    return redirect(url_for("main.admin_command_centre"))
+
+
+@main.route('/admin/command-centre/daily-report', methods=['POST'])
+@admin_required
+def generate_command_centre_daily_report():
+    from flask import flash, redirect, url_for
+    from services.monitoring import generate_daily_intelligence_report
+
+    report = generate_daily_intelligence_report()
+    flash("Daily intelligence report for {} generated.".format(report.report_date), "success")
+    return redirect(url_for("main.admin_command_centre"))
 
 
 @main.route('/admin/provider-status')
@@ -3601,7 +3710,34 @@ def public_share_media(token, media_type):
 @main.route('/create')
 @login_required
 def create():
-    return render_template('main/create.html')
+    from models import Generation
+    raw_mode = (request.args.get('mode') or 'video').lower().strip()
+    mode_aliases = {
+        'video': 'video',
+        't2v': 'video',
+        'image': 'image',
+        'photo': 'image',
+        't2i': 'image',
+        'animate': 'animate',
+        'img2vid': 'animate',
+        'image-to-video': 'animate',
+        'voice': 'voice',
+        'voiceover': 'voice',
+        'tts': 'voice',
+        'speech': 'voice',
+    }
+    initial_mode = mode_aliases.get(raw_mode, 'video')
+    recent_creations = Generation.query.filter_by(
+        user_id=current_user.id
+    ).order_by(
+        Generation.created_at.desc()
+    ).limit(6).all()
+
+    return render_template(
+        'main/create.html',
+        initial_mode=initial_mode,
+        recent_creations=recent_creations
+    )
 
 @main.route('/brands')
 @login_required

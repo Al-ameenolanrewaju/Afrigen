@@ -23,24 +23,11 @@ def upgrade():
             sa.Column('telegram_link_code', sa.String(length=20), nullable=True)
         )
 
-    # The website account a Telegram user is linked to; generation through the
-    # bot draws from this user's plan / credits / limits.
-    with op.batch_alter_table('telegram_users', schema=None) as batch_op:
-        batch_op.add_column(
-            sa.Column('user_id', sa.Integer(), nullable=True)
-        )
-        batch_op.create_foreign_key(
-            'fk_telegram_users_user_id_users',
-            'users',
-            ['user_id'],
-            ['id'],
-        )
+    # telegram_users.user_id and its users foreign key already exist in the
+    # initial schema migration; repeating that alteration breaks fresh SQLite
+    # upgrades and adds a duplicate constraint on other databases.
 
 
 def downgrade():
-    with op.batch_alter_table('telegram_users', schema=None) as batch_op:
-        batch_op.drop_constraint('fk_telegram_users_user_id_users', type_='foreignkey')
-        batch_op.drop_column('user_id')
-
     with op.batch_alter_table('users', schema=None) as batch_op:
         batch_op.drop_column('telegram_link_code')

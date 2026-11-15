@@ -12,17 +12,34 @@
 - `DATABASE_URL`: Start with `postgresql://` (ensure the provider uses IPv4 or proper DNS resolution if applicable).
 - `NEWSLETTER_TEST_RECIPIENT` (optional): Redirect newsletter batches to your email provider's approved testing address. Leave unset to send to subscribers.
 
-### AI Provider Keys
-- `FAL_KEY_ID` / `FAL_KEY_SECRET`
-- `GROQ_API_KEY`
-- `ANTHROPIC_API_KEY`
-- `OPENROUTER_API_KEY`
+The application logs a warning naming any missing full-capability variables at
+startup. The following integrations are required for their corresponding
+features:
+
+- `GROQ_API_KEY`: assistant and content-generation flows.
+- `FAL_KEY`: image/video generation.
+- `HF_TOKEN`: Hugging Face image-generation integration.
+- `PAYSTACK_SECRET_KEY` and `PAYSTACK_PUBLIC_KEY`: payments.
+
+### Other Integration Keys
+- `ELEVENLABS_API_KEY`: optional voice integration.
+- `TELEGRAM_BOT_TOKEN` and `TELEGRAM_WEBHOOK_SECRET`: Telegram integration.
+- Google OAuth client ID/secret and SMTP credentials when those features are enabled.
 
 ## Deployment Steps
-1. Push code to the production branch.
-2. The platform will install dependencies via `requirements.txt`.
-3. Pre-deploy command: `flask db upgrade` (Applies all pending database migrations).
-4. Run command: `gunicorn -w 4 -b 0.0.0.0:8000 app:app` (or similar WSGI server).
+1. Provide the required production environment variables and a persistent PostgreSQL database.
+2. The platform installs dependencies from `requirements.txt`.
+3. Run `flask db upgrade` once as the release/pre-deploy step, before routing traffic to the new release. Do not run migrations independently in every web replica.
+4. Start the web service with `gunicorn app:app --workers 1 --threads 8 --timeout 180`. The single web process owns the in-process scheduler; keep `ENABLE_SCHEDULER=true` on one process only.
+5. Configure the platform readiness probe to use `/healthz`. It returns only a generic database dependency status and does not expose connection details.
+
+The Docker image excludes local environment files, credentials, database files,
+logs, test data, and local uploads. For a container deployment, run the image's
+`flask db upgrade` command once as a release step, then start the web container.
+Media written to `static/uploads` is local to the container by default. Configure
+a persistent mounted volume at that path or integrate durable object storage
+before relying on locally rendered Movie Studio exports or generated promo
+assets in a production deployment.
 
 ## Post-Deployment Verification
 - Verify the DB connection.
@@ -30,4 +47,6 @@
 - Test generating a small campaign to ensure the background executor works correctly in the production environment.
 
 ## Railway Deployment Note
-The `railway.json` file defines the web start command for the app service. Keep the deployment environment aligned with the app's required variables, and avoid adding a second bot worker unless you intentionally reintroduce a separate Telegram integration.
+The `railway.json` file defines the pre-deploy migration and web start commands.
+Telegram is integrated into the Flask web application; the obsolete standalone
+bot process entry has been removed because its target script is not present.

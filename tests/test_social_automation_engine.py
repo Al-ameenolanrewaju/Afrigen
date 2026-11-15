@@ -317,15 +317,11 @@ def test_social_automation_dashboard_view():
             sess["_fresh"] = True
 
         res = client.get("/social-automation")
-        assert res.status_code == 200
-        assert b"Social Marketing Engine" in res.data
-        assert b"Content Calendar" in res.data
-        assert b"AI Content Studio" in res.data
-        assert b"Creative Studio" in res.data
-        assert b"Campaigns" in res.data
-        assert b"Publishing Queue" in res.data
-        assert b"Published Posts" in res.data
-        assert b"Automation Settings" in res.data
+        assert res.status_code == 404
+
+        dashboard = client.get("/dashboard")
+        assert dashboard.status_code == 200
+        assert b"Social Engine" not in dashboard.data
 
 
 def test_social_automation_toggle_pause_endpoint():

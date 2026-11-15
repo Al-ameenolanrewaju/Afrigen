@@ -15,14 +15,28 @@ depends_on = None
 
 
 def upgrade():
-    op.add_column("campaigns", sa.Column("brand_id", sa.Integer(), nullable=True))
-    op.create_foreign_key("fk_campaigns_brand_id", "campaigns", "brands", ["brand_id"], ["id"])
-    op.add_column("workflows", sa.Column("brand_id", sa.Integer(), nullable=True))
-    op.create_foreign_key("fk_workflows_brand_id", "workflows", "brands", ["brand_id"], ["id"])
+    with op.batch_alter_table("campaigns") as batch_op:
+        batch_op.add_column(sa.Column("brand_id", sa.Integer(), nullable=True))
+        batch_op.create_foreign_key(
+            "fk_campaigns_brand_id",
+            "brands",
+            ["brand_id"],
+            ["id"],
+        )
+    with op.batch_alter_table("workflows") as batch_op:
+        batch_op.add_column(sa.Column("brand_id", sa.Integer(), nullable=True))
+        batch_op.create_foreign_key(
+            "fk_workflows_brand_id",
+            "brands",
+            ["brand_id"],
+            ["id"],
+        )
 
 
 def downgrade():
-    op.drop_constraint("fk_workflows_brand_id", "workflows", type_="foreignkey")
-    op.drop_column("workflows", "brand_id")
-    op.drop_constraint("fk_campaigns_brand_id", "campaigns", type_="foreignkey")
-    op.drop_column("campaigns", "brand_id")
+    with op.batch_alter_table("workflows") as batch_op:
+        batch_op.drop_constraint("fk_workflows_brand_id", type_="foreignkey")
+        batch_op.drop_column("brand_id")
+    with op.batch_alter_table("campaigns") as batch_op:
+        batch_op.drop_constraint("fk_campaigns_brand_id", type_="foreignkey")
+        batch_op.drop_column("brand_id")
