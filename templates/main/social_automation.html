@@ -1,0 +1,724 @@
+{% extends "base.html" %}
+
+{% block title %}Social Automation Engine - Afrigen{% endblock %}
+
+{% block content %}
+<style>
+    .social-engine-page {
+        color: var(--af-ivory, #F5F1E8);
+        padding-bottom: 80px;
+    }
+    .kpi-card {
+        background: var(--af-slate, #182233);
+        border: 1px solid var(--af-border, #354154);
+        border-radius: 12px;
+        padding: 1.25rem;
+        transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+    .kpi-card:hover {
+        border-color: var(--af-gold, #D6AD65);
+        transform: translateY(-2px);
+    }
+    .kpi-value {
+        font-size: 1.8rem;
+        font-weight: 800;
+        color: var(--af-ivory, #F5F1E8);
+        line-height: 1.2;
+    }
+    .kpi-label {
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--af-text-secondary, #A5AFBF);
+    }
+    .status-badge {
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        padding: 4px 10px;
+        border-radius: 20px;
+        letter-spacing: 0.5px;
+    }
+    .status-scheduled {
+        background: rgba(245, 166, 35, 0.15);
+        color: #F5A623;
+        border: 1px solid rgba(245, 166, 35, 0.35);
+    }
+    .status-published {
+        background: rgba(72, 169, 154, 0.15);
+        color: #48A99A;
+        border: 1px solid rgba(72, 169, 154, 0.35);
+    }
+    .status-failed {
+        background: rgba(239, 68, 68, 0.15);
+        color: #EF4444;
+        border: 1px solid rgba(239, 68, 68, 0.35);
+    }
+    .status-cancelled {
+        background: rgba(165, 175, 191, 0.15);
+        color: #A5AFBF;
+        border: 1px solid rgba(165, 175, 191, 0.3);
+    }
+    .nav-tabs-custom {
+        border-bottom: 1px solid var(--af-border, #354154);
+        gap: 0.5rem;
+    }
+    .nav-tabs-custom .nav-link {
+        color: var(--af-text-secondary, #A5AFBF);
+        border: none;
+        border-bottom: 2px solid transparent;
+        padding: 0.75rem 1.25rem;
+        font-weight: 600;
+        font-size: 0.88rem;
+        background: transparent;
+        transition: all 0.2s ease;
+    }
+    .nav-tabs-custom .nav-link:hover {
+        color: var(--af-ivory, #F5F1E8);
+    }
+    .nav-tabs-custom .nav-link.active {
+        color: var(--af-gold, #D6AD65);
+        border-bottom-color: var(--af-gold, #D6AD65);
+        background: transparent;
+    }
+    .post-table {
+        color: var(--af-ivory, #F5F1E8);
+        border-color: var(--af-border, #354154);
+    }
+    .post-table th {
+        background: var(--af-surface, #202B3B);
+        color: var(--af-text-secondary, #A5AFBF);
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: 1px solid var(--af-border, #354154);
+    }
+    .post-table td {
+        background: var(--af-slate, #182233);
+        border-bottom: 1px solid var(--af-border, #354154);
+        vertical-align: middle;
+        font-size: 0.85rem;
+    }
+    .thumbnail-preview {
+        width: 54px;
+        height: 54px;
+        border-radius: 8px;
+        object-fit: cover;
+        border: 1px solid var(--af-border, #354154);
+    }
+    .thumbnail-placeholder {
+        width: 54px;
+        height: 54px;
+        border-radius: 8px;
+        background: var(--af-surface, #202B3B);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--af-text-secondary, #A5AFBF);
+        border: 1px dashed var(--af-border, #354154);
+    }
+    .insight-callout {
+        background: rgba(214, 173, 101, 0.08);
+        border-left: 4px solid var(--af-gold, #D6AD65);
+        border-radius: 0 8px 8px 0;
+        padding: 0.9rem 1.2rem;
+        margin-bottom: 0.75rem;
+    }
+</style>
+
+<div class="container py-4 social-engine-page">
+    <!-- Header -->
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center mb-4 gap-3">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <h2 class="fw-bold mb-0 text-white">Social Media Automation Engine</h2>
+                {% if settings.emergency_paused %}
+                <span class="badge bg-danger">EMERGENCY PAUSED</span>
+                {% elif settings.enabled %}
+                <span class="badge" style="background: rgba(72, 169, 154, 0.2); color: #48A99A; border: 1px solid #48A99A;">AUTONOMOUS ACTIVE</span>
+                {% else %}
+                <span class="badge bg-secondary">DISABLED</span>
+                {% endif %}
+            </div>
+            <p class="text-muted mb-0">Autonomous AI-powered marketing strategist, content calendar &amp; multi-channel distribution.</p>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+            <!-- Emergency Pause Form -->
+            <form action="{{ url_for('main.social_automation_toggle_pause') }}" method="POST">
+                {% if settings.emergency_paused %}
+                <button type="submit" class="btn btn-sm btn-success fw-bold">
+                    <i class="fa-solid fa-play me-1"></i> Resume Publishing
+                </button>
+                {% else %}
+                <button type="submit" class="btn btn-sm btn-outline-danger fw-bold" onclick="return confirm('Emergency Pause all scheduled social publishing?');">
+                    <i class="fa-solid fa-pause me-1"></i> Emergency Pause
+                </button>
+                {% endif %}
+            </form>
+
+            <!-- Quick Batch Planner -->
+            <button type="button" class="btn btn-sm text-dark fw-bold" id="generateBatchBtn" style="background: var(--af-gold, #D6AD65);">
+                <i class="fa-solid fa-wand-magic-sparkles me-1"></i> Generate Today's Posts
+            </button>
+        </div>
+    </div>
+
+    <!-- KPI Metric Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3">
+            <div class="kpi-card">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="kpi-label">Scheduled / Queue</span>
+                    <i class="fa-solid fa-clock text-warning"></i>
+                </div>
+                <div class="kpi-value text-warning">{{ scheduled_posts|length }}</div>
+                <small class="text-muted">Autonomous queue</small>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="kpi-card">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="kpi-label">Published Posts</span>
+                    <i class="fa-solid fa-paper-plane text-success"></i>
+                </div>
+                <div class="kpi-value text-success">{{ published_posts|length }}</div>
+                <small class="text-muted">Successfully distributed</small>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="kpi-card">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="kpi-label">Avg Engagement</span>
+                    <i class="fa-solid fa-chart-line text-info"></i>
+                </div>
+                <div class="kpi-value text-info">{{ analysis.average_engagement_rate }}%</div>
+                <small class="text-muted">Across active channels</small>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="kpi-card">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="kpi-label">Connected Channels</span>
+                    <i class="fa-solid fa-plug text-primary"></i>
+                </div>
+                <div class="kpi-value text-white">
+                    {{ (1 if fb_acc else 0) + (1 if li_acc else 0) }} / 2
+                </div>
+                <small class="text-muted">Facebook &amp; LinkedIn</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <ul class="nav nav-tabs nav-tabs-custom mb-4" id="socialEngineTabs" role="tablist">
+        <li class="nav-item">
+            <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">
+                <i class="fa-solid fa-gauge me-1"></i> Today's Queue
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" id="generator-tab" data-bs-toggle="tab" data-bs-target="#generator" type="button" role="tab">
+                <i class="fa-solid fa-sparkles me-1"></i> AI Content Studio
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" id="posts-tab" data-bs-toggle="tab" data-bs-target="#posts" type="button" role="tab">
+                <i class="fa-solid fa-list-check me-1"></i> Publishing History ({{ posts|length }})
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" id="analytics-tab" data-bs-toggle="tab" data-bs-target="#analytics" type="button" role="tab">
+                <i class="fa-solid fa-chart-pie me-1"></i> Performance Intelligence
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" id="settings-tab" data-bs-toggle="tab" data-bs-target="#settings" type="button" role="tab">
+                <i class="fa-solid fa-sliders me-1"></i> Automation Settings
+            </button>
+        </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content" id="socialEngineTabContent">
+        <!-- TAB 1: OVERVIEW & TODAY'S SCHEDULE -->
+        <div class="tab-pane fade show active" id="overview" role="tabpanel">
+            <div class="row g-4">
+                <div class="col-lg-8">
+                    <div class="card p-3" style="background: var(--af-slate, #182233); border: 1px solid var(--af-border, #354154); border-radius: 12px;">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="fw-bold mb-0 text-white"><i class="fa-solid fa-calendar-day me-2 text-warning"></i>Active Publishing Queue</h5>
+                            <span class="badge bg-secondary">{{ scheduled_posts|length }} ready to post</span>
+                        </div>
+
+                        {% if scheduled_posts %}
+                        <div class="d-flex flex-column gap-3">
+                            {% for p in scheduled_posts %}
+                            <div class="p-3 rounded d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3" style="background: var(--af-surface, #202B3B); border: 1px solid var(--af-border, #354154);">
+                                <div class="d-flex align-items-start gap-3">
+                                    {% if p.media_url %}
+                                        {% if p.media_type == 'video' %}
+                                        <div class="thumbnail-placeholder"><i class="fa-solid fa-video text-warning"></i></div>
+                                        {% else %}
+                                        <img src="{{ p.media_url }}" alt="Creative preview" class="thumbnail-preview">
+                                        {% endif %}
+                                    {% else %}
+                                    <div class="thumbnail-placeholder"><i class="fa-solid fa-font"></i></div>
+                                    {% endif %}
+                                    <div>
+                                        <div class="d-flex align-items-center gap-2 mb-1">
+                                            <span class="badge" style="background: rgba(214, 173, 101, 0.15); color: var(--af-gold, #D6AD65);">
+                                                <i class="fa-brands fa-{{ p.platform }} me-1"></i>{{ p.platform|capitalize }}
+                                            </span>
+                                            <span class="badge bg-dark text-muted">{{ p.content_pillar|capitalize }}</span>
+                                            <span class="badge bg-info text-dark">{{ p.content_format|upper }}</span>
+                                            <span class="status-badge status-{{ p.status }}">{{ p.status }}</span>
+                                        </div>
+                                        <h6 class="fw-bold text-white mb-1">{{ p.title or 'Scheduled Post' }}</h6>
+                                        <p class="small text-muted mb-0" style="max-width: 480px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ p.caption }}</p>
+                                    </div>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <button type="button" class="btn btn-sm btn-outline-warning publish-now-btn" data-post-id="{{ p.id }}">
+                                        <i class="fa-solid fa-bolt me-1"></i> Publish Now
+                                    </button>
+                                    <form action="{{ url_for('main.social_automation_cancel_post', post_id=p.id) }}" method="POST" onsubmit="return confirm('Cancel this post?');">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Cancel Post">
+                                            <i class="fa-solid fa-xmark"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="p-5 text-center text-muted">
+                            <i class="fa-solid fa-inbox display-4 mb-3 d-block opacity-50"></i>
+                            <p class="mb-2">No posts currently queued.</p>
+                            <button type="button" class="btn btn-sm btn-outline-warning trigger-batch-gen">
+                                Generate Daily Posts Now
+                            </button>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Channel Health Sidepanel -->
+                <div class="col-lg-4">
+                    <div class="card p-3 mb-3" style="background: var(--af-slate, #182233); border: 1px solid var(--af-border, #354154); border-radius: 12px;">
+                        <h6 class="fw-bold mb-3 text-white"><i class="fa-solid fa-network-wired me-2 text-warning"></i>Channel Status</h6>
+
+                        <!-- Facebook -->
+                        <div class="p-2 mb-2 rounded d-flex justify-content-between align-items-center" style="background: var(--af-surface, #202B3B);">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="fa-brands fa-facebook text-primary fs-5"></i>
+                                <div>
+                                    <strong class="d-block text-white small">Facebook Page</strong>
+                                    <span class="text-muted" style="font-size: 0.72rem;">{{ fb_acc.account_name if fb_acc else 'Unconnected' }}</span>
+                                </div>
+                            </div>
+                            {% if fb_acc %}
+                            <span class="badge bg-success small">Connected</span>
+                            {% else %}
+                            <a href="{{ url_for('main.connected_accounts') }}" class="btn btn-xs btn-outline-warning" style="font-size: 0.72rem; padding: 2px 8px;">Connect</a>
+                            {% endif %}
+                        </div>
+
+                        <!-- LinkedIn -->
+                        <div class="p-2 mb-3 rounded d-flex justify-content-between align-items-center" style="background: var(--af-surface, #202B3B);">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="fa-brands fa-linkedin text-info fs-5"></i>
+                                <div>
+                                    <strong class="d-block text-white small">LinkedIn Profile/Page</strong>
+                                    <span class="text-muted" style="font-size: 0.72rem;">{{ li_acc.account_name if li_acc else 'Unconnected' }}</span>
+                                </div>
+                            </div>
+                            {% if li_acc %}
+                            <span class="badge bg-success small">Connected</span>
+                            {% else %}
+                            <a href="{{ url_for('main.connected_accounts') }}" class="btn btn-xs btn-outline-warning" style="font-size: 0.72rem; padding: 2px 8px;">Connect</a>
+                            {% endif %}
+                        </div>
+
+                        <a href="{{ url_for('main.connected_accounts') }}" class="btn btn-sm btn-outline-secondary w-100" style="font-size: 0.78rem;">
+                            <i class="fa-solid fa-gear me-1"></i> Manage OAuth Credentials
+                        </a>
+                    </div>
+
+                    <!-- AI Insights Snippet -->
+                    <div class="card p-3" style="background: var(--af-slate, #182233); border: 1px solid var(--af-border, #354154); border-radius: 12px;">
+                        <h6 class="fw-bold mb-2 text-white"><i class="fa-solid fa-brain me-2" style="color: var(--af-gold, #D6AD65);"></i>AI Strategist Pulse</h6>
+                        {% for ins in analysis.insights[:2] %}
+                        <div class="insight-callout small text-white mb-2">{{ ins }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: AI CONTENT STUDIO -->
+        <div class="tab-pane fade" id="generator" role="tabpanel">
+            <div class="row g-4">
+                <div class="col-lg-5">
+                    <div class="card p-4" style="background: var(--af-slate, #182233); border: 1px solid var(--af-border, #354154); border-radius: 12px;">
+                        <h5 class="fw-bold text-white mb-3"><i class="fa-solid fa-pen-nib me-2" style="color: var(--af-gold, #D6AD65);"></i>Autonomous Generator</h5>
+                        <form id="autonomousGenForm">
+                            <div class="mb-3">
+                                <label class="form-label small text-muted">Platform</label>
+                                <select name="platform" class="form-select form-select-sm" style="background: #202B3B; border-color: #354154; color: #F5F1E8;">
+                                    <option value="facebook">Facebook Page (Conversational &amp; Community)</option>
+                                    <option value="linkedin">LinkedIn (Professional Thought Leadership)</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label small text-muted">Content Pillar</label>
+                                <select name="pillar" class="form-select form-select-sm" style="background: #202B3B; border-color: #354154; color: #F5F1E8;">
+                                    <option value="">AI Auto-Select (Self-Tuning)</option>
+                                    <option value="education">AI Education &amp; Tutorials (25%)</option>
+                                    <option value="demo">AI Demonstrations &amp; Showcase (20%)</option>
+                                    <option value="industry_insights">Industry Insights (15%)</option>
+                                    <option value="product_updates">Product Updates &amp; Movie Studio (15%)</option>
+                                    <option value="community">Community Questions (10%)</option>
+                                    <option value="case_study">Creator Case Studies (10%)</option>
+                                    <option value="promotion">Direct Promotion (5%)</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label small text-muted">Format &amp; Creative Engine</label>
+                                <select name="format" class="form-select form-select-sm" style="background: #202B3B; border-color: #354154; color: #F5F1E8;">
+                                    <option value="image">AI Image (Hugging Face FLUX / SDXL)</option>
+                                    <option value="flyer">Branded Promotional Poster (PIL Engine)</option>
+                                    <option value="video">AI Video (Hugging Face / Kling AI)</option>
+                                    <option value="text">Text Only Thought Post</option>
+                                </select>
+                            </div>
+
+                            <button type="submit" class="btn btn-warning w-100 fw-bold" id="generateSingleBtn" style="background: var(--af-gold, #D6AD65); color: #111827;">
+                                <i class="fa-solid fa-wand-magic-sparkles me-1"></i> Generate Post &amp; Schedule
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="col-lg-7">
+                    <div class="card p-4" style="background: var(--af-slate, #182233); border: 1px solid var(--af-border, #354154); border-radius: 12px; min-height: 380px;">
+                        <h5 class="fw-bold text-white mb-3"><i class="fa-solid fa-eye me-2" style="color: var(--af-gold, #D6AD65);"></i>Live Creative Preview</h5>
+                        <div id="creativePreviewArea" class="p-4 rounded text-center d-flex flex-column align-items-center justify-content-center" style="background: var(--af-surface, #202B3B); min-height: 280px;">
+                            <i class="fa-solid fa-wand-magic-sparkles display-4 text-muted mb-2 opacity-50"></i>
+                            <p class="text-muted small mb-0">Generated copy, creative asset, and QA scores will render here upon creation.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: PUBLISHING HISTORY -->
+        <div class="tab-pane fade" id="posts" role="tabpanel">
+            <div class="card p-3" style="background: var(--af-slate, #182233); border: 1px solid var(--af-border, #354154); border-radius: 12px;">
+                <div class="table-responsive">
+                    <table class="table post-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Post</th>
+                                <th>Channel</th>
+                                <th>Pillar</th>
+                                <th>Format</th>
+                                <th>Status</th>
+                                <th>QA Score</th>
+                                <th>Date / Time</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in posts %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        {% if p.media_url %}
+                                        <img src="{{ p.media_url }}" alt="Media" class="thumbnail-preview" style="width: 36px; height: 36px;">
+                                        {% else %}
+                                        <div class="thumbnail-placeholder" style="width: 36px; height: 36px;"><i class="fa-solid fa-font"></i></div>
+                                        {% endif %}
+                                        <div>
+                                            <strong class="d-block text-white" style="font-size: 0.82rem;">{{ p.title or 'Marketing Post' }}</strong>
+                                            <span class="text-muted" style="font-size: 0.72rem;">#{{ p.id }} · {{ p.caption[:45] }}...</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge" style="background: rgba(214, 173, 101, 0.15); color: var(--af-gold, #D6AD65);">
+                                        <i class="fa-brands fa-{{ p.platform }} me-1"></i>{{ p.platform|capitalize }}
+                                    </span>
+                                </td>
+                                <td><span class="badge bg-dark text-muted">{{ p.content_pillar|capitalize }}</span></td>
+                                <td><span class="badge bg-info text-dark">{{ p.content_format|upper }}</span></td>
+                                <td><span class="status-badge status-{{ p.status }}">{{ p.status }}</span></td>
+                                <td>
+                                    <span class="fw-bold {% if p.quality_score >= 80 %}text-success{% elif p.quality_score >= 60 %}text-warning{% else %}text-danger{% endif %}">
+                                        {{ p.quality_score }}/100
+                                    </span>
+                                </td>
+                                <td class="text-muted" style="font-size: 0.78rem;">
+                                    {{ p.scheduled_at.strftime('%b %d, %H:%M') if p.scheduled_at else p.created_at.strftime('%b %d, %H:%M') }}
+                                </td>
+                                <td class="text-end">
+                                    {% if p.published_url %}
+                                    <a href="{{ p.published_url }}" target="_blank" class="btn btn-xs btn-outline-info" style="font-size: 0.72rem; padding: 2px 8px;">
+                                        <i class="fa-solid fa-arrow-up-right-from-square me-1"></i> Live Post
+                                    </a>
+                                    {% elif p.status in ('scheduled', 'retry_pending') %}
+                                    <button type="button" class="btn btn-xs btn-outline-warning publish-now-btn" data-post-id="{{ p.id }}" style="font-size: 0.72rem; padding: 2px 8px;">
+                                        Publish Now
+                                    </button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="8" class="text-center py-4 text-muted">No historical posts recorded yet.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4: PERFORMANCE INTELLIGENCE -->
+        <div class="tab-pane fade" id="analytics" role="tabpanel">
+            <div class="row g-4">
+                <div class="col-lg-7">
+                    <div class="card p-4 mb-4" style="background: var(--af-slate, #182233); border: 1px solid var(--af-border, #354154); border-radius: 12px;">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="fw-bold text-white mb-0"><i class="fa-solid fa-chart-column me-2" style="color: var(--af-gold, #D6AD65);"></i>Pillar Performance Ranking</h5>
+                            <form action="{{ url_for('main.social_automation_sync_analytics') }}" method="POST">
+                                <button type="submit" class="btn btn-sm btn-outline-info">
+                                    <i class="fa-solid fa-arrows-rotate me-1"></i> Sync Live Metrics
+                                </button>
+                            </form>
+                        </div>
+
+                        {% if analysis.pillar_rankings %}
+                        <div class="d-flex flex-column gap-3">
+                            {% for r in analysis.pillar_rankings %}
+                            <div>
+                                <div class="d-flex justify-content-between small text-white mb-1">
+                                    <span><strong>{{ r.pillar|capitalize }}</strong> ({{ r.posts_count }} posts)</span>
+                                    <span class="text-warning fw-bold">{{ r.average_engagement }}% engagement</span>
+                                </div>
+                                <div class="progress" style="height: 8px; background: var(--af-surface, #202B3B);">
+                                    <div class="progress-bar" style="width: {{ [r.average_engagement * 10, 100]|min }}%; background: var(--af-gold, #D6AD65);"></div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="p-4 text-center text-muted">
+                            <p class="mb-0">Pillar engagement rankings will compute automatically as your published posts accumulate viewer interactions.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Strategic AI Insights -->
+                <div class="col-lg-5">
+                    <div class="card p-4" style="background: var(--af-slate, #182233); border: 1px solid var(--af-border, #354154); border-radius: 12px;">
+                        <h5 class="fw-bold text-white mb-3"><i class="fa-solid fa-lightbulb me-2 text-warning"></i>Autonomous Strategic Insights</h5>
+                        <div class="d-flex flex-column gap-2">
+                            {% for ins in analysis.insights %}
+                            <div class="insight-callout small text-white mb-0">
+                                <i class="fa-solid fa-check text-warning me-1"></i> {{ ins }}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 5: AUTOMATION SETTINGS -->
+        <div class="tab-pane fade" id="settings" role="tabpanel">
+            <div class="card p-4" style="background: var(--af-slate, #182233); border: 1px solid var(--af-border, #354154); border-radius: 12px; max-width: 800px;">
+                <h5 class="fw-bold text-white mb-3"><i class="fa-solid fa-sliders me-2" style="color: var(--af-gold, #D6AD65);"></i>Engine Preferences &amp; Safety Controls</h5>
+                <form action="{{ url_for('main.social_automation_update_settings') }}" method="POST">
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <div class="form-check form-switch p-3 rounded" style="background: var(--af-surface, #202B3B);">
+                                <input class="form-check-input" type="checkbox" name="enabled" id="enabledSwitch" {% if settings.enabled %}checked{% endif %}>
+                                <label class="form-check-label text-white fw-bold ms-2" for="enabledSwitch">Master Automation Enabled</label>
+                                <span class="d-block small text-muted ms-2">Permit autonomous scheduling &amp; publishing</span>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="form-check form-switch p-3 rounded" style="background: var(--af-surface, #202B3B);">
+                                <input class="form-check-input" type="checkbox" name="facebook_enabled" id="fbSwitch" {% if settings.facebook_enabled %}checked{% endif %}>
+                                <label class="form-check-label text-white fw-bold ms-2" for="fbSwitch">Facebook Publishing</label>
+                                <span class="d-block small text-muted ms-2">Publish daily updates to Meta Pages</span>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="form-check form-switch p-3 rounded" style="background: var(--af-surface, #202B3B);">
+                                <input class="form-check-input" type="checkbox" name="linkedin_enabled" id="liSwitch" {% if settings.linkedin_enabled %}checked{% endif %}>
+                                <label class="form-check-label text-white fw-bold ms-2" for="liSwitch">LinkedIn Publishing</label>
+                                <span class="d-block small text-muted ms-2">Publish thought leadership articles</span>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="form-check form-switch p-3 rounded" style="background: var(--af-surface, #202B3B);">
+                                <input class="form-check-input" type="checkbox" name="allow_video_generation" id="vidSwitch" {% if settings.allow_video_generation %}checked{% endif %}>
+                                <label class="form-check-label text-white fw-bold ms-2" for="vidSwitch">Autonomous Video Creation</label>
+                                <span class="d-block small text-muted ms-2">Generate AI videos for demo posts</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h6 class="fw-bold text-white mb-2">Hugging Face Creative Models</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label small text-muted">Image Model</label>
+                            <input type="text" name="hf_image_model" class="form-control form-control-sm" value="{{ settings.hf_image_model }}" style="background: #202B3B; border-color: #354154; color: #F5F1E8;">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small text-muted">Video Model</label>
+                            <input type="text" name="hf_video_model" class="form-control form-control-sm" value="{{ settings.hf_video_model }}" style="background: #202B3B; border-color: #354154; color: #F5F1E8;">
+                        </div>
+                    </div>
+
+                    <h6 class="fw-bold text-white mb-2">Content Pillar Distribution Target (%):</h6>
+                    <div class="row g-2 mb-4">
+                        {% for k, v in pillar_ratios.items() %}
+                        <div class="col-6 col-md-3">
+                            <label class="form-label small text-muted">{{ k|capitalize }}</label>
+                            <input type="number" name="pillar_{{ k }}" class="form-control form-control-sm" value="{{ v }}" min="0" max="100" style="background: #202B3B; border-color: #354154; color: #F5F1E8;">
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <button type="submit" class="btn btn-warning fw-bold px-4" style="background: var(--af-gold, #D6AD65); color: #111827;">
+                        Save Automation Settings
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // Single post generation
+    const genForm = document.getElementById("autonomousGenForm");
+    if (genForm) {
+        genForm.addEventListener("submit", async function(e) {
+            e.preventDefault();
+            const btn = document.getElementById("generateSingleBtn");
+            const preview = document.getElementById("creativePreviewArea");
+            const origText = btn.innerHTML;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Strategizing &amp; Generating...';
+            btn.disabled = true;
+
+            const formData = new FormData(genForm);
+            const payload = Object.fromEntries(formData.entries());
+
+            try {
+                const res = await fetch("{{ url_for('main.social_automation_generate_post') }}", {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest'},
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    let mediaHtml = '';
+                    if (data.media_url) {
+                        mediaHtml = `<img src="${data.media_url}" class="rounded mb-3" style="max-height: 220px; object-fit: cover;">`;
+                    }
+                    preview.innerHTML = `
+                        <div class="text-start w-100 p-3 rounded" style="background: #182233; border: 1px solid #354154;">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="badge bg-success">Status: ${data.status.toUpperCase()}</span>
+                                <span class="badge bg-warning text-dark">QA Score: ${data.quality_score}/100</span>
+                            </div>
+                            <h6 class="text-white fw-bold mb-2">${data.title}</h6>
+                            ${mediaHtml}
+                            <p class="small text-white-50 mb-0" style="white-space: pre-line;">${data.caption}</p>
+                        </div>
+                    `;
+                } else {
+                    alert("Generation note: " + (data.error || "Failed"));
+                }
+            } catch (err) {
+                alert("Error: " + err);
+            } finally {
+                btn.innerHTML = origText;
+                btn.disabled = false;
+            }
+        });
+    }
+
+    // Daily batch generation
+    const batchBtns = [document.getElementById("generateBatchBtn"), document.querySelector(".trigger-batch-gen")];
+    batchBtns.forEach(btn => {
+        if (!btn) return;
+        btn.addEventListener("click", async function() {
+            if (!confirm("Generate today's Facebook and LinkedIn marketing batch autonomously?")) return;
+            const orig = this.innerHTML;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Generating...';
+            this.disabled = true;
+
+            try {
+                const res = await fetch("{{ url_for('main.social_automation_generate_post') }}", {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest'},
+                    body: JSON.stringify({mode: 'daily_batch'})
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    window.location.reload();
+                } else {
+                    alert("Batch notice: " + (data.error || "Failed"));
+                }
+            } catch (err) {
+                alert("Batch generation failed: " + err);
+            } finally {
+                this.innerHTML = orig;
+                this.disabled = false;
+            }
+        });
+    });
+
+    // Publish Now button
+    document.querySelectorAll(".publish-now-btn").forEach(btn => {
+        btn.addEventListener("click", async function() {
+            const postId = this.getAttribute("data-post-id");
+            if (!confirm(`Publish post #${postId} to live channel immediately?`)) return;
+            const orig = this.innerHTML;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+            this.disabled = true;
+
+            try {
+                const res = await fetch(`/social-automation/posts/${postId}/publish-now`, {
+                    method: 'POST',
+                    headers: {'X-Requested-With': 'XMLHttpRequest'}
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    alert("Published successfully!");
+                    window.location.reload();
+                } else {
+                    alert("Publishing error: " + (data.error || "Failed"));
+                }
+            } catch (e) {
+                alert("Request error: " + e);
+            } finally {
+                this.innerHTML = orig;
+                this.disabled = false;
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -471,11 +471,12 @@ class ProviderManager:
 
             health = self._get_health(provider_name)
             offline_cooldown = timedelta(minutes=5)
-            last_error_at = health.last_error_at
+            last_error_at = health.last_error_at if health else None
             if last_error_at and last_error_at.tzinfo is None:
                 last_error_at = last_error_at.replace(tzinfo=timezone.utc)
             is_recently_offline = (
-                health.status == "offline"
+                health
+                and health.status == "offline"
                 and last_error_at
                 and datetime.now(timezone.utc) - last_error_at < offline_cooldown
             )

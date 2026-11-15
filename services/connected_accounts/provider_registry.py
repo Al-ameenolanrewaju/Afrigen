@@ -2,7 +2,7 @@ from typing import Type, Dict
 from .base import BaseProviderAdapter
 
 _registry: Dict[str, Type[BaseProviderAdapter]] = {}
-DISABLED_PROVIDERS = {"facebook"}
+DISABLED_PROVIDERS = set()
 
 def register_provider(name: str, adapter_cls: Type[BaseProviderAdapter]):
     """Register a provider adapter."""

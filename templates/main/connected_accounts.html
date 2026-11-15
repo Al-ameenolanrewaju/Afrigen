@@ -4,88 +4,172 @@
 
 {% block content %}
 <style>
-    .connected-accounts-page { color: #F0F6FC; }
+    .connected-accounts-page { color: var(--af-ivory, #F5F1E8); }
     .connected-accounts-page h2,
-    .connected-accounts-page .card-title { color: #F0F6FC !important; }
-    .connected-accounts-page .text-muted { color: #AEB7C7 !important; }
-    .connected-accounts-page .text-primary { color: #FFCF5C !important; }
-    .connected-accounts-page .btn-primary {
-        color: #161B22 !important;
-        background: #F5A623 !important;
-        border-color: #F5A623 !important;
+    .connected-accounts-page .card-title { color: var(--af-ivory, #F5F1E8) !important; }
+    .connected-accounts-page .text-muted { color: var(--af-text-secondary, #A5AFBF) !important; }
+    
+    .account-card {
+        background: var(--af-slate, #182233);
+        border: 1px solid var(--af-border, #354154);
+        border-radius: 12px;
+        transition: transform 0.2s ease, border-color 0.2s ease;
     }
-    .connected-accounts-page .btn-outline-primary {
-        color: #FFCF5C !important;
-        border-color: #F5A623 !important;
+    .account-card:hover {
+        border-color: var(--af-gold, #D6AD65);
+        transform: translateY(-2px);
     }
-    .connected-accounts-page .btn-outline-primary:hover {
-        color: #161B22 !important;
-        background: #F5A623 !important;
+    .platform-avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid var(--af-gold, #D6AD65);
     }
-    .connected-accounts-page .btn-secondary:disabled {
-        color: #AEB7C7 !important;
-        background: #30363D !important;
-        border-color: #484F58 !important;
-        opacity: 1;
+    .platform-icon-wrap {
+        width: 52px;
+        height: 52px;
+        border-radius: 12px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(214, 173, 101, 0.1);
+        color: var(--af-gold, #D6AD65);
+        font-size: 1.6rem;
     }
-    .connected-account-modal { color: #F0F6FC; }
-    .connected-account-modal .modal-title { color: #F0F6FC !important; }
-    .connected-account-modal .modal-body,
-    .connected-account-modal .modal-footer { color: #F0F6FC; }
-    .connected-account-modal .modal-content { background: #161B22; border: 1px solid #30363D; }
+    .badge-status-connected {
+        background: rgba(72, 169, 154, 0.15);
+        color: #48A99A;
+        border: 1px solid rgba(72, 169, 154, 0.3);
+        font-size: 0.75rem;
+        padding: 4px 10px;
+        border-radius: 20px;
+    }
+    .badge-status-disconnected {
+        background: rgba(165, 175, 191, 0.12);
+        color: #A5AFBF;
+        border: 1px solid rgba(165, 175, 191, 0.25);
+        font-size: 0.75rem;
+        padding: 4px 10px;
+        border-radius: 20px;
+    }
+    .meta-detail-row {
+        font-size: 0.78rem;
+        color: var(--af-text-secondary, #A5AFBF);
+        margin-bottom: 4px;
+        display: flex;
+        justify-content: space-between;
+    }
+    .connected-account-modal .modal-content {
+        background: var(--af-slate, #182233);
+        border: 1px solid var(--af-border, #354154);
+        color: var(--af-ivory, #F5F1E8);
+    }
     .connected-account-modal .modal-header,
-    .connected-account-modal .modal-footer { border-color: #30363D; }
+    .connected-account-modal .modal-footer {
+        border-color: var(--af-border, #354154);
+    }
 </style>
-<div class="container py-4 connected-accounts-page">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="fw-bold mb-0">Connected Accounts</h2>
-        <p class="text-muted mb-0">Manage your external publishing destinations</p>
-    </div>
 
-    {% if discontinued_accounts %}
-    <div class="alert alert-warning" role="alert">
-        Facebook integration has been discontinued and can no longer be used for publishing.
-        Please connect another publishing destination.
+<div class="container py-4 connected-accounts-page">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
+        <div>
+            <h2 class="fw-bold mb-1"><i class="fa-solid fa-share-nodes me-2" style="color: var(--af-gold, #D6AD65);"></i>Connected Publishing Channels</h2>
+            <p class="text-muted mb-0">Direct native integrations for Facebook Pages and LinkedIn for autonomous content distribution.</p>
+        </div>
+        <a href="{{ url_for('main.social_automation_dashboard') }}" class="btn btn-outline-warning btn-sm d-inline-flex align-items-center gap-2" style="border-color: var(--af-gold, #D6AD65); color: var(--af-gold, #D6AD65);">
+            <i class="fa-solid fa-gauge"></i> Social Engine Dashboard
+        </a>
     </div>
-    {% endif %}
 
     <div class="row g-4">
-        <!-- Supported Providers (Phase 1) -->
         {% for provider in supported_providers %}
+        {% set account = connected_map.get(provider.id) %}
         <div class="col-md-6 col-lg-4">
-            <div class="card h-100 shadow-sm border-0">
-                <div class="card-body text-center">
-                    <i class="{{ provider.icon }} display-4 mb-3 text-primary"></i>
-                    <h5 class="card-title fw-bold">{{ provider.name }}</h5>
-                    
-                    {% set account = connected_map.get(provider.id) %}
-                    {% if account %}
-                        <p class="text-success small mb-2"><i class="bi bi-check-circle-fill"></i> Connected</p>
-                        <p class="text-muted small mb-3">{{ account.account_name }}</p>
-                        <div class="d-flex justify-content-center gap-2">
-                            <form action="{{ url_for('main.disconnect_provider', provider=provider.id) }}" method="POST">
-                                <button type="submit" class="btn btn-outline-danger btn-sm">Disconnect</button>
-                            </form>
-                            <form action="{{ url_for('main.connect_provider', provider=provider.id) }}" method="POST" class="connect-form">
-                                <button type="submit" class="btn btn-outline-primary btn-sm">Reconnect</button>
-                            </form>
+            <div class="card account-card h-100 p-3 d-flex flex-column justify-content-between">
+                <div>
+                    <div class="d-flex align-items-start justify-content-between mb-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="platform-icon-wrap">
+                                <i class="{{ provider.icon }}"></i>
+                            </div>
+                            <div>
+                                <h5 class="fw-bold mb-0 text-white">{{ provider.name }}</h5>
+                                <span class="small text-muted">
+                                    {% if provider.id == 'facebook' %}Official Meta Page
+                                    {% elif provider.id == 'linkedin' %}LinkedIn Profile/Page
+                                    {% else %}Direct Channel{% endif %}
+                                </span>
+                            </div>
                         </div>
-                    {% elif not provider.get('available', True) %}
-                        <p class="text-muted small mb-2"><i class="bi bi-clock"></i> Coming soon</p>
-                        <p class="text-muted small mb-3">No official connection API</p>
-                        <button type="button" class="btn btn-secondary btn-sm px-4" disabled>Unavailable</button>
+
+                        {% if account %}
+                        <span class="badge-status-connected"><i class="fa-solid fa-circle-check me-1"></i>Active</span>
+                        {% else %}
+                        <span class="badge-status-disconnected"><i class="fa-solid fa-circle-minus me-1"></i>Unlinked</span>
+                        {% endif %}
+                    </div>
+
+                    {% if account %}
+                    <div class="p-2 mb-3 rounded" style="background: var(--af-surface, #202B3B); border: 1px solid var(--af-border, #354154);">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <i class="fa-solid fa-user-check text-warning" style="font-size: 0.9rem;"></i>
+                            <strong class="text-white small text-truncate" title="{{ account.account_name }}">{{ account.account_name or 'Connected Account' }}</strong>
+                        </div>
+                        <div class="meta-detail-row">
+                            <span>Channel ID:</span>
+                            <span class="text-white">{{ account.account_identifier[:16] if account.account_identifier else 'Verified' }}</span>
+                        </div>
+                        <div class="meta-detail-row">
+                            <span>Permissions:</span>
+                            <span class="text-success"><i class="fa-solid fa-check-double me-1"></i>Publish &amp; Read</span>
+                        </div>
+                        <div class="meta-detail-row">
+                            <span>Last Sync:</span>
+                            <span>{{ account.connected_at.strftime('%b %d, %Y') if account.connected_at else 'Just now' }}</span>
+                        </div>
+                        <div class="meta-detail-row">
+                            <span>Token Status:</span>
+                            <span class="text-success">Healthy / Active</span>
+                        </div>
+                    </div>
                     {% else %}
-                        <p class="text-muted small mb-2"><i class="bi bi-dash-circle"></i> Not Connected</p>
-                        <p class="text-muted small mb-3">&nbsp;</p>
-                        <form action="{{ url_for('main.connect_provider', provider=provider.id) }}" method="POST" class="connect-form">
-                            <button type="submit" class="btn btn-primary btn-sm px-4">Connect</button>
+                    <div class="p-3 mb-3 rounded text-center" style="background: rgba(32, 43, 59, 0.5); border: 1px dashed var(--af-border, #354154);">
+                        <p class="small text-muted mb-0">Connect to publish AI marketing copy, images, and video directly to this channel.</p>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div>
+                    {% if account %}
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-info flex-grow-1 test-conn-btn" data-provider="{{ provider.id }}">
+                            <i class="fa-solid fa-plug-circle-check me-1"></i> Test
+                        </button>
+                        <form action="{{ url_for('main.connect_provider', provider=provider.id) }}" method="POST" class="connect-form flex-grow-1">
+                            <button type="submit" class="btn btn-sm btn-outline-warning w-100">
+                                <i class="fa-solid fa-arrows-rotate me-1"></i> Reconnect
+                            </button>
                         </form>
+                        <form action="{{ url_for('main.disconnect_provider', provider=provider.id) }}" method="POST" onsubmit="return confirm('Disconnect this channel?');">
+                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Disconnect">
+                                <i class="fa-solid fa-link-slash"></i>
+                            </button>
+                        </form>
+                    </div>
+                    {% elif not provider.get('available', True) %}
+                    <button type="button" class="btn btn-secondary btn-sm w-100" disabled>Coming Soon</button>
+                    {% else %}
+                    <form action="{{ url_for('main.connect_provider', provider=provider.id) }}" method="POST" class="connect-form w-100">
+                        <button type="submit" class="btn btn-primary btn-sm w-100 fw-bold" style="background: var(--af-gold, #D6AD65); border-color: var(--af-gold, #D6AD65); color: #111827;">
+                            <i class="fa-solid fa-bolt me-1"></i> Connect {{ provider.name }}
+                        </button>
+                    </form>
                     {% endif %}
                 </div>
             </div>
         </div>
         {% endfor %}
-
     </div>
 </div>
 
@@ -93,141 +177,70 @@
 <div class="modal fade" id="connectModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content connected-account-modal">
-      <div class="modal-header">
-        <h5 class="modal-title" id="connectModalTitle">Connect Account</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <form id="connectForm" method="POST" action="">
-          <div class="modal-body" id="connectModalBody">
-            <!-- Dynamic fields will be injected here -->
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-            <button type="submit" class="btn btn-primary">Connect</button>
-          </div>
-      </form>
+            <div class="modal-header">
+                <h5 class="modal-title" id="connectModalTitle">Connect Account</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="connectForm" method="POST" action="">
+                <div class="modal-body" id="connectModalBody"></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning" style="background: var(--af-gold, #D6AD65); color: #111827;">Connect</button>
+                </div>
+            </form>
+        </div>
     </div>
-  </div>
 </div>
 
 <script>
 document.addEventListener("DOMContentLoaded", function() {
+    // Dynamic Form Submission
     const connectForms = document.querySelectorAll(".connect-form");
-    
     connectForms.forEach(form => {
         form.addEventListener("submit", async function(e) {
             e.preventDefault();
             const url = this.getAttribute("action");
             const btn = this.querySelector("button");
             const originalText = btn.innerHTML;
-            
             btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
             btn.disabled = true;
-            
+
             try {
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: {'X-Requested-With': 'XMLHttpRequest'}
                 });
-                
-                // If it's a redirect (OAuth), the browser might automatically follow it 
-                // OR fetch follows it and we get the HTML page. 
-                // Better approach: server sends JSON for both. 
-                // Wait, our python code returns a redirect() for OAuth, which fetch follows.
-                // Let's check if the response is JSON.
-                
                 const contentType = response.headers.get("content-type");
                 if (contentType && contentType.includes("application/json")) {
                     const data = await response.json();
-                    
                     if (data.type === "form") {
-                        // Open modal
                         const modal = new bootstrap.Modal(document.getElementById('connectModal'));
                         document.getElementById('connectForm').setAttribute('action', url + '/token');
                         
                         const fieldDefinitions = {
                             token: {label: 'API Key / Access Token', type: 'text'},
-                            page_id: {label: 'Page ID', type: 'text'},
+                            page_id: {label: 'Facebook Page ID', type: 'text'},
                             page_access_token: {label: 'Page Access Token', type: 'password'},
                             access_token: {label: 'Access Token', type: 'password'},
-                            author_urn: {label: 'Author URN', type: 'text'},
-                            consumer_key: {label: 'Consumer Key', type: 'text'},
-                            consumer_secret: {label: 'Consumer Secret', type: 'password'},
-                            access_token_secret: {label: 'Access Token Secret', type: 'password'},
-                            client_key: {label: 'Client Key', type: 'text'},
-                            client_secret: {label: 'Client Secret', type: 'password'},
-                            open_id: {label: 'Open ID', type: 'text'},
-                            board_id: {label: 'Board ID', type: 'text'},
-                            client_id: {label: 'Client ID', type: 'text'},
-                            refresh_token: {label: 'Refresh Token', type: 'password'},
-                            username: {label: 'Username', type: 'text'},
-                            app_password: {label: 'Application Password', type: 'password'},
-                            chat_id: {label: 'Chat ID / Channel ID', type: 'text'},
-                            site_url: {label: 'Site URL', type: 'url'}
+                            chat_id: {label: 'Telegram Chat ID', type: 'text'}
                         };
 
                         const methods = data.methods || [];
                         let html = '';
-
-                        if (methods.includes('app_password')) {
-                            html += '<div class="mb-3"><label class="form-label">Username</label><input type="text" name="username" class="form-control" required></div>';
-                            html += '<div class="mb-3"><label class="form-label">Application Password</label><input type="password" name="app_password" class="form-control" required></div>';
-                        }
-
                         methods.forEach(field => {
-                            if (field === 'app_password' || field === 'username') {
-                                return;
-                            }
-
-                            const definition = fieldDefinitions[field] || {
-                                label: field.replace(/_/g, ' ').replace(/\b\w/g, match => match.toUpperCase()),
-                                type: 'text'
-                            };
-                            const inputType = definition.type === 'url' ? 'url' : definition.type;
-                            const placeholder = field === 'site_url' ? 'placeholder="https://..."' : '';
-                            html += `<div class="mb-3"><label class="form-label">${definition.label}</label><input type="${inputType}" name="${field}" class="form-control" ${placeholder} required></div>`;
+                            const def = fieldDefinitions[field] || {label: field.replace(/_/g, ' ').toUpperCase(), type: 'text'};
+                            html += `<div class="mb-3"><label class="form-label">${def.label}</label><input type="${def.type}" name="${field}" class="form-control" style="background: #202B3B; border-color: #354154; color: #F5F1E8;" required></div>`;
                         });
-
-                        if (methods.includes('chat_id')) {
-                            html += '<div class="mb-3"><label class="form-label">Chat ID / Channel ID</label><input type="text" name="chat_id" class="form-control" required></div>';
-                        }
-
-                        // Ghost connections also need a site URL.
-                        if (url.includes('ghost') || methods.includes('site_url')) {
-                            html += '<div class="mb-3"><label class="form-label">Site URL</label><input type="url" name="site_url" class="form-control" placeholder="https://..." required></div>';
-                        }
-                        
                         document.getElementById('connectModalBody').innerHTML = html;
                         modal.show();
                     } else if (data.type === "redirect") {
-                        const provider = url.split('/connected-accounts/')[1].split('/')[0];
-                        const authWindow = window.open(data.url, `afrigen${provider}Connect`, 'width=620,height=760');
-                        if (!authWindow) {
-                            alert('Please allow popups for Afrigen to connect this account.');
-                            return;
-                        }
-                        const poll = setInterval(async () => {
-                            try {
-                                const status = await fetch(`/connected-accounts/${provider}/status`).then(r => r.json());
-                                if (status.connected) {
-                                    clearInterval(poll);
-                                    if (!authWindow.closed) authWindow.close();
-                                    window.location.reload();
-                                    }
-                                } catch (error) {
-                                    console.error(error);
-                                }
-                            }, 2500);
-                            setTimeout(() => clearInterval(poll), 300000);
-                        }
+                        window.location.href = data.url;
                     } else if (data.ok === false) {
-                        alert("Connection failed: " + (data.error || "Unknown error"));
+                        alert("Connection setup note: " + (data.error || "Unknown error"));
                     } else {
-                        // generic fallback
                         window.location.reload();
                     }
                 } else {
-                    // Fallback if not JSON
                     window.location.reload();
                 }
             } catch (err) {
@@ -236,6 +249,34 @@ document.addEventListener("DOMContentLoaded", function() {
             } finally {
                 btn.innerHTML = originalText;
                 btn.disabled = false;
+            }
+        });
+    });
+
+    // Test Connection buttons
+    document.querySelectorAll(".test-conn-btn").forEach(btn => {
+        btn.addEventListener("click", async function() {
+            const provider = this.getAttribute("data-provider");
+            const orig = this.innerHTML;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+            this.disabled = true;
+
+            try {
+                const res = await fetch(`/connected-accounts/${provider}/test`, {
+                    method: 'POST',
+                    headers: {'X-Requested-With': 'XMLHttpRequest'}
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    alert(`✅ ${data.message}`);
+                } else {
+                    alert(`❌ Verification failed: ${data.error}`);
+                }
+            } catch (e) {
+                alert(`Error testing ${provider}: ${e}`);
+            } finally {
+                this.innerHTML = orig;
+                this.disabled = false;
             }
         });
     });

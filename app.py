@@ -181,7 +181,9 @@ def ensure_legacy_schema_columns():
             from models import (
                 Notification, NewsletterCampaign, MovieProject, MovieCharacter,
                 MovieScene, MovieShot, StoryboardFrame, MovieAudioTrack,
-                MovieTimeline, MovieRenderJob
+                MovieTimeline, MovieRenderJob,
+                SocialCampaign, SocialPost, SocialMediaAsset, SocialPublishingJob,
+                SocialAnalytics, SocialAutomationSettings, AIContentHistory
             )
             if not inspector.has_table('notifications'):
                 Notification.__table__.create(bind=db.engine, checkfirst=True)
@@ -189,7 +191,9 @@ def ensure_legacy_schema_columns():
                 NewsletterCampaign.__table__.create(bind=db.engine, checkfirst=True)
             for movie_table in (
                 MovieProject, MovieCharacter, MovieScene, MovieShot,
-                StoryboardFrame, MovieAudioTrack, MovieTimeline, MovieRenderJob
+                StoryboardFrame, MovieAudioTrack, MovieTimeline, MovieRenderJob,
+                SocialCampaign, SocialPost, SocialMediaAsset, SocialPublishingJob,
+                SocialAnalytics, SocialAutomationSettings, AIContentHistory
             ):
                 if not inspector.has_table(movie_table.__tablename__):
                     movie_table.__table__.create(bind=db.engine, checkfirst=True)
@@ -322,13 +326,34 @@ def alert_failed_generation_rate():
 
 @scheduler.task('interval', id='process_publishing_queue', seconds=30)
 def process_publishing_queue():
-    """Poll the publishing retry queue every 30 seconds."""
+    """Poll the publishing retry queue and autonomous social distribution queue every 30 seconds."""
     with app.app_context():
         try:
             from services.connected_accounts.queue import process_queue
             process_queue()
         except Exception as e:
             print(f"Publishing queue processor error: {e}")
+
+        try:
+            from services.social_publisher import run_social_publishing_cycle
+            run_social_publishing_cycle()
+        except Exception as e:
+            logger.warning(f"Social automation queue processor error: {e}")
+
+
+@scheduler.task('cron', id='social_automation_daily_planner', hour=6, minute=0)
+def social_automation_daily_planner_job():
+    """Plan and generate daily social content at 7:00 AM WAT (06:00 UTC) for autonomous campaigns."""
+    with app.app_context():
+        try:
+            from models import SocialAutomationSettings, User
+            from services.social_engine import generate_daily_social_schedule
+            active_settings = SocialAutomationSettings.query.filter_by(enabled=True, emergency_paused=False).all()
+            for setting in active_settings:
+                generate_daily_social_schedule(setting.user_id)
+            logger.info("Daily autonomous social planning completed for %s active accounts.", len(active_settings))
+        except Exception as e:
+            logger.error(f"Daily social automation planner error: {e}")
 
 
 @scheduler.task('cron', id='generate_weekly_newsletter', day_of_week='sat', hour=9)

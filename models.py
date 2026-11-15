@@ -1112,3 +1112,244 @@ class MovieRenderJob(db.Model):
     def __repr__(self):
         return f"<MovieRenderJob {self.id} {self.status}>"
 
+
+# ==============================================================================
+# AFRIGEN SOCIAL MARKETING & AUTONOMOUS AUTOMATION ENGINE MODELS
+# ==============================================================================
+
+class SocialCampaign(db.Model):
+    """Marketing campaign with target pillars, audience, and multi-platform schedule."""
+    __tablename__ = 'social_campaigns'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    name = db.Column(db.String(255), nullable=False)
+    objective = db.Column(db.String(100), default="awareness")  # awareness, growth, engagement, traffic, conversions
+    target_audience = db.Column(db.String(255), default="African creators, entrepreneurs and digital marketers")
+    start_date = db.Column(db.DateTime, nullable=True)
+    end_date = db.Column(db.DateTime, nullable=True)
+    platforms_json = db.Column(db.Text, default='["facebook", "linkedin"]')
+    content_strategy = db.Column(db.Text, nullable=True)
+    creative_requirements = db.Column(db.Text, nullable=True)
+    status = db.Column(db.String(30), default="active", index=True)  # draft, active, paused, completed
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+    user = db.relationship('User', backref=db.backref('social_campaigns', cascade='all, delete-orphan'))
+    posts = db.relationship('SocialPost', back_populates='campaign', cascade='all, delete-orphan')
+
+    def __repr__(self):
+        return f"<SocialCampaign {self.id} '{self.name}'>"
+
+
+class SocialPost(db.Model):
+    """Autonomous marketing post planned, generated, validated, and scheduled for publishing."""
+    __tablename__ = 'social_posts'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    campaign_id = db.Column(db.Integer, db.ForeignKey('social_campaigns.id'), nullable=True, index=True)
+
+    platform = db.Column(db.String(50), nullable=False, index=True)  # 'facebook', 'linkedin'
+    title = db.Column(db.String(255), nullable=True)
+    content_pillar = db.Column(db.String(50), default="education", index=True)
+    marketing_objective = db.Column(db.String(50), default="awareness")
+    target_audience = db.Column(db.String(255), nullable=True)
+    content_format = db.Column(db.String(50), default="text")  # 'text', 'image', 'flyer', 'video'
+
+    caption = db.Column(db.Text, nullable=False)
+    hashtags = db.Column(db.String(500), nullable=True)
+    call_to_action = db.Column(db.String(255), nullable=True)
+    creative_instructions = db.Column(db.Text, nullable=True)
+
+    # Generated creative / media reference
+    media_url = db.Column(db.Text, nullable=True)
+    media_type = db.Column(db.String(50), nullable=True)  # 'image', 'flyer', 'video'
+
+    # Publishing lifecycle state:
+    # draft -> planned -> generating -> creative_processing -> ready -> scheduled -> publishing -> published | failed | cancelled | retry_pending
+    status = db.Column(db.String(30), default="planned", index=True)
+    scheduled_at = db.Column(db.DateTime, nullable=True, index=True)
+    published_at = db.Column(db.DateTime, nullable=True)
+
+    remote_post_id = db.Column(db.String(255), nullable=True)
+    published_url = db.Column(db.String(500), nullable=True)
+
+    attempt_count = db.Column(db.Integer, default=0)
+    last_attempt_at = db.Column(db.DateTime, nullable=True)
+    error_details = db.Column(db.Text, nullable=True)
+
+    quality_score = db.Column(db.Integer, default=100)
+    quality_checks_json = db.Column(db.Text, nullable=True)
+    idempotency_key = db.Column(db.String(120), unique=True, nullable=True)
+
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+    user = db.relationship('User', backref=db.backref('social_posts', cascade='all, delete-orphan'))
+    campaign = db.relationship('SocialCampaign', back_populates='posts')
+    jobs = db.relationship('SocialPublishingJob', back_populates='post', cascade='all, delete-orphan')
+    analytics = db.relationship('SocialAnalytics', back_populates='post', uselist=False, cascade='all, delete-orphan')
+
+    def __repr__(self):
+        return f"<SocialPost {self.id} [{self.platform}] status={self.status}>"
+
+
+class SocialMediaAsset(db.Model):
+    """Persistent creative assets generated via Hugging Face or PIL for social posts."""
+    __tablename__ = 'social_media_assets'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    post_id = db.Column(db.Integer, db.ForeignKey('social_posts.id'), nullable=True, index=True)
+    campaign_id = db.Column(db.Integer, db.ForeignKey('social_campaigns.id'), nullable=True, index=True)
+
+    media_type = db.Column(db.String(50), nullable=False)  # 'image', 'flyer', 'video'
+    storage_path = db.Column(db.String(500), nullable=True)
+    public_url = db.Column(db.Text, nullable=False)
+    provider = db.Column(db.String(50), default="huggingface")  # 'huggingface', 'python_pil', 'fal'
+    model_name = db.Column(db.String(150), nullable=True)
+    dimensions = db.Column(db.String(50), default="1080x1080")
+    duration_seconds = db.Column(db.Integer, nullable=True)
+    status = db.Column(db.String(30), default="ready")  # 'processing', 'ready', 'failed'
+    error = db.Column(db.Text, nullable=True)
+
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    user = db.relationship('User', backref=db.backref('social_media_assets', cascade='all, delete-orphan'))
+    post = db.relationship('SocialPost', backref=db.backref('media_assets', cascade='all, delete-orphan'))
+
+    def __repr__(self):
+        return f"<SocialMediaAsset {self.id} type={self.media_type}>"
+
+
+class SocialPublishingJob(db.Model):
+    """Database-backed execution queue with distributed worker lease locking."""
+    __tablename__ = 'social_publishing_jobs'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    post_id = db.Column(db.Integer, db.ForeignKey('social_posts.id'), nullable=False, index=True)
+    platform = db.Column(db.String(50), nullable=False)
+
+    status = db.Column(db.String(30), default="pending", index=True)  # pending, running, completed, failed, retrying
+    scheduled_time = db.Column(db.DateTime, nullable=False, index=True)
+
+    # Worker lease lock fields (Render multi-instance safe)
+    locked_at = db.Column(db.DateTime, nullable=True)
+    locked_by = db.Column(db.String(100), nullable=True)
+    lease_expires_at = db.Column(db.DateTime, nullable=True, index=True)
+
+    attempt_count = db.Column(db.Integer, default=0)
+    max_attempts = db.Column(db.Integer, default=3)
+    next_retry_at = db.Column(db.DateTime, nullable=True)
+
+    idempotency_key = db.Column(db.String(120), unique=True, nullable=False)
+    response_data_json = db.Column(db.Text, nullable=True)
+    error_details = db.Column(db.Text, nullable=True)
+
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+    user = db.relationship('User', backref=db.backref('social_publishing_jobs', cascade='all, delete-orphan'))
+    post = db.relationship('SocialPost', back_populates='jobs')
+
+    def __repr__(self):
+        return f"<SocialPublishingJob {self.id} post={self.post_id} status={self.status}>"
+
+
+class SocialAnalytics(db.Model):
+    """Post engagement & performance analytics synchronized from platform APIs."""
+    __tablename__ = 'social_analytics'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    post_id = db.Column(db.Integer, db.ForeignKey('social_posts.id'), nullable=False, unique=True, index=True)
+    platform = db.Column(db.String(50), nullable=False, index=True)
+    remote_post_id = db.Column(db.String(255), nullable=True)
+
+    impressions = db.Column(db.Integer, default=0)
+    reactions = db.Column(db.Integer, default=0)
+    comments = db.Column(db.Integer, default=0)
+    shares = db.Column(db.Integer, default=0)
+    clicks = db.Column(db.Integer, default=0)
+    engagement_rate = db.Column(db.Float, default=0.0)
+
+    raw_metrics_json = db.Column(db.Text, nullable=True)
+    synced_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    user = db.relationship('User', backref=db.backref('social_analytics', cascade='all, delete-orphan'))
+    post = db.relationship('SocialPost', back_populates='analytics')
+
+    def __repr__(self):
+        return f"<SocialAnalytics post={self.post_id} eng_rate={self.engagement_rate}%>"
+
+
+class SocialAutomationSettings(db.Model):
+    """User-scoped autonomous social marketing configuration & emergency controls."""
+    __tablename__ = 'social_automation_settings'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, unique=True, index=True)
+
+    enabled = db.Column(db.Boolean, default=True)
+    emergency_paused = db.Column(db.Boolean, default=False)
+
+    facebook_enabled = db.Column(db.Boolean, default=True)
+    linkedin_enabled = db.Column(db.Boolean, default=True)
+
+    daily_limit_facebook = db.Column(db.Integer, default=1)
+    daily_limit_linkedin = db.Column(db.Integer, default=1)
+
+    preferred_posting_hours_json = db.Column(db.Text, default='[8, 17]')
+    timezone_str = db.Column(db.String(50), default="Africa/Lagos")
+
+    # Content pillar target ratios (% summing to 100)
+    pillar_ratios_json = db.Column(
+        db.Text,
+        default='{"education": 25, "demo": 20, "industry_insights": 15, "product_updates": 15, "community": 10, "case_study": 10, "promotion": 5}'
+    )
+
+    allow_video_generation = db.Column(db.Boolean, default=True)
+    allow_image_generation = db.Column(db.Boolean, default=True)
+
+    hf_image_model = db.Column(db.String(150), default="black-forest-labs/FLUX.1-schnell")
+    hf_video_model = db.Column(db.String(150), default="damo-vilab/text-to-video-ms-1.7m")
+
+    max_monthly_video_budget = db.Column(db.Integer, default=20)
+    notify_on_publish = db.Column(db.Boolean, default=True)
+    notify_on_failure = db.Column(db.Boolean, default=True)
+
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+    user = db.relationship('User', backref=db.backref('social_automation_settings', uselist=False, cascade='all, delete-orphan'))
+
+    def __repr__(self):
+        return f"<SocialAutomationSettings user={self.user_id} enabled={self.enabled} paused={self.emergency_paused}>"
+
+
+class AIContentHistory(db.Model):
+    """Historical record for originality and duplicate detection."""
+    __tablename__ = 'ai_content_history'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    post_id = db.Column(db.Integer, db.ForeignKey('social_posts.id'), nullable=True, index=True)
+    platform = db.Column(db.String(50), nullable=False)
+
+    caption_hash = db.Column(db.String(64), nullable=False, index=True)
+    hook_text = db.Column(db.String(255), nullable=True)
+    topic = db.Column(db.String(150), nullable=True)
+    keywords_json = db.Column(db.Text, nullable=True)
+
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+
+    user = db.relationship('User', backref=db.backref('ai_content_history', cascade='all, delete-orphan'))
+    post = db.relationship('SocialPost', backref=db.backref('content_history_entries', cascade='all, delete-orphan'))
+
+    def __repr__(self):
+        return f"<AIContentHistory {self.id} hash={self.caption_hash[:10]}>"
+
+

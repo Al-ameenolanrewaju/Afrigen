@@ -503,6 +503,7 @@ def connected_accounts():
     
     # Official providers
     supported_providers = [
+        {"id": "facebook", "name": "Facebook Page", "icon": "bi-facebook"},
         {"id": "linkedin", "name": "LinkedIn", "icon": "bi-linkedin"},
         {"id": "telegram", "name": "Telegram", "icon": "bi-telegram"},
         {"id": "tiktok", "name": "TikTok", "icon": "bi-tiktok"},
@@ -511,11 +512,7 @@ def connected_accounts():
         {"id": "medium", "name": "Medium", "icon": "bi-medium"},
         {"id": "devto", "name": "Dev.to", "icon": "bi-code-square"},
     ]
-    discontinued_accounts = [
-        account for account in accounts
-        if account.provider == "facebook" and account.status == "connected"
-    ]
-    
+    discontinued_accounts = []
     coming_soon = []
     
     return render_template("main/connected_accounts.html", 
@@ -527,12 +524,6 @@ def connected_accounts():
 @main.route('/connected-accounts/<provider>/connect', methods=['GET', 'POST'])
 @login_required
 def connect_provider(provider):
-    if provider == "facebook":
-        return jsonify({
-            "ok": False,
-            "error": "Facebook integration has been discontinued."
-        }), 410
-
     from services.connected_accounts.provider_registry import get_adapter
     
     try:
@@ -564,10 +555,6 @@ def connect_provider(provider):
 @main.route('/connected-accounts/<provider>/callback', methods=['GET'])
 @login_required
 def provider_callback(provider):
-    if provider == "facebook":
-        flash("Facebook integration has been discontinued.", "warning")
-        return redirect(url_for("main.connected_accounts"))
-
     from services.connected_accounts.provider_registry import get_adapter
     from models import ConnectedAccount
     from utils.encryption import encrypt_token
@@ -586,9 +573,9 @@ def provider_callback(provider):
             account.status = "connected"
             account.account_name = result.get("account_name", f"{provider.capitalize()} User")
             if result.get("account_identifier"):
-                account.account_identifier = result.get("account_identifier")
+                account.account_identifier = str(result.get("account_identifier"))
             if result.get("identifier"):
-                account.account_identifier = result.get("identifier")
+                account.account_identifier = str(result.get("identifier"))
             
             # Store tokens encrypted
             if result.get("access_token"):
@@ -602,15 +589,19 @@ def provider_callback(provider):
                 from datetime import timedelta
                 account.token_expiry = datetime.now(timezone.utc) + timedelta(seconds=int(result["expires_in"]))
                 
+            if result.get("metadata"):
+                import json
+                account.metadata_json = encrypt_token(json.dumps(result.get("metadata")))
+
             account.connected_at = datetime.now(timezone.utc)
             db.session.commit()
             
             # Run test connection
             test_res = adapter.test_connection(current_user.id)
             if not test_res.get("ok"):
-                flash(f"Connected, but test failed: {test_res.get('error')}", "warning")
+                flash(f"Connected, but verification reported: {test_res.get('error')}", "warning")
             else:
-                flash(f"Successfully connected {provider.capitalize()}!", "success")
+                flash(f"Successfully connected {account.account_name} ({provider.capitalize()})!", "success")
         else:
             flash(f"Failed to connect {provider.capitalize()}: {result.get('error')}", "danger")
     except Exception as e:
@@ -621,14 +612,73 @@ def provider_callback(provider):
 @main.route('/connected-accounts/<provider>/connect/token', methods=['POST'])
 @login_required
 def connect_provider_token(provider):
-    if provider == "facebook":
-        flash("Facebook integration has been discontinued.", "warning")
-        return redirect(url_for("main.connected_accounts"))
-
     from services.connected_accounts.provider_registry import get_adapter
     from models import ConnectedAccount
     from utils.encryption import encrypt_token
     from datetime import datetime, timezone
+    
+    try:
+        adapter = get_adapter(provider)
+        
+        # Build kwargs from form
+        kwargs = request.form.to_dict()
+        result = adapter.connect(current_user.id, **kwargs)
+        
+        if result.get("ok"):
+            account = ConnectedAccount.query.filter_by(user_id=current_user.id, provider=provider).first()
+            if not account:
+                account = ConnectedAccount(user_id=current_user.id, provider=provider)
+                db.session.add(account)
+                
+            account.status = "connected"
+            account.account_name = result.get("account_name", f"{provider.capitalize()} User")
+            if result.get("account_identifier"):
+                account.account_identifier = str(result.get("account_identifier"))
+            if result.get("identifier"):
+                account.account_identifier = str(result.get("identifier"))
+            
+            import json
+
+            primary_token = result.get("token") or result.get("access_token") or result.get("refresh_token")
+            if primary_token:
+                account.encrypted_access_token = encrypt_token(primary_token)
+
+            if result.get("refresh_token"):
+                account.encrypted_refresh_token = encrypt_token(result.get("refresh_token"))
+
+            if result.get("metadata"):
+                account.metadata_json = encrypt_token(json.dumps(result.get("metadata")))
+                
+            account.connected_at = datetime.now(timezone.utc)
+            db.session.commit()
+            
+            # Run test connection
+            test_res = adapter.test_connection(current_user.id)
+            if not test_res.get("ok"):
+                flash(f"Connected, but verification reported: {test_res.get('error')}", "warning")
+            else:
+                flash(f"Successfully connected {provider.capitalize()}!", "success")
+        else:
+            flash(f"Failed to connect {provider.capitalize()}: {result.get('error')}", "danger")
+    except Exception as e:
+        flash(f"Error connecting {provider.capitalize()}: {str(e)}", "danger")
+        
+    return redirect(url_for('main.connected_accounts'))
+
+@main.route('/connected-accounts/<provider>/test', methods=['POST'])
+@csrf.exempt
+@login_required
+def test_provider_connection_route(provider):
+    from services.connected_accounts.provider_registry import get_adapter
+    try:
+        adapter = get_adapter(provider)
+        res = adapter.test_connection(current_user.id)
+        if res.get("ok"):
+            return jsonify({"ok": True, "message": f"{provider.capitalize()} connection verified successfully!", "details": res})
+        else:
+            return jsonify({"ok": False, "error": res.get("error", "Connection test failed")}), 400
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
     
     try:
         adapter = get_adapter(provider)
@@ -3597,6 +3647,220 @@ def campaigns():
 @login_required
 def automations():
     return render_template('main/automations.html')
+
+
+# ==============================================================================
+# AFRIGEN AUTONOMOUS SOCIAL MARKETING & PUBLISHING ENGINE
+# ==============================================================================
+
+@main.route('/social-automation')
+@login_required
+def social_automation_dashboard():
+    """Autonomous marketing engine dashboard with calendar, queue, analytics, and controls."""
+    from models import SocialPost, SocialCampaign, SocialPublishingJob, SocialAnalytics, ConnectedAccount
+    from services.social_engine import get_or_create_settings
+    from services.social_analytics import analyze_marketing_performance
+
+    settings = get_or_create_settings(current_user.id)
+    posts = (
+        SocialPost.query.filter_by(user_id=current_user.id)
+        .order_by(SocialPost.created_at.desc())
+        .limit(60)
+        .all()
+    )
+    scheduled_posts = [p for p in posts if p.status in ('scheduled', 'publishing', 'retry_pending')]
+    published_posts = [p for p in posts if p.status == 'published']
+    failed_posts = [p for p in posts if p.status == 'failed']
+
+    # Connected accounts
+    fb_acc = ConnectedAccount.query.filter_by(user_id=current_user.id, provider='facebook', status='connected').first()
+    li_acc = ConnectedAccount.query.filter_by(user_id=current_user.id, provider='linkedin', status='connected').first()
+
+    analysis = analyze_marketing_performance(current_user.id)
+    campaigns = SocialCampaign.query.filter_by(user_id=current_user.id).order_by(SocialCampaign.created_at.desc()).all()
+
+    # Parse pillar ratios
+    import json
+    try:
+        pillar_ratios = json.loads(settings.pillar_ratios_json) if settings.pillar_ratios_json else {}
+    except Exception:
+        pillar_ratios = {}
+
+    return render_template(
+        'main/social_automation.html',
+        settings=settings,
+        posts=posts,
+        scheduled_posts=scheduled_posts,
+        published_posts=published_posts,
+        failed_posts=failed_posts,
+        fb_acc=fb_acc,
+        li_acc=li_acc,
+        analysis=analysis,
+        campaigns=campaigns,
+        pillar_ratios=pillar_ratios,
+    )
+
+
+@main.route('/social-automation/generate', methods=['POST'])
+@csrf.exempt
+@login_required
+def social_automation_generate_post():
+    """Generate a single post or full daily batch autonomously."""
+    from services.social_engine import generate_autonomous_post, generate_daily_social_schedule
+    data = request.get_json() or request.form.to_dict() or {}
+    mode = data.get("mode", "single")  # "single" or "daily_batch"
+    platform = data.get("platform", "facebook")
+    pillar = data.get("pillar")
+    content_format = data.get("format")
+
+    try:
+        if mode == "daily_batch":
+            posts = generate_daily_social_schedule(current_user.id)
+            if posts:
+                flash(f"Generated {len(posts)} daily autonomous posts (Facebook + LinkedIn).", "success")
+                return jsonify({"ok": True, "count": len(posts), "message": "Daily schedule generated successfully."})
+            else:
+                return jsonify({"ok": False, "error": "Could not generate batch. Verify automation is enabled."}), 400
+        else:
+            post = generate_autonomous_post(
+                user_id=current_user.id,
+                platform=platform,
+                preferred_pillar=pillar,
+                preferred_format=content_format,
+            )
+            if post:
+                flash(f"Autonomous {platform.capitalize()} post created ({post.status}).", "success")
+                return jsonify({
+                    "ok": True,
+                    "post_id": post.id,
+                    "title": post.title,
+                    "caption": post.caption,
+                    "media_url": post.media_url,
+                    "status": post.status,
+                    "quality_score": post.quality_score,
+                })
+            else:
+                return jsonify({"ok": False, "error": "Post generation failed. Please check automation settings."}), 400
+    except Exception as exc:
+        logger.exception("Social generation route error: %s", exc)
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+@main.route('/social-automation/pause', methods=['POST'])
+@csrf.exempt
+@login_required
+def social_automation_toggle_pause():
+    """Emergency toggle to pause or resume autonomous publishing without deleting scheduled jobs."""
+    from services.social_engine import get_or_create_settings
+    settings = get_or_create_settings(current_user.id)
+    settings.emergency_paused = not settings.emergency_paused
+    db.session.commit()
+    state_str = "PAUSED" if settings.emergency_paused else "RESUMED"
+    flash(f"Autonomous social publishing has been {state_str}.", "warning" if settings.emergency_paused else "success")
+    if request.is_json:
+        return jsonify({"ok": True, "emergency_paused": settings.emergency_paused})
+    return redirect(url_for('main.social_automation_dashboard'))
+
+
+@main.route('/social-automation/settings', methods=['POST'])
+@login_required
+def social_automation_update_settings():
+    """Update automation preferences, content pillar ratios, and Hugging Face models."""
+    from services.social_engine import get_or_create_settings
+    import json
+    settings = get_or_create_settings(current_user.id)
+    data = request.form.to_dict() or request.get_json() or {}
+
+    settings.enabled = (data.get("enabled") in (True, "true", "on", "1"))
+    settings.facebook_enabled = (data.get("facebook_enabled") in (True, "true", "on", "1"))
+    settings.linkedin_enabled = (data.get("linkedin_enabled") in (True, "true", "on", "1"))
+    settings.allow_video_generation = (data.get("allow_video_generation") in (True, "true", "on", "1"))
+    settings.allow_image_generation = (data.get("allow_image_generation") in (True, "true", "on", "1"))
+
+    if data.get("hf_image_model"):
+        settings.hf_image_model = data.get("hf_image_model").strip()
+    if data.get("hf_video_model"):
+        settings.hf_video_model = data.get("hf_video_model").strip()
+
+    # Pillar percentages
+    pillars = ["education", "demo", "industry_insights", "product_updates", "community", "case_study", "promotion"]
+    new_ratios = {}
+    for p in pillars:
+        val = data.get(f"pillar_{p}")
+        if val is not None:
+            try:
+                new_ratios[p] = int(val)
+            except (ValueError, TypeError):
+                pass
+    if new_ratios and sum(new_ratios.values()) > 0:
+        settings.pillar_ratios_json = json.dumps(new_ratios)
+
+    db.session.commit()
+    flash("Social automation preferences saved successfully.", "success")
+    if request.is_json:
+        return jsonify({"ok": True, "message": "Settings updated."})
+    return redirect(url_for('main.social_automation_dashboard'))
+
+
+@main.route('/social-automation/posts/<int:post_id>/publish-now', methods=['POST'])
+@csrf.exempt
+@login_required
+def social_automation_publish_now(post_id):
+    """Force immediate execution of a scheduled post."""
+    from models import SocialPost, SocialPublishingJob
+    from services.social_publisher import process_single_publishing_job
+
+    post = SocialPost.query.filter_by(id=post_id, user_id=current_user.id).first_or_404()
+    job = SocialPublishingJob.query.filter_by(post_id=post.id).first()
+    if not job:
+        job = SocialPublishingJob(
+            user_id=current_user.id,
+            post_id=post.id,
+            platform=post.platform,
+            status="pending",
+            scheduled_time=datetime.now(timezone.utc),
+            idempotency_key=f"manual_{post.id}_{uuid.uuid4().hex[:8]}"
+        )
+        db.session.add(job)
+        db.session.commit()
+
+    res = process_single_publishing_job(job)
+    if res.get("ok"):
+        flash(f"Post #{post.id} published successfully to {post.platform.capitalize()}!", "success")
+        return jsonify({"ok": True, "post_url": res.get("post_url")})
+    else:
+        flash(f"Publishing failed: {res.get('error')}", "danger")
+        return jsonify({"ok": False, "error": res.get("error")}), 400
+
+
+@main.route('/social-automation/posts/<int:post_id>/cancel', methods=['POST'])
+@csrf.exempt
+@login_required
+def social_automation_cancel_post(post_id):
+    """Cancel a pending/scheduled social post."""
+    from models import SocialPost, SocialPublishingJob
+    post = SocialPost.query.filter_by(id=post_id, user_id=current_user.id).first_or_404()
+    post.status = "cancelled"
+    for job in post.jobs:
+        job.status = "cancelled"
+    db.session.commit()
+    flash(f"Post #{post.id} was cancelled.", "info")
+    if request.is_json:
+        return jsonify({"ok": True})
+    return redirect(url_for('main.social_automation_dashboard'))
+
+
+@main.route('/social-automation/analytics/sync', methods=['POST'])
+@csrf.exempt
+@login_required
+def social_automation_sync_analytics():
+    """Trigger on-demand analytics synchronization for recent posts."""
+    from services.social_analytics import sync_all_recent_analytics
+    sync_all_recent_analytics(current_user.id)
+    flash("Social media engagement metrics synchronized.", "success")
+    if request.is_json:
+        return jsonify({"ok": True})
+    return redirect(url_for('main.social_automation_dashboard'))
 
 
 @main.route('/automations/assets/<asset_id>/media')
