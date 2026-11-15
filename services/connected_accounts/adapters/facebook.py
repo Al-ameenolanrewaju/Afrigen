@@ -347,9 +347,37 @@ class FacebookAdapter(BaseProviderAdapter):
                 error_msg = res_data.get("error", {}).get("message", resp.text)
                 return {"ok": False, "error": f"Facebook feed publish failed: {error_msg}"}
 
+        except requests.exceptions.RequestException as req_exc:
+            logger.warning("Facebook network exception or timeout: %s. Verifying if post was created...", req_exc)
+            existing = self.verify_remote_post_exists(page_id, token, post_message)
+            if existing.get("found"):
+                return {"ok": True, "post_id": existing.get("post_id"), "post_url": existing.get("post_url")}
+            return {"ok": False, "error": f"Facebook network error: {req_exc}"}
         except Exception as exc:
             logger.exception("Facebook publishing exception: %s", exc)
             return {"ok": False, "error": str(exc)}
+
+    def verify_remote_post_exists(self, page_id: str, access_token: str, message_text: str) -> Dict[str, Any]:
+        """Check if a post with matching excerpt already exists on the Page to prevent duplicates on timeout."""
+        try:
+            resp = requests.get(
+                f"{GRAPH_BASE_URL}/{page_id}/feed",
+                params={"access_token": access_token, "limit": 5, "fields": "id,message,created_time"},
+                timeout=10,
+            )
+            if resp.status_code == 200:
+                posts = resp.json().get("data", [])
+                clean_target = " ".join((message_text or "").split()[:15]).lower()
+                for p in posts:
+                    p_msg = " ".join((p.get("message") or "").split()[:15]).lower()
+                    if clean_target and p_msg and (clean_target in p_msg or p_msg in clean_target):
+                        remote_id = p["id"]
+                        post_url = f"https://www.facebook.com/{remote_id.replace('_', '/posts/')}"
+                        logger.info("Found existing published Facebook post after timeout: %s", remote_id)
+                        return {"found": True, "post_id": remote_id, "post_url": post_url}
+        except Exception as check_err:
+            logger.warning("Could not verify remote Facebook post existence: %s", check_err)
+        return {"found": False}
 
     def _verify_page_access(self, page_id: str, access_token: str) -> Dict[str, Any]:
         """Check if a manual page ID and access token can access Graph API."""

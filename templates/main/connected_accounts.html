@@ -90,15 +90,18 @@
                 <div>
                     <div class="d-flex align-items-start justify-content-between mb-3">
                         <div class="d-flex align-items-center gap-3">
-                            <div class="platform-icon-wrap">
+                            {% if account and account.avatar_url %}
+                            <img src="{{ account.avatar_url }}" alt="{{ account.account_name }}" class="platform-avatar" onerror="this.onerror=null; this.src=''; this.classList.add('d-none');">
+                            {% endif %}
+                            <div class="platform-icon-wrap {% if account and account.avatar_url %}d-none{% endif %}">
                                 <i class="{{ provider.icon }}"></i>
                             </div>
                             <div>
                                 <h5 class="fw-bold mb-0 text-white">{{ provider.name }}</h5>
                                 <span class="small text-muted">
-                                    {% if provider.id == 'facebook' %}Official Meta Page
-                                    {% elif provider.id == 'linkedin' %}LinkedIn Profile/Page
-                                    {% else %}Direct Channel{% endif %}
+                                    {% if provider.id == 'facebook' %}Meta Graph API v19.0
+                                    {% elif provider.id == 'linkedin' %}LinkedIn Posts REST API
+                                    {% else %}Direct Publishing Channel{% endif %}
                                 </span>
                             </div>
                         </div>
@@ -117,20 +120,24 @@
                             <strong class="text-white small text-truncate" title="{{ account.account_name }}">{{ account.account_name or 'Connected Account' }}</strong>
                         </div>
                         <div class="meta-detail-row">
-                            <span>Channel ID:</span>
-                            <span class="text-white">{{ account.account_identifier[:16] if account.account_identifier else 'Verified' }}</span>
+                            <span>Account Type:</span>
+                            <span class="text-white fw-bold">{{ account.account_type or ('Facebook Page' if provider.id == 'facebook' else 'LinkedIn Identity') }}</span>
                         </div>
                         <div class="meta-detail-row">
-                            <span>Permissions:</span>
-                            <span class="text-success"><i class="fa-solid fa-check-double me-1"></i>Publish &amp; Read</span>
+                            <span>Account ID:</span>
+                            <span class="text-white font-monospace">{{ account.account_identifier[:16] if account.account_identifier else 'Verified' }}</span>
+                        </div>
+                        <div class="meta-detail-row">
+                            <span>Publishing Scope:</span>
+                            <span class="text-success"><i class="fa-solid fa-check-double me-1"></i>{{ 'pages_manage_posts' if provider.id == 'facebook' else 'w_member_social' }}</span>
                         </div>
                         <div class="meta-detail-row">
                             <span>Last Sync:</span>
                             <span>{{ account.connected_at.strftime('%b %d, %Y') if account.connected_at else 'Just now' }}</span>
                         </div>
                         <div class="meta-detail-row">
-                            <span>Token Status:</span>
-                            <span class="text-success">Healthy / Active</span>
+                            <span>Token Health:</span>
+                            <span class="text-success">{{ 'Permanent Page Token' if provider.id == 'facebook' else 'Active (60-day OAuth)' }}</span>
                         </div>
                     </div>
                     {% else %}

@@ -241,7 +241,12 @@ class LinkedinAdapter(BaseProviderAdapter):
 
         # Resolve person/organization URN
         metadata = self._parse_metadata(account.metadata_json)
-        person_id = account.account_identifier or metadata.get("sub") or os.environ.get("LINKEDIN_PERSON_ID", "")
+        person_id = (
+            metadata.get("publishing_identity")
+            or account.account_identifier
+            or metadata.get("sub")
+            or os.environ.get("LINKEDIN_PERSON_ID", "")
+        )
         media_url = getattr(content, "media_url", "") or getattr(content, "file_url", "") or ""
         media_type = (getattr(content, "media_type", "") or getattr(content, "content_type", "") or "").lower()
 

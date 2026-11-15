@@ -222,11 +222,15 @@ def post_article(text: str, access_token: str = None, person_id: str = None,
         "X-Restli-Protocol-Version": "2.0.0",
     }
 
-    person_urn = f"urn:li:person:{person_id.replace('urn:li:person:', '')}"
+    # Support both member and organization identities
+    if person_id.startswith("urn:li:"):
+        author_urn = person_id
+    else:
+        author_urn = f"urn:li:person:{person_id.replace('urn:li:person:', '')}"
     media_asset = None
     if media_url and media_type == "image":
         try:
-            media_asset = _upload_image(media_url, access_token, person_urn, headers)
+            media_asset = _upload_image(media_url, access_token, author_urn, headers)
         except Exception as exc:
             return {
                 "ok": False,
@@ -236,7 +240,7 @@ def post_article(text: str, access_token: str = None, person_id: str = None,
             }
     elif media_url and media_type == "video":
         try:
-            media_asset = _upload_video(media_url, person_urn, headers)
+            media_asset = _upload_video(media_url, author_urn, headers)
         except Exception as exc:
             return {
                 "ok": False,
@@ -247,7 +251,7 @@ def post_article(text: str, access_token: str = None, person_id: str = None,
 
     # Try the newer /posts endpoint first
     body = {
-        "author": person_urn,
+        "author": author_urn,
         "commentary": text,
         "visibility": "PUBLIC",
         "distribution": {

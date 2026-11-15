@@ -1,3 +1,4 @@
+import json
 from flask import (
     Blueprint, render_template, request, flash, redirect, url_for,
     jsonify, abort, session, current_app
@@ -498,7 +499,29 @@ def generate():
 @login_required
 def connected_accounts():
     from models import ConnectedAccount
+    import json
+    from utils.encryption import decrypt_token
     accounts = ConnectedAccount.query.filter_by(user_id=current_user.id).all()
+    for acc in accounts:
+        acc_meta = {}
+        if acc.metadata_json:
+            try:
+                try:
+                    decrypted = decrypt_token(acc.metadata_json)
+                    acc_meta = json.loads(decrypted)
+                except Exception:
+                    acc_meta = json.loads(acc.metadata_json)
+            except Exception:
+                pass
+        acc.parsed_meta = acc_meta
+        pic = acc_meta.get("picture_url")
+        if not pic and isinstance(acc_meta.get("picture"), dict):
+            pic = acc_meta.get("picture", {}).get("data", {}).get("url")
+        elif not pic and isinstance(acc_meta.get("picture"), str):
+            pic = acc_meta.get("picture")
+        acc.avatar_url = pic
+        acc.account_type = "Facebook Page" if acc.provider == "facebook" else ("LinkedIn Identity" if acc.provider == "linkedin" else acc.provider.capitalize())
+
     connected_map = {acc.provider: acc for acc in accounts if acc.status == 'connected'}
     
     # Official providers
@@ -755,12 +778,13 @@ def disconnect_provider(provider):
 def refine_prompt_free():
     data = request.get_json() or {}
     prompt = data.get('prompt')
+    style = data.get('style', 'cinematic')
     if not prompt:
         return jsonify({"error": "No prompt provided"}), 400
     try:
         user = current_user if current_user.is_authenticated else None
-        refined = refine_prompt(prompt, 'cinematic', user=user)
-        return jsonify({"refined": refined})
+        refined = refine_prompt(prompt, style, user=user)
+        return jsonify({"refined_prompt": refined, "refined": refined})
     except Exception as e:
         logger.exception("Afrigen Intelligence prompt refinement failed")
         from services.ai_products import customer_error
@@ -3657,7 +3681,10 @@ def automations():
 @login_required
 def social_automation_dashboard():
     """Autonomous marketing engine dashboard with calendar, queue, analytics, and controls."""
-    from models import SocialPost, SocialCampaign, SocialPublishingJob, SocialAnalytics, ConnectedAccount
+    from models import (
+        SocialPost, SocialCampaign, SocialMediaAsset, SocialPublishingJob,
+        SocialAnalytics, ConnectedAccount
+    )
     from services.social_engine import get_or_create_settings
     from services.social_analytics import analyze_marketing_performance
 
@@ -3671,6 +3698,14 @@ def social_automation_dashboard():
     scheduled_posts = [p for p in posts if p.status in ('scheduled', 'publishing', 'retry_pending')]
     published_posts = [p for p in posts if p.status == 'published']
     failed_posts = [p for p in posts if p.status == 'failed']
+
+    # Creative Studio assets
+    media_assets = (
+        SocialMediaAsset.query.filter_by(user_id=current_user.id)
+        .order_by(SocialMediaAsset.created_at.desc())
+        .limit(30)
+        .all()
+    )
 
     # Connected accounts
     fb_acc = ConnectedAccount.query.filter_by(user_id=current_user.id, provider='facebook', status='connected').first()
@@ -3693,6 +3728,7 @@ def social_automation_dashboard():
         scheduled_posts=scheduled_posts,
         published_posts=published_posts,
         failed_posts=failed_posts,
+        media_assets=media_assets,
         fb_acc=fb_acc,
         li_acc=li_acc,
         analysis=analysis,
@@ -3861,6 +3897,197 @@ def social_automation_sync_analytics():
     if request.is_json:
         return jsonify({"ok": True})
     return redirect(url_for('main.social_automation_dashboard'))
+
+
+@main.route('/social-automation/campaigns/create', methods=['POST'])
+@csrf.exempt
+@login_required
+def social_automation_create_campaign():
+    """Create a new marketing campaign and optionally autogenerate scheduled posts."""
+    from models import SocialCampaign
+    from services.social_engine import generate_campaign_posts
+    data = request.form.to_dict() or request.get_json() or {}
+
+    name = data.get("name", "").strip()
+    if not name:
+        flash("Campaign name is required.", "danger")
+        if request.is_json:
+            return jsonify({"ok": False, "error": "Campaign name is required."}), 400
+        return redirect(url_for('main.social_automation_dashboard'))
+
+    objective = data.get("objective", "awareness")
+    target_audience = data.get("target_audience", "African creators, entrepreneurs, and digital marketers")
+    platforms = data.get("platforms", ["facebook", "linkedin"])
+    if isinstance(platforms, str):
+        try:
+            platforms = json.loads(platforms)
+        except Exception:
+            platforms = [p.strip() for p in platforms.split(",") if p.strip()]
+    if not platforms:
+        platforms = ["facebook", "linkedin"]
+
+    start_date_str = data.get("start_date")
+    end_date_str = data.get("end_date")
+    start_date = None
+    end_date = None
+    if start_date_str:
+        try:
+            start_date = datetime.fromisoformat(start_date_str)
+        except Exception:
+            pass
+    if end_date_str:
+        try:
+            end_date = datetime.fromisoformat(end_date_str)
+        except Exception:
+            pass
+
+    campaign = SocialCampaign(
+        user_id=current_user.id,
+        name=name,
+        objective=objective,
+        target_audience=target_audience,
+        start_date=start_date,
+        end_date=end_date,
+        platforms_json=json.dumps(platforms),
+        content_strategy=data.get("content_strategy", ""),
+        creative_requirements=data.get("creative_requirements", ""),
+        status="active"
+    )
+    db.session.add(campaign)
+    db.session.commit()
+
+    # Autogenerate posts if requested
+    autogen = data.get("autogenerate_posts") in (True, "true", "on", "1")
+    created_posts = []
+    if autogen:
+        created_posts = generate_campaign_posts(campaign.id, current_user.id, posts_count=4)
+
+    flash(f"Campaign '{name}' created with {len(created_posts)} autonomous posts scheduled.", "success")
+    if request.is_json:
+        return jsonify({"ok": True, "campaign_id": campaign.id, "posts_count": len(created_posts)})
+    return redirect(url_for('main.social_automation_dashboard'))
+
+
+@main.route('/social-automation/campaigns/<int:campaign_id>/generate-posts', methods=['POST'])
+@csrf.exempt
+@login_required
+def social_automation_generate_campaign_posts_route(campaign_id):
+    """Trigger AI generation of cohesive campaign posts."""
+    from services.social_engine import generate_campaign_posts
+    posts = generate_campaign_posts(campaign_id, current_user.id, posts_count=4)
+    flash(f"Generated {len(posts)} scheduled posts for this campaign.", "success")
+    if request.is_json:
+        return jsonify({"ok": True, "posts_count": len(posts)})
+    return redirect(url_for('main.social_automation_dashboard'))
+
+
+@main.route('/social-automation/campaigns/<int:campaign_id>/delete', methods=['POST'])
+@csrf.exempt
+@login_required
+def social_automation_delete_campaign(campaign_id):
+    """Delete marketing campaign and unlink associated posts."""
+    from models import SocialCampaign
+    campaign = SocialCampaign.query.filter_by(id=campaign_id, user_id=current_user.id).first_or_404()
+    db.session.delete(campaign)
+    db.session.commit()
+    flash("Campaign deleted.", "info")
+    if request.is_json:
+        return jsonify({"ok": True})
+    return redirect(url_for('main.social_automation_dashboard'))
+
+
+@main.route('/social-automation/posts/<int:post_id>/edit', methods=['POST'])
+@csrf.exempt
+@login_required
+def social_automation_edit_post(post_id):
+    """Update post caption, CTA, hashtags, or scheduled time, and recalculate QA score."""
+    from models import SocialPost
+    from services.social_qa import run_social_quality_audit
+    post = SocialPost.query.filter_by(id=post_id, user_id=current_user.id).first_or_404()
+    data = request.form.to_dict() or request.get_json() or {}
+
+    if data.get("caption"):
+        post.caption = data.get("caption").strip()
+    if data.get("call_to_action"):
+        post.call_to_action = data.get("call_to_action").strip()
+    if data.get("hashtags"):
+        post.hashtags = data.get("hashtags").strip()
+    if data.get("title"):
+        post.title = data.get("title").strip()
+
+    if data.get("scheduled_at"):
+        try:
+            post.scheduled_at = datetime.fromisoformat(data.get("scheduled_at"))
+            for job in post.jobs:
+                job.scheduled_time = post.scheduled_at
+        except Exception:
+            pass
+
+    # Recalculate QA score
+    qa = run_social_quality_audit(
+        caption=post.caption,
+        platform=post.platform,
+        content_format=post.content_format,
+        media_url=post.media_url,
+        call_to_action=post.call_to_action
+    )
+    post.quality_score = qa["score"]
+    post.quality_checks_json = json.dumps(qa["checks"])
+    if qa["passed"] and post.status in ("retry_pending", "failed"):
+        post.status = "scheduled"
+
+    db.session.commit()
+    flash(f"Post #{post.id} updated (QA Score: {post.quality_score}%).", "success")
+    if request.is_json:
+        return jsonify({"ok": True, "post_id": post.id, "quality_score": post.quality_score})
+    return redirect(url_for('main.social_automation_dashboard'))
+
+
+@main.route('/social-automation/creative/generate', methods=['POST'])
+@csrf.exempt
+@login_required
+def social_automation_generate_creative_route():
+    """Generate image or video creative directly in the Creative Studio via Hugging Face."""
+    from models import SocialMediaAsset
+    from services.social_creative_hf import generate_social_image, generate_social_video
+    data = request.get_json() or request.form.to_dict() or {}
+
+    prompt = data.get("prompt", "").strip()
+    if not prompt:
+        return jsonify({"ok": False, "error": "Creative prompt is required."}), 400
+
+    media_type = data.get("media_type", "image")
+    aspect_ratio = data.get("aspect_ratio", "1:1")
+    model_override = data.get("model")
+
+    if media_type == "video":
+        result = generate_social_video(prompt, duration_seconds=5, aspect_ratio=aspect_ratio, model_override=model_override)
+    else:
+        result = generate_social_image(prompt, aspect_ratio=aspect_ratio, model_override=model_override, fallback_to_flyer=True)
+
+    if result.get("ok"):
+        asset = SocialMediaAsset(
+            user_id=current_user.id,
+            media_type=result.get("media_type", media_type),
+            public_url=result.get("media_url"),
+            provider=result.get("provider", "huggingface"),
+            model_name=result.get("model_name"),
+            dimensions=result.get("dimensions", "1080x1080"),
+            duration_seconds=result.get("duration_seconds", 5 if media_type == "video" else None),
+            status="ready"
+        )
+        db.session.add(asset)
+        db.session.commit()
+        return jsonify({
+            "ok": True,
+            "asset_id": asset.id,
+            "media_url": asset.public_url,
+            "media_type": asset.media_type,
+            "provider": asset.provider,
+            "model_name": asset.model_name
+        })
+    else:
+        return jsonify({"ok": False, "error": result.get("error", "Creative generation failed.")}), 500
 
 
 @main.route('/automations/assets/<asset_id>/media')

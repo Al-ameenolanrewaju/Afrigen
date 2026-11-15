@@ -1,6 +1,6 @@
-# Afrigen 2.0 Page and Route Inventory
+# Afrigen 3.0 Page and Route Inventory
 
-## Coverage status (2026-11-14)
+## Coverage status (2026-11-15)
 
 This is a repository-level inventory, not a claim that the full redesign is complete.
 It was built from Flask route decorators and registrations, all Jinja template files,
@@ -11,36 +11,56 @@ open for pages marked pending below.
 
 | Measure | Current inventory |
 |---|---:|
-| Registered Flask routes, including Flask's static route | 157 |
-| Application-declared route rules | 156 |
+| Registered Flask routes, including Flask's static route | 175 |
+| Application-declared route rules | 174 |
 | Registered application blueprints | 6 |
-| Jinja template files | 69 |
-| Page templates (61 layout-extending plus 1 standalone) | 62 |
-| Layouts and reusable template fragments | 7 |
-| Pages redesigned in this task | 1 (notifications) |
-| Pages with targeted automated route/template tests | 1 (notifications) |
-| Full automated test suite | 42 passed |
+| Jinja template files | 71 |
+| Page templates (62 layout-extending plus 1 standalone) | 63 |
+| Layouts and reusable template fragments | 8 |
+| Afrigen 3.0 pages fully redesigned and audited | 0 |
+| Pages with targeted automated route/template tests | 1 (notifications; prior iteration) |
+| Full automated test suite last recorded before V3 | 42 passed (2026-11-14) |
 | Pages intentionally retained after completed review | 0 |
 | Pages merged | 0 |
 | Pages deprecated | 0 |
 | Pages verified at all required desktop/mobile widths | 0 |
-| Remaining pages pending full review/redesign/testing | 61 |
+| Page templates pending full V3 review/redesign/testing | 63 |
 
 The notification page has targeted route/API and rendered-page tests. Those tests do
 not cover responsive browser rendering, the admin layout, every subscription tier,
 or each notification action at all requested viewport sizes. Accordingly it is not
-counted as fully viewport-tested.
+counted as fully viewport-tested or as a completed Afrigen 3.0 page.
+
+## Afrigen 3.0 implementation status (2026-11-15)
+
+The route/template audit was refreshed from the running Flask URL map and the
+repository's Jinja files before V3 implementation. Current totals are 174
+application-declared route rules, 6 blueprints, and 71 templates (62 templates
+extending a layout, one standalone page, and 8 layouts/reusable fragments). The
+route catalog and page checklist below include the current social automation and
+mobile-navigation additions.
+
+The first foundation pass introduced a light palette, then was revised at the user's
+direction to restore Afrigen's original black-and-gold visual system, matching the
+attached dark reference. The desktop destination search and Creative Intelligence
+wordmark remain. The five-item mobile navigation, More drawer destinations,
+notification panel, route handlers, and Movie Studio entitlement checks are retained.
+
+This is foundation work, not a completion claim. All 63 page templates remain
+pending a page-by-page visual, interaction, access, and responsive review. Browser
+screenshots have been reviewed for the public home at desktop and mobile widths;
+authenticated, admin, and studio screens still need visual review.
 
 ## Blueprint and inheritance map
 
 | Registration | Prefix | Routes |
 |---|---|---:|
-| `main` | `/` | 123 |
+| `main` | `/` | 139 |
 | `auth` | `/auth` | 7 |
 | `api` | `/api/v1` | 2 |
-| `campaigns_bp` | `/api/campaigns` | 6 |
+| `campaigns` | `/api/campaigns` | 7 |
 | `telegram_bp` | `/telegram` | 5 |
-| `movie_studio_bp` | `/movie-studio` | 9 |
+| `movie_studio` | `/movie-studio` | 10 |
 | Flask static endpoint | `/static/<path:filename>` | 1 |
 
 `templates/base.html` is the primary public/authenticated shell; it includes the
@@ -54,7 +74,7 @@ mutually exclusive at the responsive breakpoint and open the same panel.
 
 Reusable layouts/fragments: `templates/base.html`, `templates/admin_base.html`,
 `templates/components/auth_sidebar.html`, `templates/components/public_navbar.html`,
-`templates/components/footer.html`,
+`templates/components/footer.html`, `templates/components/mobile_more_menu.html`,
 `templates/components/notification_center.html`, and
 `templates/main/_social_publish_modal.html`.
 
@@ -124,6 +144,7 @@ are required work, not assertions that those requirements are already met.
 | Saved prompts — `templates/main/saved_prompts.html` | `GET /saved-prompts`; authenticated | Saved prompt list; prompt-save API/form | Application design; mobile list/actions and empty state | Review pending; not tested; decision pending |
 | Settings — `templates/main/settings.html` | `GET,POST /settings`; authenticated | Account, notification preferences and credentials | Application design; mobile tabs/forms and success/error states | Existing 2.0 work present; acceptance review and tests pending |
 | Share — `templates/main/share.html` | `GET /v/<token>`; public token | Shared generation preview | Public design; mobile media and unavailable/expired state | Review pending; not tested; decision pending |
+| Social automation — `templates/main/social_automation.html` | `GET /social-automation`; authenticated | Creative assets, campaigns, social posts, publishing, schedule and analytics | Application design; mobile tabs, media previews, calendar, forms and publish states | Review pending; not tested; decision pending |
 | Terms — `templates/main/terms.html` | `GET /terms`; public | Terms of service | Public design; mobile reading/accessibility | Review pending; not tested; decision pending |
 | Unsubscribe — `templates/main/unsubscribe.html` | `GET /unsubscribe/<token>`; token holder | Email unsubscribe confirmation/result | Public design; mobile success/invalid-token states | Review pending; not tested; decision pending |
 | Upgrade — `templates/main/upgrade.html` | `GET /upgrade`; public/session-aware, tier-aware | Tier pricing and six payment-initiation paths | Public/app design; mobile plan comparison and correct tier/payment states | Existing 2.0 work present; acceptance review and tests pending |
@@ -164,14 +185,16 @@ below include every declared Flask rule; route methods are encoded in the route
 decorators and should be checked alongside the corresponding handler when auditing
 actions. The default Flask static-file route is listed separately.
 
-### `main` blueprint — 123 routes
+### `main` blueprint — 139 route rules
 
 `/`; `/dashboard`; `/connected-accounts/<provider>/status`; `/generate`;
 `/connected-accounts`; `/connected-accounts/<provider>/connect`;
 `/connected-accounts/<provider>/callback`; `/connected-accounts/<provider>/connect/token`;
-`/connected-accounts/<provider>/disconnect`; `/refine-prompt`; `/refine-image-prompt`;
+`/connected-accounts/<provider>/disconnect`; `/connected-accounts/<provider>/test`;
+`/refine-prompt`; `/refine-image-prompt`;
 `/generate-from-image`; `/generate-image`; `/generate-voice`;
-`/generation/<int:generation_id>/retry`; `/v/<token>`; `/result/video`; `/result/image`;
+`/generation/<int:generation_id>/retry`; `/v/<token>`;
+`/v/<token>/media/<media_type>`; `/result/video`; `/result/image`;
 `/history`; `/admin/provider-status`; `/admin`;
 `/admin/generation/<int:generation_id>/force-refund`;
 `/admin/generation/<int:generation_id>/force-retry`;
@@ -202,30 +225,42 @@ actions. The default Flask static-file route is listed separately.
 `/notifications`; `/api/notifications`; `/api/notifications/history`;
 `/api/notifications/<int:notif_id>/read`; `/api/notifications/read-all`;
 `/admin/notifications/broadcast`; `/admin/campaigns`; `/offline`; `/download-app`;
-`/download/video/<int:generation_id>`; `/download/image/<int:generation_id>`; `/create`;
+`/download/video/<int:generation_id>`; `/download/image/<int:generation_id>`; `/media/generation/<int:generation_id>/<media_type>`;
+`/create`;
 `/brands`; `/api/brands`; `/api/brands/<int:brand_id>`; `/campaigns`; `/automations`;
-`/automations/<log_id>`; `/assistant`; `/api/publishing/accounts`;
+`/automations/<log_id>`; `/automations/assets/<asset_id>/media`; `/assistant`;
+`/api/publishing/accounts`;
 `/api/publishing/publish`; `/settings`; `/settings/credentials/save`; `/profile`;
 `/automation/build`; `/campaign/build`; `/campaign/<campaign_id>`; `/api/copilot`;
 `/api/automations`; `/api/automations/run/<workflow_id>`;
-`/api/automations/<workflow_id>`; `/api/automations/save`; `/api/campaigns/plan`.
+`/api/automations/<workflow_id>`; `/api/automations/save`; `/api/campaigns/plan`;
+`/social-automation`; `/social-automation/analytics/sync`;
+`/social-automation/campaigns/<int:campaign_id>/delete`;
+`/social-automation/campaigns/<int:campaign_id>/generate-posts`;
+`/social-automation/campaigns/create`; `/social-automation/creative/generate`;
+`/social-automation/generate`; `/social-automation/pause`;
+`/social-automation/posts/<int:post_id>/cancel`;
+`/social-automation/posts/<int:post_id>/edit`;
+`/social-automation/posts/<int:post_id>/publish-now`; `/social-automation/settings`.
 
 ### Other registered blueprints and direct rules
 
 - `auth` (`/auth`, 7): `/register`, `/login`, `/logout`, `/google`,
   `/google/callback`, `/forgot-password`, `/reset-password/<token>`.
 - `api` (`/api/v1`, 2): `/status`, `/blog/<slug>`.
-- `campaigns_bp` (`/api/campaigns`, 6): `/`, `/<int:campaign_id>`,
+- `campaigns` (`/api/campaigns`, 7): `/`, `/<int:campaign_id>`,
   `/<int:campaign_id>/retry`, `/<int:campaign_id>/pause`,
-  `/<int:campaign_id>/resume`. The blueprint registers `/` for both GET and POST.
+  `/<int:campaign_id>/resume`, `/assets/<int:asset_id>/media`. The blueprint
+  registers `/` for both GET and POST.
 - `telegram_bp` (`/telegram`, 5): `/webhook`, `/setup-webhook`, `/webhook-info`,
   `/connect-code`, `/link-status`.
-- `movie_studio_bp` (`/movie-studio`, 9): `/`, `/projects/create`,
+- `movie_studio` (`/movie-studio`, 10): `/`, `/projects/create`,
   `/projects/<int:project_id>`, `/projects/<int:project_id>/treatment`,
   `/projects/<int:project_id>/characters/<int:char_id>/portrait`,
   `/projects/<int:project_id>/scenes/<int:scene_id>/storyboard`,
   `/projects/<int:project_id>/shots/<int:shot_id>/generate`,
-  `/projects/<int:project_id>/render`, `/render-jobs/<int:job_id>/status`.
+  `/projects/<int:project_id>/render`, `/render-jobs/<int:job_id>/status`,
+  `/media/<asset_type>/<int:asset_id>`.
 - Direct application routes (4): `/favicon.ico`, `/robots.txt`, `/sitemap.xml`,
   `/ads.txt`. Flask also registers `/static/<path:filename>`.
 

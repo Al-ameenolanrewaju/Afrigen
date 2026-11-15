@@ -1,6 +1,6 @@
 """Master Social Automation Orchestrator for Afrigen AI.
 
-Brings together strategy planning, Hugging Face creative generation, platform-specific
+Brings together content planning, Hugging Face creative generation, platform-specific
 copywriting, quality auditing, distributed job scheduling, and analytics synchronization.
 """
 
@@ -17,14 +17,16 @@ from models import (
 )
 from services.social_strategist import (
     select_next_pillar, plan_post_concept, generate_platform_copy,
-    check_content_originality
+    check_content_originality, plan_weekly_content, normalize_pillar
 )
 from services.social_creative_hf import (
     generate_social_image, generate_social_video, validate_media_asset
 )
-from services.social_qa import run_social_quality_audit
+from services.social_qa import run_social_quality_audit, attempt_qa_auto_correction
 from services.social_publisher import run_social_publishing_cycle
-from services.social_analytics import sync_all_recent_analytics, adapt_future_strategy
+from services.social_analytics import (
+    sync_all_recent_analytics, adapt_future_strategy, get_performance_guidance
+)
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +61,7 @@ def generate_autonomous_post(
     scheduled_for: Optional[datetime] = None,
     preferred_pillar: Optional[str] = None,
     preferred_format: Optional[str] = None,
+    marketing_objective: str = "awareness",
 ) -> Optional[SocialPost]:
     """Execute end-to-end autonomous post creation: strategy -> copy -> creative -> QA -> job."""
     settings = get_or_create_settings(user_id)
@@ -72,12 +75,22 @@ def generate_autonomous_post(
     if platform == "linkedin" and not settings.linkedin_enabled:
         return None
 
-    # Step 1: Strategy & Pillar Selection
-    pillar = preferred_pillar or select_next_pillar(user_id, settings)
-    concept = plan_post_concept(pillar, platform)
+    # Step 1: Strategy, Pillar Selection & Performance Intelligence
+    guidance = get_performance_guidance(user_id)
+    raw_pillar = preferred_pillar or select_next_pillar(user_id, settings)
+    pillar = normalize_pillar(raw_pillar)
+
+    concept = plan_post_concept(
+        pillar=pillar,
+        platform=platform,
+        user_id=user_id,
+        marketing_objective=marketing_objective,
+        analytics_guidance=guidance,
+    )
     title = concept["title"]
     summary = concept["summary"]
     content_format = preferred_format or concept["format"]
+    creative_type = concept.get("creative_type", "educational_graphic")
 
     # Step 2: Platform-Specific Copywriting
     copy_data = generate_platform_copy(
@@ -87,6 +100,7 @@ def generate_autonomous_post(
         platform=platform,
         content_format=content_format,
         user_id=user_id,
+        analytics_guidance=guidance,
     )
     caption = copy_data["caption"]
     cta = copy_data["call_to_action"]
@@ -94,17 +108,35 @@ def generate_autonomous_post(
     creative_prompt = copy_data["creative_prompt"]
 
     # Step 3: Originality & Duplicate Check
-    originality = check_content_originality(caption, user_id)
+    originality = check_content_originality(caption, user_id, platform=platform)
     if not originality["is_original"]:
         logger.info("Hook duplicate detected: %s. Generating fresh variations.", originality["reason"])
-        caption = f"{caption}\n\n[Refreshed Edition]"
+        # Re-generate copy with explicit fresh angle
+        fresh_copy = generate_platform_copy(
+            title=f"New Perspective: {title}",
+            summary=summary,
+            pillar=pillar,
+            platform=platform,
+            content_format=content_format,
+            user_id=user_id,
+        )
+        caption = fresh_copy["caption"]
+        cta = fresh_copy["call_to_action"]
+        hashtags = fresh_copy["hashtags"]
 
-    # Step 4: Creative Generation (Hugging Face / PIL Flyer / Video)
+    # Step 4: Creative Generation via Hugging Face
     media_url = None
     media_asset = None
+    image_model = settings.hf_image_model or "black-forest-labs/FLUX.1-schnell"
+    video_model = settings.hf_video_model or "damo-vilab/text-to-video-ms-1.7m"
+
     if content_format in ("image", "flyer", "video"):
         if content_format == "video" and settings.allow_video_generation:
-            vid_res = generate_social_video(creative_prompt, duration_seconds=5)
+            vid_res = generate_social_video(
+                prompt=creative_prompt,
+                duration_seconds=5,
+                model_override=video_model,
+            )
             if vid_res.get("ok"):
                 media_url = vid_res.get("media_url")
                 media_asset = SocialMediaAsset(
@@ -113,13 +145,23 @@ def generate_autonomous_post(
                     media_type="video",
                     public_url=media_url,
                     provider=vid_res.get("provider", "huggingface"),
-                    model_name=vid_res.get("model_name"),
+                    model_name=vid_res.get("model_name", video_model),
                     duration_seconds=5,
                     status="ready",
                 )
-        else:
-            # Generate image or flyer via Hugging Face with PIL fallback
-            img_res = generate_social_image(creative_prompt, aspect_ratio="1:1", fallback_to_flyer=True)
+            else:
+                logger.warning("Hugging Face video generation failed: %s. Falling back to branded graphic.", vid_res.get("error"))
+                # When video fails, switch format to high-definition graphic so post isn't blocked
+                content_format = "image"
+
+        if content_format in ("image", "flyer"):
+            img_res = generate_social_image(
+                prompt=creative_prompt,
+                aspect_ratio="1:1",
+                model_override=image_model,
+                creative_type=creative_type,
+                fallback_to_flyer=True,
+            )
             if img_res.get("ok"):
                 media_url = img_res.get("media_url")
                 media_asset = SocialMediaAsset(
@@ -128,12 +170,12 @@ def generate_autonomous_post(
                     media_type=img_res.get("media_type", "image"),
                     public_url=media_url,
                     provider=img_res.get("provider", "huggingface"),
-                    model_name=img_res.get("model_name"),
+                    model_name=img_res.get("model_name", image_model),
                     dimensions=img_res.get("dimensions", "1080x1080"),
                     status="ready",
                 )
 
-    # Step 5: Quality Assurance & Safety Audit
+    # Step 5: Quality Assurance & Safety Audit with Auto-Correction and Regeneration
     qa_result = run_social_quality_audit(
         caption=caption,
         platform=platform,
@@ -141,6 +183,39 @@ def generate_autonomous_post(
         media_url=media_url,
         call_to_action=cta,
     )
+
+    # Attempt automatic correction if initial QA was borderline
+    if not qa_result["passed"]:
+        correction = attempt_qa_auto_correction(caption, platform, qa_result["flags"], call_to_action=cta)
+        if correction.get("modified"):
+            caption = correction["corrected_caption"]
+            qa_result = run_social_quality_audit(
+                caption=caption,
+                platform=platform,
+                content_format=content_format,
+                media_url=media_url,
+                call_to_action=cta,
+            )
+
+    # If still failing due to content issues (e.g. non-compliant phrase or fake claims), regenerate
+    if not qa_result["passed"] and any("non-compliant" in f or "fabricated" in f or "invented" in f for f in qa_result["flags"]):
+        logger.warning("QA failed with critical flags: %s. Triggering safe copy regeneration.", qa_result["flags"])
+        safe_copy = generate_platform_copy(
+            title=title,
+            summary=summary,
+            pillar=pillar,
+            platform=platform,
+            content_format=content_format,
+            user_id=user_id,
+        )
+        caption = safe_copy["caption"]
+        qa_result = run_social_quality_audit(
+            caption=caption,
+            platform=platform,
+            content_format=content_format,
+            media_url=media_url,
+            call_to_action=safe_copy["call_to_action"],
+        )
 
     # Schedule Time Calculation
     publish_time = scheduled_for or (datetime.now(timezone.utc) + timedelta(minutes=15))
@@ -153,7 +228,7 @@ def generate_autonomous_post(
         platform=platform,
         title=title,
         content_pillar=pillar,
-        marketing_objective="awareness",
+        marketing_objective=marketing_objective,
         target_audience="African creators, entrepreneurs, and digital professionals",
         content_format=content_format,
         caption=caption,
@@ -175,7 +250,7 @@ def generate_autonomous_post(
         media_asset.post_id = post.id
         db.session.add(media_asset)
 
-    # Step 7: Create Distributed Publishing Job
+    # Step 7: Create Distributed Publishing Job (only when QA passes)
     if qa_result["passed"]:
         job = SocialPublishingJob(
             user_id=user_id,
@@ -201,7 +276,7 @@ def generate_daily_social_schedule(user_id: int) -> List[SocialPost]:
     created_posts = []
     now = datetime.now(timezone.utc)
 
-    # Preferred posting hours: morning (e.g. 08:00 UTC) and evening (e.g. 17:00 UTC)
+    # Preferred posting hours: morning (e.g. 08:00 WAT / 07:00 UTC) and evening (e.g. 17:00 WAT / 16:00 UTC)
     hours = [8, 17]
     if settings.preferred_posting_hours_json:
         try:
@@ -227,6 +302,84 @@ def generate_daily_social_schedule(user_id: int) -> List[SocialPost]:
         li_post = generate_autonomous_post(user_id=user_id, platform="linkedin", scheduled_for=li_time)
         if li_post:
             created_posts.append(li_post)
+
+    return created_posts
+
+
+def generate_weekly_social_schedule(user_id: int, start_date: Optional[datetime] = None) -> List[SocialPost]:
+    """Generate a cohesive 7-day scheduled content calendar balancing all 7 content pillars."""
+    settings = get_or_create_settings(user_id)
+    if settings.emergency_paused or not settings.enabled:
+        return []
+
+    guidance = get_performance_guidance(user_id)
+    planned = plan_weekly_content(
+        user_id=user_id,
+        start_date=start_date,
+        posts_per_day=1,
+        marketing_objective="awareness",
+        analytics_guidance=guidance,
+    )
+
+    created_posts = []
+    for item in planned:
+        post = generate_autonomous_post(
+            user_id=user_id,
+            platform=item["platform"],
+            scheduled_for=item["scheduled_time"],
+            preferred_pillar=item["pillar"],
+            preferred_format=item["format"],
+            marketing_objective=item.get("marketing_objective", "awareness"),
+        )
+        if post:
+            created_posts.append(post)
+
+    return created_posts
+
+
+def generate_campaign_posts(campaign_id: int, user_id: int, posts_count: int = 4) -> List[SocialPost]:
+    """Generate cohesive multi-platform scheduled posts for a marketing campaign."""
+    campaign = SocialCampaign.query.filter_by(id=campaign_id, user_id=user_id).first()
+    if not campaign:
+        return []
+
+    settings = get_or_create_settings(user_id)
+    platforms = ["facebook", "linkedin"]
+    if campaign.platforms_json:
+        try:
+            platforms = json.loads(campaign.platforms_json)
+        except Exception:
+            pass
+
+    start_date = campaign.start_date or (datetime.now(timezone.utc) + timedelta(hours=1))
+    end_date = campaign.end_date or (start_date + timedelta(days=7))
+    total_span_seconds = max(3600, int((end_date - start_date).total_seconds()))
+    step_seconds = max(3600, total_span_seconds // max(1, posts_count))
+
+    created_posts = []
+    objective = campaign.objective or "awareness"
+    target_audience = campaign.target_audience or "African creators and businesses"
+
+    for i in range(posts_count):
+        platform = platforms[i % len(platforms)]
+        post_time = start_date + timedelta(seconds=i * step_seconds)
+        pillar = select_next_pillar(user_id, settings)
+        fmt = "video" if (i % 2 == 0 and settings.allow_video_generation) else ("flyer" if i % 2 == 1 else "image")
+
+        post = generate_autonomous_post(
+            user_id=user_id,
+            platform=platform,
+            campaign_id=campaign.id,
+            scheduled_for=post_time,
+            preferred_pillar=pillar,
+            preferred_format=fmt,
+            marketing_objective=objective,
+        )
+        if post:
+            post.marketing_objective = objective
+            post.target_audience = target_audience
+            db.session.commit()
+            created_posts.append(post)
 
     return created_posts
 

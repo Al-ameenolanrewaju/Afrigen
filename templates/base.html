@@ -13,11 +13,11 @@
 <link rel="apple-touch-icon"
       href="{{ url_for('static', filename='favicon.png') }}">
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-    <meta name="theme-color" content="#F5A623">
+    <meta name="theme-color" content="#D6AD65">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Afrigen">
-    <title>{% block title %}Afrigen AI{% endblock %} | AI Marketing & Campaign Platform</title>
+    <title>{% block title %}Afrigen — Creative Intelligence{% endblock %} | Creative Production Platform</title>
     <meta name="description"
 content="{% block meta_description %}Afrigen AI is an AI-powered marketing and campaign platform that helps African creators and brands generate campaigns, blogs, social content, videos, images, and voiceovers from a single idea.{% endblock %}">
 
@@ -29,17 +29,17 @@ content="Afrigen AI, AI marketing platform, campaign generator, AI content creat
 <meta name="robots" content="index, follow">
 
 <!-- Open Graph / Facebook -->
-<meta property="og:title" content="Afrigen AI | AI Generation ,Marketing & Campaign Platform">
+<meta property="og:title" content="Afrigen — Creative Intelligence">
 <meta property="og:description"
-content="Create campaigns, content, videos, images, and voiceovers with Afrigen AI — the AI platform built for modern African creators and brands.">
+content="A creative production platform for professional video, images, voiceovers, writing, campaigns, and film.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://afrigen.com.ng{{ request.path }}">
 
 <!-- Twitter -->
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Afrigen AI | AI Marketing & Campaign Platform">
+<meta name="twitter:title" content="Afrigen — Creative Intelligence">
 <meta name="twitter:description"
-content="Generate campaigns, blogs, social media content, videos, and visuals with Afrigen AI.">
+content="Create professional media and stories in one unified creative environment.">
 
 <!-- Canonical URL -->
 <link rel="canonical" href="{% block canonical %}https://afrigen.com.ng{{ request.path }}{% endblock %}">
@@ -73,7 +73,7 @@ content="Generate campaigns, blogs, social media content, videos, and visuals wi
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome 6 (icons that replaced the old emojis) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
@@ -89,6 +89,7 @@ content="Generate campaigns, blogs, social media content, videos, and visuals wi
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/notifications.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-dashboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/afrigen-shell.css') }}">
     <style>
         .navbar-brand { color: var(--af-gold, #D6AD65) !important; }
         @media (min-width: 992px) {
@@ -109,7 +110,8 @@ content="Generate campaigns, blogs, social media content, videos, and visuals wi
     </style>
     {% block og_meta %}{% endblock %}
 </head>
-<body>
+{% set create_mode = request.args.get('mode', 'video') %}
+<body class="{% if request.endpoint and request.endpoint.startswith('movie_studio.') %}af-page-cinematic{% elif request.endpoint == 'main.create' and create_mode == 'video' %}af-page-cinematic af-page-video-studio{% elif request.endpoint == 'main.create' and create_mode == 'image' %}af-page-app af-page-photo{% elif request.endpoint == 'main.create' and create_mode == 'writing' %}af-page-app af-page-writing{% elif current_user.is_authenticated %}af-page-app{% else %}af-page-public{% endif %}">
 {% if current_user.is_authenticated %}
 <div class="app-shell">
     {% if not request.args.get('embedded') %}
@@ -132,6 +134,12 @@ content="Generate campaigns, blogs, social media content, videos, and visuals wi
                     <i class="fa-solid fa-video me-1"></i> {{ current_user.free_video_allowance }} Free Video{% if current_user.free_video_allowance > 1 %}s{% endif %}
                 </span>
                 {% endif %}
+                <label class="workspace-search d-none d-lg-flex" aria-label="Search workspace destinations">
+                    <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                    <input type="search" id="workspaceSearch" list="workspaceDestinations" placeholder="Find a destination" autocomplete="off">
+                    <kbd>/</kbd>
+                </label>
+                <datalist id="workspaceDestinations"></datalist>
             </div>
 
             <div class="topbar-right">
@@ -271,6 +279,46 @@ content="Generate campaigns, blogs, social media content, videos, and visuals wi
     {% if current_user.is_authenticated and not request.args.get('embedded') %}
     {% include 'components/notification_center.html' %}
     {% endif %}
+
+    <script>
+        (function () {
+            const search = document.getElementById('workspaceSearch');
+            const destinations = document.getElementById('workspaceDestinations');
+            if (!search || !destinations) return;
+
+            const links = Array.from(document.querySelectorAll('.sidebar-nav-link, .mobile-more-groups a'));
+            const entries = [];
+            const seen = new Set();
+            links.forEach(function (link) {
+                const label = link.textContent.replace(/\s+/g, ' ').trim();
+                const href = link.href;
+                if (!label || !href || seen.has(href)) return;
+                seen.add(href);
+                entries.push({ label: label, href: href });
+                const option = document.createElement('option');
+                option.value = label;
+                destinations.appendChild(option);
+            });
+
+            search.addEventListener('keydown', function (event) {
+                if (event.key !== 'Enter') return;
+                const query = search.value.trim().toLowerCase();
+                const match = entries.find(function (entry) {
+                    return entry.label.toLowerCase() === query;
+                }) || entries.find(function (entry) {
+                    return entry.label.toLowerCase().startsWith(query);
+                });
+                if (match) window.location.assign(match.href);
+            });
+
+            document.addEventListener('keydown', function (event) {
+                if (event.key !== '/' || event.ctrlKey || event.metaKey || event.altKey) return;
+                if (event.target instanceof HTMLElement && /^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName)) return;
+                event.preventDefault();
+                search.focus();
+            });
+        })();
+    </script>
 
     <!-- PWA registration -->
     <script>

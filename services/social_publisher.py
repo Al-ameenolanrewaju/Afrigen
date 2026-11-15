@@ -1,7 +1,8 @@
 """Autonomous Social Publishing Engine with Distributed Worker Lease Locking.
 
 Coordinates scheduled publishing to Facebook Pages and LinkedIn with database-backed
-leases, idempotency guarantees, exponential backoff retries, and duplicate prevention.
+leases, idempotency guarantees, exponential backoff retries, duplicate prevention,
+and accurate detection and reporting of expired account connections.
 """
 
 import os
@@ -23,16 +24,38 @@ logger = logging.getLogger(__name__)
 WORKER_ID = f"{socket.gethostname()}_{os.getpid()}_{uuid.uuid4().hex[:6]}"
 LEASE_DURATION_SECONDS = 300  # 5-minute lease lock
 
+# Keywords and error patterns indicating expired OAuth credentials
+EXPIRED_TOKEN_SIGNATURES = [
+    "session has expired",
+    "error validating access token",
+    "oauthexception",
+    "access_token_expired",
+    "token is expired",
+    "invalid access token",
+    "revoked access token",
+    "unauthorized",
+    "401 client error",
+    "code 190",
+]
+
 
 def get_worker_identity() -> str:
     return WORKER_ID
+
+
+def _is_expired_connection_error(error_message: str) -> bool:
+    """Detect whether a publishing error stems from an expired or revoked OAuth token."""
+    if not error_message:
+        return False
+    lower_err = error_message.lower()
+    return any(sig in lower_err for sig in EXPIRED_TOKEN_SIGNATURES)
 
 
 # ==============================================================================
 # WORKER LEASE LOCKING & JOB DISPATCH
 # ==============================================================================
 
-def claim_next_publishing_job(worker_id: str = None) -> Optional[SocialPublishingJob]:
+def claim_next_publishing_job(worker_id: Optional[str] = None) -> Optional[SocialPublishingJob]:
     """Atomically acquire lease lock on the next pending social publishing job.
 
     Ensures that across multiple Render instances or workers, only ONE instance
@@ -42,7 +65,7 @@ def claim_next_publishing_job(worker_id: str = None) -> Optional[SocialPublishin
     now = datetime.now(timezone.utc)
     lease_expires = now + timedelta(seconds=LEASE_DURATION_SECONDS)
 
-    # 1. Look for unassigned or expired lease jobs that are ready to publish
+    # Look for unassigned or expired lease jobs that are ready to publish
     candidate = (
         SocialPublishingJob.query.filter(
             SocialPublishingJob.status.in_(["pending", "retrying"]),
@@ -84,6 +107,20 @@ def process_single_publishing_job(job: SocialPublishingJob) -> Dict[str, Any]:
         job.error_details = "Post record not found."
         db.session.commit()
         return {"ok": False, "error": job.error_details}
+
+    # Duplicate publication guard: if post is already published, skip publishing
+    if post.status == "published" and post.remote_post_id:
+        logger.warning("Post #%s was already published (remote_id=%s). Preventing duplicate publication.",
+                       post.id, post.remote_post_id)
+        job.status = "completed"
+        job.error_details = None
+        db.session.commit()
+        return {
+            "ok": True,
+            "post_id": post.remote_post_id,
+            "post_url": post.published_url,
+            "note": "Already published",
+        }
 
     # Ensure post status reflects active publishing
     post.status = "publishing"
@@ -143,9 +180,8 @@ def process_single_publishing_job(job: SocialPublishingJob) -> Dict[str, Any]:
                 user_id=post.user_id,
                 title=f"Published to {platform.capitalize()}",
                 message=f"'{post.title or 'Post'}' was published successfully to your {platform.capitalize()} channel.",
-                notification_type="social_publishing",
-                category="marketing",
-                link_url=post_url or "/social-automation",
+                type="success",
+                link=post_url or "/social-automation",
             ))
             db.session.commit()
         except Exception:
@@ -160,8 +196,32 @@ def process_single_publishing_job(job: SocialPublishingJob) -> Dict[str, Any]:
         job.error_details = err_msg
         post.error_details = err_msg
 
-        if job.attempt_count < job.max_attempts:
-            # Exponential backoff (attempt 1: +3m, attempt 2: +15m)
+        # Check for expired OAuth account connection
+        if _is_expired_connection_error(err_msg):
+            logger.error("Expired OAuth connection detected for user %s on %s: %s",
+                         post.user_id, platform, err_msg)
+            # Mark connected account as expired
+            account = ConnectedAccount.query.filter_by(user_id=post.user_id, provider=platform).first()
+            if account:
+                account.status = "expired"
+
+            job.status = "failed"
+            post.status = "failed"
+
+            # Alert user to reconnect account
+            try:
+                db.session.add(Notification(
+                    user_id=post.user_id,
+                    title=f"{platform.capitalize()} Connection Expired",
+                    message=f"Your {platform.capitalize()} access token has expired. Please reconnect your account under Connected Accounts to resume automatic publishing.",
+                    type="warning",
+                    link="/connected-accounts",
+                ))
+            except Exception:
+                pass
+
+        elif job.attempt_count < job.max_attempts:
+            # Controlled exponential backoff (attempt 1: +3m, attempt 2: +15m)
             backoff_minutes = 3 if job.attempt_count == 1 else 15
             job.status = "retrying"
             job.next_retry_at = now + timedelta(minutes=backoff_minutes)
@@ -175,15 +235,13 @@ def process_single_publishing_job(job: SocialPublishingJob) -> Dict[str, Any]:
         else:
             job.status = "failed"
             post.status = "failed"
-            # Alert user on permanent publishing failure
             try:
                 db.session.add(Notification(
                     user_id=post.user_id,
                     title=f"Publishing Failed: {platform.capitalize()}",
                     message=f"Post '{post.title or 'Post'}' could not be published after {job.max_attempts} attempts: {err_msg[:120]}",
-                    notification_type="social_publishing",
-                    category="marketing",
-                    link_url="/social-automation",
+                    type="warning",
+                    link="/social-automation",
                 ))
             except Exception:
                 pass
@@ -199,7 +257,6 @@ def run_social_publishing_cycle() -> int:
     Returns the count of jobs processed.
     """
     processed = 0
-    # Process up to 5 jobs per scheduler invocation
     for _ in range(5):
         try:
             job = claim_next_publishing_job()

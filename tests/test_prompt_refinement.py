@@ -1,6 +1,7 @@
 from unittest.mock import patch
 
-from routes.main import _usable_refinement
+from app import app
+from routes.main import _usable_refinement, refine_prompt_free
 from services.claude import _refinement_is_usable, refine_prompt
 
 
@@ -28,3 +29,18 @@ def test_video_refinement_falls_back_to_usable_prompt():
 
     assert refined.startswith("Animate this.")
     assert "clear main subject and action" in refined
+
+
+def test_free_prompt_refinement_returns_homepage_response_key_and_style():
+    with app.test_request_context(
+        "/refine-prompt",
+        method="POST",
+        json={"prompt": "A woman walking through Lagos", "style": "realistic"},
+    ):
+        with patch("routes.main.refine_prompt", return_value="A refined video prompt.") as refine:
+            response = refine_prompt_free()
+
+    assert response.get_json()["refined_prompt"] == "A refined video prompt."
+    assert response.get_json()["refined"] == "A refined video prompt."
+    refine.assert_called_once()
+    assert refine.call_args.args == ("A woman walking through Lagos", "realistic")
