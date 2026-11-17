@@ -2672,7 +2672,7 @@ def launch():
 def launch_subscribe():
     if not current_app.config.get('LAUNCH_ACTIVE', True):
         abort(404)
-    from models import Subscriber
+    from models import Subscriber, EmailOptOut
     from services.email import send_launch_confirmation
     import re
 
