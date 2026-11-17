@@ -38,7 +38,7 @@ AFRIGEN_FEATURES = [
 
 # ---------- AI generation (Groq, grounded in our own product + blog) ----------
 
-def generate_weekly_digest(stats=None):
+def generate_weekly_digest(stats=None, include_research=False):
     """Write this week's Afrigen newsletter using Content Engine.
 
     Grounded in our REAL features and REAL published blog posts (with their exact
@@ -88,11 +88,11 @@ def generate_weekly_digest(stats=None):
         research_sources=research_sources,
     )
     
-    return (
+    result = (
         generated.extra_fields.get("subject", "The Creator Intelligence Brief"),
         generated.content,
-        research_sources,
     )
+    return (*result, research_sources) if include_research else result
 
 
 def _strip_code_fences(text):
@@ -370,7 +370,7 @@ def run_weekly_generation():
         "total_users": User.query.count(),
         "total_generations": Generation.query.count(),
     }
-    subject, body, research_sources = generate_weekly_digest(stats)
+    subject, body, research_sources = generate_weekly_digest(stats, include_research=True)
     issue = create_draft(subject, body, auto_generated=True, research_sources=research_sources)
     print(f"Weekly newsletter draft generated (issue {issue.id}).")
     _notify_admins(
