@@ -63,7 +63,14 @@ def generate_weekly_digest(stats=None):
     stats = stats or {}
     posts = get_all_posts()[:5]
 
-    # 2. Build the master brief around the day's editorial angle.
+    # 2. Research recent AI developments before writing the edition.
+    # Feed failures are isolated; the writer safely falls back to evergreen content
+    # when no sufficiently recent, parseable source material is available.
+    from services.newsletter_research import collect_newsletter_research
+    research_sources = collect_newsletter_research()
+    logger.info("Newsletter research collected %s verified feed items", len(research_sources))
+
+    # 3. Build the master brief around the day's editorial angle.
     latest_post = posts[0] if posts else None
     source_context = (
         f"Daily newsletter editorial: {editorial_theme['name']}. "
@@ -73,8 +80,13 @@ def generate_weekly_digest(stats=None):
     )
     brief = generate_content_brief(category, source_context)
 
-    # 3. Generate newsletter via Content Engine
-    generated = write_newsletter(brief=brief, stats=stats, posts=posts)
+    # 4. Generate newsletter using only the curated research records above.
+    generated = write_newsletter(
+        brief=brief,
+        stats=stats,
+        posts=posts,
+        research_sources=research_sources,
+    )
     
     return generated.extra_fields.get("subject", "Afrigen Weekly"), generated.content
 
