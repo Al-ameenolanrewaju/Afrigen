@@ -1,248 +1,241 @@
 {% extends "admin_base.html" %}
 
-{% block title %}Weekly Newsletter — Afrigen{% endblock %}
+{% block title %}Newsletter Editorial Desk{% endblock %}
 
 {% block content %}
+<style>
+.newsletter-desk{color:#e8edf4}
+.newsletter-panel{background:#111923;border:1px solid #263342;border-radius:16px;padding:22px}
+.newsletter-muted{color:#9aa8b8}
+.newsletter-kicker{color:#d9a86c;font-size:11px;font-weight:800;letter-spacing:1.6px;text-transform:uppercase}
+.newsletter-stat{font-size:28px;font-weight:800;color:#f2bd78}
+.newsletter-source{background:#0d141d;border:1px solid #263342;border-radius:12px;padding:14px}
+.newsletter-source a{color:#f2bd78;word-break:break-word}
+.newsletter-badge{display:inline-block;border-radius:999px;padding:4px 9px;font-size:11px;font-weight:700;background:#263342;color:#cbd5e1}
+.newsletter-badge.approved{background:#123b2a;color:#8ee0b1}
+.newsletter-badge.draft{background:#493517;color:#f4cb85}
+.newsletter-badge.sending{background:#153958;color:#9ed5ff}
+.newsletter-badge.sent{background:#203b33;color:#9ce0c0}
+.newsletter-editor{background:#0b1118!important;color:#eef2f7!important;border:1px solid #344253!important}
+.newsletter-editor:focus{border-color:#d9a86c!important;box-shadow:0 0 0 .2rem rgba(217,168,108,.12)!important}
+.newsletter-action{border-radius:10px;font-weight:700}
+@media(max-width:767px){.newsletter-panel{padding:16px}.newsletter-actions>*{width:100%}}
+</style>
 
-<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+<div class="newsletter-desk">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
     <div>
-        <h1 style="color: #F5A623; font-weight: 700; margin: 0; font-size: 1.6rem;"><i class="fa-solid fa-newspaper"></i> Weekly Newsletter</h1>
-        <p style="color: #888; margin: 0;">Auto-generated each week — review, edit, then send to everyone.</p>
+      <div class="newsletter-kicker mb-2">Editorial operations</div>
+      <h1 class="mb-1" style="font-family:Georgia,serif;font-weight:700;color:#f4f0e9">Newsletter Editorial Desk</h1>
+      <p class="newsletter-muted mb-0">Research, review, edit and approve each daily edition before delivery.</p>
     </div>
-    <a href="{{ url_for('main.admin') }}" class="btn btn-outline-warning btn-sm"><i class="fa-solid fa-arrow-left"></i> Back to Admin</a>
-</div>
+    <a href="{{ url_for('main.admin') }}" class="btn btn-outline-light btn-sm">← Back to Admin</a>
+  </div>
 
-<!-- STATUS ROW -->
-<div class="row g-3 mb-4">
-    <div class="col-md-4">
-        <div class="card p-3 text-center">
-            <p style="color: #888; margin-bottom: 6px;">Audience (will receive)</p>
-            <h3 style="color: #F5A623; font-weight: 800; margin: 0;">{{ audience }}</h3>
-            <small style="color: #555;">accounts + waitlist, minus unsubscribes</small>
+  <div class="row g-3 mb-4">
+    <div class="col-md-4"><div class="newsletter-panel h-100">
+      <div class="newsletter-kicker">Eligible audience</div>
+      <div class="newsletter-stat">{{ audience }}</div>
+      <div class="newsletter-muted small">Opted-in accounts and subscribers, excluding opt-outs</div>
+    </div></div>
+    <div class="col-md-4"><div class="newsletter-panel h-100">
+      <div class="newsletter-kicker">Current edition</div>
+      {% if draft %}
+        <div class="mt-2"><span class="newsletter-badge {{ draft.status }}">{{ draft.status|title }}</span></div>
+        <div class="fw-bold mt-2">{{ draft.subject }}</div>
+        <div class="newsletter-muted small">Issue #{{ draft.id }} · {{ admin_resend_datetime(draft.created_at).strftime('%b %d, %Y · %H:%M') }}</div>
+      {% else %}
+        <div class="newsletter-stat">—</div><div class="newsletter-muted small">No issue awaiting review</div>
+      {% endif %}
+    </div></div>
+    <div class="col-md-4"><div class="newsletter-panel h-100">
+      <div class="newsletter-kicker">Last completed delivery</div>
+      {% if last_sent %}
+        <div class="newsletter-stat">{{ last_sent.recipients_count or 0 }}</div>
+        <div class="newsletter-muted small">{{ admin_resend_datetime(last_sent.sent_at).strftime('%b %d, %Y · %H:%M') if last_sent.sent_at else 'Sent date unavailable' }}</div>
+      {% else %}
+        <div class="newsletter-stat">—</div><div class="newsletter-muted small">No completed edition yet</div>
+      {% endif %}
+    </div></div>
+  </div>
+
+  {% if draft and draft.status == 'draft' %}
+  <div class="alert alert-warning border-0 mb-4" style="background:#3b2d18;color:#f7d9a4">
+    <strong>Approval required.</strong> This edition will not be distributed until you approve it. After approval, the scheduled delivery process sends in cohorts of up to 80 recipients per day.
+  </div>
+  {% elif draft and draft.status == 'approved' %}
+  <div class="alert alert-success border-0 mb-4" style="background:#143526;color:#b9f0cf">
+    <strong>Approved for delivery.</strong> The scheduled delivery process will begin sending this edition in cohorts of up to 80 recipients.
+  </div>
+  {% endif %}
+
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <section class="newsletter-panel mb-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+          <div><div class="newsletter-kicker">01 · Edition editor</div><h4 class="mb-0 mt-1" style="font-family:Georgia,serif">Prepare the issue</h4></div>
+          <button id="generateBtn" class="btn btn-outline-warning btn-sm newsletter-action"><i class="fa-solid fa-wand-magic-sparkles me-1"></i> Generate new edition</button>
         </div>
+        <label class="form-label" for="subject">Email subject</label>
+        <input id="subject" class="form-control newsletter-editor mb-3" maxlength="300"
+               value="{{ draft.subject if draft else '' }}" placeholder="A clear, specific subject line">
+        <label class="form-label" for="body">Newsletter HTML</label>
+        <textarea id="body" class="form-control newsletter-editor" rows="22"
+          placeholder="Generate an edition or write the HTML here.">{{ draft.body if draft else '' }}</textarea>
+        <div class="d-flex flex-wrap gap-2 newsletter-actions mt-3">
+          <button id="previewBtn" class="btn btn-outline-light btn-sm newsletter-action"><i class="fa-regular fa-eye me-1"></i> Preview email</button>
+          <button id="saveBtn" class="btn btn-outline-warning btn-sm newsletter-action"><i class="fa-regular fa-floppy-disk me-1"></i> Save edits</button>
+          <button id="approveBtn" class="btn btn-success btn-sm newsletter-action"><i class="fa-solid fa-check me-1"></i> Approve for delivery</button>
+          <span id="status" class="newsletter-muted align-self-center small" role="status"></span>
+        </div>
+        <p class="newsletter-muted small mt-3 mb-0">Saving edits returns the issue to Draft status. Approval is required again after every edit.</p>
+      </section>
+
+      <section id="previewCard" class="newsletter-panel mb-4" style="display:none">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div><div class="newsletter-kicker">02 · Reader view</div><h4 class="mb-0 mt-1" style="font-family:Georgia,serif">Email preview</h4></div>
+          <button id="closePreviewBtn" class="btn btn-sm btn-outline-light">Close</button>
+        </div>
+        <iframe id="previewFrame" title="Newsletter email preview" sandbox="" style="width:100%;min-height:850px;border:0;border-radius:10px;background:#f1f0ed"></iframe>
+      </section>
+
+      <section class="newsletter-panel">
+        <div class="newsletter-kicker mb-1">03 · Edition history</div>
+        <h4 class="mb-3" style="font-family:Georgia,serif">Recent issues</h4>
+        {% for issue in recent_issues %}
+          <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 py-2" style="border-bottom:1px solid #263342">
+            <div class="me-2">
+              <div class="fw-semibold">{{ issue.subject or 'Untitled edition' }}</div>
+              <div class="newsletter-muted small">#{{ issue.id }} · {{ admin_resend_datetime(issue.created_at).strftime('%b %d, %Y · %H:%M') }}</div>
+            </div>
+            <span class="newsletter-badge {{ issue.status }}">{{ issue.status|title }}</span>
+          </div>
+        {% else %}
+          <p class="newsletter-muted mb-0">No editions have been created yet.</p>
+        {% endfor %}
+      </section>
     </div>
-    <div class="col-md-4">
-        <div class="card p-3 text-center">
-            <p style="color: #888; margin-bottom: 6px;">Current Draft</p>
-            {% if draft and draft.status == 'approved' %}
-            <h3 style="color: #27AE60; font-weight: 800; margin: 0;"><i class="fa-solid fa-circle-check"></i> Approved</h3>
-            <small style="color: #555;">approved issue sends Monday 9am</small>
-            {% elif draft %}
-            <h3 style="color: #F5A623; font-weight: 800; margin: 0;">Draft</h3>
-            <small style="color: #555;">approval required for Monday send</small>
-            {% else %}
-            <h3 style="color: #888; font-weight: 800; margin: 0;">None</h3>
-            <small style="color: #555;">generate one below</small>
+
+    <div class="col-lg-4">
+      <section class="newsletter-panel mb-4">
+        <div class="newsletter-kicker">Evidence review</div>
+        <h4 class="mb-2 mt-1" style="font-family:Georgia,serif">Research sources</h4>
+        <p class="newsletter-muted small">These are the feed items supplied to the editor. Coverage labels are headline-matching hints, not fact-checks.</p>
+        {% for source in research_sources %}
+          <article class="newsletter-source mb-2">
+            <div class="d-flex justify-content-between gap-2 align-items-start mb-2">
+              <strong class="small">{{ source.publisher }}</strong>
+              <span class="newsletter-badge">{{ source.coverage_status|replace('_',' ')|title }}</span>
+            </div>
+            <div class="fw-semibold small mb-2">{{ source.title }}</div>
+            <div class="newsletter-muted small mb-2">{{ source.published_at[:10] if source.published_at else 'Date unavailable' }} · {{ source.coverage_count or 1 }} outlet(s)</div>
+            {% if source.coverage_publishers %}
+              <div class="newsletter-muted small mb-2">Coverage: {{ source.coverage_publishers|join(', ') }}</div>
             {% endif %}
-        </div>
+            {% if source.coverage_note %}<div class="newsletter-muted small mb-2">{{ source.coverage_note }}</div>{% endif %}
+            <a href="{{ source.url }}" target="_blank" rel="noopener noreferrer" class="small">Open original source ↗</a>
+          </article>
+        {% else %}
+          <div class="newsletter-source">
+            <strong>No current research sources were attached.</strong>
+            <p class="newsletter-muted small mb-0 mt-1">The editor should use an evergreen explanation rather than invent current news.</p>
+          </div>
+        {% endfor %}
+      </section>
+
+      <section class="newsletter-panel">
+        <div class="newsletter-kicker">Delivery policy</div>
+        <h5 class="mt-1" style="font-family:Georgia,serif">Approval first. Then delivery.</h5>
+        <ul class="newsletter-muted small ps-3 mb-0">
+          <li class="mb-2">No automatic distribution while an edition is a Draft.</li>
+          <li class="mb-2">Approval unlocks scheduled delivery.</li>
+          <li class="mb-2">Maximum cohort size: 80 recipients per scheduled run.</li>
+          <li>Unsubscribed and opted-out addresses are excluded.</li>
+        </ul>
+      </section>
     </div>
-    <div class="col-md-4">
-        <div class="card p-3 text-center">
-            <p style="color: #888; margin-bottom: 6px;">Last Sent</p>
-            <h3 id="lastSentDate" style="color: #555; font-weight: 800; margin: 0; font-size: 1.2rem;">
-                {{ admin_resend_datetime(last_sent.sent_at).strftime('%b %d, %Y') if last_sent else '—' }}
-            </h3>
-            <small id="lastSentRecipients" style="color: #555;">
-                {% if last_sent %}
-                    {{ last_sent.recipients_count }} delivered{% if last_sent.attempted_count is not none %} of {{ last_sent.attempted_count }} attempted{% endif %}
-                    {% if last_sent.failed_count %} ({{ last_sent.failed_count }} failed){% endif %}
-                {% else %}never{% endif %}
-            </small>
-        </div>
-    </div>
-</div>
-
-{% if draft and draft.send_attempted_at and draft.status != 'sent' %}
-<div class="alert alert-warning mb-4" role="alert">
-    Last send attempt: {{ draft.send_attempted_at.strftime('%b %d, %Y at %H:%M') }}.
-    No email was delivered from that attempt. Check the delivery error shown after clicking Send now.
-</div>
-{% endif %}
-
-<!-- EDITOR -->
-<div class="card p-4 mb-4">
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-        <h5 style="color: #F0F6FC; font-weight: 700; margin: 0;">Draft</h5>
-        <button id="generateBtn" class="btn btn-outline-warning btn-sm"><i class="fa-solid fa-robot"></i> Generate with AI + web</button>
-    </div>
-
-    <label class="form-label" for="subject">Subject</label>
-    <input type="text" id="subject" class="form-control mb-3"
-           placeholder="This week at Afrigen..." value="{{ draft.subject if draft else '' }}">
-
-    <label class="form-label" for="body">Body (HTML)</label>
-    <textarea id="body" class="form-control mb-2" rows="14"
-              placeholder="Click 'Generate with AI + web' to draft this week's issue, or write your own HTML here.">{{ draft.body if draft else '' }}</textarea>
-
-    <!-- RESEND BATCH SELECTOR (Free Tier Friendly) -->
-    <div class="p-3 my-3 rounded" style="background: rgba(245, 166, 35, 0.08); border: 1px solid rgba(245, 166, 35, 0.25);">
-        <div class="row align-items-center g-2">
-            <div class="col-md-5">
-                <label class="form-label mb-1" for="batchSelect" style="color: #F5A623; font-weight: 600; font-size: 14px;">
-                    <i class="fa-solid fa-layer-group"></i> Send in Batches (Resend Free Tier: 100/day max)
-                </label>
-                <select id="batchSelect" class="form-select form-select-sm" style="background:#161B22; color:#fff; border-color:#30363D;">
-                    {% for b in batches %}
-                    <option value="{{ b.offset }}" data-limit="{{ b.limit }}">{{ b.label }}</option>
-                    {% endfor %}
-                    <option value="0" data-limit="0">All Subscribers ({{ audience }} people)</option>
-                </select>
-            </div>
-            <div class="col-md-7">
-                <small style="color: #8B949E; font-size: 12px; line-height: 1.4; display: block;">
-                    💡 Resend Free allows 100 emails/day. Choose <strong>Batch 1 (80 users)</strong> today, and <strong>Batch 2</strong> tomorrow to broadcast without hitting daily rate limits.
-                </small>
-            </div>
-        </div>
-    </div>
-
-    <div class="d-flex flex-wrap gap-2 mt-2">
-        <button id="previewBtn" class="btn btn-outline-warning btn-sm"><i class="fa-solid fa-eye"></i> Preview</button>
-        <button id="saveBtn" class="btn btn-outline-warning"><i class="fa-solid fa-floppy-disk"></i> Save draft</button>
-        <button id="approveBtn" class="btn btn-success"><i class="fa-solid fa-circle-check"></i> Approve for Monday send</button>
-        <button id="sendBtn" class="btn btn-afrigen"><i class="fa-solid fa-paper-plane"></i> Send Selected Batch</button>
-        <span id="status" class="align-self-center ms-2" style="color: #888;"></span>
-    </div>
-    <p class="mt-2 mb-0" style="color: #555; font-size: 13px;">
-        Monday's automatic send only sends an approved issue. Use Send now for
-        an immediate manual delivery.
-    </p>
-</div>
-
-<!-- PREVIEW -->
-<div id="previewCard" class="card p-4 mb-5" style="display:none;">
-    <h5 style="color: #F0F6FC; font-weight: 700;">Preview</h5>
-    <div id="previewBody" style="background:#fff; color:#111; border-radius:10px; padding:20px; margin-top:10px;"></div>
+  </div>
 </div>
 
 <script>
 const subjectEl = document.getElementById('subject');
 const bodyEl = document.getElementById('body');
 const statusEl = document.getElementById('status');
+const previewCard = document.getElementById('previewCard');
+const previewFrame = document.getElementById('previewFrame');
 
-function setStatus(msg, color = '#888') {
-    statusEl.style.color = color;
-    statusEl.innerText = msg;
+function setStatus(message, color = '#9aa8b8') {
+  statusEl.style.color = color;
+  statusEl.textContent = message;
 }
 
-async function post(url, payload) {
-    try {
-        const res = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload || {}),
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok && !data.error) {
-            data.error = `Server returned ${res.status}`;
-        }
-        return data;
-    } catch (error) {
-        return { ok: false, error: `Request failed: ${error.message}` };
-    }
+async function post(url, payload = {}) {
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok && !data.error) data.error = `Server returned ${response.status}`;
+    return data;
+  } catch (error) {
+    return {ok:false, error:error.message};
+  }
 }
 
 document.getElementById('generateBtn').addEventListener('click', async () => {
-    setStatus('Generating with AI + web search… this can take ~30s', '#F5A623');
-    const data = await post('{{ url_for("main.admin_newsletter_generate") }}');
-    if (data.ok) {
-        subjectEl.value = data.subject || '';
-        bodyEl.value = data.body || '';
-        setStatus('Draft generated ✓', '#27AE60');
-    } else {
-        setStatus('Generate failed: ' + (data.error || 'unknown error'), '#E74C3C');
-    }
+  if (!confirm('Generate a new newsletter edition? Any existing unsent draft must be reviewed first.')) return;
+  setStatus('Researching and writing the edition…', '#f2bd78');
+  const data = await post('{{ url_for("main.admin_newsletter_generate") }}');
+  if (data.ok) {
+    subjectEl.value = data.subject || '';
+    bodyEl.value = data.body || '';
+    setStatus('Edition generated. Review the sources, preview, then save or approve.', '#8ee0b1');
+    window.location.reload();
+  } else {
+    setStatus('Generation failed: ' + (data.error || 'Unknown error'), '#ff8f8f');
+  }
 });
 
 document.getElementById('saveBtn').addEventListener('click', async () => {
-    setStatus('Saving…');
-    const data = await post('{{ url_for("main.admin_newsletter_save") }}', {
-        subject: subjectEl.value, body: bodyEl.value,
-    });
-    setStatus(data.ok ? 'Saved ✓' : 'Save failed', data.ok ? '#27AE60' : '#E74C3C');
+  setStatus('Saving changes…');
+  const data = await post('{{ url_for("main.admin_newsletter_save") }}', {
+    subject: subjectEl.value, body: bodyEl.value
+  });
+  if (data.ok) {
+    setStatus('Saved as Draft. Approval is required before delivery.', '#8ee0b1');
+    window.location.reload();
+  } else setStatus('Save failed: ' + (data.error || 'Unknown error'), '#ff8f8f');
 });
 
 document.getElementById('approveBtn').addEventListener('click', async () => {
-    setStatus('Approving…');
-    const data = await post('{{ url_for("main.admin_newsletter_approve") }}', {
-        subject: subjectEl.value, body: bodyEl.value,
-    });
-    if (data.ok) {
-        setStatus('Approved ✓ — will auto-send Monday 9am', '#27AE60');
-    } else {
-        setStatus('Approve failed: ' + (data.error || 'unknown error'), '#E74C3C');
-    }
+  if (!subjectEl.value.trim() || !bodyEl.value.trim()) {
+    setStatus('Add a subject and newsletter body before approval.', '#ff8f8f');
+    return;
+  }
+  if (!confirm('Approve this exact edition for scheduled email delivery to opted-in subscribers?')) return;
+  setStatus('Approving edition…', '#f2bd78');
+  const data = await post('{{ url_for("main.admin_newsletter_approve") }}', {
+    subject: subjectEl.value, body: bodyEl.value
+  });
+  if (data.ok) {
+    setStatus('Approved. Scheduled delivery will start with the next newsletter run.', '#8ee0b1');
+    window.location.reload();
+  } else setStatus('Approval failed: ' + (data.error || 'Unknown error'), '#ff8f8f');
 });
 
 document.getElementById('previewBtn').addEventListener('click', () => {
-    document.getElementById('previewBody').innerHTML =
-        '<div style="background:#f1f0ed;padding:24px 10px;font-family:Arial,Helvetica,sans-serif;color:#20242b;">' +
-          '<div style="max-width:680px;margin:0 auto;background:#fff;">' +
-            '<div style="background:#171c25;padding:25px 30px 22px;">' +
-              '<div style="margin:0 0 7px;color:#e6ad65;font-size:10px;font-weight:bold;letter-spacing:2px;">AFRIGEN PRESENTS</div>' +
-              '<div style="color:#fff;font-family:Georgia,serif;font-size:23px;font-weight:bold;">The Creator Intelligence Brief</div>' +
-              '<div style="margin-top:8px;color:#c5cbd3;font-size:11px;letter-spacing:.5px;">IDEAS · TECHNOLOGY · THE FUTURE OF CREATIVITY</div>' +
-            '</div>' +
-            '<div style="padding:30px;">' + bodyEl.value + '</div>' +
-            '<div style="padding:22px 30px;background:#f7f6f3;border-top:1px solid #e8e5df;">' +
-              '<div style="color:#343942;font-family:Georgia,serif;font-size:16px;font-weight:bold;">Afrigen</div>' +
-              '<p style="color:#666b73;font-size:12px;line-height:1.6;">A publication for curious creators, builders and people shaping what comes next.</p>' +
-              '<p style="color:#777c83;font-size:11px;">Website · Read the blog · Unsubscribe (sample preview)</p>' +
-              '<p style="color:#969aa0;font-size:10px;">© 2026 Afrigen. All rights reserved.</p>' +
-            '</div>' +
-          '</div>' +
-        '</div>';
-    document.getElementById('previewCard').style.display = 'block';
+  const masthead = '<div style="background:#171c25;padding:25px 30px 22px;font-family:Arial,sans-serif"><div style="color:#e6ad65;font-size:10px;font-weight:bold;letter-spacing:2px">EDITORIAL MAGAZINE</div><div style="color:#fff;font-family:Georgia,serif;font-size:24px;font-weight:bold;margin-top:7px">The Creator Intelligence Brief</div><div style="color:#c5cbd3;font-size:11px;margin-top:8px">IDEAS · TECHNOLOGY · THE FUTURE OF CREATIVITY</div></div>';
+  const footer = '<div style="padding:22px 30px;background:#f7f6f3;border-top:1px solid #e8e5df;font-family:Arial,sans-serif"><strong style="font-family:Georgia,serif">Afrigen</strong><p style="color:#666;font-size:12px;line-height:1.6">A publication for curious creators, builders and people shaping what comes next.</p><p style="color:#888;font-size:10px">Sample footer · Unsubscribe link appears in delivered email</p></div>';
+  const doc = '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;background:#f1f0ed;padding:20px 8px"><div style="max-width:680px;margin:auto;background:#fff;color:#20242b;font-family:Arial,Helvetica,sans-serif">' + masthead + '<main style="padding:30px">' + bodyEl.value + '</main>' + footer + '</div></body></html>';
+  previewFrame.srcdoc = doc;
+  previewCard.style.display = 'block';
+  previewCard.scrollIntoView({behavior:'smooth',block:'start'});
 });
-
-const batchSelect = document.getElementById('batchSelect');
-const sendBtn = document.getElementById('sendBtn');
-
-function updateSendButtonLabel() {
-    if (!batchSelect || !sendBtn) return;
-    const selectedOpt = batchSelect.options[batchSelect.selectedIndex];
-    const isAll = selectedOpt.getAttribute('data-limit') === '0';
-    sendBtn.innerHTML = isAll 
-        ? `<i class="fa-solid fa-share-nodes"></i> Send now to all {{ audience }} people`
-        : `<i class="fa-solid fa-paper-plane"></i> Send ${selectedOpt.text}`;
-}
-
-if (batchSelect) {
-    batchSelect.addEventListener('change', updateSendButtonLabel);
-    updateSendButtonLabel();
-}
-
-sendBtn.addEventListener('click', async () => {
-    const selectedOpt = batchSelect ? batchSelect.options[batchSelect.selectedIndex] : null;
-    const offset = selectedOpt ? parseInt(selectedOpt.value, 10) : 0;
-    const limit = selectedOpt ? parseInt(selectedOpt.getAttribute('data-limit'), 10) : 80;
-
-    sendBtn.disabled = true;
-    setStatus('Sending…', '#F5A623');
-    const data = await post('{{ url_for("main.admin_newsletter_send") }}', {
-        subject: subjectEl.value,
-        body: bodyEl.value,
-        offset: offset,
-        limit: limit
-    });
-    if (data.sent > 0) {
-        const sentDate = data.sent_at ? new Date(data.sent_at) : new Date();
-        document.getElementById('lastSentDate').textContent = sentDate.toLocaleDateString('en-US', {
-            month: 'short', day: '2-digit', year: 'numeric', timeZone: 'UTC'
-        });
-        document.getElementById('lastSentRecipients').textContent = `to ${data.sent} recipients`;
-    }
-    if (data.ok) {
-        setStatus(`Sent to ${data.sent} of ${data.attempted} recipients ✓`, '#27AE60');
-        window.location.reload();
-    } else {
-        sendBtn.disabled = false;
-        setStatus(data.message || ('Send failed: ' + (data.error || 'unknown error')), '#E74C3C');
-        if (data.sent > 0) {
-            window.setTimeout(() => window.location.reload(), 1200);
-        }
-    }
+document.getElementById('closePreviewBtn').addEventListener('click', () => {
+  previewCard.style.display = 'none';
+  previewFrame.srcdoc = '';
 });
 </script>
-
 {% endblock %}
