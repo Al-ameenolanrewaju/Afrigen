@@ -399,37 +399,20 @@ def run_weekly_send():
 # ---------- Daily Newsletter Campaign Batch Runner ----------
 
 def run_daily_newsletter_batch(app_ctx=None):
-    """Dispatch one batch for an explicitly launched admin campaign.
-
-    Campaigns remain separate from the autonomous daily editorial newsletter.
-    Do not advance the offset when the provider reports failures.
-    """
+    """Find the first 'sending' campaign and dispatch a batch of emails."""
     from models import NewsletterCampaign
-    campaign = NewsletterCampaign.query.filter_by(status='sending').order_by(NewsletterCampaign.id.asc()).first()
+    campaign = NewsletterCampaign.query.filter_by(status='sending').first()
     if not campaign:
-        return {"sent": 0, "failed": 0}
-    recipients = collect_recipients(limit=campaign.batch_size or 80, offset=campaign.batch_offset or 0)
-    if not recipients:
+        return
+    recipients = collect_recipients(limit=campaign.batch_size, offset=campaign.batch_offset)
+    if recipients:
+        send_newsletter(recipients, campaign.subject, campaign.html_body, is_html=True)
+    campaign.batch_offset += campaign.batch_size
+    if campaign.batch_offset >= campaign.total_audience:
         campaign.status = 'complete'
         campaign.completed_at = datetime.now(timezone.utc)
-        db.session.commit()
-        return {"sent": 0, "failed": 0}
-    result = send_newsletter(
-        recipients, campaign.subject, campaign.html_body,
-        is_html=True, return_details=True,
-    )
-    # Keep the same audience slice queued until all recipients in it are accepted.
-    if result.get("failed", 0) == 0 and result.get("sent", 0) == len(recipients) and not result.get("test_recipient"):
-        campaign.batch_offset += len(recipients)
-        if campaign.batch_offset >= campaign.total_audience:
-            campaign.status = 'complete'
-            campaign.completed_at = datetime.now(timezone.utc)
     db.session.commit()
-    print(
-        f"Newsletter campaign {campaign.id}: sent={result.get('sent', 0)} "
-        f"failed={result.get('failed', 0)} offset={campaign.batch_offset}"
-    )
-    return result
+    print(f"Newsletter campaign {campaign.id}: batch sent ({len(recipients)} recipients), offset now {campaign.batch_offset}")
 
 
 def run_daily_newsletter_cycle():
