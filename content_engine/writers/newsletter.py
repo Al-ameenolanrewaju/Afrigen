@@ -85,6 +85,13 @@ def write_newsletter(
     stats = stats or {}
     posts = posts or []
     research_sources = research_sources or []
+    # Keep only complete source records with HTTPS article links. The RSS service
+    # performs date and feed validation; this is a final boundary before prompting.
+    research_sources = [
+        source for source in research_sources
+        if source.get("title") and source.get("publisher")
+        and source.get("published_at") and source.get("url", "").startswith("https://")
+    ][:8]
     now = datetime.now(ZoneInfo("Africa/Lagos"))
     today = now.strftime("%B %d, %Y")
     users = int(stats.get("total_users") or 0)
