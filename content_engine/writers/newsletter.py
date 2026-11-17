@@ -4,7 +4,7 @@ from zoneinfo import ZoneInfo
 from html.parser import HTMLParser
 from ..models import ContentBrief, GeneratedContent
 from ..utils import generate_with_validation
-from ..planner import ContentPlanner
+from ..planner import ContentPlanner, get_newsletter_editorial_theme
 from ..prompts.newsletter_prompt import NEWSLETTER_SYSTEM, get_newsletter_user_prompt
 from ..validators import validate_newsletter
 
@@ -27,8 +27,8 @@ AFRIGEN_FEATURES = [
 def _clean_html(text: str) -> str:
     """Repair a few common malformed attribute-less tags without rewriting valid markup."""
     for tag in ("p", "h1", "h2", "h3", "h4", "strong", "ul", "ol", "li", "em", "br", "div", "span"):
-        text = re.sub(rf'<{tag}\\s*["\\']\\s*>?', f'<{tag}>', text, flags=re.IGNORECASE)
-        text = re.sub(rf'</{tag}\\s*["\\']\\s*>?', f'</{tag}>', text, flags=re.IGNORECASE)
+        text = re.sub(rf'<{tag}\s*["\']\s*>?', f'<{tag}>', text, flags=re.IGNORECASE)
+        text = re.sub(rf'</{tag}\s*["\']\s*>?', f'</{tag}>', text, flags=re.IGNORECASE)
     return text.strip()
 
 
@@ -38,13 +38,13 @@ def _split_subject(text: str, fallback_subject: str):
     lines = text.splitlines()
     if lines and lines[0].strip().upper().startswith("SUBJECT:"):
         subject = lines[0].split(":", 1)[1].strip() or fallback_subject
-        body = "\\n".join(lines[1:]).strip()
+        body = "\n".join(lines[1:]).strip()
     return subject, body
 
 
 def _extract_preheader(body: str) -> str:
     match = re.search(
-        r'<[^>]*class=["\\'][^"\\']*newsletter-preheader[^"\\']*["\\'][^>]*>(.*?)</[^>]+>',
+        r"""<[^>]*class=["'][^"']*newsletter-preheader[^"']*["'][^>]*>(.*?)</[^>]+>""",
         body, flags=re.IGNORECASE | re.DOTALL
     )
     if not match:
@@ -66,7 +66,7 @@ class _PlainTextExtractor(HTMLParser):
 def _to_plain_text(markup: str) -> str:
     parser = _PlainTextExtractor()
     parser.feed(markup or "")
-    return "\\n\\n".join(parser.parts)
+    return "\n\n".join(parser.parts)
 
 
 def _newsletter_validator(content: str) -> tuple[bool, str]:
@@ -91,10 +91,9 @@ def write_newsletter(
     generations = int(stats.get("total_generations") or 0)
 
     from constants import SITE_URL
-    from ..planner import get_newsletter_editorial_theme
 
     editorial_theme = get_newsletter_editorial_theme(now)
-    posts_block = "\\n".join(
+    posts_block = "\n".join(
         f"- {p.title} | {(p.description or '').strip()} | {SITE_URL}/blog/{p.slug}"
         for p in posts[:5]
         if getattr(p, "title", None) and getattr(p, "slug", None)
@@ -102,7 +101,7 @@ def write_newsletter(
     if not posts_block:
         posts_block = "(No published blog articles are available for this edition.)"
 
-    features_block = "\\n".join(f"- {feature}" for feature in AFRIGEN_FEATURES)
+    features_block = "\n".join(f"- {feature}" for feature in AFRIGEN_FEATURES)
     user_prompt = get_newsletter_user_prompt(
         brief=brief,
         features_block=features_block,
@@ -134,8 +133,7 @@ def write_newsletter(
     preview_text = _extract_preheader(body)
     plain_text = _to_plain_text(body)
 
-    planner = ContentPlanner()
-    planner.record_newsletter_topic(brief.topic)
+    ContentPlanner().record_newsletter_topic(brief.topic)
 
     from ..utils import get_logger
     get_logger("NewsletterWriter").info(
