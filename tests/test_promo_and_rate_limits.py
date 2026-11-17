@@ -71,3 +71,26 @@ def test_automatic_promo_jobs_are_disabled():
     assert not hasattr(app_module, "autopost_promo_morning_job")
     assert not hasattr(app_module, "autopost_promo_evening_job")
 
+
+
+def test_promo_copy_uses_provider_manager_task_router(monkeypatch):
+    """Promo copy must call the ProviderManager task router, not a nonexistent method."""
+    import services.provider_manager as provider_module
+    from services.promo_campaign import generate_promo_post
+
+    calls = {}
+
+    class FakeProviderManager:
+        def generate_text(self, task_type, messages, **kwargs):
+            calls["task_type"] = task_type
+            calls["messages"] = messages
+            calls["kwargs"] = kwargs
+            return "A polished campaign post."
+
+    monkeypatch.setattr(provider_module, "provider_manager", FakeProviderManager())
+    result = generate_promo_post("Launch our new creator feature", "facebook")
+
+    assert result == "A polished campaign post."
+    assert calls["task_type"] == "Default"
+    assert calls["kwargs"]["max_tokens"] == 1000
+    assert calls["messages"][0]["role"] == "system"
