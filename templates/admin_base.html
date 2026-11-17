@@ -6,28 +6,35 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <script>
         (function () {
-            const token = document.querySelector('meta[name="csrf-token"]').content;
+            const readToken = () => document.querySelector('meta[name="csrf-token"]')?.content || '';
             const originalFetch = window.fetch.bind(window);
             window.fetch = function (input, init) {
-                init = init || {};
-                const url = typeof input === 'string' ? input : input.url;
-                const sameOrigin = !url || url.startsWith('/') || url.startsWith(window.location.origin);
+                init = Object.assign({}, init || {});
+                const rawUrl = typeof input === 'string' ? input : input.url;
+                let sameOrigin = true;
+                try { sameOrigin = new URL(rawUrl || window.location.href, window.location.href).origin === window.location.origin; }
+                catch (_) { sameOrigin = false; }
                 const method = (init.method || (typeof input !== 'string' && input.method) || 'GET').toUpperCase();
                 if (sameOrigin && !['GET', 'HEAD', 'OPTIONS', 'TRACE'].includes(method)) {
                     const headers = new Headers(init.headers || (typeof input !== 'string' ? input.headers : undefined));
-                    headers.set('X-CSRFToken', token);
+                    const token = readToken();
+                    if (token) headers.set('X-CSRFToken', token);
                     init.headers = headers;
+                    if (!init.credentials) init.credentials = 'same-origin';
                 }
                 return originalFetch(input, init);
             };
             document.addEventListener('submit', function (event) {
                 const form = event.target;
-                if (form.method.toUpperCase() === 'GET' || form.querySelector('input[name="csrf_token"]')) return;
-                const field = document.createElement('input');
-                field.type = 'hidden';
-                field.name = 'csrf_token';
-                field.value = token;
-                form.appendChild(field);
+                if (!(form instanceof HTMLFormElement) || form.method.toUpperCase() === 'GET') return;
+                let field = form.querySelector('input[name="csrf_token"]');
+                if (!field) {
+                    field = document.createElement('input');
+                    field.type = 'hidden';
+                    field.name = 'csrf_token';
+                    form.appendChild(field);
+                }
+                if (!field.value) field.value = readToken();
             }, true);
         })();
     </script>
@@ -576,8 +583,7 @@
             <a href="{{ url_for('main.admin') }}" {% if request.endpoint == 'main.admin' %}aria-current="page"{% endif %}><i class="fa-solid fa-border-all"></i>Overview</a>
             <a href="{{ url_for('main.admin_command_centre') }}" {% if request.endpoint == 'main.admin_command_centre' %}aria-current="page"{% endif %}><i class="fa-solid fa-gauge-high"></i>Command Centre</a>
             <a href="{{ url_for('main.admin_promo_campaigns') }}" {% if request.endpoint == 'main.admin_promo_campaigns' %}aria-current="page"{% endif %}><i class="fa-solid fa-bullhorn"></i>AI Promo Campaigns</a>
-            <a href="{{ url_for('main.admin_newsletter_campaigns') }}" {% if request.endpoint and 'newsletter' in request.endpoint %}aria-current="page"{% endif %}><i class="fa-solid fa-envelope"></i>Daily Newsletter</a>
-            <a href="{{ url_for('main.admin_newsletter') }}" {% if request.endpoint == 'main.admin_newsletter' %}aria-current="page"{% endif %}><i class="fa-solid fa-pen-to-square"></i>Newsletter editor</a>
+            <a href="{{ url_for('main.admin_newsletter') }}" {% if request.endpoint and ('newsletter' in request.endpoint or request.path.startswith('/admin/newsletter')) %}aria-current="page"{% endif %}><i class="fa-solid fa-envelope-open-text"></i>Newsletter Studio</a>
             <a href="{{ url_for('main.admin_blog') }}" {% if request.endpoint and 'blog' in request.endpoint %}aria-current="page"{% endif %}><i class="fa-solid fa-newspaper"></i>Blog CMS</a>
             <a href="{{ url_for('main.admin_distribution') }}" {% if request.endpoint and 'distribution' in request.endpoint %}aria-current="page"{% endif %}><i class="fa-solid fa-satellite-dish"></i>Social Distribution</a>
             <a href="{{ url_for('main.admin_pricing') }}" {% if request.endpoint == 'main.admin_pricing' %}aria-current="page"{% endif %}><i class="fa-solid fa-tags"></i>Pricing &amp; Tiers</a>
