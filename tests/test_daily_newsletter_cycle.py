@@ -38,13 +38,14 @@ def test_daily_newsletter_cycle_snapshots_and_sends_batches_without_skipping():
         ])
         db.session.commit()
 
-        with patch("services.newsletter.generate_weekly_digest", return_value=("Daily edition", "<p>Useful content</p>", [{"title": "Source", "publisher": "Publisher", "url": "https://example.com/story"}])):
+        with patch("services.newsletter.generate_weekly_digest", return_value=("Daily edition", "<p>Useful content</p>", [{"title": "Source", "publisher": "Publisher", "url": "https://example.com/story"}])) as generator:
             with patch("services.newsletter.send_newsletter", side_effect=[
                 {"attempted": 80, "sent": 80, "failed": 0, "failures": [], "test_recipient": None},
                 {"attempted": 5, "sent": 5, "failed": 0, "failures": [], "test_recipient": None},
             ]) as sender:
                 from services.newsletter import run_daily_newsletter_cycle
                 generated = run_daily_newsletter_cycle()
+                assert generator.call_args.kwargs["include_research"] is True
                 issue = NewsletterIssue.query.one()
                 assert generated["awaiting_approval"] is True
                 assert sender.call_count == 0
