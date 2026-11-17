@@ -3460,8 +3460,11 @@ def admin_marketing_campaign_launch(id):
     platforms = payload.get('platforms') or []
     if platforms:
         try:
-            from services.promo_campaign import run_promo_campaign
-            social = run_promo_campaign(payload.get('brief', ''), platforms)
+            from services.promo_campaign import publish_prepared_campaign
+            social = publish_prepared_campaign(
+                payload.get('brief', ''), payload.get('copies', {}),
+                platforms, payload.get('flyer_url')
+            )
             logger.info("Marketing campaign %s social delivery: %s", id, social.get('platforms', {}))
         except Exception:
             logger.exception("Social distribution failed for marketing campaign %s", id)
