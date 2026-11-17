@@ -101,3 +101,20 @@ def test_daily_newsletter_retries_failed_recipient_before_next_fixed_cohort():
             ("cohort81@mail.net", "Reader 81"),
         ]
         assert NewsletterIssue.query.one().status == "sent"
+
+
+def test_legacy_zero_count_newsletter_metrics_are_rejected_before_approval():
+    from routes.main import _contains_stale_newsletter_metrics
+
+    assert _contains_stale_newsletter_metrics(
+        "<h2>Afrigen Update</h2><p>We are currently at 0 creators and 0 generations.</p>"
+    )
+    assert _contains_stale_newsletter_metrics(
+        "<p>Currently at 0 creator and 0 generation.</p>"
+    )
+    assert not _contains_stale_newsletter_metrics(
+        "<p>Learn a practical way to improve your next video.</p>"
+    )
+    assert not _contains_stale_newsletter_metrics(
+        "<p>Our community continues to build.</p>"
+    )
