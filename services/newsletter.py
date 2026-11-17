@@ -1,17 +1,14 @@
-"""Weekly auto-generated newsletter.
-
-Generates a draft with Groq (llama) that is ABOUT AFRIGEN — a feature spotlight,
-links to our real published blog guides, a practical creator tip, and our latest
-community stats. It is NOT a roundup of external AI news. The admin can edit it,
-then it's sent to everyone (registered users + waitlist), minus unsubscribes.
-"""
+"""Daily editorial magazine generation and newsletter delivery lifecycle."""
 import os
 import re
 import json
+import logging
 from datetime import datetime, date, timezone
 
 from models import db, User, Subscriber, Generation, NewsletterIssue, EmailOptOut
 from services.email import send_newsletter, BASE_URL
+
+logger = logging.getLogger(__name__)
 
 
 # Same model the rest of the app uses (Groq). Override with NEWSLETTER_MODEL if desired.
