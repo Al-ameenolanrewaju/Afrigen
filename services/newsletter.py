@@ -513,7 +513,6 @@ def run_daily_newsletter_cycle():
         db.session.commit()
         return {"generated": False, "sent": 0, "pending": len(remaining)}
 
-    batch_emails = {x["email"] for x in batch}
     send_list = [(x["email"], x.get("name") or "") for x in batch]
     issue.send_attempted_at = datetime.now(timezone.utc)
     for item in batch:
@@ -549,6 +548,7 @@ def run_daily_newsletter_cycle():
         issue.sent_at = datetime.now(timezone.utc)
         issue.failed_count = 0
         issue.recipients_count = sum(1 for x in audience if x.get("status") == "sent")
+        db.session.commit()
     logger.info(
         "Daily newsletter issue %s: attempted=%s accepted=%s failed=%s pending=%s",
         issue.id, result.get("attempted", 0), result.get("sent", 0),
