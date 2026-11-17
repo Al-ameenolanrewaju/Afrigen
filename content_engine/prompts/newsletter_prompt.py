@@ -109,10 +109,8 @@ VERIFIED AFRIGEN CAPABILITIES
 Only mention capabilities from this list. Do not imply availability beyond what is written.
 {features_block}
 
-COMMUNITY DATA
-Registered users: {users}
-Total generations: {generations}
-Only include these figures if they are meaningful and non-zero. Never infer growth, milestones, roadmap promises, or outcomes from them.
+COMMUNITY METRICS
+Do not include creator counts, registered-user counts, generation totals, growth figures, or activity metrics in this edition. These operational values are not editorial source material and can be stale or misleading. Never invent or infer them.
 
 REQUIRED EDITORIAL FLOW
 1. MASTHEAD / ISSUE INTRO
