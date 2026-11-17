@@ -1,0 +1,64 @@
+{% extends "admin_base.html" %}
+{% block title %}Afrigen Admin Intelligence{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-intelligence.css') }}">
+<div class="ai-shell">
+  <aside class="ai-sidebar" id="aiSidebar">
+    <div class="ai-brand"><span class="ai-mark">A</span><div><strong>AFRIGEN</strong><small>ADMIN INTELLIGENCE</small></div></div>
+    <div class="ai-nav-label">WORKSPACE</div>
+    <a class="ai-nav active" href="{{ url_for('admin_intelligence.overview') }}"><i class="fa-solid fa-chart-pie"></i> Executive overview</a>
+    <div class="ai-nav-label">INTELLIGENCE</div>
+    {% for endpoint, label, icon in [
+      ('users','User intelligence','fa-users'),('finance','Financial intelligence','fa-wallet'),
+      ('ai','AI platform','fa-wand-magic-sparkles'),('operations','Infrastructure & operations','fa-server'),
+      ('growth','Marketing & growth','fa-arrow-trend-up'),('security','Security & administration','fa-shield-halved'),
+      ('automation','Automation & experience','fa-gears'),('reports','Founder intelligence','fa-lightbulb'),
+      ('settings','Settings','fa-sliders')
+    ] %}
+    <a class="ai-nav" href="{{ url_for('admin_intelligence.' ~ endpoint, period=period) }}"><i class="fa-solid {{ icon }}"></i>{{ label }}</a>
+    {% endfor %}
+    <div class="ai-sidebar-footer"><span class="ai-live-dot"></span> Live application data<br><small>Read-only intelligence workspace</small></div>
+  </aside>
+  <main class="ai-main">
+    <header class="ai-topbar">
+      <button class="ai-menu" id="aiMenu" aria-label="Open dashboard navigation"><i class="fa-solid fa-bars"></i></button>
+      <div><span class="ai-eyebrow">AFRIGEN / EXECUTIVE</span><h1>Executive overview</h1></div>
+      <div class="ai-top-actions">
+        <span class="ai-date">{{ period_start.strftime('%d %b %Y') }} – {{ period_end.strftime('%d %b %Y') }}</span>
+        <a class="ai-old-panel" href="{{ url_for('main.admin') }}">Legacy admin ↗</a>
+      </div>
+    </header>
+    <section class="ai-welcome">
+      <div><span class="ai-kicker">FOUNDER WORKSPACE</span><h2>Platform intelligence, at a glance.</h2><p>Business performance, user activity, AI operations and platform health in one place.</p></div>
+      <form method="get" class="ai-period"><label for="period">REPORTING PERIOD</label><select id="period" name="period" onchange="this.form.submit()"><option value="7" {% if period=='7' %}selected{% endif %}>Last 7 days</option><option value="30" {% if period=='30' %}selected{% endif %}>Last 30 days</option><option value="90" {% if period=='90' %}selected{% endif %}>Last 90 days</option></select><small>Compared with the preceding equivalent period</small></form>
+    </section>
+    <section class="ai-kpis">
+      <article class="ai-kpi"><span>Total users</span><strong>{{ "{:,}".format(intelligence.total_users) }}</strong><small>All registered accounts</small><i class="fa-solid fa-users"></i></article>
+      <article class="ai-kpi"><span>New registrations</span><strong>{{ "{:,}".format(intelligence.signups) }}</strong><small>{% if intelligence.signup_change is not none %}{{ '%+.1f'|format(intelligence.signup_change) }}% vs previous period{% else %}No prior-period baseline{% endif %}</small><i class="fa-solid fa-user-plus"></i></article>
+      <article class="ai-kpi"><span>AI generations</span><strong>{{ "{:,}".format(intelligence.generations) }}</strong><small>{% if intelligence.generation_change is not none %}{{ '%+.1f'|format(intelligence.generation_change) }}% vs previous period{% else %}No prior-period baseline{% endif %}</small><i class="fa-solid fa-wand-magic-sparkles"></i></article>
+      <article class="ai-kpi"><span>Generation success</span><strong>{{ intelligence.success_rate|string + '%' if intelligence.success_rate is not none else '—' }}</strong><small>{{ intelligence.completed }} completed · {{ intelligence.failed }} failed</small><i class="fa-solid fa-circle-check"></i></article>
+      <article class="ai-kpi"><span>Recorded payment value</span><strong>₦{{ "{:,.0f}".format(intelligence.recorded_payment_ngn) }}</strong><small>{{ intelligence.recorded_payment_count }} payment records · not reconciled</small><i class="fa-solid fa-wallet"></i></article>
+      <article class="ai-kpi"><span>Open incidents</span><strong>{{ intelligence.active_incidents }}</strong><small>From persisted monitoring records</small><i class="fa-solid fa-shield-halved"></i></article>
+    </section>
+    <section class="ai-grid-main">
+      <article class="ai-panel ai-chart-panel"><div class="ai-panel-head"><div><h3>Growth & platform activity</h3><p>Daily registrations and generation requests</p></div><span class="ai-tag">LAST {{ period_days }} DAYS</span></div><div class="ai-chart-wrap"><canvas id="activityChart"></canvas></div></article>
+      <article class="ai-panel"><div class="ai-panel-head"><div><h3>Generation health</h3><p>Outcomes within selected period</p></div></div><div class="ai-health-number">{{ intelligence.success_rate|string + '%' if intelligence.success_rate is not none else '—' }}</div><div class="ai-progress"><span style="width:{{ intelligence.success_rate or 0 }}%"></span></div><div class="ai-stat-row"><span>Completed</span><strong>{{ intelligence.completed }}</strong></div><div class="ai-stat-row"><span>Failed</span><strong>{{ intelligence.failed }}</strong></div><div class="ai-stat-row"><span>Pending / processing</span><strong>{{ intelligence.pending }}</strong></div></article>
+    </section>
+    <section class="ai-grid-three">
+      <article class="ai-panel"><div class="ai-panel-head"><div><h3>AI operating costs</h3><p>USD · recorded separately</p></div></div><div class="ai-cost"><span>Generation cost recorded</span><strong>${{ '%.2f'|format(intelligence.generation_cost_usd_recorded) }}</strong></div><div class="ai-cost"><span>Provider estimate</span><strong>${{ '%.2f'|format(intelligence.provider_estimated_cost_usd) }}</strong></div><small class="ai-note">Provider estimates are not invoices. Values may overlap; do not add them.</small></article>
+      <article class="ai-panel"><div class="ai-panel-head"><div><h3>Acquisition sources</h3><p>Signup attribution recorded at registration</p></div></div>{% for row in intelligence.sources %}<div class="ai-list-row"><span>{{ row.name }}</span><strong>{{ row.count }}</strong></div>{% else %}<p class="ai-empty">No source data in this period.</p>{% endfor %}</article>
+      <article class="ai-panel"><div class="ai-panel-head"><div><h3>Top countries</h3><p>New registrations by country</p></div></div>{% for row in intelligence.countries %}<div class="ai-list-row"><span>{{ row.name }}</span><strong>{{ row.count }}</strong></div>{% else %}<p class="ai-empty">No country data in this period.</p>{% endfor %}</article>
+    </section>
+    <section class="ai-panel"><div class="ai-panel-head"><div><h3>Platform monitoring</h3><p>Latest persisted infrastructure and service checks</p></div><a href="{{ url_for('main.admin_command_centre') }}">Open Command Centre ↗</a></div>
+      <div class="ai-monitor-grid">{% for item in intelligence.monitor_snapshots %}<div class="ai-monitor"><span class="ai-status {{ item.status }}">{{ item.status }}</span><strong>{{ item.monitor_key|replace('_',' ')|title }}</strong><small>{{ item.summary }}</small></div>{% else %}<p class="ai-empty">No monitoring snapshots recorded yet.</p>{% endfor %}</div>
+    </section>
+    <section class="ai-panel"><div class="ai-panel-head"><div><h3>Active incidents</h3><p>Items requiring operational attention</p></div><a href="{{ url_for('main.admin_command_centre') }}">Manage incidents ↗</a></div>
+      {% for incident in intelligence.incidents %}<div class="ai-incident"><span class="ai-status {{ incident.severity }}">{{ incident.severity }}</span><div><strong>{{ incident.title }}</strong><small>{{ incident.recommendation }}</small></div><span>{{ incident.status }}</span></div>{% else %}<p class="ai-empty">No active monitoring incidents.</p>{% endfor %}
+    </section>
+    <footer class="ai-footer">Afrigen Admin Intelligence · Data shown reflects records currently available in the application.</footer>
+  </main>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>window.AFRIGEN_INTELLIGENCE = {{ {'labels': intelligence.labels, 'signups': intelligence.daily_signups, 'generations': intelligence.daily_generations}|tojson }};</script>
+<script src="{{ url_for('static', filename='js/admin-intelligence.js') }}"></script>
+{% endblock %}
