@@ -68,7 +68,7 @@ def generate_weekly_digest(stats=None, include_research=False):
     # when no sufficiently recent, parseable source material is available.
     from services.newsletter_research import collect_newsletter_research
     research_sources = collect_newsletter_research()
-    logger.info("Newsletter research collected %s verified feed items", len(research_sources))
+    logger.info("Newsletter research collected %s curated feed items", len(research_sources))
 
     # 3. Build the master brief around the day's editorial angle.
     latest_post = posts[0] if posts else None
@@ -375,7 +375,7 @@ def run_weekly_generation():
     print(f"Weekly newsletter draft generated (issue {issue.id}).")
     _notify_admins(
         "📰 This week's Afrigen newsletter is ready to review",
-        "A draft has been generated for review. Use Send now when it is ready.",
+        "A draft has been generated with its research sources. Review and approve it in the newsletter editorial desk before scheduled delivery.",
     )
     return issue
 
@@ -436,9 +436,9 @@ def run_daily_newsletter_batch(app_ctx=None):
 
 
 def run_daily_newsletter_cycle():
-    """Generate one immutable daily edition and deliver it in ordered batches of 80.
+    """Generate an approval-gated daily edition and deliver approved issues in cohorts of 80.
 
-    The audience is snapshotted once per edition. Failed recipients remain pending
+    The audience is snapshotted once per approved edition. Failed recipients remain pending
     and are retried before the next audience slice; a new edition is not generated
     until every snapshot recipient has either received it or opted out.
     """
