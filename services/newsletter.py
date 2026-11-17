@@ -399,17 +399,167 @@ def run_weekly_send():
 # ---------- Daily Newsletter Campaign Batch Runner ----------
 
 def run_daily_newsletter_batch(app_ctx=None):
-    """Find the first 'sending' campaign and dispatch a batch of emails."""
+    """Dispatch one batch for an explicitly launched admin campaign.
+
+    Campaigns remain separate from the autonomous daily editorial newsletter.
+    Do not advance the offset when the provider reports failures.
+    """
     from models import NewsletterCampaign
-    campaign = NewsletterCampaign.query.filter_by(status='sending').first()
+    campaign = NewsletterCampaign.query.filter_by(status='sending').order_by(NewsletterCampaign.id.asc()).first()
     if not campaign:
-        return
-    recipients = collect_recipients(limit=campaign.batch_size, offset=campaign.batch_offset)
-    if recipients:
-        send_newsletter(recipients, campaign.subject, campaign.html_body, is_html=True)
-    campaign.batch_offset += campaign.batch_size
-    if campaign.batch_offset >= campaign.total_audience:
+        return {"sent": 0, "failed": 0}
+    recipients = collect_recipients(limit=campaign.batch_size or 80, offset=campaign.batch_offset or 0)
+    if not recipients:
         campaign.status = 'complete'
         campaign.completed_at = datetime.now(timezone.utc)
+        db.session.commit()
+        return {"sent": 0, "failed": 0}
+    result = send_newsletter(
+        recipients, campaign.subject, campaign.html_body,
+        is_html=True, return_details=True,
+    )
+    # Keep the same audience slice queued until all recipients in it are accepted.
+    if result.get("failed", 0) == 0 and result.get("sent", 0) == len(recipients) and not result.get("test_recipient"):
+        campaign.batch_offset += len(recipients)
+        if campaign.batch_offset >= campaign.total_audience:
+            campaign.status = 'complete'
+            campaign.completed_at = datetime.now(timezone.utc)
     db.session.commit()
-    print(f"Newsletter campaign {campaign.id}: batch sent ({len(recipients)} recipients), offset now {campaign.batch_offset}")
+    print(
+        f"Newsletter campaign {campaign.id}: sent={result.get('sent', 0)} "
+        f"failed={result.get('failed', 0)} offset={campaign.batch_offset}"
+    )
+    return result
+
+
+def run_daily_newsletter_cycle():
+    """Generate one immutable daily edition and deliver it in ordered batches of 80.
+
+    The audience is snapshotted once per edition. Failed recipients remain pending
+    and are retried before the next audience slice; a new edition is not generated
+    until every snapshot recipient has either received it or opted out.
+    """
+    from models import NewsletterIssue
+
+    # Ensure the table is available on deployments that rely on create_all for
+    # additive tables. This is idempotent and does not alter existing rows.
+    db.create_all()
+
+    issue = (
+        NewsletterIssue.query.filter_by(status="sending")
+        .order_by(NewsletterIssue.created_at.asc())
+        .first()
+    )
+
+    if issue is None:
+        recipients = collect_recipients()
+        if not recipients:
+            print("Daily newsletter skipped: no eligible subscribers.")
+            return {"generated": False, "sent": 0, "pending": 0}
+        subject, body = generate_weekly_digest({
+            "total_users": User.query.count(),
+            "total_generations": Generation.query.count(),
+        })
+        if not subject or not body or not body.strip():
+            raise ValueError("Daily newsletter generation returned an empty subject or body.")
+        snapshot = [
+            {"email": (email or "").strip().lower(), "name": name or "",
+             "status": "pending", "attempts": 0}
+            for email, name in recipients
+        ]
+        issue = NewsletterIssue(
+            subject=subject[:300],
+            body=body,
+            status="sending",
+            auto_generated=True,
+            recipients_count=0,
+            attempted_count=0,
+            failed_count=0,
+            delivery_failures=json.dumps({"version": 1, "audience": snapshot}),
+        )
+        db.session.add(issue)
+        db.session.commit()
+        print(f"Daily newsletter edition {issue.id} generated for {len(snapshot)} recipients.")
+
+    try:
+        state = json.loads(issue.delivery_failures or "{}")
+    except (TypeError, ValueError):
+        state = {}
+    audience = state.get("audience") if isinstance(state, dict) else None
+    if not isinstance(audience, list):
+        raise ValueError(f"Daily newsletter issue {issue.id} has no valid audience snapshot.")
+
+    # Re-check current eligibility and global opt-outs before every send.
+    currently_eligible = {
+        email.lower() for email, _name in collect_recipients()
+    }
+    pending = []
+    for item in audience:
+        email = (item.get("email") or "").strip().lower()
+        if item.get("status") != "pending":
+            continue
+        if email not in currently_eligible:
+            item["status"] = "suppressed"
+            continue
+        pending.append(item)
+
+    batch = pending[:80]
+    if not batch:
+        remaining = [x for x in audience if x.get("status") == "pending"]
+        if not remaining:
+            sent_count = sum(1 for x in audience if x.get("status") == "sent")
+            issue.status = "sent"
+            issue.recipients_count = sent_count
+            issue.failed_count = 0
+            issue.sent_at = datetime.now(timezone.utc)
+            issue.delivery_failures = json.dumps({"version": 1, "audience": audience})
+            db.session.commit()
+            print(f"Daily newsletter edition {issue.id} completed ({sent_count} delivered).")
+            return {"generated": False, "sent": 0, "pending": 0, "complete": True}
+        issue.delivery_failures = json.dumps({"version": 1, "audience": audience})
+        db.session.commit()
+        return {"generated": False, "sent": 0, "pending": len(remaining)}
+
+    batch_emails = {x["email"] for x in batch}
+    send_list = [(x["email"], x.get("name") or "") for x in batch]
+    issue.send_attempted_at = datetime.now(timezone.utc)
+    for item in batch:
+        item["attempts"] = int(item.get("attempts", 0)) + 1
+    db.session.commit()
+
+    result = send_newsletter(
+        send_list, issue.subject, issue.body,
+        base_url=BASE_URL, is_html=True, return_details=True,
+    )
+    failed_emails = {
+        (failure.get("email") or "").strip().lower()
+        for failure in result.get("failures", [])
+    }
+    if not result.get("test_recipient"):
+        if result.get("sent", 0) == len(batch) - len(failed_emails):
+            for item in batch:
+                if item["email"] not in failed_emails:
+                    item["status"] = "sent"
+        else:
+            # Provider response was ambiguous: do not mark anyone delivered.
+            logger.error("Daily newsletter issue %s returned an incomplete provider result; batch will retry.", issue.id)
+
+    issue.attempted_count = (issue.attempted_count or 0) + result.get("attempted", 0)
+    issue.recipients_count = sum(1 for x in audience if x.get("status") == "sent")
+    issue.failed_count = sum(1 for x in audience if x.get("status") == "pending")
+    issue.delivery_failures = json.dumps({"version": 1, "audience": audience})
+    db.session.commit()
+
+    pending_count = sum(1 for x in audience if x.get("status") == "pending")
+    logger.info(
+        "Daily newsletter issue %s: attempted=%s accepted=%s failed=%s pending=%s",
+        issue.id, result.get("attempted", 0), result.get("sent", 0),
+        result.get("failed", 0), pending_count,
+    )
+    return {
+        "issue_id": issue.id,
+        "attempted": result.get("attempted", 0),
+        "sent": result.get("sent", 0),
+        "failed": result.get("failed", 0),
+        "pending": pending_count,
+    }
