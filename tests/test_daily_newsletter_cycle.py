@@ -72,7 +72,7 @@ def test_daily_newsletter_retries_failed_recipient_before_next_fixed_cohort():
         ])
         db.session.commit()
 
-        with patch("services.newsletter.generate_weekly_digest", return_value=("Daily edition", "<p>Useful content</p>")):
+        with patch("services.newsletter.generate_weekly_digest", return_value=("Daily edition", "<p>Useful content</p>", [{"title": "Source", "publisher": "Publisher", "url": "https://example.com/story"}])):
             with patch("services.newsletter.send_newsletter", side_effect=[
                 {"attempted": 80, "sent": 79, "failed": 1,
                  "failures": [{"email": "cohort0@mail.net", "error": "temporary"}], "test_recipient": None},
