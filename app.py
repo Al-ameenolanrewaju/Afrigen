@@ -32,6 +32,7 @@ from routes.api import api
 from routes.campaigns import campaigns_bp
 from routes.telegram import telegram_bp
 from routes.movie_studio import movie_studio_bp
+from routes.admin_intelligence import admin_intelligence
 from services.credits import refund_video
 from services.monitoring import generate_daily_intelligence_report, run_monitoring_cycle
 from constants import (
@@ -540,6 +541,7 @@ app.register_blueprint(api, url_prefix='/api/v1')
 app.register_blueprint(campaigns_bp, url_prefix='/api/campaigns')
 app.register_blueprint(telegram_bp)
 app.register_blueprint(movie_studio_bp)
+app.register_blueprint(admin_intelligence)
 
 
 @app.context_processor
