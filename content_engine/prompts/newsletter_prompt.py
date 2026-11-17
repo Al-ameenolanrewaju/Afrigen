@@ -149,7 +149,7 @@ REQUIRED EDITORIAL FLOW
 
 10. CLOSING NOTE
    - A concise human sign-off and at most one relevant CTA.
-   - The CTA may link to {SITE_URL}/dashboard only if it naturally fits the edition.
+   - Include one restrained, useful text CTA linking to {SITE_URL}/dashboard (for example, "Explore the creative workspace"). Keep it editorial, not salesy.
 
 DESIGN DETAILS
 - Use a refined magazine cover-story treatment with a large headline and clear editorial standfirst.
