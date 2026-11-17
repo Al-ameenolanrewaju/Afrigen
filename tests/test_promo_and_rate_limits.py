@@ -61,9 +61,13 @@ def test_admin_grant_free_video_limiter_exemption():
         assert refreshed_user.free_video_allowance == 10
 
 
-def test_scheduled_promo_jobs_exist():
-    """Verify that APScheduler has morning and evening promo jobs configured."""
-    from app import autopost_promo_morning_job, autopost_promo_evening_job
-    assert callable(autopost_promo_morning_job)
-    assert callable(autopost_promo_evening_job)
+def test_automatic_promo_jobs_are_disabled():
+    """Promotions must require explicit admin approval; organic jobs stay automatic."""
+    import app as app_module
+    from app import daily_newsletter_job, social_automation_daily_planner_job
+
+    assert callable(daily_newsletter_job)
+    assert callable(social_automation_daily_planner_job)
+    assert not hasattr(app_module, "autopost_promo_morning_job")
+    assert not hasattr(app_module, "autopost_promo_evening_job")
 
