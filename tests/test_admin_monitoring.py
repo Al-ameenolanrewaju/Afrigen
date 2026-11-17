@@ -73,8 +73,9 @@ def test_health_endpoint_is_not_ready_before_monitoring_migration(monkeypatch):
 def test_monitoring_cycle_persists_snapshots_and_deduplicates_incidents():
     # Keep both cycles inside the same five-minute snapshot bucket. Using the
     # wall clock directly makes this test flaky when it starts near a bucket edge.
-    now = _utcnow().replace(
-        minute=(_utcnow().minute // 5) * 5 + 1,
+    base_time = _utcnow()
+    now = base_time.replace(
+        minute=(base_time.minute // 5) * 5 + 1,
         second=0,
         microsecond=0,
     )
