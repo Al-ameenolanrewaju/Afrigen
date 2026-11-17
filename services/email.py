@@ -112,7 +112,8 @@ def send_welcome_email(user_email, username):
             "from": FROM_EMAIL,
             "to": user_email,
             "subject": "Welcome to Afrigen",
-            "html": get_base_email_html(content)
+            "html": get_newsletter_email_html(content, unsub_url),
+                "text": _newsletter_plain_text(content) + f"\n\nUnsubscribe: {unsub_url}"
         })
         print("Welcome email sent!")
     except Exception as e:
@@ -381,6 +382,56 @@ def send_launch_confirmation(user_email, name):
         print(f"Launch confirmation email error: {e}")
 
 
+
+def get_newsletter_email_html(content, unsubscribe_url):
+    """Render the editorial magazine in a dedicated, email-client-safe 680px frame."""
+    safe_unsubscribe_url = html.escape(unsubscribe_url or "", quote=True)
+    return f"""<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light">
+<title>The Creator Intelligence Brief</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f1f0ed;font-family:Arial,Helvetica,sans-serif;color:#20242b;">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;background-color:#f1f0ed;">
+<tr><td align="center" style="padding:28px 12px;">
+<table role="presentation" width="680" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:680px;background-color:#ffffff;border-collapse:collapse;">
+<tr><td style="background-color:#171c25;padding:25px 30px 22px 30px;">
+  <p style="margin:0 0 7px 0;color:#e6ad65;font-size:10px;line-height:1.4;font-weight:bold;letter-spacing:2px;">AFRIGEN PRESENTS</p>
+  <p style="margin:0;color:#ffffff;font-family:Georgia,'Times New Roman',serif;font-size:23px;line-height:1.2;font-weight:bold;">The Creator Intelligence Brief</p>
+  <p style="margin:8px 0 0 0;color:#c5cbd3;font-size:11px;line-height:1.5;letter-spacing:.5px;">IDEAS · TECHNOLOGY · THE FUTURE OF CREATIVITY</p>
+</td></tr>
+<tr><td style="padding:30px 30px 34px 30px;background-color:#ffffff;">
+{content}
+</td></tr>
+<tr><td style="padding:22px 30px;background-color:#f7f6f3;border-top:1px solid #e8e5df;">
+  <p style="margin:0 0 8px 0;color:#343942;font-family:Georgia,'Times New Roman',serif;font-size:16px;font-weight:bold;">Afrigen</p>
+  <p style="margin:0 0 12px 0;color:#666b73;font-size:12px;line-height:1.6;">A publication for curious creators, builders and people shaping what comes next.</p>
+  <p style="margin:0 0 10px 0;font-size:12px;line-height:1.6;">
+    <a href="{BASE_URL}" style="color:#8b5d2b;text-decoration:underline;">Website</a>
+    &nbsp;·&nbsp;
+    <a href="{BASE_URL}/blog" style="color:#8b5d2b;text-decoration:underline;">Read the blog</a>
+  </p>
+  <p style="margin:0;color:#777c83;font-size:11px;line-height:1.6;">You're receiving this because you subscribed to the Afrigen newsletter. <a href="{safe_unsubscribe_url}" style="color:#555b63;text-decoration:underline;">Unsubscribe</a>.</p>
+  <p style="margin:12px 0 0 0;color:#969aa0;font-size:10px;line-height:1.5;">© 2026 Afrigen. All rights reserved.</p>
+</td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>"""
+
+
+def _newsletter_plain_text(markup):
+    """Create a readable plain-text fallback from newsletter HTML."""
+    text = re.sub(r"(?i)<br\s*/?>|</p>|</h[1-6]>|</li>|</tr>", "\n", markup or "")
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = html.unescape(text)
+    return re.sub(r"\n[ \t]+", "\n", re.sub(r"[ \t]{2,}", " ", text)).strip()
+
+
 def send_newsletter(recipients, subject, body, base_url=BASE_URL, is_html=False,
                     return_details=False):
     html_body = body if is_html else (body or "").replace("\n", "<br>")
@@ -430,17 +481,7 @@ def send_newsletter(recipients, subject, body, base_url=BASE_URL, is_html=False,
 
             original_emails.append(email)
             unsub_url = f"{base_url}/unsubscribe/{generate_unsub_token(email)}"
-            content = f"""
-            <p style="color: #E4E4E7; font-size: 15px; margin: 0 0 24px 0;">Hi <strong style="color: #FFFFFF;">{html.escape(name or 'there')}</strong>,</p>
-            <div style="color: #A1A1AA; font-size: 15px; line-height: 1.7; margin-bottom: 40px;">
-                {html_body}
-            </div>
-            
-            <p style="color: #52525B; font-size: 13px; margin: 0; line-height: 1.5; padding-top: 32px; border-top: 1px solid #222222;">
-                You're receiving this because you subscribed to updates.<br>
-                <a href="{unsub_url}" style="color: #A1A1AA; text-decoration: underline;">Unsubscribe from this list</a>.
-            </p>
-            """
+            content = html_body
             payloads.append({
                 "from": FROM_EMAIL,
                 "to": test_recipient or email,
