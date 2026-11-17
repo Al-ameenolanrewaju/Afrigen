@@ -1,0 +1,54 @@
+/* Afrigen Admin Command Centre — operations-focused dark interface */
+.command-centre {
+  --cc-panel: #121a25; --cc-panel-soft: #172231;
+  --cc-border: rgba(148, 163, 184, .15); --cc-muted: #94a3b8;
+  --cc-text: #edf2f8; --cc-gold: #d9aa58; color: var(--cc-text); max-width: 1680px;
+}
+.command-centre h1,.command-centre h2,.command-centre h3 { color:var(--cc-text); letter-spacing:-.025em; }
+.command-centre .text-muted { color:var(--cc-muted)!important; }
+.command-centre section { margin-bottom:2.4rem!important; }
+.command-centre section h2 { font-size:1.02rem; font-weight:750; }
+.command-centre section p.small { font-size:.78rem; }
+.command-centre > .d-flex:first-of-type { padding:1.15rem 1.25rem; border:1px solid var(--cc-border); border-radius:16px; background:linear-gradient(120deg,rgba(217,170,88,.09),rgba(18,26,37,.96) 48%); }
+.command-centre .card { background:var(--cc-panel)!important; color:var(--cc-text)!important; border:1px solid var(--cc-border)!important; border-radius:15px!important; box-shadow:0 10px 28px rgba(0,0,0,.14); }
+.command-centre .card-header { background:rgba(255,255,255,.025)!important; color:var(--cc-text)!important; border-bottom:1px solid var(--cc-border)!important; padding:.95rem 1.1rem; }
+.command-centre .card-body { padding:1.1rem; }
+.command-centre .row.g-3 { --bs-gutter-x:.7rem; --bs-gutter-y:.7rem; }
+.command-centre .row.g-3 > [class*="col-"] { padding:.8rem; border:1px solid var(--cc-border); border-radius:11px; background:var(--cc-panel-soft); }
+.command-centre .row.g-3 > [class*="col-"] > .text-muted.small { font-size:.72rem; margin-bottom:.35rem; }
+.command-centre .row.g-3 > [class*="col-"] > strong { display:block; font-size:clamp(1.05rem,2vw,1.35rem); line-height:1.3; letter-spacing:-.035em; overflow-wrap:anywhere; font-variant-numeric:tabular-nums; }
+.command-centre article.card { height:100%; transition:border-color .18s ease,transform .18s ease; }
+.command-centre article.card:hover { border-color:rgba(217,170,88,.42)!important; transform:translateY(-2px); }
+.command-centre article .card-body { padding:1rem; }
+.command-centre article h3 { font-size:.88rem; font-weight:750; }
+.command-centre article p:not(.text-muted) { color:#c5d0dd; font-size:.8rem; line-height:1.55; }
+.command-centre article dl { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:.42rem .8rem; padding-top:.8rem; border-top:1px solid var(--cc-border); }
+.command-centre article dl dt { color:var(--cc-muted)!important; font-size:.71rem; font-weight:500; overflow-wrap:anywhere; }
+.command-centre article dl dd { color:#e2eaf3; font-size:.72rem; font-weight:650; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.command-centre .badge { border-radius:999px; padding:.38rem .62rem; font-size:.67rem; font-weight:700; letter-spacing:.025em; }
+.command-centre .btn-warning { background:var(--cc-gold); border-color:var(--cc-gold); color:#17130c; font-weight:700; }
+.command-centre .btn-outline-warning { color:var(--cc-gold); border-color:rgba(217,170,88,.5); }
+.command-centre .btn-outline-warning:hover { background:var(--cc-gold); color:#17130c; }
+.command-centre .alert { background:var(--cc-panel-soft); color:var(--cc-text); border-color:var(--cc-border); border-radius:12px; }
+.command-centre hr { border-color:var(--cc-border); opacity:1; }
+.command-centre .table-responsive { border:1px solid var(--cc-border); border-radius:14px; background:var(--cc-panel); }
+.command-centre .table { --bs-table-bg:transparent; --bs-table-color:#dce5ef; --bs-table-border-color:var(--cc-border); margin:0; font-size:.77rem; }
+.command-centre .table thead th { background:rgba(255,255,255,.035); color:var(--cc-muted); font-size:.66rem; text-transform:uppercase; letter-spacing:.075em; white-space:nowrap; padding:.85rem .9rem; }
+.command-centre .table td { padding:.85rem .9rem; }
+.command-centre .table-dark { --bs-table-bg:transparent; --bs-table-color:#dce5ef; }
+.command-centre .form-control,.command-centre .form-select { background:#0e1621; color:var(--cc-text); border-color:var(--cc-border); font-size:.77rem; }
+.command-centre .form-control:focus,.command-centre .form-select:focus { border-color:var(--cc-gold); box-shadow:0 0 0 .2rem rgba(217,170,88,.12); }
+.command-centre details summary { color:#d5b477; cursor:pointer; }
+.command-centre pre { color:#cbd5e1; }
+@media(max-width:767.98px) {
+ .command-centre.container-fluid { padding:1rem .85rem 6.5rem!important; }
+ .command-centre > .d-flex:first-of-type { padding:1rem; align-items:flex-start!important; }
+ .command-centre > .d-flex:first-of-type h1 { font-size:1.5rem; }
+ .command-centre > .d-flex:first-of-type form { width:100%; }
+ .command-centre > .d-flex:first-of-type form .btn { width:100%; }
+ .command-centre section { margin-bottom:1.8rem!important; }
+ .command-centre section > .d-flex:first-child { align-items:flex-start!important; }
+ .command-centre .row.g-3 > [class*="col-"] { padding:.7rem; }
+ .command-centre .table { min-width:760px; }
+ .command-centre article .card-body { padding:.9rem; }
+}
