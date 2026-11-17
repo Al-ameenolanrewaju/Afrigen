@@ -2825,7 +2825,9 @@ def admin_newsletter():
 @main.route('/admin/newsletter/generate', methods=['POST'])
 @admin_required
 def admin_newsletter_generate():
-    from services.newsletter import run_weekly_generation
+    from services.newsletter import run_weekly_generation, get_current_draft
+    if get_current_draft() is not None:
+        return jsonify({'ok': False, 'error': 'An unsent edition already exists. Review, edit, approve, or resolve it before generating another.'}), 409
     try:
         issue = run_weekly_generation()
     except Exception as e:
