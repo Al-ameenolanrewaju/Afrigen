@@ -2896,7 +2896,7 @@ def admin_newsletter_approve():
     # Old drafts may contain placeholder community figures generated before
     # newsletter metrics were removed from the editorial brief. Never approve
     # a visibly stale zero-count announcement for delivery.
-    if re.search(r'currently\\s+at\\s+0\\s+creators?\\b|0\\s+creators?\\s+and\\s+0\\s+generations?\\b', final_body, re.IGNORECASE):
+    if re.search(r'currently\s+at\s+0\s+creators?\b|0\s+creators?\s+and\s+0\s+generations?\b', final_body, re.IGNORECASE):
         return jsonify({
             'ok': False,
             'error': 'This draft contains outdated zero-count community metrics. Remove that Afrigen Update section, save the edits, then approve again.'
