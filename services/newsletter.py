@@ -466,7 +466,7 @@ def run_daily_newsletter_cycle():
             subject, body, research_sources = generate_weekly_digest({
                 "total_users": User.query.count(),
                 "total_generations": Generation.query.count(),
-            })
+            }, include_research=True)
             if not subject or not body or not body.strip():
                 raise ValueError("Daily newsletter generation returned an empty subject or body.")
             issue = create_draft(
