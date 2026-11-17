@@ -219,7 +219,7 @@ Output ONLY the final promotional text ready to publish."""
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ]
-            text = provider_manager.generate(messages, max_tokens=1000)
+            text = provider_manager.generate_text("Default", messages, max_tokens=1000)
             if text:
                 return text.strip()
         except Exception as e:
