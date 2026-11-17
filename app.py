@@ -398,7 +398,8 @@ def social_automation_daily_planner_job():
             logger.error(f"Daily social automation planner error: {e}")
 
 
-@scheduler.task('cron', id='generate_weekly_newsletter', day_of_week='sat', hour=9)
+# Retired: the autonomous daily newsletter now owns editorial generation and distribution.
+# @scheduler.task('cron', id='generate_weekly_newsletter', day_of_week='sat', hour=9)
 def generate_weekly_newsletter():
     with app.app_context():
         try:
@@ -408,7 +409,8 @@ def generate_weekly_newsletter():
             print(f"Weekly newsletter generation failed: {e}")
 
 
-@scheduler.task('cron', id='send_weekly_newsletter', day_of_week='mon', hour=9)
+# Retired: the autonomous daily newsletter now owns editorial generation and distribution.
+# @scheduler.task('cron', id='send_weekly_newsletter', day_of_week='mon', hour=9)
 def send_weekly_newsletter():
     with app.app_context():
         try:
@@ -463,49 +465,16 @@ def monthly_quota_reset_job():
 def daily_newsletter_job():
     with app.app_context():
         try:
-            from services.newsletter import run_daily_newsletter_batch
+            from services.newsletter import run_daily_newsletter_batch, run_daily_newsletter_cycle
+            # Explicitly approved campaign batches remain supported separately.
             run_daily_newsletter_batch()
+            run_daily_newsletter_cycle()
         except Exception as e:
             print(f"Daily newsletter batch failed: {e}")
 
 
-@scheduler.task('cron', id='autopost_promo_morning', hour=8, minute=0)
-def autopost_promo_morning_job():
-    """Autopost morning promotional campaign across social channels at 9:00 AM WAT (8:00 UTC)."""
-    with app.app_context():
-        try:
-            import random
-            from services.promo_campaign import run_promo_campaign
-            morning_offers = [
-                "Unlock Cinema-Quality African AI Video! Creator Plans now start from ₦10,000/month with full commercial rights.",
-                "Turn scripts into breathtaking African visuals and 4K cinema videos. Claim your free trial at afrigen.com.ng today!",
-                "Create AI videos on the go with our Telegram Bot (@afrigen_bot) and mobile web app. Start creating in seconds!",
-            ]
-            offer = random.choice(morning_offers)
-            res = run_promo_campaign(offer)
-            logger.info(f"Morning promo campaign autopost completed: {res.get('platforms')}")
-        except Exception as e:
-            logger.error(f"Morning promo autopost failed: {e}")
-
-
-@scheduler.task('cron', id='autopost_promo_evening', hour=17, minute=0)
-def autopost_promo_evening_job():
-    """Autopost evening promotional campaign across social channels at 6:00 PM WAT (17:00 UTC)."""
-    with app.app_context():
-        try:
-            import random
-            from services.promo_campaign import run_promo_campaign
-            evening_offers = [
-                "Evening Creator Special: Scale your content production with Afrigen Studio & Director tiers. Full 4K AI generation.",
-                "Authentic African faces, heritage, and stories in 4K cinema AI. Upgrade to Creator for only ₦10k at afrigen.com.ng/upgrade.",
-                "Empower your agency with instant AI video workflows. Try our free Spark plan with monthly video allowances!",
-            ]
-            offer = random.choice(evening_offers)
-            res = run_promo_campaign(offer)
-            logger.info(f"Evening promo campaign autopost completed: {res.get('platforms')}")
-        except Exception as e:
-            logger.error(f"Evening promo autopost failed: {e}")
-
+# Automatic promotional rotations are intentionally disabled. Promotional campaigns
+# are launched only through the admin approval workflow.
 
 # Setup logging
 if not os.path.exists('logs'):
