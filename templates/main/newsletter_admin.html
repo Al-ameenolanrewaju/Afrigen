@@ -1,6 +1,6 @@
 {% extends "admin_base.html" %}
 
-{% block title %}Newsletter Editorial Desk{% endblock %}
+{% block title %}Newsletter Studio{% endblock %}
 
 {% block content %}
 <style>
@@ -26,8 +26,8 @@
   <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
     <div>
       <div class="newsletter-kicker mb-2">Editorial operations</div>
-      <h1 class="mb-1" style="font-family:Georgia,serif;font-weight:700;color:#f4f0e9">Newsletter Editorial Desk</h1>
-      <p class="newsletter-muted mb-0">Research, review, edit and approve each daily edition before delivery.</p>
+      <h1 class="mb-1" style="font-family:Georgia,serif;font-weight:700;color:#f4f0e9">Newsletter Studio</h1>
+      <p class="newsletter-muted mb-0">One workspace for editorial, delivery monitoring and edition history.</p>
     </div>
     <a href="{{ url_for('main.admin') }}" class="btn btn-outline-light btn-sm">← Back to Admin</a>
   </div>
@@ -67,7 +67,39 @@
   <div class="alert alert-success border-0 mb-4" style="background:#143526;color:#b9f0cf">
     <strong>Approved for delivery.</strong> The scheduled delivery process will begin sending this edition in cohorts of up to 80 recipients.
   </div>
+  {% elif draft and draft.status == 'sending' %}
+  <div class="alert alert-info border-0 mb-4" style="background:#15334a;color:#b9e1ff">
+    <strong>Delivery in progress.</strong> This approved edition is being delivered in scheduled cohorts. Failed recipients remain queued for retry.
+  </div>
   {% endif %}
+
+  <section class="newsletter-panel mb-4" id="delivery-monitor">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+      <div><div class="newsletter-kicker">02 · Delivery monitor</div><h4 class="mb-0 mt-1" style="font-family:Georgia,serif">Live delivery status</h4></div>
+      <span class="newsletter-badge {{ delivery_summary.status }}">{{ delivery_summary.status|title }}</span>
+    </div>
+    {% if delivery_summary.status == 'sending' %}
+      <div class="row g-3 mb-3">
+        <div class="col-6 col-md-3"><div class="newsletter-source"><div class="newsletter-muted small">Delivered</div><div class="newsletter-stat">{{ delivery_summary.sent }}</div></div></div>
+        <div class="col-6 col-md-3"><div class="newsletter-source"><div class="newsletter-muted small">Attempted</div><div class="newsletter-stat">{{ delivery_summary.attempted }}</div></div></div>
+        <div class="col-6 col-md-3"><div class="newsletter-source"><div class="newsletter-muted small">Failed</div><div class="newsletter-stat">{{ delivery_summary.failed }}</div></div></div>
+        <div class="col-6 col-md-3"><div class="newsletter-source"><div class="newsletter-muted small">Pending</div><div class="newsletter-stat">{{ delivery_summary.pending }}</div></div></div>
+      </div>
+      <div class="newsletter-muted small mb-2">{{ delivery_summary.sent }} of {{ delivery_summary.snapshot_total }} snapshotted recipients delivered</div>
+      <div class="progress mb-3" style="height:8px;background:#263342"><div class="progress-bar" role="progressbar" style="width:{{ (delivery_summary.sent * 100 // delivery_summary.snapshot_total) if delivery_summary.snapshot_total else 0 }}%;background:#d9a86c" aria-valuenow="{{ delivery_summary.sent }}" aria-valuemin="0" aria-valuemax="{{ delivery_summary.snapshot_total }}"></div></div>
+      <p class="newsletter-muted small mb-0">The scheduler retries failed recipients before moving to the next cohort. A new edition is held until this issue is complete.</p>
+    {% else %}
+      <p class="newsletter-muted mb-3">No issue is currently being delivered. The next approved edition will enter the scheduled delivery queue.</p>
+    {% endif %}
+    <div class="newsletter-kicker mt-4 mb-2">Audience cohorts · up to 80 recipients</div>
+    <div class="row g-2">
+      {% for batch in batches %}
+        <div class="col-12 col-md-6 col-xl-4"><div class="newsletter-source d-flex justify-content-between gap-2 align-items-center"><div><strong class="small">{{ batch.label }}</strong><div class="newsletter-muted small">{{ batch.count }} eligible recipients</div></div><span class="newsletter-badge">{{ batch.batch_number }}</span></div></div>
+      {% else %}
+        <div class="col-12"><p class="newsletter-muted small mb-0">No eligible recipients are currently queued.</p></div>
+      {% endfor %}
+    </div>
+  </section>
 
   <div class="row g-4">
     <div class="col-lg-8">
@@ -93,14 +125,14 @@
 
       <section id="previewCard" class="newsletter-panel mb-4" style="display:none">
         <div class="d-flex justify-content-between align-items-center mb-3">
-          <div><div class="newsletter-kicker">02 · Reader view</div><h4 class="mb-0 mt-1" style="font-family:Georgia,serif">Email preview</h4></div>
+          <div><div class="newsletter-kicker">03 · Reader view</div><h4 class="mb-0 mt-1" style="font-family:Georgia,serif">Email preview</h4></div>
           <button id="closePreviewBtn" class="btn btn-sm btn-outline-light">Close</button>
         </div>
         <iframe id="previewFrame" title="Newsletter email preview" sandbox="" style="width:100%;min-height:850px;border:0;border-radius:10px;background:#f1f0ed"></iframe>
       </section>
 
       <section class="newsletter-panel">
-        <div class="newsletter-kicker mb-1">03 · Edition history</div>
+        <div class="newsletter-kicker mb-1">04 · Edition history</div>
         <h4 class="mb-3" style="font-family:Georgia,serif">Recent issues</h4>
         {% for issue in recent_issues %}
           <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 py-2" style="border-bottom:1px solid #263342">
