@@ -551,6 +551,11 @@ def run_daily_newsletter_cycle():
     db.session.commit()
 
     pending_count = sum(1 for x in audience if x.get("status") == "pending")
+    if pending_count == 0:
+        issue.status = "sent"
+        issue.sent_at = datetime.now(timezone.utc)
+        issue.failed_count = 0
+        issue.recipients_count = sum(1 for x in audience if x.get("status") == "sent")
     logger.info(
         "Daily newsletter issue %s: attempted=%s accepted=%s failed=%s pending=%s",
         issue.id, result.get("attempted", 0), result.get("sent", 0),
