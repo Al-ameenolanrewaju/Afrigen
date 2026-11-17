@@ -3,6 +3,7 @@ import os
 import json
 import html
 import logging
+import re
 
 resend.api_key = os.environ.get("RESEND_API_KEY")
 
@@ -112,8 +113,7 @@ def send_welcome_email(user_email, username):
             "from": FROM_EMAIL,
             "to": user_email,
             "subject": "Welcome to Afrigen",
-            "html": get_newsletter_email_html(content, unsub_url),
-                "text": _newsletter_plain_text(content) + f"\n\nUnsubscribe: {unsub_url}"
+            "html": get_base_email_html(content)
         })
         print("Welcome email sent!")
     except Exception as e:
@@ -486,7 +486,8 @@ def send_newsletter(recipients, subject, body, base_url=BASE_URL, is_html=False,
                 "from": FROM_EMAIL,
                 "to": test_recipient or email,
                 "subject": subject or "Afrigen Update",
-                "html": get_base_email_html(content)
+                "html": get_newsletter_email_html(content, unsub_url),
+                "text": _newsletter_plain_text(content) + f"\n\nUnsubscribe: {unsub_url}"
             })
 
         if not payloads:
