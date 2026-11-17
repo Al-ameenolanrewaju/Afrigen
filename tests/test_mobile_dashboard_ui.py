@@ -85,7 +85,7 @@ def test_admin_user_gets_admin_destinations_in_mobile_more_menu():
     response = client.get("/dashboard")
     assert response.status_code == 200
     assert b"Administration</h3>" in response.data
-    assert b'href="/admin/campaigns"' in response.data
+    assert b'href="/admin/marketing"' in response.data
     assert b'href="/admin/credits"' in response.data
 
 

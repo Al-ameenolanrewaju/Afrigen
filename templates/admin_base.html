@@ -460,13 +460,8 @@
         <div class="admin-nav-section mt-3">GROWTH & CAMPAIGNS</div>
         <ul class="admin-nav-list">
             <li>
-                <a href="{{ url_for('main.admin_promo_campaigns') }}" class="admin-nav-item {% if request.endpoint == 'main.admin_promo_campaigns' %}active{% endif %}">
-                    <i class="fa-solid fa-bullhorn" style="color: #F5A623;"></i> AI Promo Campaigns
-                </a>
-            </li>
-            <li>
-                <a href="{{ url_for('main.admin_newsletter_campaigns') }}" class="admin-nav-item {% if request.endpoint and 'newsletter' in request.endpoint %}active{% endif %}">
-                    <i class="fa-solid fa-envelope" style="color: #60A5FA;"></i> Daily Newsletter
+                <a href="{{ url_for('main.admin_marketing_campaigns') }}" class="admin-nav-item {% if request.endpoint in ('main.admin_marketing_campaigns', 'main.admin_promo_campaigns', 'main.admin_newsletter_campaigns') %}active{% endif %}">
+                    <i class="fa-solid fa-bullhorn" style="color: #F5A623;"></i> Marketing Campaigns
                 </a>
             </li>
             <li>

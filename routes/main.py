@@ -3316,46 +3316,167 @@ def admin_paystack_webhooks():
     return render_template('main/admin_paystack_webhooks.html', webhook_logs=webhook_logs)
 
 
-# ---------- Admin Newsletter Campaigns ----------
+# ---------- Unified AI Marketing Campaign Centre ----------
 
-@main.route('/admin/newsletter/campaigns')
+_MARKETING_CAMPAIGN_PREFIX = "__AFRIGEN_MARKETING_CAMPAIGN_V1__\\n"
+_MARKETING_PLATFORMS = ("telegram", "facebook", "instagram", "linkedin", "devto")
+
+
+def _marketing_campaign_payload(campaign):
+    raw = campaign.html_body or ""
+    if raw.startswith(_MARKETING_CAMPAIGN_PREFIX):
+        try:
+            return json.loads(raw[len(_MARKETING_CAMPAIGN_PREFIX):])
+        except (TypeError, ValueError):
+            logger.exception("Could not decode marketing campaign %s", campaign.id)
+    return {
+        "brief": campaign.subject,
+        "email_subject": campaign.subject,
+        "email_html": raw,
+        "copies": {},
+        "platforms": [],
+        "flyer_url": None,
+    }
+
+
+@main.route('/admin/marketing', methods=['GET', 'POST'])
 @admin_required
-def admin_newsletter_campaigns():
+@limiter.exempt
+def admin_marketing_campaigns():
     from models import NewsletterCampaign
-    campaigns = NewsletterCampaign.query.order_by(NewsletterCampaign.created_at.desc()).all()
-    return render_template('admin/newsletter_campaigns.html', campaigns=campaigns)
+    from services.newsletter import collect_recipients
+
+    generated = None
+    if request.method == 'POST':
+        brief = request.form.get('campaign_brief', '').strip()
+        platforms = [p for p in request.form.getlist('platforms') if p in _MARKETING_PLATFORMS]
+        if not brief:
+            flash('Describe the promotion or announcement first.', 'danger')
+        else:
+            try:
+                from services.promo_campaign import generate_promo_post, generate_promo_flyer
+                from services.provider_manager import provider_manager
+
+                copies = {
+                    platform: generate_promo_post(brief, platform)
+                    for platform in platforms
+                }
+                email_prompt = (
+                    "Create a conversion-focused promotional email for Afrigen AI. "
+                    "Return ONLY valid JSON with keys subject and html. The html must be "
+                    "email-safe table-based HTML, inline styles, responsive, and include a "
+                    "clear CTA to https://afrigen.com.ng. Do not invent features, prices, "
+                    "discounts, deadlines, or guarantees. Use only details in the campaign brief. "
+                    "Include a concise unsubscribe footer placeholder; the delivery system adds "
+                    "the real unsubscribe link.\n\nCAMPAIGN BRIEF:\n" + brief
+                )
+                response = provider_manager.generate([
+                    {"role": "system", "content": "You are Afrigen's senior lifecycle marketing writer. Be accurate, persuasive, and concise."},
+                    {"role": "user", "content": email_prompt},
+                ], max_tokens=1800)
+                email_data = json.loads(response.strip().removeprefix("```json").removesuffix("```").strip())
+                email_subject = str(email_data.get("subject") or "An update from Afrigen")[:300]
+                email_html = str(email_data.get("html") or "")
+                if not email_html:
+                    raise ValueError("The email generator returned an empty email.")
+                flyer_url = generate_promo_flyer(brief)
+                generated = {
+                    "brief": brief,
+                    "email_subject": email_subject,
+                    "email_html": email_html,
+                    "copies": copies,
+                    "platforms": platforms,
+                    "flyer_url": flyer_url,
+                }
+                flash('Campaign assets generated. Review and edit each channel before saving.', 'success')
+            except Exception as exc:
+                logger.exception("Unified marketing campaign generation failed")
+                flash(f'Could not generate the campaign: {exc}', 'danger')
+
+    campaigns = NewsletterCampaign.query.order_by(NewsletterCampaign.created_at.desc()).limit(50).all()
+    campaign_rows = [{"campaign": c, "payload": _marketing_campaign_payload(c)} for c in campaigns]
+    return render_template(
+        'admin/marketing_campaigns.html',
+        generated=generated,
+        campaign_rows=campaign_rows,
+        audience_count=len(collect_recipients()),
+    )
 
 
-@main.route('/admin/newsletter/campaigns/new', methods=['POST'])
+@main.route('/admin/marketing/save', methods=['POST'])
 @admin_required
-def admin_newsletter_campaign_new():
+@limiter.exempt
+def admin_marketing_campaign_save():
     from models import NewsletterCampaign
-    subject = request.form.get('subject', '').strip()
-    html_body = request.form.get('html_body', '').strip()
-    if not subject or not html_body:
-        flash('Subject and body are required.', 'danger')
-        return redirect(url_for('main.admin_newsletter_campaigns'))
-    campaign = NewsletterCampaign(subject=subject, html_body=html_body, status='draft')
+    brief = request.form.get('campaign_brief', '').strip()
+    subject = request.form.get('email_subject', '').strip()
+    email_html = request.form.get('email_html', '').strip()
+    platforms = [p for p in request.form.getlist('platforms') if p in _MARKETING_PLATFORMS]
+    if not brief or not subject or not email_html:
+        flash('Campaign brief, email subject, and email body are required.', 'danger')
+        return redirect(url_for('main.admin_marketing_campaigns'))
+    copies = {}
+    for platform in platforms:
+        copies[platform] = request.form.get('copy_' + platform, '').strip()
+    payload = {
+        "brief": brief,
+        "email_subject": subject,
+        "email_html": email_html,
+        "copies": copies,
+        "platforms": platforms,
+        "flyer_url": request.form.get('flyer_url', '').strip() or None,
+        "social_published": False,
+    }
+    campaign = NewsletterCampaign(
+        subject=subject,
+        html_body=_MARKETING_CAMPAIGN_PREFIX + json.dumps(payload, ensure_ascii=False),
+        status='draft',
+    )
     db.session.add(campaign)
     db.session.commit()
-    flash('Campaign created.', 'success')
-    return redirect(url_for('main.admin_newsletter_campaigns'))
+    flash('Campaign saved as a draft. Nothing has been sent or published.', 'success')
+    return redirect(url_for('main.admin_marketing_campaigns'))
 
 
-@main.route('/admin/newsletter/campaigns/<int:id>/launch', methods=['POST'])
+@main.route('/admin/marketing/<int:id>/launch', methods=['POST'])
 @admin_required
-def admin_newsletter_campaign_launch(id):
+@limiter.exempt
+def admin_marketing_campaign_launch(id):
     from models import NewsletterCampaign
     from services.newsletter import collect_recipients
     campaign = NewsletterCampaign.query.get_or_404(id)
-    total = len(collect_recipients(limit=99999, offset=0))
-    campaign.total_audience = total
+    payload = _marketing_campaign_payload(campaign)
+    if campaign.status != 'draft':
+        flash('Only draft campaigns can be launched.', 'warning')
+        return redirect(url_for('main.admin_marketing_campaigns'))
+    campaign.subject = payload.get('email_subject') or campaign.subject
+    campaign.html_body = payload.get('email_html') or ''
+    campaign.total_audience = len(collect_recipients())
     campaign.batch_offset = 0
     campaign.status = 'sending'
     campaign.started_at = datetime.now(timezone.utc)
     db.session.commit()
-    flash(f'Campaign launched to {total} recipients.', 'success')
-    return redirect(url_for('main.admin_newsletter_campaigns'))
+
+    platforms = payload.get('platforms') or []
+    if platforms:
+        try:
+            from services.promo_campaign import publish_prepared_campaign
+            social = publish_prepared_campaign(
+                payload.get('brief', ''), payload.get('copies', {}),
+                platforms, payload.get('flyer_url')
+            )
+            logger.info("Marketing campaign %s social delivery: %s", id, social.get('platforms', {}))
+        except Exception:
+            logger.exception("Social distribution failed for marketing campaign %s", id)
+            flash('Email campaign queued; one or more social channels could not be published. Check logs.', 'warning')
+    flash(f'Campaign launched. Email delivery will process in batches for {campaign.total_audience} opted-in recipients.', 'success')
+    return redirect(url_for('main.admin_marketing_campaigns'))
+
+
+@main.route('/admin/newsletter/campaigns')
+@admin_required
+def admin_newsletter_campaigns():
+    return redirect(url_for('main.admin_marketing_campaigns'))
 
 
 @main.route('/admin/newsletter/campaigns/<int:id>/pause', methods=['POST'])
@@ -3370,7 +3491,7 @@ def admin_newsletter_campaign_pause(id):
         campaign.status = 'sending'
         flash('Campaign resumed.', 'success')
     db.session.commit()
-    return redirect(url_for('main.admin_newsletter_campaigns'))
+    return redirect(url_for('main.admin_marketing_campaigns'))
 
 
 @main.route('/admin/newsletter/campaigns/<int:id>/delete', methods=['POST'])
@@ -3380,11 +3501,11 @@ def admin_newsletter_campaign_delete(id):
     campaign = NewsletterCampaign.query.get_or_404(id)
     if campaign.status != 'draft':
         flash('Only draft campaigns can be deleted.', 'danger')
-        return redirect(url_for('main.admin_newsletter_campaigns'))
+        return redirect(url_for('main.admin_marketing_campaigns'))
     db.session.delete(campaign)
     db.session.commit()
     flash('Campaign deleted.', 'success')
-    return redirect(url_for('main.admin_newsletter_campaigns'))
+    return redirect(url_for('main.admin_marketing_campaigns'))
 
 
 # ---------- Notifications API ----------
@@ -3596,26 +3717,15 @@ def admin_notifications_broadcast():
     return jsonify({'ok': True, 'sent_to': len(users)})
 
 
-# ---------- Admin Promo Campaigns ----------
+# ---------- Legacy promo entry redirects to unified marketing ----------
 
 @main.route('/admin/campaigns', methods=['GET', 'POST'])
 @admin_required
 @limiter.exempt
 def admin_promo_campaigns():
-    result = None
     if request.method == 'POST':
-        offer_text = request.form.get('offer_text', '').strip()
-        selected_platforms = request.form.getlist('platforms')
-        if offer_text:
-            try:
-                from services.promo_campaign import run_promo_campaign
-                result = run_promo_campaign(offer_text, selected_platforms or None)
-                flash('Campaign launched!', 'success')
-            except Exception as exc:
-                flash(f'Campaign error: {exc}', 'danger')
-        else:
-            flash('Offer text is required.', 'danger')
-    return render_template('admin/campaigns.html', result=result)
+        flash('Use the unified campaign composer to generate, review, and launch all channels together.', 'info')
+    return redirect(url_for('main.admin_marketing_campaigns'))
 
 
 # ---------- PWA Routes ----------

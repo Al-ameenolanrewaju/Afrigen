@@ -120,23 +120,35 @@ def _split_subject(text, fallback_subject):
 # ---------- Recipients ----------
 
 def collect_recipients(limit=None, offset=0):
-    """Every email we can reach — every registered user + waitlist — de-duped
-    (case-insensitive), excluding anyone who unsubscribed.
+    """Return deduplicated, explicitly opted-in users and newsletter subscribers.
 
-    Supports limit and offset slicing for Resend daily quota management (e.g. 80-user batches).
+    Global opt-outs are always excluded. Registered accounts must have marketing
+    emails enabled; waitlist subscribers must have their newsletter flag enabled.
     """
-    opted_out = {e.lower() for (e,) in db.session.query(EmailOptOut.email).all()}
+    opted_out = {
+        (email or "").strip().lower()
+        for (email,) in db.session.query(EmailOptOut.email).all()
+    }
 
     seen = set()
     recipients = []
-    # Registered accounts first (so their username is used as the name on dupes).
-    for email, name in db.session.query(User.email, User.username).all():
-        key = (email or "").lower()
+
+    # Registered accounts are eligible only when the user opted into marketing.
+    user_query = db.session.query(User.email, User.username).filter(
+        User.marketing_emails.is_(True)
+    )
+    for email, name in user_query.all():
+        key = (email or "").strip().lower()
         if key and key not in seen and key not in opted_out:
             seen.add(key)
             recipients.append((email, name))
-    for email, name in db.session.query(Subscriber.email, Subscriber.name).all():
-        key = (email or "").lower()
+
+    # Waitlist records are included only when their newsletter preference is enabled.
+    subscriber_query = db.session.query(Subscriber.email, Subscriber.name).filter(
+        Subscriber.newsletter.is_(True)
+    )
+    for email, name in subscriber_query.all():
+        key = (email or "").strip().lower()
         if key and key not in seen and key not in opted_out:
             seen.add(key)
             recipients.append((email, name))
@@ -145,9 +157,7 @@ def collect_recipients(limit=None, offset=0):
         recipients = recipients[offset:]
     if limit and limit > 0:
         recipients = recipients[:limit]
-
     return recipients
-
 
 def get_newsletter_batches(batch_size=80):
     """Split the total deduplicated newsletter audience into batches (default 80 for Resend free tier)."""

@@ -19,7 +19,7 @@ def test_collect_recipients_slicing():
     with app.app_context():
         # Create 100 test users
         users = [
-            User(username=f"user_{i}", email=f"user_{i}@example.com", password="pw", credits=5)
+            User(username=f"user_{i}", email=f"user_{i}@example.com", password="pw", credits=5, marketing_emails=True)
             for i in range(100)
         ]
         db.session.add_all(users)
@@ -41,7 +41,7 @@ def test_get_newsletter_batches():
     with app.app_context():
         # Create 185 test users
         users = [
-            User(username=f"u_{i}", email=f"u_{i}@example.com", password="pw", credits=5)
+            User(username=f"u_{i}", email=f"u_{i}@example.com", password="pw", credits=5, marketing_emails=True)
             for i in range(185)
         ]
         db.session.add_all(users)
