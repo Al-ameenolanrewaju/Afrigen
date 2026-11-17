@@ -90,3 +90,63 @@ def test_collect_newsletter_research_rejects_non_https_article_links():
     )
 
     assert items == []
+
+
+def test_story_coverage_flags_related_headlines_without_claiming_verification():
+    from services.newsletter_research import annotate_story_coverage
+
+    items = [
+        {
+            "title": "OpenAI launches new reasoning model for developers",
+            "publisher": "Publisher One",
+            "source_type": "independent",
+        },
+        {
+            "title": "OpenAI launches a new reasoning model for developers",
+            "publisher": "Publisher Two",
+            "source_type": "independent",
+        },
+    ]
+
+    annotated = annotate_story_coverage(items)
+
+    assert [item["coverage_status"] for item in annotated] == [
+        "multiple_outlets", "multiple_outlets"
+    ]
+    assert all(item["coverage_count"] == 2 for item in annotated)
+    assert all(item["coverage_publishers"] == ["Publisher One", "Publisher Two"] for item in annotated)
+    assert all("not proof" in item["coverage_note"] for item in annotated)
+
+
+def test_story_coverage_keeps_primary_announcement_distinct_from_independent_reporting():
+    from services.newsletter_research import annotate_story_coverage
+
+    primary = {
+        "title": "Company announces a new AI model",
+        "publisher": "Company",
+        "source_type": "primary",
+    }
+    independent = {
+        "title": "Company announces a new AI model",
+        "publisher": "Newsroom",
+        "source_type": "independent",
+    }
+
+    annotated = annotate_story_coverage([primary, independent])
+
+    assert annotated[0]["coverage_status"] == "multiple_outlets"
+    assert annotated[0]["coverage_count"] == 2
+
+
+def test_story_coverage_does_not_merge_unrelated_or_same_publisher_headlines():
+    from services.newsletter_research import annotate_story_coverage
+
+    items = [
+        {"title": "OpenAI releases a new model", "publisher": "Same Publisher", "source_type": "independent"},
+        {"title": "NASA discovers water on distant planet", "publisher": "Same Publisher", "source_type": "independent"},
+    ]
+
+    annotated = annotate_story_coverage(items)
+
+    assert len(annotated) == 2
+    assert all(item["coverage_status"] == "single_source" for item in annotated)
