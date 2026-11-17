@@ -2879,6 +2879,15 @@ def admin_newsletter_save():
     return jsonify({'ok': True, 'id': draft.id, 'status': draft.status})
 
 
+def _contains_stale_newsletter_metrics(body):
+    """Detect legacy zero-count community claims before an issue can be approved."""
+    return bool(re.search(
+        r'currently\s+at\s+0\s+creators?\b|0\s+creators?\s+and\s+0\s+generations?\b',
+        body or '',
+        re.IGNORECASE,
+    ))
+
+
 @main.route('/admin/newsletter/approve', methods=['POST'])
 @admin_required
 def admin_newsletter_approve():
@@ -2896,7 +2905,7 @@ def admin_newsletter_approve():
     # Old drafts may contain placeholder community figures generated before
     # newsletter metrics were removed from the editorial brief. Never approve
     # a visibly stale zero-count announcement for delivery.
-    if re.search(r'currently\s+at\s+0\s+creators?\b|0\s+creators?\s+and\s+0\s+generations?\b', final_body, re.IGNORECASE):
+    if _contains_stale_newsletter_metrics(final_body):
         return jsonify({
             'ok': False,
             'error': 'This draft contains outdated zero-count community metrics. Remove that Afrigen Update section, save the edits, then approve again.'
