@@ -1,3 +1,4 @@
+from unittest.mock import patch
 from app import app
 from models import db, User, Subscriber, EmailOptOut
 from services.newsletter import (
