@@ -251,6 +251,11 @@ def ensure_legacy_schema_columns():
                 'subscribers': [
                     ('updated_at', 'TIMESTAMPTZ', "UPDATE subscribers SET updated_at = created_at WHERE updated_at IS NULL")
                 ],
+                # Keep this additive repair for deployments where Render's
+                # pre-deploy migration command was not configured on the service.
+                'newsletter_issues': [
+                    ('research_sources_json', 'TEXT', None),
+                ],
                 'telegram_users': [
                     ('mode', "VARCHAR(20) DEFAULT 'video'", "UPDATE telegram_users SET mode = 'video' WHERE mode IS NULL"),
                     ('style', "VARCHAR(50) DEFAULT 'cinematic'", "UPDATE telegram_users SET style = 'cinematic' WHERE style IS NULL"),
