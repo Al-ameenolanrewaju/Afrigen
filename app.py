@@ -104,6 +104,12 @@ def add_security_headers(response):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Permissions-Policy"] = "geolocation=(), camera=(), microphone=()"
+    # Admin HTML contains per-session CSRF tokens. Never let browsers or proxies
+    # cache a token-bearing page and replay it after its session has changed.
+    if request.path.startswith("/admin"):
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, private"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Vary"] = "Cookie"
     return response
 
 
