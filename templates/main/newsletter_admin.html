@@ -28,6 +28,11 @@
       <div class="newsletter-kicker mb-2">Editorial operations</div>
       <h1 class="mb-1" style="font-family:Georgia,serif;font-weight:700;color:#f4f0e9">Newsletter Studio</h1>
       <p class="newsletter-muted mb-0">One workspace for editorial, delivery monitoring and edition history.</p>
+      <div class="d-flex flex-wrap gap-2 mt-3">
+        <a class="btn btn-sm btn-outline-warning" href="#edition-editor">Editorial Desk</a>
+        <a class="btn btn-sm btn-outline-light" href="#delivery-monitor">Delivery Monitor</a>
+        <a class="btn btn-sm btn-outline-light" href="#edition-history">Edition History</a>
+      </div>
     </div>
     <a href="{{ url_for('main.admin') }}" class="btn btn-outline-light btn-sm">← Back to Admin</a>
   </div>
@@ -59,6 +64,11 @@
     </div></div>
   </div>
 
+  {% if draft and draft.body and ('0 creators' in draft.body|lower or '0 generations' in draft.body|lower) %}
+  <div class="alert alert-warning border-0 mb-4" style="background:#3b2d18;color:#f7d9a4">
+    <strong>Editorial quality check.</strong> This saved edition contains zero-valued creator or generation claims. Community metrics have been removed from new newsletter generation; please edit this older draft before approving it.
+  </div>
+  {% endif %}
   {% if draft and draft.status == 'draft' %}
   <div class="alert alert-warning border-0 mb-4" style="background:#3b2d18;color:#f7d9a4">
     <strong>Approval required.</strong> This edition will not be distributed until you approve it. After approval, the scheduled delivery process sends in cohorts of up to 80 recipients per day.
@@ -103,7 +113,7 @@
 
   <div class="row g-4">
     <div class="col-lg-8">
-      <section class="newsletter-panel mb-4">
+      <section class="newsletter-panel mb-4" id="edition-editor">
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
           <div><div class="newsletter-kicker">01 · Edition editor</div><h4 class="mb-0 mt-1" style="font-family:Georgia,serif">Prepare the issue</h4></div>
           <button id="generateBtn" class="btn btn-outline-warning btn-sm newsletter-action"><i class="fa-solid fa-wand-magic-sparkles me-1"></i> Generate new edition</button>
@@ -131,7 +141,7 @@
         <iframe id="previewFrame" title="Newsletter email preview" sandbox="" style="width:100%;min-height:850px;border:0;border-radius:10px;background:#f1f0ed"></iframe>
       </section>
 
-      <section class="newsletter-panel">
+      <section class="newsletter-panel" id="edition-history">
         <div class="newsletter-kicker mb-1">04 · Edition history</div>
         <h4 class="mb-3" style="font-family:Georgia,serif">Recent issues</h4>
         {% for issue in recent_issues %}
