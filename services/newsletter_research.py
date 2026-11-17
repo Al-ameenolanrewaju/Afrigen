@@ -19,15 +19,15 @@ logger = logging.getLogger(__name__)
 # Primary sources are preferred for announcements; established newsrooms add
 # independent reporting and context. Keep this list deliberately curated.
 NEWSLETTER_RSS_FEEDS = (
-    {"publisher": "OpenAI", "url": "https://openai.com/news/rss.xml", "tier": 1},
-    {"publisher": "Google DeepMind", "url": "https://deepmind.google/blog/rss.xml", "tier": 1},
-    {"publisher": "Google AI", "url": "https://blog.google/technology/ai/rss/", "tier": 1},
-    {"publisher": "Hugging Face", "url": "https://huggingface.co/blog/feed.xml", "tier": 1},
-    {"publisher": "MIT Technology Review", "url": "https://www.technologyreview.com/topic/artificial-intelligence/feed", "tier": 2},
-    {"publisher": "TechCrunch", "url": "https://techcrunch.com/category/artificial-intelligence/feed/", "tier": 2},
-    {"publisher": "The Verge", "url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml", "tier": 2},
-    {"publisher": "Ars Technica", "url": "https://arstechnica.com/ai/feed/", "tier": 2},
-    {"publisher": "Simon Willison", "url": "https://simonwillison.net/atom/everything/", "tier": 2},
+    {"publisher": "OpenAI", "url": "https://openai.com/news/rss.xml", "tier": 1, "source_type": "primary"},
+    {"publisher": "Google DeepMind", "url": "https://deepmind.google/blog/rss.xml", "tier": 1, "source_type": "primary"},
+    {"publisher": "Google AI", "url": "https://blog.google/technology/ai/rss/", "tier": 1, "source_type": "primary"},
+    {"publisher": "Hugging Face", "url": "https://huggingface.co/blog/feed.xml", "tier": 1, "source_type": "primary"},
+    {"publisher": "MIT Technology Review", "url": "https://www.technologyreview.com/topic/artificial-intelligence/feed", "tier": 2, "source_type": "independent"},
+    {"publisher": "TechCrunch", "url": "https://techcrunch.com/category/artificial-intelligence/feed/", "tier": 2, "source_type": "independent"},
+    {"publisher": "The Verge", "url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml", "tier": 2, "source_type": "independent"},
+    {"publisher": "Ars Technica", "url": "https://arstechnica.com/ai/feed/", "tier": 2, "source_type": "independent"},
+    {"publisher": "Simon Willison", "url": "https://simonwillison.net/atom/everything/", "tier": 2, "source_type": "independent"},
 )
 
 REQUEST_TIMEOUT = (3.05, 8)
@@ -128,8 +128,75 @@ def _parse_feed(xml_bytes, source, now):
             "url": link,
             "summary": summary,
             "source_tier": source["tier"],
+            "source_type": source.get("source_type", "unknown"),
         })
     return results
+
+
+# Headline grouping is a discovery signal only. It does not establish that the
+# underlying claims are true or that publishers used independent reporting.
+_TITLE_STOPWORDS = {
+    "about", "after", "amid", "and", "are", "announces", "been", "for",
+    "from", "has", "have", "into", "its", "new", "over", "says", "that",
+    "the", "their", "this", "with", "will", "your",
+}
+
+
+def _headline_tokens(title):
+    words = re.findall(r"[a-z0-9]{3,}", (title or "").lower())
+    return {word for word in words if word not in _TITLE_STOPWORDS}
+
+
+def _headline_similarity(left, right):
+    a, b = _headline_tokens(left), _headline_tokens(right)
+    if not a or not b:
+        return 0.0
+    return len(a & b) / len(a | b)
+
+
+def annotate_story_coverage(items, similarity_threshold=0.42):
+    """Flag likely cross-publisher coverage; never label it fact-verified.
+
+    Publisher labels are a rough signal: RSS alone cannot rule out syndication,
+    common press releases, shared ownership, or shared original sourcing.
+    """
+    groups = []
+    for item in items:
+        match = None
+        for group in groups:
+            if any(
+                existing["publisher"] != item["publisher"]
+                and _headline_similarity(existing["title"], item["title"]) >= similarity_threshold
+                for existing in group
+            ):
+                match = group
+                break
+        (match if match is not None else groups.append([item]) or groups[-1]).append(item) if match is not None else None
+
+    annotated = []
+    for group in groups:
+        publishers = list(dict.fromkeys(entry["publisher"] for entry in group))
+        source_types = {entry.get("source_type", "unknown") for entry in group}
+        if len(publishers) > 1:
+            status = "multiple_outlets"
+        elif source_types == {"primary"}:
+            status = "primary_source_only"
+        else:
+            status = "single_source"
+        for item in group:
+            annotated.append({
+                **item,
+                "coverage_status": status,
+                "coverage_count": len(publishers),
+                "coverage_publishers": publishers,
+                "coverage_note": (
+                    "Related headlines appeared across multiple outlets; this is not proof "
+                    "of independent corroboration or factual accuracy."
+                    if len(publishers) > 1 else
+                    "Only one publisher was found in this feed sample; this does not mean the report is false."
+                ),
+            })
+    return annotated
 
 
 def collect_newsletter_research(now=None, feeds=None, session=None):
@@ -177,7 +244,8 @@ def collect_newsletter_research(now=None, feeds=None, session=None):
         ),
         reverse=True,
     )
-    return [
+    selected = [
         {key: value for key, value in item.items() if key != "source_tier"}
         for item in items[:MAX_RESEARCH_ITEMS]
     ]
+    return annotate_story_coverage(selected)
