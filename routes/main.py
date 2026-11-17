@@ -2688,7 +2688,18 @@ def launch_subscribe():
 
     existing = Subscriber.query.filter_by(email=email).first()
     if existing:
-        # Idempotent: re-subscribing just confirms they're already on the list.
+        # A returning waitlist member may explicitly opt into the newsletter now,
+        # even if their original signup left the newsletter preference disabled.
+        # Preserve an existing preference when the checkbox is not selected.
+        if newsletter and not existing.newsletter:
+            existing.newsletter = True
+            existing.updated_at = datetime.now(timezone.utc)
+            opt_out = EmailOptOut.query.filter_by(email=email).first()
+            if opt_out:
+                # A fresh, affirmative signup is a new consent signal.
+                db.session.delete(opt_out)
+            db.session.commit()
+            send_launch_confirmation(email, name)
         return jsonify({'success': True, 'link': launch_link, 'already': True})
 
     subscriber = Subscriber(name=name, email=email, newsletter=newsletter)
