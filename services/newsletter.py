@@ -455,36 +455,51 @@ def run_daily_newsletter_cycle():
     )
 
     if issue is None:
+        # The editorial workflow is deliberately approval-gated. Generate a
+        # reviewable draft first; no recipient is contacted until an admin approves.
+        issue = get_current_draft()
+        if issue is None:
+            recipients = collect_recipients()
+            if not recipients:
+                print("Daily newsletter skipped: no eligible subscribers.")
+                return {"generated": False, "sent": 0, "pending": 0}
+            subject, body, research_sources = generate_weekly_digest({
+                "total_users": User.query.count(),
+                "total_generations": Generation.query.count(),
+            })
+            if not subject or not body or not body.strip():
+                raise ValueError("Daily newsletter generation returned an empty subject or body.")
+            issue = create_draft(
+                subject, body, auto_generated=True, research_sources=research_sources
+            )
+            print(f"Daily newsletter edition {issue.id} is ready for editorial approval.")
+            _notify_admins(
+                "Daily newsletter is ready for review",
+                f"Edition #{issue.id} has been generated with its source list. Approve it in the newsletter editor before delivery.",
+            )
+            return {"generated": True, "issue_id": issue.id, "awaiting_approval": True, "sent": 0, "pending": 0}
+
+        if issue.status != "approved":
+            print(f"Daily newsletter issue {issue.id} is awaiting editorial approval.")
+            return {"generated": False, "issue_id": issue.id, "awaiting_approval": True, "sent": 0, "pending": 0}
+
         recipients = collect_recipients()
         if not recipients:
             print("Daily newsletter skipped: no eligible subscribers.")
             return {"generated": False, "sent": 0, "pending": 0}
-        subject, body, research_sources = generate_weekly_digest({
-            "total_users": User.query.count(),
-            "total_generations": Generation.query.count(),
-        })
-        if not subject or not body or not body.strip():
-            raise ValueError("Daily newsletter generation returned an empty subject or body.")
         snapshot = [
             {"email": (email or "").strip().lower(), "name": name or "",
              "position": position, "batch_number": position // 80,
              "status": "pending", "attempts": 0}
             for position, (email, name) in enumerate(recipients)
         ]
-        issue = NewsletterIssue(
-            subject=subject[:300],
-            body=body,
-            research_sources_json=json.dumps(research_sources or [], ensure_ascii=False),
-            status="sending",
-            auto_generated=True,
-            recipients_count=0,
-            attempted_count=0,
-            failed_count=0,
-            delivery_failures=json.dumps({"version": 1, "audience": snapshot}),
-        )
-        db.session.add(issue)
+        issue.status = "sending"
+        issue.recipients_count = 0
+        issue.attempted_count = 0
+        issue.failed_count = 0
+        issue.delivery_failures = json.dumps({"version": 1, "audience": snapshot})
         db.session.commit()
-        print(f"Daily newsletter edition {issue.id} generated for {len(snapshot)} recipients.")
+        print(f"Approved newsletter edition {issue.id} queued for {len(snapshot)} recipients.")
 
     try:
         state = json.loads(issue.delivery_failures or "{}")
