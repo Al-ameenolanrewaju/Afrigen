@@ -461,7 +461,7 @@ def monthly_quota_reset_job():
             db.session.rollback()
 
 
-@scheduler.task('cron', id='daily_newsletter', hour=8, minute=0)
+@scheduler.task('cron', id='daily_newsletter', hour=8, minute=0, timezone='UTC')
 def daily_newsletter_job():
     with app.app_context():
         try:
