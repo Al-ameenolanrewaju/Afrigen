@@ -29,3 +29,29 @@ def test_newsletter_editorial_calendar_uses_lagos_local_date():
     )
     assert result["day"] == "Tuesday"
     assert result["name"] == "Creator Education"
+
+
+
+def test_newsletter_prompt_never_includes_unverified_community_metrics():
+    from types import SimpleNamespace
+    from content_engine.prompts.newsletter_prompt import get_newsletter_user_prompt
+
+    brief = SimpleNamespace(
+        topic="AI workflows",
+        goal="Teach a practical workflow",
+        key_message="Start with a clear brief",
+        key_insight="Specific inputs improve outputs",
+        suggested_tone="Practical",
+        call_to_action="Try the workflow",
+    )
+    prompt = get_newsletter_user_prompt(
+        brief=brief,
+        features_block="",
+        posts_block="",
+        users=0,
+        generations=0,
+        date_str="November 17, 2026",
+    )
+    assert "Registered users: 0" not in prompt
+    assert "Total generations: 0" not in prompt
+    assert "Do not include creator counts" in prompt
