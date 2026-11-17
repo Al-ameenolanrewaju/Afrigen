@@ -431,7 +431,7 @@ def send_newsletter(recipients, subject, body, base_url=BASE_URL, is_html=False,
             original_emails.append(email)
             unsub_url = f"{base_url}/unsubscribe/{generate_unsub_token(email)}"
             content = f"""
-            <p style="color: #E4E4E7; font-size: 15px; margin: 0 0 24px 0;">Hi <strong style="color: #FFFFFF;">{name or 'there'}</strong>,</p>
+            <p style="color: #E4E4E7; font-size: 15px; margin: 0 0 24px 0;">Hi <strong style="color: #FFFFFF;">{html.escape(name or 'there')}</strong>,</p>
             <div style="color: #A1A1AA; font-size: 15px; line-height: 1.7; margin-bottom: 40px;">
                 {html_body}
             </div>
