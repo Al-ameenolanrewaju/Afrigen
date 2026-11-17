@@ -472,6 +472,11 @@
                 </a>
             </li>
             <li>
+                <a href="{{ url_for('main.admin_newsletter') }}" class="admin-nav-item {% if request.endpoint and 'newsletter' in request.endpoint %}active{% endif %}">
+                    <i class="fa-solid fa-envelope-open-text"></i> Newsletter Studio
+                </a>
+            </li>
+            <li>
                 <a href="{{ url_for('main.admin_blog') }}" class="admin-nav-item {% if request.endpoint and 'blog' in request.endpoint %}active{% endif %}">
                     <i class="fa-solid fa-newspaper"></i> Blog CMS
                 </a>
