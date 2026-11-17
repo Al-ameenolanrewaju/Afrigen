@@ -2792,13 +2792,38 @@ def admin_newsletter():
     from services.newsletter import get_current_draft, audience_size, get_newsletter_batches
     from models import NewsletterIssue
 
-    draft = get_current_draft()
+    active_issue = (
+        NewsletterIssue.query.filter_by(status='sending')
+        .order_by(NewsletterIssue.created_at.asc())
+        .first()
+    )
+    draft = active_issue or get_current_draft()
     last_sent = (
         NewsletterIssue.query.filter_by(status='sent')
         .order_by(NewsletterIssue.sent_at.desc())
         .first()
     )
     batches, total_audience = get_newsletter_batches(batch_size=80)
+    delivery_summary = {
+        "status": draft.status if draft else "idle",
+        "sent": int(draft.recipients_count or 0) if draft else 0,
+        "attempted": int(draft.attempted_count or 0) if draft else 0,
+        "failed": int(draft.failed_count or 0) if draft else 0,
+        "pending": 0,
+        "snapshot_total": 0,
+    }
+    if draft and draft.status == "sending":
+        try:
+            delivery_state = json.loads(draft.delivery_failures or "{}")
+            audience_snapshot = delivery_state.get("audience", []) if isinstance(delivery_state, dict) else []
+            if isinstance(audience_snapshot, list):
+                delivery_summary["snapshot_total"] = len(audience_snapshot)
+                delivery_summary["pending"] = sum(
+                    1 for item in audience_snapshot
+                    if isinstance(item, dict) and item.get("status") == "pending"
+                )
+        except (TypeError, ValueError):
+            current_app.logger.warning("Could not decode delivery snapshot for newsletter issue %s", draft.id)
     research_sources = []
     if draft and draft.research_sources_json:
         try:
@@ -2816,6 +2841,7 @@ def admin_newsletter():
         last_sent=last_sent,
         audience=total_audience,
         batches=batches,
+        delivery_summary=delivery_summary,
         research_sources=research_sources,
         recent_issues=recent_issues,
         admin_resend_datetime=_admin_resend_datetime,
@@ -3434,7 +3460,8 @@ def admin_marketing_campaign_launch(id):
 @main.route('/admin/newsletter/campaigns')
 @admin_required
 def admin_newsletter_campaigns():
-    return redirect(url_for('main.admin_marketing_campaigns'))
+    # Legacy bookmark retained; newsletter operations now live in one studio.
+    return redirect(url_for('main.admin_newsletter'))
 
 
 @main.route('/admin/newsletter/campaigns/<int:id>/pause', methods=['POST'])
