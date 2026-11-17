@@ -2799,12 +2799,25 @@ def admin_newsletter():
         .first()
     )
     batches, total_audience = get_newsletter_batches(batch_size=80)
+    research_sources = []
+    if draft and draft.research_sources_json:
+        try:
+            research_sources = json.loads(draft.research_sources_json)
+            if not isinstance(research_sources, list):
+                research_sources = []
+        except (TypeError, ValueError):
+            research_sources = []
+    recent_issues = NewsletterIssue.query.order_by(
+        NewsletterIssue.created_at.desc()
+    ).limit(8).all()
     return render_template(
         'main/newsletter_admin.html',
         draft=draft,
         last_sent=last_sent,
         audience=total_audience,
         batches=batches,
+        research_sources=research_sources,
+        recent_issues=recent_issues,
         admin_resend_datetime=_admin_resend_datetime,
     )
 
@@ -2818,7 +2831,7 @@ def admin_newsletter_generate():
     except Exception as e:
         current_app.logger.exception("Newsletter generation failed")
         return jsonify({'ok': False, 'error': str(e)}), 500
-    return jsonify({'ok': True, 'subject': issue.subject, 'body': issue.body})
+    return jsonify({'ok': True, 'id': issue.id, 'subject': issue.subject, 'body': issue.body})
 
 
 @main.route('/admin/newsletter/save', methods=['POST'])
