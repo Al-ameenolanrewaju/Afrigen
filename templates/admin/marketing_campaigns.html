@@ -1,0 +1,74 @@
+{% extends "admin_base.html" %}
+{% block title %}Marketing Campaign Centre{% endblock %}
+{% block content %}
+<style>
+.marketing-wrap{max-width:1180px;margin:0 auto}.marketing-hero{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;margin-bottom:22px}.marketing-title{color:#f5a623;font-weight:800;margin:0 0 6px}.marketing-muted{color:#929bad;font-size:14px}.marketing-card{background:#151d2b;border:1px solid #273246;border-radius:16px;padding:22px;margin-bottom:20px}.marketing-card h5{color:#f5b544;font-weight:750;margin-bottom:16px}.marketing-field{background:#0c1220!important;border:1px solid #303b50!important;color:#f3f4f6!important;border-radius:10px!important}.marketing-field:focus{border-color:#d69b37!important;box-shadow:0 0 0 3px #d69b3722!important}.marketing-channel{display:flex;align-items:center;gap:8px;padding:10px 12px;background:#101827;border:1px solid #2b3548;border-radius:10px;color:#e5e7eb;font-size:13px}.marketing-channel input{accent-color:#f5a623}.marketing-btn{background:#f5a623;color:#111827;border:0;border-radius:10px;padding:11px 18px;font-weight:800}.marketing-btn:hover{background:#ffc15b;color:#111827}.marketing-secondary{background:#202b3d;color:#e5e7eb;border:1px solid #3a465a;border-radius:9px;padding:9px 14px}.marketing-preview{background:#fff;color:#20242c;border-radius:10px;padding:16px;min-height:150px;overflow:auto}.marketing-copy{min-height:130px}.marketing-stat{background:#101827;border:1px solid #29364a;padding:14px;border-radius:12px}.marketing-stat strong{display:block;color:#f5b544;font-size:22px}.marketing-campaign{border-top:1px solid #2b3548;padding:16px 0}.marketing-tag{font-size:11px;letter-spacing:.06em;color:#aab4c5}
+@media(max-width:700px){.marketing-hero{display:block}.marketing-card{padding:16px}.marketing-actions{display:grid!important}.marketing-actions>*{width:100%}}
+</style>
+<div class="marketing-wrap">
+ <div class="marketing-hero">
+  <div><div class="marketing-tag mb-2">GROWTH & DISTRIBUTION</div><h3 class="marketing-title"><i class="fa-solid fa-bullhorn me-2"></i>Marketing Campaign Centre</h3><p class="marketing-muted mb-0">One brief. AI-generated email, social content and creative. Review everything before launch.</p></div>
+  <div class="marketing-stat"><span class="marketing-muted">Reachable newsletter audience</span><strong>{{ audience_count }}</strong><span class="marketing-muted">Eligible recipients after deduplication and opt-outs</span></div>
+ </div>
+ <section class="marketing-card">
+  <h5>01 · Campaign brief</h5>
+  <form method="POST" action="{{ url_for('main.admin_marketing_campaigns') }}">
+   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+   <label class="form-label text-light fw-semibold">What are we promoting?</label>
+   <textarea name="campaign_brief" rows="4" class="form-control marketing-field mb-3" required placeholder="Describe the offer, feature launch, announcement, audience, key benefits and call to action. Include exact prices and dates if relevant."></textarea>
+   <label class="form-label text-light fw-semibold">Generate content for</label>
+   <div class="d-flex flex-wrap gap-2 mb-3">
+    {% for p,label in [('email','Email newsletter'),('facebook','Facebook'),('linkedin','LinkedIn'),('instagram','Instagram'),('telegram','Telegram'),('devto','Dev.to')] %}
+    <label class="marketing-channel"><input type="checkbox" name="platforms" value="{{ p }}" {% if p != 'devto' %}checked{% endif %}> {{ label }}</label>
+    {% endfor %}
+   </div>
+   <button class="marketing-btn" type="submit"><i class="fa-solid fa-wand-magic-sparkles me-2"></i>Generate campaign assets</button>
+  </form>
+ </section>
+ {% if generated %}
+ <form method="POST" action="{{ url_for('main.admin_marketing_campaign_save') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="campaign_brief" value="{{ generated.brief|e }}">
+  <input type="hidden" name="flyer_url" value="{{ generated.flyer_url or '' }}">
+  {% for p in generated.platforms %}<input type="hidden" name="platforms" value="{{ p }}">{% endfor %}
+  <section class="marketing-card">
+   <h5>02 · Review and edit generated assets</h5>
+   <div class="mb-3"><label class="form-label text-light fw-semibold">Email subject</label><input class="form-control marketing-field" name="email_subject" value="{{ generated.email_subject }}" maxlength="300" required></div>
+   <div class="mb-3"><label class="form-label text-light fw-semibold">Email HTML body</label><textarea class="form-control marketing-field font-monospace" name="email_html" rows="12" required>{{ generated.email_html }}</textarea><small class="marketing-muted">The delivery system wraps this in Afrigen's branded email layout and adds the unsubscribe link.</small></div>
+   <h6 class="text-light fw-semibold mt-4">Email preview</h6><div class="marketing-preview mb-4" id="emailPreview"></div>
+   {% if generated.flyer_url %}<div class="mb-4"><h6 class="text-light fw-semibold">Campaign creative</h6><img src="{{ generated.flyer_url }}" alt="Generated campaign flyer" class="img-fluid rounded-3" style="max-height:360px"></div>{% endif %}
+   <h6 class="text-light fw-semibold">Social channel copy</h6>
+   {% for p,copy in generated.copies.items() %}
+    <div class="mb-3"><label class="form-label text-light text-capitalize fw-semibold">{{ p }}</label><textarea class="form-control marketing-field marketing-copy" name="copy_{{ p }}" rows="5">{{ copy }}</textarea></div>
+   {% endfor %}
+   <div class="d-flex flex-wrap gap-2 marketing-actions"><button class="marketing-btn" type="submit"><i class="fa-solid fa-floppy-disk me-2"></i>Save as draft</button><span class="marketing-muted align-self-center">Saving does not send emails or publish posts.</span></div>
+  </section>
+ </form>
+ <script>
+ (function(){const field=document.querySelector('[name="email_html"]'),preview=document.getElementById('emailPreview');if(!field||!preview)return;function update(){preview.innerHTML=field.value;}field.addEventListener('input',update);update();})();
+ </script>
+ {% endif %}
+ <section class="marketing-card">
+  <h5>03 · Campaign drafts and delivery</h5>
+  {% if campaign_rows %}
+   {% for row in campaign_rows %}
+    <div class="marketing-campaign">
+     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+      <div><div class="marketing-tag">CAMPAIGN #{{ row.campaign.id }} · {{ row.campaign.created_at.strftime('%d %b %Y, %H:%M') if row.campaign.created_at else '' }}</div><div class="text-light fw-bold mt-1">{{ row.payload.email_subject or row.campaign.subject }}</div><div class="marketing-muted">{{ row.payload.brief or 'Newsletter campaign' }}</div></div>
+      <span class="badge {% if row.campaign.status == 'sending' %}bg-success{% elif row.campaign.status == 'paused' %}bg-warning text-dark{% elif row.campaign.status == 'complete' %}bg-secondary{% else %}bg-dark border border-secondary{% endif %}">{{ row.campaign.status|upper }}</span>
+     </div>
+     {% if row.campaign.total_audience %}<div class="marketing-muted mt-2">{{ row.campaign.batch_offset }} / {{ row.campaign.total_audience }} email recipients processed</div><div class="progress mt-1" style="height:6px;background:#263247"><div class="progress-bar" style="width:{{ [row.campaign.batch_offset * 100 // row.campaign.total_audience,100]|min }}%;background:#f5a623"></div></div>{% endif %}
+     {% if row.campaign.status == 'draft' %}
+      <div class="d-flex gap-2 mt-3 flex-wrap">
+       <form method="POST" action="{{ url_for('main.admin_marketing_campaign_launch',id=row.campaign.id) }}" onsubmit="return confirm('Launch this campaign? Emails will be queued and selected social channels will be published.');"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="marketing-btn" type="submit"><i class="fa-solid fa-rocket me-1"></i>Approve & launch</button></form>
+       <form method="POST" action="{{ url_for('main.admin_newsletter_campaign_delete',id=row.campaign.id) }}" onsubmit="return confirm('Delete this draft?');"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="marketing-secondary" type="submit">Delete draft</button></form>
+      </div>
+     {% elif row.campaign.status in ('sending','paused') %}
+      <form method="POST" action="{{ url_for('main.admin_newsletter_campaign_pause',id=row.campaign.id) }}" class="mt-3"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="marketing-secondary">{{ 'Pause email batches' if row.campaign.status == 'sending' else 'Resume email batches' }}</button></form>
+     {% endif %}
+    </div>
+   {% endfor %}
+  {% else %}<p class="marketing-muted mb-0">No campaigns yet. Generate your first campaign above.</p>{% endif %}
+ </section>
+</div>
+{% endblock %}
