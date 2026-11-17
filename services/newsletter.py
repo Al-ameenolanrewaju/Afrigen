@@ -447,8 +447,9 @@ def run_daily_newsletter_cycle():
             raise ValueError("Daily newsletter generation returned an empty subject or body.")
         snapshot = [
             {"email": (email or "").strip().lower(), "name": name or "",
+             "position": position, "batch_number": position // 80,
              "status": "pending", "attempts": 0}
-            for email, name in recipients
+            for position, (email, name) in enumerate(recipients)
         ]
         issue = NewsletterIssue(
             subject=subject[:300],
@@ -486,7 +487,16 @@ def run_daily_newsletter_cycle():
             continue
         pending.append(item)
 
-    batch = pending[:80]
+    # Keep the original 1–80, 81–160, ... cohorts stable. A failed address
+    # holds its cohort for retry instead of shifting later subscribers forward.
+    next_batch_number = min(
+        (int(item.get("batch_number", int(item.get("position", 0)) // 80)) for item in pending),
+        default=None,
+    )
+    batch = [
+        item for item in pending
+        if int(item.get("batch_number", int(item.get("position", 0)) // 80)) == next_batch_number
+    ][:80]
     if not batch:
         remaining = [x for x in audience if x.get("status") == "pending"]
         if not remaining:
