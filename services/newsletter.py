@@ -88,7 +88,11 @@ def generate_weekly_digest(stats=None):
         research_sources=research_sources,
     )
     
-    return generated.extra_fields.get("subject", "Afrigen Weekly"), generated.content
+    return (
+        generated.extra_fields.get("subject", "The Creator Intelligence Brief"),
+        generated.content,
+        research_sources,
+    )
 
 
 def _strip_code_fences(text):
@@ -285,12 +289,13 @@ def get_current_draft():
     )
 
 
-def create_draft(subject, body, auto_generated=True):
+def create_draft(subject, body, auto_generated=True, research_sources=None):
     issue = NewsletterIssue(
         subject=subject or "",
         body=body or "",
         status="draft",
         auto_generated=auto_generated,
+        research_sources_json=json.dumps(research_sources or [], ensure_ascii=False),
     )
     db.session.add(issue)
     db.session.commit()
@@ -365,8 +370,8 @@ def run_weekly_generation():
         "total_users": User.query.count(),
         "total_generations": Generation.query.count(),
     }
-    subject, body = generate_weekly_digest(stats)
-    issue = create_draft(subject, body, auto_generated=True)
+    subject, body, research_sources = generate_weekly_digest(stats)
+    issue = create_draft(subject, body, auto_generated=True, research_sources=research_sources)
     print(f"Weekly newsletter draft generated (issue {issue.id}).")
     _notify_admins(
         "📰 This week's Afrigen newsletter is ready to review",
@@ -454,7 +459,7 @@ def run_daily_newsletter_cycle():
         if not recipients:
             print("Daily newsletter skipped: no eligible subscribers.")
             return {"generated": False, "sent": 0, "pending": 0}
-        subject, body = generate_weekly_digest({
+        subject, body, research_sources = generate_weekly_digest({
             "total_users": User.query.count(),
             "total_generations": Generation.query.count(),
         })
@@ -469,6 +474,7 @@ def run_daily_newsletter_cycle():
         issue = NewsletterIssue(
             subject=subject[:300],
             body=body,
+            research_sources_json=json.dumps(research_sources or [], ensure_ascii=False),
             status="sending",
             auto_generated=True,
             recipients_count=0,
