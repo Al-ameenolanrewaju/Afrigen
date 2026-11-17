@@ -12,7 +12,7 @@ class Config:
     PERMANENT_SESSION_LIFETIME = timedelta(days=30)
     # Admin editors can remain open during long review sessions; keep CSRF
     # tokens valid for a workday while retaining normal session validation.
-    WTF_CSRF_TIME_LIMIT = timedelta(hours=8)
+    WTF_CSRF_TIME_LIMIT = 8 * 60 * 60
     REMEMBER_COOKIE_DURATION = timedelta(days=30)
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
