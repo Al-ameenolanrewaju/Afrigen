@@ -171,7 +171,10 @@ def annotate_story_coverage(items, similarity_threshold=0.42):
             ):
                 match = group
                 break
-        (match if match is not None else groups.append([item]) or groups[-1]).append(item) if match is not None else None
+        if match is None:
+            groups.append([item])
+        else:
+            match.append(item)
 
     annotated = []
     for group in groups:
