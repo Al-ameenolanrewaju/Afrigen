@@ -310,3 +310,55 @@ def run_promo_campaign(offer_text: str, platforms: list = None) -> dict:
 
     return results
 
+
+
+def publish_prepared_campaign(offer_text: str, copies: dict, platforms: list = None,
+                              flyer_url: str = None) -> dict:
+    """Publish the exact reviewed copy from a unified campaign draft."""
+    target_platforms = platforms or list((copies or {}).keys())
+    results = {"offer": offer_text, "flyer_url": flyer_url, "platforms": {}}
+    for platform in target_platforms:
+        platform = (platform or "").lower().strip()
+        copy = (copies or {}).get(platform, "").strip()
+        if not copy:
+            results["platforms"][platform] = {
+                "ok": False, "error": "No reviewed copy was saved for this channel."
+            }
+            continue
+        try:
+            if platform == "telegram":
+                from platforms.telegram import post_to_channel
+                text_to_send = f"{copy}\\n\\n🖼️ [Campaign flyer]({flyer_url})" if flyer_url else copy
+                results["platforms"][platform] = post_to_channel(text_to_send)
+            elif platform == "linkedin":
+                from platforms.linkedin import post_article
+                results["platforms"][platform] = post_article(copy)
+            elif platform == "facebook":
+                from platforms.facebook import post_to_page
+                results["platforms"][platform] = post_to_page(
+                    text=copy, link=flyer_url or f"{SITE_URL}/upgrade"
+                )
+            elif platform == "devto":
+                from platforms.devto import publish_article
+                results["platforms"][platform] = publish_article(
+                    title=f"Afrigen AI: {offer_text[:80]}",
+                    content=copy,
+                    tags=["ai", "video", "contentcreation", "africa"],
+                    canonical_url=f"{SITE_URL}/upgrade",
+                    description=offer_text[:150],
+                )
+            elif platform == "instagram":
+                results["platforms"][platform] = {
+                    "ok": True,
+                    "caption": copy,
+                    "flyer_url": flyer_url,
+                    "note": "Prepared for Instagram publishing via the connected scheduler.",
+                }
+            else:
+                results["platforms"][platform] = {
+                    "ok": False, "error": f"Unsupported platform: {platform}"
+                }
+        except Exception as exc:
+            logger.exception("Failed to publish reviewed campaign to %s", platform)
+            results["platforms"][platform] = {"ok": False, "error": str(exc)}
+    return results
