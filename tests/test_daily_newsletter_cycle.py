@@ -38,12 +38,18 @@ def test_daily_newsletter_cycle_snapshots_and_sends_batches_without_skipping():
         ])
         db.session.commit()
 
-        with patch("services.newsletter.generate_weekly_digest", return_value=("Daily edition", "<p>Useful content</p>")):
+        with patch("services.newsletter.generate_weekly_digest", return_value=("Daily edition", "<p>Useful content</p>", [{"title": "Source", "publisher": "Publisher", "url": "https://example.com/story"}])):
             with patch("services.newsletter.send_newsletter", side_effect=[
                 {"attempted": 80, "sent": 80, "failed": 0, "failures": [], "test_recipient": None},
                 {"attempted": 5, "sent": 5, "failed": 0, "failures": [], "test_recipient": None},
             ]) as sender:
                 from services.newsletter import run_daily_newsletter_cycle
+                generated = run_daily_newsletter_cycle()
+                issue = NewsletterIssue.query.one()
+                assert generated["awaiting_approval"] is True
+                assert sender.call_count == 0
+                issue.status = "approved"
+                db.session.commit()
                 first = run_daily_newsletter_cycle()
                 second = run_daily_newsletter_cycle()
 
@@ -74,6 +80,12 @@ def test_daily_newsletter_retries_failed_recipient_before_next_fixed_cohort():
                 {"attempted": 2, "sent": 2, "failed": 0, "failures": [], "test_recipient": None},
             ]) as sender:
                 from services.newsletter import run_daily_newsletter_cycle
+                generated = run_daily_newsletter_cycle()
+                issue = NewsletterIssue.query.one()
+                assert generated["awaiting_approval"] is True
+                assert sender.call_count == 0
+                issue.status = "approved"
+                db.session.commit()
                 first = run_daily_newsletter_cycle()
                 retry = run_daily_newsletter_cycle()
                 final = run_daily_newsletter_cycle()
