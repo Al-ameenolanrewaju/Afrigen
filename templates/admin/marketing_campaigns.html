@@ -35,7 +35,7 @@
    <h5>02 · Review and edit generated assets</h5>
    <div class="mb-3"><label class="form-label text-light fw-semibold">Email subject</label><input class="form-control marketing-field" name="email_subject" value="{{ generated.email_subject }}" maxlength="300" required></div>
    <div class="mb-3"><label class="form-label text-light fw-semibold">Email HTML body</label><textarea class="form-control marketing-field font-monospace" name="email_html" rows="12" required>{{ generated.email_html }}</textarea><small class="marketing-muted">The delivery system wraps this in Afrigen's branded email layout and adds the unsubscribe link.</small></div>
-   <h6 class="text-light fw-semibold mt-4">Email preview</h6><div class="marketing-preview mb-4" id="emailPreview"></div>
+   <h6 class="text-light fw-semibold mt-4">Email preview</h6><iframe class="marketing-preview mb-4 w-100" id="emailPreview" title="Email preview" sandbox="" style="height:360px;border:0"></iframe>
    {% if generated.flyer_url %}<div class="mb-4"><h6 class="text-light fw-semibold">Campaign creative</h6><img src="{{ generated.flyer_url }}" alt="Generated campaign flyer" class="img-fluid rounded-3" style="max-height:360px"></div>{% endif %}
    <h6 class="text-light fw-semibold">Social channel copy</h6>
    {% for p,copy in generated.copies.items() %}
@@ -45,7 +45,7 @@
   </section>
  </form>
  <script>
- (function(){const field=document.querySelector('[name="email_html"]'),preview=document.getElementById('emailPreview');if(!field||!preview)return;function update(){preview.innerHTML=field.value;}field.addEventListener('input',update);update();})();
+ (function(){const field=document.querySelector('[name="email_html"]'),preview=document.getElementById('emailPreview');if(!field||!preview)return;function update(){preview.srcdoc=field.value;}field.addEventListener('input',update);update();})();
  </script>
  {% endif %}
  <section class="marketing-card">
