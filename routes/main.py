@@ -3370,10 +3370,15 @@ def admin_marketing_campaigns():
                     "Include a concise unsubscribe footer placeholder; the delivery system adds "
                     "the real unsubscribe link.\n\nCAMPAIGN BRIEF:\n" + brief
                 )
-                response = provider_manager.generate([
-                    {"role": "system", "content": "You are Afrigen's senior lifecycle marketing writer. Be accurate, persuasive, and concise."},
-                    {"role": "user", "content": email_prompt},
-                ], max_tokens=1800)
+                response = provider_manager.generate_text(
+                    "Default",
+                    [
+                        {"role": "system", "content": "You are Afrigen's senior lifecycle marketing writer. Be accurate, persuasive, and concise."},
+                        {"role": "user", "content": email_prompt},
+                    ],
+                    max_tokens=1800,
+                    response_format={"type": "json_object"},
+                )
                 email_data = json.loads(response.strip().removeprefix("```json").removesuffix("```").strip())
                 email_subject = str(email_data.get("subject") or "An update from Afrigen")[:300]
                 email_html = str(email_data.get("html") or "")
