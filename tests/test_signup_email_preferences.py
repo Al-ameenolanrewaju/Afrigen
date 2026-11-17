@@ -1,5 +1,5 @@
 from app import app
-from models import db, User, Subscriber
+from models import db, User, Subscriber, EmailOptOut
 from services.newsletter import (
     upsert_subscriber_from_user,
     sync_user_email_preferences,
@@ -94,6 +94,33 @@ def test_get_newsletter_audience_count_counts_registered_users_and_waitlist_with
         count = get_newsletter_audience_count()
 
         assert count == 2
+
+
+
+def test_existing_waitlist_subscriber_can_explicitly_reenable_newsletter():
+    with app.app_context():
+        subscriber = Subscriber(
+            name='Returning Reader',
+            email='reader@example.com',
+            newsletter=False,
+        )
+        db.session.add(subscriber)
+        db.session.add(EmailOptOut(email='reader@example.com'))
+        db.session.commit()
+
+        client = app.test_client()
+        with patch('services.email.send_launch_confirmation'):
+            response = client.post('/launch/subscribe', json={
+                'name': 'Returning Reader',
+                'email': 'reader@example.com',
+                'newsletter': True,
+            })
+
+        assert response.status_code == 200
+        assert response.get_json()['already'] is True
+        db.session.refresh(subscriber)
+        assert subscriber.newsletter is True
+        assert EmailOptOut.query.filter_by(email='reader@example.com').first() is None
 
 
 def test_app_keeps_user_sessions_persistent():
