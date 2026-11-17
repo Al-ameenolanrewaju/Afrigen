@@ -58,16 +58,22 @@ def generate_weekly_digest(stats=None):
         
     from content_engine import ContentPlanner, generate_content_brief, write_newsletter
 
-    # 1. Use Planner to pick a newsletter topic/category
+    # 1. Select the stable daily magazine theme using Nigeria-local time.
     planner = ContentPlanner()
-    category = planner.select_category()
+    editorial_theme = planner.select_newsletter_theme()
+    category = editorial_theme["category"]
 
     stats = stats or {}
     posts = get_all_posts()[:5]
-    
-    # 2. Generate Master Brief
-    # We can use the latest blog post as context, or a general theme
-    source_context = f"Newsletter Edition. Focus on Afrigen updates, AI tools, and African creativity. Latest post: {posts[0].title if posts else 'General AI Update'}"
+
+    # 2. Build the master brief around the day's editorial angle.
+    latest_post = posts[0] if posts else None
+    source_context = (
+        f"Daily newsletter editorial: {editorial_theme['name']}. "
+        f"Direction: {editorial_theme['angle']} "
+        f"Focus on useful AI knowledge, practical creator education, and African creativity. "
+        f"Latest published article: {latest_post.title if latest_post else 'No current article supplied; use an evergreen subject.'}"
+    )
     brief = generate_content_brief(category, source_context)
 
     # 3. Generate newsletter via Content Engine
