@@ -2799,12 +2799,25 @@ def admin_newsletter():
         .first()
     )
     batches, total_audience = get_newsletter_batches(batch_size=80)
+    research_sources = []
+    if draft and draft.research_sources_json:
+        try:
+            research_sources = json.loads(draft.research_sources_json)
+            if not isinstance(research_sources, list):
+                research_sources = []
+        except (TypeError, ValueError):
+            research_sources = []
+    recent_issues = NewsletterIssue.query.order_by(
+        NewsletterIssue.created_at.desc()
+    ).limit(8).all()
     return render_template(
         'main/newsletter_admin.html',
         draft=draft,
         last_sent=last_sent,
         audience=total_audience,
         batches=batches,
+        research_sources=research_sources,
+        recent_issues=recent_issues,
         admin_resend_datetime=_admin_resend_datetime,
     )
 
@@ -2812,13 +2825,15 @@ def admin_newsletter():
 @main.route('/admin/newsletter/generate', methods=['POST'])
 @admin_required
 def admin_newsletter_generate():
-    from services.newsletter import run_weekly_generation
+    from services.newsletter import run_weekly_generation, get_current_draft
+    if get_current_draft() is not None:
+        return jsonify({'ok': False, 'error': 'An unsent edition already exists. Review, edit, approve, or resolve it before generating another.'}), 409
     try:
         issue = run_weekly_generation()
     except Exception as e:
         current_app.logger.exception("Newsletter generation failed")
         return jsonify({'ok': False, 'error': str(e)}), 500
-    return jsonify({'ok': True, 'subject': issue.subject, 'body': issue.body})
+    return jsonify({'ok': True, 'id': issue.id, 'subject': issue.subject, 'body': issue.body})
 
 
 @main.route('/admin/newsletter/save', methods=['POST'])
@@ -2860,73 +2875,11 @@ def admin_newsletter_approve():
 @main.route('/admin/newsletter/send', methods=['POST'])
 @admin_required
 def admin_newsletter_send():
-    from services.newsletter import get_current_draft, create_draft, save_draft, send_issue
-
-    data = request.get_json(silent=True) or request.form
-    subject = (data.get('subject') or '').strip()
-    body = (data.get('body') or '').strip()
-
-    # Persist whatever is currently in the editor before sending.
-    draft = get_current_draft()
-    if draft is None:
-        draft = create_draft(subject, body, auto_generated=False)
-    elif subject or body:
-        save_draft(draft, subject, body)
-
-    if not draft.body:
-        return jsonify({'ok': False, 'error': 'Newsletter body is empty.'}), 400
-
-    try:
-        offset = data.get('offset')
-        try:
-            offset = int(offset) if offset is not None else 0
-        except (ValueError, TypeError):
-            offset = 0
-
-        limit = data.get('limit')
-        try:
-            limit = int(limit) if limit is not None else 80
-        except (ValueError, TypeError):
-            limit = 80
-        if limit <= 0:
-            limit = None
-
-        result = send_issue(draft, limit=limit, offset=offset)
-    except Exception as e:
-        current_app.logger.exception("Newsletter send failed")
-        return jsonify({'ok': False, 'error': str(e)}), 500
-    if result['sent'] == 0:
-        return jsonify({
-            'ok': False,
-            'error': (
-                f"No emails were delivered. Check RESEND_API_KEY and your subscriber list. "
-                f"{result['failures'][0]['error']}"
-                if result['failures'] else
-                'No emails were delivered. Check RESEND_API_KEY and your subscriber list.'
-            ),
-            'attempted': result['attempted'],
-            'sent': 0,
-            'failed': result['failed'],
-            'failures': result['failures'][:10],
-            'sent_at': result.get('sent_at'),
-        }), 502
+    """Retired direct-send endpoint; all delivery must follow explicit approval and cohort scheduling."""
     return jsonify({
-        'ok': result['failed'] == 0,
-        'sent': result['sent'],
-        'attempted': result['attempted'],
-        'failed': result['failed'],
-        'failures': result['failures'][:10],
-        'sent_at': result.get('sent_at'),
-        'test_recipient': result.get('test_recipient'),
-        'message': (
-            (
-                f"Sent {result['sent']} test emails to {result['test_recipient']}. "
-                if result.get('test_recipient') else
-                f"Sent to {result['sent']} recipients. "
-            ) +
-            f"{result['failed']} failed."
-        ),
-    }), (200 if result['failed'] == 0 else 207)
+        'ok': False,
+        'error': 'Direct newsletter sending is disabled. Approve the edition in the Newsletter Editorial Desk; scheduled delivery will handle the 80-recipient cohorts.'
+    }), 409
 
 
 @main.route('/unsubscribe/<token>')

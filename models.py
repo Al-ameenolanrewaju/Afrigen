@@ -387,6 +387,7 @@ class NewsletterIssue(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     subject = db.Column(db.String(300), nullable=False, default="")
     body = db.Column(db.Text, nullable=False, default="")  # HTML body, editable
+    research_sources_json = db.Column(db.Text, nullable=True)  # Editorial evidence shown in admin review
     status = db.Column(db.String(20), default="draft")      # draft | sent
     auto_generated = db.Column(db.Boolean, default=True)
     recipients_count = db.Column(db.Integer, default=0)

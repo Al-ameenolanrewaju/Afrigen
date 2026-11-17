@@ -29,7 +29,6 @@ DEFAULT_PILLARS = {
     "product_updates": 15,
     "community": 10,
     "case_study": 10,
-    "promotion": 5,
 }
 
 # Display names matching exact user specification
@@ -107,6 +106,8 @@ def select_next_pillar(user_id: int, settings: Optional[SocialAutomationSettings
     - Promotional content is capped at 5% and never scheduled back-to-back.
     """
     ratios = DEFAULT_PILLARS.copy()
+    # Promotional content is never part of autonomous organic scheduling.
+    ratios["promotion"] = 0
     if settings and settings.pillar_ratios_json:
         try:
             custom_ratios = json.loads(settings.pillar_ratios_json)
@@ -118,6 +119,7 @@ def select_next_pillar(user_id: int, settings: Optional[SocialAutomationSettings
                 # Keep promotional strictly <= 10% even if customized
                 if normalized_custom.get("promotion", 0) > 10:
                     normalized_custom["promotion"] = 5
+                normalized_custom["promotion"] = 0
                 ratios = normalized_custom
         except Exception:
             pass
@@ -521,33 +523,34 @@ def generate_platform_copy(
         "3. Only official pricing is permitted: Creator Plan at ₦10,000/month or free Spark allowances.\n"
         "4. DO NOT use generic robotic clichés like 'In today's fast-paced digital world', 'game-changer', or 'delve into'.\n"
         "5. Keep emojis minimal and professional (maximum 2-3 tasteful emojis).\n"
-        "6. Provide genuine, actionable educational or strategic value in every single post."
+        "6. Provide genuine, actionable educational or strategic value in every single post.\n"
+        "7. Use only facts explicitly present in the topic, summary, or verified product context. If a detail is not supplied, omit it.\n"
+        "8. Never invent founder experiences, customer outcomes, statistics, timelines, prices, technical specifications, or product capabilities.\n"
+        "9. Avoid announcement-style openings, repeated brand slogans, generic motivational language, and empty engagement bait.\n"
+        "10. Write like a knowledgeable human editor: specific, natural, varied in structure, and useful even if the reader never clicks the link."
     )
 
     if platform == "facebook":
         platform_instructions = (
             "FACEBOOK STRATEGY:\n"
-            "- Tone: Conversational, engaging, creator-centric, inspiring.\n"
-            "- Structure:\n"
-            "  1. Attention-grabbing relatable hook for African creators or entrepreneurs.\n"
-            "  2. Short storytelling paragraph explaining the practical workflow or technique.\n"
-            "  3. Clear, actionable takeaway.\n"
-            "  4. Engaging open-ended question to drive comments and community discussion.\n"
-            "  5. Direct CTA linking to afrigen.com.ng.\n"
-            "- Length: 120–220 words.\n"
-            "- Include exactly 3–4 hashtags at the end (#AfrigenAI #AfricaCreates #AIVideo #AfricanCreators)."
+            "- Tone: Conversational, direct, observant, and useful; not salesy or motivational.\n"
+            "- Open with a concrete creator problem, surprising observation, or practical question—not a brand announcement.\n"
+            "- Give one usable technique, example, checklist, or decision rule grounded in the supplied topic.\n"
+            "- Vary post structures; do not force a story, question, CTA, or brand mention into every post.\n"
+            "- Structure: choose the form that best serves the idea; do not force a fixed template.\n"
+            "- Length: 90–180 words.\n"
+            "- Use 0–3 relevant hashtags only when they add context; do not append a fixed hashtag block."
         )
     else:  # linkedin
         platform_instructions = (
             "LINKEDIN STRATEGY:\n"
-            "- Tone: Executive thought leadership, founder/builder perspective, agency production ROI.\n"
-            "- Structure:\n"
-            "  1. Bold single-line opening hook focused on industry shifts or efficiency.\n"
-            "  2. Strategic observation with generous white space between short paragraphs.\n"
-            "  3. Practical business lesson for African marketing agencies, indie studios, and tech founders.\n"
-            "  4. Professional CTA inviting peer discussion and directing to afrigen.com.ng.\n"
-            "- Length: 150–250 words.\n"
-            "- Include exactly 3 targeted hashtags at the end (#AfrigenAI #GenerativeAI #CreativeEconomy)."
+            "- Tone: Analytical, professional, precise, and grounded; no inflated executive jargon.\n"
+            "- Lead with a clear thesis or trade-off, then explain the reasoning and practical implication.\n"
+            "- Use a real builder perspective only when the supplied context supports it; never fabricate personal experience.\n"
+            "- Vary structure and close naturally; do not force a sales CTA into every post.\n"
+            "- Structure: state a thesis, support it with reasoning, and end when the point is complete.\n"
+            "- Length: 120–220 words.\n"
+            "- Use 0–3 relevant hashtags only when they add context; do not append a fixed hashtag block."
         )
 
     user_prompt = f"""Write ready-to-publish social copy for {platform.upper()}.
@@ -561,7 +564,7 @@ FORMAT: {content_format}
 
 Return JSON with exactly these keys:
 {{
-    "caption": "The complete post text ready to publish (without standalone hashtags or CTA)",
+    "caption": "The complete post text ready to publish. Include a CTA only when natural; do not pad the post with slogans.",
     "call_to_action": "Clear short CTA text (e.g. 'Explore creative workflows at afrigen.com.ng')",
     "hashtags": "{'#AfrigenAI #AfricaCreates #AIVideo #AfricanCreators' if platform == 'facebook' else '#AfrigenAI #GenerativeAI #CreativeEconomy'}",
     "creative_prompt": "Ultra-detailed visual generation prompt in Afrigen's black/gold/amber aesthetic to create matching {content_format}"

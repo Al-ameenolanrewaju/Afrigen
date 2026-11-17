@@ -1,17 +1,14 @@
-"""Weekly auto-generated newsletter.
-
-Generates a draft with Groq (llama) that is ABOUT AFRIGEN — a feature spotlight,
-links to our real published blog guides, a practical creator tip, and our latest
-community stats. It is NOT a roundup of external AI news. The admin can edit it,
-then it's sent to everyone (registered users + waitlist), minus unsubscribes.
-"""
+"""Daily editorial magazine generation and newsletter delivery lifecycle."""
 import os
 import re
 import json
+import logging
 from datetime import datetime, date, timezone
 
 from models import db, User, Subscriber, Generation, NewsletterIssue, EmailOptOut
 from services.email import send_newsletter, BASE_URL
+
+logger = logging.getLogger(__name__)
 
 
 # Same model the rest of the app uses (Groq). Override with NEWSLETTER_MODEL if desired.
@@ -41,7 +38,7 @@ AFRIGEN_FEATURES = [
 
 # ---------- AI generation (Groq, grounded in our own product + blog) ----------
 
-def generate_weekly_digest(stats=None):
+def generate_weekly_digest(stats=None, include_research=False):
     """Write this week's Afrigen newsletter using Content Engine.
 
     Grounded in our REAL features and REAL published blog posts (with their exact
@@ -58,22 +55,44 @@ def generate_weekly_digest(stats=None):
         
     from content_engine import ContentPlanner, generate_content_brief, write_newsletter
 
-    # 1. Use Planner to pick a newsletter topic/category
+    # 1. Select the stable daily magazine theme using Nigeria-local time.
     planner = ContentPlanner()
-    category = planner.select_category()
+    editorial_theme = planner.select_newsletter_theme()
+    category = editorial_theme["category"]
 
     stats = stats or {}
     posts = get_all_posts()[:5]
-    
-    # 2. Generate Master Brief
-    # We can use the latest blog post as context, or a general theme
-    source_context = f"Newsletter Edition. Focus on Afrigen updates, AI tools, and African creativity. Latest post: {posts[0].title if posts else 'General AI Update'}"
+
+    # 2. Research recent AI developments before writing the edition.
+    # Feed failures are isolated; the writer safely falls back to evergreen content
+    # when no sufficiently recent, parseable source material is available.
+    from services.newsletter_research import collect_newsletter_research
+    research_sources = collect_newsletter_research()
+    logger.info("Newsletter research collected %s curated feed items", len(research_sources))
+
+    # 3. Build the master brief around the day's editorial angle.
+    latest_post = posts[0] if posts else None
+    source_context = (
+        f"Daily newsletter editorial: {editorial_theme['name']}. "
+        f"Direction: {editorial_theme['angle']} "
+        f"Focus on useful AI knowledge, practical creator education, and African creativity. "
+        f"Latest published article: {latest_post.title if latest_post else 'No current article supplied; use an evergreen subject.'}"
+    )
     brief = generate_content_brief(category, source_context)
 
-    # 3. Generate newsletter via Content Engine
-    generated = write_newsletter(brief=brief, stats=stats, posts=posts)
+    # 4. Generate newsletter using only the curated research records above.
+    generated = write_newsletter(
+        brief=brief,
+        stats=stats,
+        posts=posts,
+        research_sources=research_sources,
+    )
     
-    return generated.extra_fields.get("subject", "Afrigen Weekly"), generated.content
+    result = (
+        generated.extra_fields.get("subject", "The Creator Intelligence Brief"),
+        generated.content,
+    )
+    return (*result, research_sources) if include_research else result
 
 
 def _strip_code_fences(text):
@@ -270,12 +289,13 @@ def get_current_draft():
     )
 
 
-def create_draft(subject, body, auto_generated=True):
+def create_draft(subject, body, auto_generated=True, research_sources=None):
     issue = NewsletterIssue(
         subject=subject or "",
         body=body or "",
         status="draft",
         auto_generated=auto_generated,
+        research_sources_json=json.dumps(research_sources or [], ensure_ascii=False),
     )
     db.session.add(issue)
     db.session.commit()
@@ -350,12 +370,12 @@ def run_weekly_generation():
         "total_users": User.query.count(),
         "total_generations": Generation.query.count(),
     }
-    subject, body = generate_weekly_digest(stats)
-    issue = create_draft(subject, body, auto_generated=True)
+    subject, body, research_sources = generate_weekly_digest(stats, include_research=True)
+    issue = create_draft(subject, body, auto_generated=True, research_sources=research_sources)
     print(f"Weekly newsletter draft generated (issue {issue.id}).")
     _notify_admins(
         "📰 This week's Afrigen newsletter is ready to review",
-        "A draft has been generated for review. Use Send now when it is ready.",
+        "A draft has been generated with its research sources. Review and approve it in the newsletter editorial desk before scheduled delivery.",
     )
     return issue
 
@@ -413,3 +433,167 @@ def run_daily_newsletter_batch(app_ctx=None):
         campaign.completed_at = datetime.now(timezone.utc)
     db.session.commit()
     print(f"Newsletter campaign {campaign.id}: batch sent ({len(recipients)} recipients), offset now {campaign.batch_offset}")
+
+
+def run_daily_newsletter_cycle():
+    """Generate an approval-gated daily edition and deliver approved issues in cohorts of 80.
+
+    The audience is snapshotted once per approved edition. Failed recipients remain pending
+    and are retried before the next audience slice; a new edition is not generated
+    until every snapshot recipient has either received it or opted out.
+    """
+    from models import NewsletterIssue
+
+    # Ensure the table is available on deployments that rely on create_all for
+    # additive tables. This is idempotent and does not alter existing rows.
+    db.create_all()
+
+    issue = (
+        NewsletterIssue.query.filter_by(status="sending")
+        .order_by(NewsletterIssue.created_at.asc())
+        .first()
+    )
+
+    if issue is None:
+        # The editorial workflow is deliberately approval-gated. Generate a
+        # reviewable draft first; no recipient is contacted until an admin approves.
+        issue = get_current_draft()
+        if issue is None:
+            recipients = collect_recipients()
+            if not recipients:
+                print("Daily newsletter skipped: no eligible subscribers.")
+                return {"generated": False, "sent": 0, "pending": 0}
+            subject, body, research_sources = generate_weekly_digest({
+                "total_users": User.query.count(),
+                "total_generations": Generation.query.count(),
+            }, include_research=True)
+            if not subject or not body or not body.strip():
+                raise ValueError("Daily newsletter generation returned an empty subject or body.")
+            issue = create_draft(
+                subject, body, auto_generated=True, research_sources=research_sources
+            )
+            print(f"Daily newsletter edition {issue.id} is ready for editorial approval.")
+            _notify_admins(
+                "Daily newsletter is ready for review",
+                f"Edition #{issue.id} has been generated with its source list. Approve it in the newsletter editor before delivery.",
+            )
+            return {"generated": True, "issue_id": issue.id, "awaiting_approval": True, "sent": 0, "pending": 0}
+
+        if issue.status != "approved":
+            print(f"Daily newsletter issue {issue.id} is awaiting editorial approval.")
+            return {"generated": False, "issue_id": issue.id, "awaiting_approval": True, "sent": 0, "pending": 0}
+
+        recipients = collect_recipients()
+        if not recipients:
+            print("Daily newsletter skipped: no eligible subscribers.")
+            return {"generated": False, "sent": 0, "pending": 0}
+        snapshot = [
+            {"email": (email or "").strip().lower(), "name": name or "",
+             "position": position, "batch_number": position // 80,
+             "status": "pending", "attempts": 0}
+            for position, (email, name) in enumerate(recipients)
+        ]
+        issue.status = "sending"
+        issue.recipients_count = 0
+        issue.attempted_count = 0
+        issue.failed_count = 0
+        issue.delivery_failures = json.dumps({"version": 1, "audience": snapshot})
+        db.session.commit()
+        print(f"Approved newsletter edition {issue.id} queued for {len(snapshot)} recipients.")
+
+    try:
+        state = json.loads(issue.delivery_failures or "{}")
+    except (TypeError, ValueError):
+        state = {}
+    audience = state.get("audience") if isinstance(state, dict) else None
+    if not isinstance(audience, list):
+        raise ValueError(f"Daily newsletter issue {issue.id} has no valid audience snapshot.")
+
+    # Re-check current eligibility and global opt-outs before every send.
+    currently_eligible = {
+        email.lower() for email, _name in collect_recipients()
+    }
+    pending = []
+    for item in audience:
+        email = (item.get("email") or "").strip().lower()
+        if item.get("status") != "pending":
+            continue
+        if email not in currently_eligible:
+            item["status"] = "suppressed"
+            continue
+        pending.append(item)
+
+    # Keep the original 1–80, 81–160, ... cohorts stable. A failed address
+    # holds its cohort for retry instead of shifting later subscribers forward.
+    next_batch_number = min(
+        (int(item.get("batch_number", int(item.get("position", 0)) // 80)) for item in pending),
+        default=None,
+    )
+    batch = [
+        item for item in pending
+        if int(item.get("batch_number", int(item.get("position", 0)) // 80)) == next_batch_number
+    ][:80]
+    if not batch:
+        remaining = [x for x in audience if x.get("status") == "pending"]
+        if not remaining:
+            sent_count = sum(1 for x in audience if x.get("status") == "sent")
+            issue.status = "sent"
+            issue.recipients_count = sent_count
+            issue.failed_count = 0
+            issue.sent_at = datetime.now(timezone.utc)
+            issue.delivery_failures = json.dumps({"version": 1, "audience": audience})
+            db.session.commit()
+            print(f"Daily newsletter edition {issue.id} completed ({sent_count} delivered).")
+            return {"generated": False, "sent": 0, "pending": 0, "complete": True}
+        issue.delivery_failures = json.dumps({"version": 1, "audience": audience})
+        db.session.commit()
+        return {"generated": False, "sent": 0, "pending": len(remaining)}
+
+    send_list = [(x["email"], x.get("name") or "") for x in batch]
+    issue.send_attempted_at = datetime.now(timezone.utc)
+    for item in batch:
+        item["attempts"] = int(item.get("attempts", 0)) + 1
+    db.session.commit()
+
+    result = send_newsletter(
+        send_list, issue.subject, issue.body,
+        base_url=BASE_URL, is_html=True, return_details=True,
+    )
+    failed_emails = {
+        (failure.get("email") or "").strip().lower()
+        for failure in result.get("failures", [])
+    }
+    if not result.get("test_recipient"):
+        if result.get("sent", 0) == len(batch) - len(failed_emails):
+            for item in batch:
+                if item["email"] not in failed_emails:
+                    item["status"] = "sent"
+        else:
+            # Provider response was ambiguous: do not mark anyone delivered.
+            logger.error("Daily newsletter issue %s returned an incomplete provider result; batch will retry.", issue.id)
+
+    issue.attempted_count = (issue.attempted_count or 0) + result.get("attempted", 0)
+    issue.recipients_count = sum(1 for x in audience if x.get("status") == "sent")
+    issue.failed_count = sum(1 for x in audience if x.get("status") == "pending")
+    issue.delivery_failures = json.dumps({"version": 1, "audience": audience})
+    db.session.commit()
+
+    pending_count = sum(1 for x in audience if x.get("status") == "pending")
+    if pending_count == 0:
+        issue.status = "sent"
+        issue.sent_at = datetime.now(timezone.utc)
+        issue.failed_count = 0
+        issue.recipients_count = sum(1 for x in audience if x.get("status") == "sent")
+        db.session.commit()
+    logger.info(
+        "Daily newsletter issue %s: attempted=%s accepted=%s failed=%s pending=%s",
+        issue.id, result.get("attempted", 0), result.get("sent", 0),
+        result.get("failed", 0), pending_count,
+    )
+    return {
+        "issue_id": issue.id,
+        "attempted": result.get("attempted", 0),
+        "sent": result.get("sent", 0),
+        "failed": result.get("failed", 0),
+        "pending": pending_count,
+    }
