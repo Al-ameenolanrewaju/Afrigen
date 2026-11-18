@@ -984,6 +984,8 @@ def generate_image():
 
         if image:
             charge_image(locked_user)
+            from services.generation_notifications import notify_generation_ready
+            notify_generation_ready(generation)
 
         db.session.commit()
 
@@ -1107,6 +1109,8 @@ def generate_image_from_retry(generation):
         generation.status = 'completed' if image_url else 'failed'
         if image_url:
             charge_image(current_user)
+            from services.generation_notifications import notify_generation_ready
+            notify_generation_ready(generation)
         db.session.commit()
     except Exception as exc:
         db.session.rollback()
@@ -3228,6 +3232,8 @@ def fal_webhook():
 
         generation.video_url = video_url
         generation.status = 'completed'
+        from services.generation_notifications import notify_generation_ready
+        notify_generation_ready(generation)
         print(f"GENERATION webhook_request_id={request_id} status=completed")
 
         # Check if user needs low credit warning

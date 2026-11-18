@@ -141,6 +141,14 @@ def generate_character_portrait_asset(character_id: int):
         res = generate_image(prompt, style="realistic", aspect_ratio="1:1", provider="fal", allow_fal=True)
         if res and res.get("success") and res.get("image_url"):
             char.reference_image_url = res["image_url"]
+            from services.generation_notifications import create_media_ready_notification
+            create_media_ready_notification(
+                project.user_id,
+                "photo",
+                f"/movie-studio/projects/{project.id}#characters",
+                title="Your character portrait is ready",
+                message=f"The portrait for {char.name} has been generated.",
+            )
             db.session.commit()
             return True, res["image_url"]
         return False, res.get("error", "Image generation failed")
@@ -255,6 +263,14 @@ def generate_shot_video_clip(shot_id: int):
         if res and res.get("success") and res.get("video_url"):
             shot.video_url = res["video_url"]
             shot.status = "completed"
+            from services.generation_notifications import create_media_ready_notification
+            create_media_ready_notification(
+                project.user_id,
+                "video",
+                f"/movie-studio/projects/{project.id}#shots",
+                title="Your video clip is ready",
+                message=f"Shot {shot.shot_number} has been generated.",
+            )
             db.session.commit()
             return True, shot.video_url
         else:
@@ -394,6 +410,14 @@ def start_movie_render_job(project_id: int, user_id: int, app_instance=None):
                 job.progress = 100
                 job.output_video_url = uploaded_url
                 job.completed_at = datetime.now(timezone.utc)
+                from services.generation_notifications import create_media_ready_notification
+                create_media_ready_notification(
+                    user_id,
+                    "video",
+                    f"/movie-studio/projects/{project.id}",
+                    title="Your movie is ready",
+                    message=f"{project.title} has finished rendering.",
+                )
                 db.session.commit()
 
             except Exception as exc:

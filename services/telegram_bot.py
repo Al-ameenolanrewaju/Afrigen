@@ -1124,6 +1124,8 @@ class TelegramBotService:
             )
 
         db.session.add(gen)
+        from services.generation_notifications import notify_generation_ready
+        notify_generation_ready(gen)
         tg_user.prompts_refined = (tg_user.prompts_refined or 0) + 1
         db.session.commit()
 
