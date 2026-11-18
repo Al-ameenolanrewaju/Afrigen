@@ -13,11 +13,12 @@ def setup_function():
 
 def test_collect_recipients_includes_independent_subscribers_deduplicates_and_honors_opt_out():
     with app.app_context():
-        user = User(username="registered", email="same@example.net", password="pw", credits=5, marketing_emails=True)
+        user = User(username="registered", email="same@example.net", password="pw", credits=5, marketing_emails=False)
         db.session.add(user)
         db.session.add_all([
             Subscriber(name="Duplicate", email="SAME@example.net", newsletter=True),
             Subscriber(name="Independent", email="independent@example.net", newsletter=True),
+            Subscriber(name="Inactive newsletter-only", email="inactive@example.net", newsletter=False),
             Subscriber(name="Opted out", email="blocked@example.net", newsletter=True),
             EmailOptOut(email="blocked@example.net"),
         ])
@@ -27,6 +28,7 @@ def test_collect_recipients_includes_independent_subscribers_deduplicates_and_ho
         normalized = [email.lower() for email, _name in recipients]
         assert normalized.count("same@example.net") == 1
         assert "independent@example.net" in normalized
+        assert "inactive@example.net" in normalized
         assert "blocked@example.net" not in normalized
 
 

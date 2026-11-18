@@ -139,10 +139,10 @@ def _split_subject(text, fallback_subject):
 # ---------- Recipients ----------
 
 def collect_recipients(limit=None, offset=0):
-    """Return deduplicated, explicitly opted-in users and newsletter subscribers.
+    """Return the deduplicated registered-user and subscriber audience.
 
-    Global opt-outs are always excluded. Registered accounts must have marketing
-    emails enabled; waitlist subscribers must have their newsletter flag enabled.
+    Global opt-outs are always excluded. All registered users and subscriber rows
+    are included regardless of their individual newsletter preference.
     """
     opted_out = {
         (email or "").strip().lower()
@@ -152,20 +152,16 @@ def collect_recipients(limit=None, offset=0):
     seen = set()
     recipients = []
 
-    # Registered accounts are eligible only when the user opted into marketing.
-    user_query = db.session.query(User.email, User.username).filter(
-        User.marketing_emails.is_(True)
-    )
+    # Registered accounts are included in the newsletter audience.
+    user_query = db.session.query(User.email, User.username)
     for email, name in user_query.all():
         key = (email or "").strip().lower()
         if key and key not in seen and key not in opted_out:
             seen.add(key)
             recipients.append((email, name))
 
-    # Waitlist records are included only when their newsletter preference is enabled.
-    subscriber_query = db.session.query(Subscriber.email, Subscriber.name).filter(
-        Subscriber.newsletter.is_(True)
-    )
+    # Newsletter-only subscriber records are included as well.
+    subscriber_query = db.session.query(Subscriber.email, Subscriber.name)
     for email, name in subscriber_query.all():
         key = (email or "").strip().lower()
         if key and key not in seen and key not in opted_out:
@@ -250,17 +246,27 @@ def sync_user_email_preferences(user, form_data=None):
 
 
 def sync_all_users_to_subscribers():
-    """Backfill all registered users into the subscriber table so the newsletter audience is complete."""
+    """Backfill and synchronize registered users in the subscriber table."""
     users = User.query.all()
     created = 0
     for user in users:
         email = (user.email or '').strip().lower()
         if not email:
             continue
-        if Subscriber.query.filter_by(email=email).first():
-            continue
-        upsert_subscriber_from_user(user)
-        created += 1
+        subscriber = Subscriber.query.filter_by(email=email).first()
+        if subscriber is None:
+            upsert_subscriber_from_user(user)
+            created += 1
+        else:
+            subscriber.name = (
+                (getattr(user, 'username', '') or subscriber.name or email.split('@', 1)[0])
+                .strip()
+                or email
+            )
+            subscriber.email = email
+            subscriber.newsletter = bool(getattr(user, 'marketing_emails', False))
+            subscriber.updated_at = datetime.now(timezone.utc)
+    db.session.commit()
     return created
 
 
@@ -269,7 +275,7 @@ def audience_size():
 
 
 def get_newsletter_audience_count():
-    """Return the real deduplicated newsletter audience, including opted-in users and waitlist subscribers."""
+    """Return the deduplicated registered-user and subscriber audience."""
     return len(collect_recipients())
 
 

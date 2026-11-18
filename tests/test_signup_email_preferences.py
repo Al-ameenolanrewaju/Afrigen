@@ -78,6 +78,31 @@ def test_sync_all_users_to_subscribers_backfills_missing_users():
         assert subscriber.newsletter is False
 
 
+def test_sync_all_users_updates_existing_subscriber_preferences():
+    with app.app_context():
+        user = User(
+            username='updated-name',
+            email='existing@example.com',
+            password='hash',
+            credits=5,
+            marketing_emails=True,
+        )
+        subscriber = Subscriber(
+            name='Old Name',
+            email='existing@example.com',
+            newsletter=False,
+        )
+        db.session.add_all([user, subscriber])
+        db.session.commit()
+
+        created = sync_all_users_to_subscribers()
+
+        assert created == 0
+        db.session.refresh(subscriber)
+        assert subscriber.name == 'updated-name'
+        assert subscriber.newsletter is True
+
+
 def test_get_newsletter_audience_count_counts_registered_users_and_waitlist_without_duplicates():
     with app.app_context():
         user = User(
