@@ -2777,7 +2777,7 @@ def launch_admin_export():
 @main.route('/launch/admin/newsletter', methods=['POST'])
 @admin_required
 def launch_admin_newsletter():
-    from models import Subscriber
+    from models import Subscriber, NewsletterIssue
     from services.email import send_newsletter
 
     data = request.get_json(silent=True) or request.form
@@ -2795,8 +2795,41 @@ def launch_admin_newsletter():
     if not recipients:
         return jsonify({'sent': 0, 'message': 'No newsletter subscribers to send to.'})
 
-    sent = send_newsletter(recipients, subject, body)
-    return jsonify({'sent': sent})
+    attempted_at = datetime.now(timezone.utc)
+    result = send_newsletter(recipients, subject, body, return_details=True)
+    sent = int(result.get('sent') or 0)
+    attempted = int(result.get('attempted') or len(recipients))
+    failed = int(result.get('failed') or 0)
+    test_recipient = result.get('test_recipient')
+    completed = sent > 0 and sent == attempted and failed == 0 and not test_recipient
+    if test_recipient:
+        status = 'test'
+    elif completed:
+        status = 'sent'
+    elif sent:
+        status = 'partial'
+    else:
+        status = 'failed'
+
+    issue = NewsletterIssue(
+        subject=subject or '',
+        body=body,
+        status=status,
+        auto_generated=False,
+        recipients_count=sent,
+        attempted_count=attempted,
+        failed_count=failed,
+        send_attempted_at=attempted_at,
+        sent_at=datetime.now(timezone.utc) if completed else None,
+    )
+    db.session.add(issue)
+    db.session.commit()
+    return jsonify({
+        'sent': sent,
+        'failed': failed,
+        'status': status,
+        'sent_at': issue.sent_at.isoformat() if issue.sent_at else None,
+    })
 
 
 # ---------- Weekly auto-generated newsletter ----------
@@ -2806,6 +2839,7 @@ def launch_admin_newsletter():
 def admin_newsletter():
     from services.newsletter import get_current_draft, audience_size, get_newsletter_batches
     from models import NewsletterIssue
+    from sqlalchemy import case
 
     active_issue = (
         NewsletterIssue.query.filter_by(status='sending')
@@ -2813,11 +2847,21 @@ def admin_newsletter():
         .first()
     )
     draft = active_issue or get_current_draft()
-    last_sent = (
-        NewsletterIssue.query.filter_by(status='sent')
-        .order_by(NewsletterIssue.sent_at.desc())
+    delivery_timestamp = case(
+        (NewsletterIssue.sent_at.is_(None), NewsletterIssue.send_attempted_at),
+        (NewsletterIssue.send_attempted_at.is_(None), NewsletterIssue.sent_at),
+        (NewsletterIssue.sent_at >= NewsletterIssue.send_attempted_at, NewsletterIssue.sent_at),
+        else_=NewsletterIssue.send_attempted_at,
+    )
+    last_sent_row = (
+        db.session.query(NewsletterIssue, delivery_timestamp.label("delivery_timestamp"))
+        .filter_by(status='sent')
+        .filter(delivery_timestamp.isnot(None))
+        .order_by(delivery_timestamp.desc(), NewsletterIssue.id.desc())
         .first()
     )
+    last_sent = last_sent_row[0] if last_sent_row else None
+    last_delivery_at = last_sent_row[1] if last_sent_row else None
     batches, total_audience = get_newsletter_batches(batch_size=80)
     delivery_summary = {
         "status": draft.status if draft else "idle",
@@ -2854,12 +2898,13 @@ def admin_newsletter():
         'main/newsletter_admin.html',
         draft=draft,
         last_sent=last_sent,
+        last_delivery_at=last_delivery_at,
         audience=total_audience,
         batches=batches,
         delivery_summary=delivery_summary,
         research_sources=research_sources,
         recent_issues=recent_issues,
-        admin_resend_datetime=_admin_resend_datetime,
+        admin_local_datetime=_admin_local_datetime,
     )
 
 

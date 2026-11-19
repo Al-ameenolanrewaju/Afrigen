@@ -48,7 +48,7 @@
       {% if draft %}
         <div class="mt-2"><span class="newsletter-badge {{ draft.status }}">{{ draft.status|title }}</span></div>
         <div class="fw-bold mt-2">{{ draft.subject }}</div>
-        <div class="newsletter-muted small">Issue #{{ draft.id }} · {{ admin_resend_datetime(draft.created_at).strftime('%b %d, %Y · %H:%M') }}</div>
+        <div class="newsletter-muted small">Issue #{{ draft.id }} · {{ admin_local_datetime(draft.created_at).strftime('%b %d, %Y · %H:%M') }}</div>
       {% else %}
         <div class="newsletter-stat">—</div><div class="newsletter-muted small">No issue awaiting review</div>
       {% endif %}
@@ -57,7 +57,7 @@
       <div class="newsletter-kicker">Last completed delivery</div>
       {% if last_sent %}
         <div class="newsletter-stat">{{ last_sent.recipients_count or 0 }}</div>
-        <div class="newsletter-muted small">{{ admin_resend_datetime(last_sent.sent_at).strftime('%b %d, %Y · %H:%M') if last_sent.sent_at else 'Sent date unavailable' }}</div>
+        <div class="newsletter-muted small">{{ admin_local_datetime(last_delivery_at).strftime('%b %d, %Y · %H:%M') if last_delivery_at else 'Sent date unavailable' }}</div>
       {% else %}
         <div class="newsletter-stat">—</div><div class="newsletter-muted small">No completed edition yet</div>
       {% endif %}
@@ -148,7 +148,7 @@
           <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 py-2" style="border-bottom:1px solid #263342">
             <div class="me-2">
               <div class="fw-semibold">{{ issue.subject or 'Untitled edition' }}</div>
-              <div class="newsletter-muted small">#{{ issue.id }} · {{ admin_resend_datetime(issue.created_at).strftime('%b %d, %Y · %H:%M') }}</div>
+              <div class="newsletter-muted small">#{{ issue.id }} · {{ admin_local_datetime(issue.created_at).strftime('%b %d, %Y · %H:%M') }}</div>
             </div>
             <span class="newsletter-badge {{ issue.status }}">{{ issue.status|title }}</span>
           </div>

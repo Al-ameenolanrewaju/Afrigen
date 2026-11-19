@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, timezone
 import pytest
 from app import app
 from models import db, User, Subscriber, EmailOptOut, NewsletterIssue
@@ -120,4 +121,97 @@ def test_send_newsletter_isolates_provider_rejected_recipient(caplog):
     assert "attempted=3 sent=2 failed=1" in caplog.text
     assert "Invalid `to` field" in caplog.text
     assert "blocked@qa-mail.net" not in caplog.text
+
+
+def test_admin_newsletter_last_delivery_uses_configured_local_timezone(monkeypatch):
+    from routes import main as main_routes
+    from zoneinfo import ZoneInfo
+
+    monkeypatch.setattr(main_routes, "is_admin_user", lambda user: True)
+    monkeypatch.setattr(main_routes, "ADMIN_TIMEZONE", ZoneInfo("Africa/Lagos"))
+    with app.app_context():
+        admin = User(username="newsletter_admin", email="newsletter-admin@example.com", password="pw")
+        issue = NewsletterIssue(
+            subject="Timezone test",
+            body="<p>Test</p>",
+            status="sent",
+            recipients_count=1,
+            sent_at=datetime(2026, 11, 12, 23, 30, tzinfo=timezone.utc),
+        )
+        latest_issue = NewsletterIssue(
+            subject="Latest delivery",
+            body="<p>Test</p>",
+            status="sent",
+            recipients_count=78,
+            created_at=datetime(2026, 11, 19, 0, 30, tzinfo=timezone.utc),
+            send_attempted_at=datetime(2026, 11, 19, 0, 30, tzinfo=timezone.utc),
+        )
+        db.session.add_all([admin, issue, latest_issue])
+        db.session.commit()
+        admin_id = admin.id
+
+    client = app.test_client()
+    with client.session_transaction() as browser_session:
+        browser_session["_user_id"] = str(admin_id)
+        browser_session["_fresh"] = True
+
+    response = client.get("/admin/newsletter")
+    assert response.status_code == 200
+    assert "Nov 19, 2026 · 01:30" in response.get_data(as_text=True)
+
+
+@pytest.mark.parametrize(
+    ("send_result", "expected_status", "expected_sent_at"),
+    [
+        (
+            {"attempted": 2, "sent": 2, "failed": 0, "failures": [], "test_recipient": None},
+            "sent",
+            True,
+        ),
+        (
+            {"attempted": 2, "sent": 1, "failed": 1, "failures": [{"email": "two@example.com"}], "test_recipient": None},
+            "partial",
+            False,
+        ),
+    ],
+)
+def test_launch_newsletter_records_delivery_result(
+    monkeypatch, send_result, expected_status, expected_sent_at
+):
+    from routes import main as main_routes
+
+    monkeypatch.setattr(main_routes, "is_admin_user", lambda user: True)
+    monkeypatch.setattr("services.email.send_newsletter", lambda *args, **kwargs: send_result)
+    with app.app_context():
+        admin = User(username="launch_admin", email="launch-admin@example.com", password="pw")
+        db.session.add_all([
+            admin,
+            Subscriber(name="One", email="one@example.com", newsletter=True),
+            Subscriber(name="Two", email="two@example.com", newsletter=True),
+        ])
+        db.session.commit()
+        admin_id = admin.id
+
+    client = app.test_client()
+    with client.session_transaction() as browser_session:
+        browser_session["_user_id"] = str(admin_id)
+        browser_session["_fresh"] = True
+
+    csrf_enabled = app.config.get("WTF_CSRF_ENABLED", True)
+    app.config["WTF_CSRF_ENABLED"] = False
+    try:
+        response = client.post(
+            "/launch/admin/newsletter",
+            json={"subject": "Delivery test", "body": "<p>Today</p>"},
+        )
+    finally:
+        app.config["WTF_CSRF_ENABLED"] = csrf_enabled
+
+    assert response.status_code == 200
+    with app.app_context():
+        issue = NewsletterIssue.query.one()
+        assert issue.status == expected_status
+        assert issue.recipients_count == send_result["sent"]
+        assert issue.attempted_count == send_result["attempted"]
+        assert issue.sent_at is not None if expected_sent_at else issue.sent_at is None
 
