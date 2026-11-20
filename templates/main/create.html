@@ -895,6 +895,7 @@
 
             <!-- Hidden Submission Forms (Clean, Independent, Non-Nested) -->
             <form id="form_video" method="POST" action="{{ url_for('main.generate') }}" style="display: none;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="prompt" class="sync-prompt">
                 <input type="hidden" name="style" id="form_video_style" value="cinematic">
                 <input type="hidden" name="aspect_ratio" id="form_video_ratio" value="16:9">
@@ -904,6 +905,7 @@
             </form>
 
             <form id="form_image" method="POST" action="{{ url_for('main.generate_image') }}" style="display: none;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="prompt" class="sync-prompt">
                 <input type="hidden" name="style" id="form_image_style" value="realistic">
                 <input type="hidden" name="aspect_ratio" id="form_image_ratio" value="1:1">
@@ -911,6 +913,7 @@
             </form>
 
             <form id="form_animate" method="POST" action="{{ url_for('main.generate_from_image') }}" enctype="multipart/form-data" style="display: none;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="prompt" class="sync-prompt">
                 <input type="hidden" name="aspect_ratio" id="form_animate_ratio" value="16:9">
                 <input type="hidden" name="duration" id="form_animate_duration" value="5">
@@ -918,6 +921,7 @@
             </form>
 
             <form id="form_voice" method="POST" action="{{ url_for('main.generate_voice') }}" style="display: none;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="prompt" class="sync-prompt">
                 <input type="hidden" name="voice" id="form_voice_actor" value="en-NG-AbeoNeural">
             </form>

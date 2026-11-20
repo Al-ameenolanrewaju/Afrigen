@@ -110,6 +110,11 @@ def test_create_studio_has_independent_non_nested_forms():
     # Verify NO nested forms
     for f in [video_form, image_form, animate_form, voice_form]:
         assert len(f.find_all("form")) == 0
+        # Every POST form must carry its CSRF token, including forms submitted
+        # with the native form.submit() API (which skips submit event handlers).
+        csrf_field = f.find("input", {"name": "csrf_token"})
+        assert csrf_field is not None
+        assert csrf_field.get("value")
 
     # Verify form targets
     assert "/generate" in video_form["action"]
