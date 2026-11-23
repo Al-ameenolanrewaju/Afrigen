@@ -876,7 +876,7 @@
                         Available: <strong class="text-white">{{ current_user.credits or 0 }} cr</strong>
                     </span>
 
-                    {% set can_generate_video = current_user.plan in ['pro', 'creator', 'studio', 'director'] or (current_user.free_video_allowance or 0) > 0 %}
+                    {% set can_generate_video = current_user.plan == 'pro' or (current_user.free_video_allowance or 0) > 0 %}
                     <button type="button" id="btnSubmitGeneration" class="btn-create-submit" onclick="submitActiveGeneration()"
                         {% if (initial_mode or 'video') == 'video' and not can_generate_video %}hidden{% endif %}>
                         <span id="btnSubmitText">
