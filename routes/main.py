@@ -427,7 +427,9 @@ def generate():
         # them from bypassing limits by firing parallel API calls.
         locked_user = db.session.get(User, current_user.id, with_for_update=True)
 
-        ok, error, _ = video_gate(locked_user, effective_style, extended=extended, duration=duration)
+        ok, error, video_cost = video_gate(
+            locked_user, effective_style, extended=extended, duration=duration
+        )
         if not ok:
             db.session.rollback()
             return jsonify({"success": False, "error": error})
@@ -440,7 +442,9 @@ def generate():
             client_request_id=request_id,
             token=_fal_webhook_token(request_id),
         )
-        video_cost = text_to_video_cost(style, extended=extended, duration=duration)
+        # Use the gate's charge amount: 0 for an admin-granted free video,
+        # otherwise the normal paid-plan credit cost. This value is also stored
+        # on the generation so a failed free generation restores the allowance.
         print(f"GENERATION request_id={request_id} status=refined original_prompt={prompt!r} refined_prompt={refined!r}")
         result = generate_video_async(
             prompt=refined, style=style, aspect_ratio=aspect_ratio, webhook_url=webhook_url,
