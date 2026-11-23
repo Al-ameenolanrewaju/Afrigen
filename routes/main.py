@@ -1204,6 +1204,40 @@ def public_share(token):
     return render_template('main/share.html', gen=gen, share_token=token)
 
 
+@main.route('/result/')
+@login_required
+def result_home():
+    generation_id = request.args.get('generation_id', type=int)
+    generation = Generation.query.filter_by(
+        id=generation_id, user_id=current_user.id
+    ).first() if generation_id else Generation.query.filter_by(
+        user_id=current_user.id
+    ).order_by(Generation.id.desc()).first()
+    if not generation:
+        return redirect(url_for('main.history'))
+    if generation.image_url or generation.generation_type == 'image':
+        return redirect(url_for('main.image_result', generation_id=generation.id))
+    return redirect(url_for('main.video_result', generation_id=generation.id))
+
+
+@main.route('/generation/<int:generation_id>/status')
+@login_required
+def generation_status(generation_id):
+    generation = Generation.query.filter_by(
+        id=generation_id,
+        user_id=current_user.id,
+    ).first_or_404()
+    payload = {
+        'success': True,
+        'status': generation.status,
+        'type': generation.generation_type or 'video',
+        'video_url': generation_media_url(generation.id, 'video') if generation.video_url else None,
+        'image_url': generation_media_url(generation.id, 'image') if generation.image_url else None,
+        'error': generation.error_message if hasattr(generation, 'error_message') else None,
+    }
+    return jsonify(payload)
+
+
 @main.route('/result/video')
 @login_required
 def video_result():
@@ -1225,6 +1259,8 @@ def video_result():
             if generation and generation.audio_url else None
         ),
         share_url=share_url_for(generation.id) if generation and generation.video_url else '',
+        generation_id=generation.id if generation else None,
+        generation_status=generation.status if generation else 'unknown',
     )
 
 @main.route('/result/image')
