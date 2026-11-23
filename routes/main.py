@@ -1204,6 +1204,33 @@ def public_share(token):
     return render_template('main/share.html', gen=gen, share_token=token)
 
 
+@main.route('/result/')
+@login_required
+def result_home():
+    generation_id = request.args.get('generation_id', type=int)
+    if generation_id:
+        return redirect(url_for('main.video_result', generation_id=generation_id))
+    return redirect(url_for('main.history'))
+
+
+@main.route('/generation/<int:generation_id>/status')
+@login_required
+def generation_status(generation_id):
+    generation = Generation.query.filter_by(
+        id=generation_id,
+        user_id=current_user.id,
+    ).first_or_404()
+    payload = {
+        'success': True,
+        'status': generation.status,
+        'type': generation.generation_type or 'video',
+        'video_url': generation_media_url(generation.id, 'video') if generation.video_url else None,
+        'image_url': generation_media_url(generation.id, 'image') if generation.image_url else None,
+        'error': generation.error_message if hasattr(generation, 'error_message') else None,
+    }
+    return jsonify(payload)
+
+
 @main.route('/result/video')
 @login_required
 def video_result():
