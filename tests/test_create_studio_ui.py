@@ -144,3 +144,22 @@ def test_prompt_enhancement_endpoints():
     assert res2.status_code == 200
     data2 = res2.get_json()
     assert "refined" in data2
+
+
+def test_free_user_sees_video_access_warning_and_no_video_button():
+    client = _get_test_client()
+    with app.app_context():
+        user = User.query.filter_by(email="create_studio_tester@afrigen.com").first()
+        user.plan = "free"
+        user.credits = 100
+        user.free_video_allowance = 0
+        db.session.commit()
+
+    res = client.get("/create")
+    assert res.status_code == 200
+    soup = BeautifulSoup(res.data.decode("utf-8"), "html.parser")
+    button = soup.find("button", id="btnSubmitGeneration")
+    warning = soup.find("div", id="videoAccessWarning")
+    assert button is not None and button.has_attr("hidden")
+    assert warning is not None
+    assert "Video generation unavailable" in warning.get_text()
