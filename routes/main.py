@@ -1252,6 +1252,8 @@ def video_result():
             if generation and generation.audio_url else None
         ),
         share_url=share_url_for(generation.id) if generation and generation.video_url else '',
+        generation_id=generation.id if generation else None,
+        generation_status=generation.status if generation else 'unknown',
     )
 
 @main.route('/result/image')
