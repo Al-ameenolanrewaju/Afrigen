@@ -56,8 +56,14 @@ def test_charge_and_refund_free_video_allowance():
         db.session.add(user)
         db.session.commit()
 
-        # Charge one video
-        charge_video(user, cost=0)
+        # Follow the same flow as the generation route: use the charge
+        # amount returned by video_gate, which must be zero for a gifted video.
+        ok, error, cost = video_gate(user, "cinematic")
+        assert ok
+        assert error is None
+        assert cost == 0
+
+        charge_video(user, cost=cost)
         db.session.commit()
 
         assert user.free_video_allowance == 1
