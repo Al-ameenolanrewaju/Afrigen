@@ -446,7 +446,7 @@ def generate():
             prompt=refined, style=style, aspect_ratio=aspect_ratio, webhook_url=webhook_url,
             extended=extended, duration=duration, request_id=request_id,
             original_prompt=prompt,
-            allow_fal=(locked_user.plan == 'pro' or (locked_user.free_video_allowance or 0) > 0),
+            allow_fal=(is_paid_plan(locked_user.plan) or (locked_user.free_video_allowance or 0) > 0),
         )
 
         if not result["success"]:
