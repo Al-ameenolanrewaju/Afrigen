@@ -79,14 +79,12 @@ def video_gate(user, style, extended=False, duration="5"):
 
     plan = getattr(user, 'plan', 'free') or 'free'
 
-    # Spark / free tier — check free video allowance first, or available credits
+    # Free-tier users may generate video only when an administrator has granted
+    # a free-video allowance. Ordinary credits do not unlock video generation.
     if not is_paid_plan(plan):
         if (getattr(user, 'free_video_allowance', 0) or 0) > 0:
             return (True, None, 0)
-        # If free user has enough credits (e.g. from bonus, admin grant, or referral), allow generation
-        if (user.credits or 0) >= cost:
-            return (True, None, cost)
-        return (False, "Video generation is a Pro feature. Upgrade to create videos!", cost)
+        return (False, "Video generation is available to paid subscribers or users with a granted free video. Upgrade to unlock video generation!", cost)
 
     # Paid tiers — check credits
     if (user.credits or 0) < cost:
