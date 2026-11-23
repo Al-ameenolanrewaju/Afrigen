@@ -1,202 +1,181 @@
 {% extends "base.html" %}
-
-{% block title %}Generation Result{% endblock %}
-
+{% block title %}Your Creation | Afrigen Studio{% endblock %}
 {% block content %}
-<div class="container mt-4">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
+<style>
+.result-shell{max-width:1180px;margin:0 auto;padding:clamp(18px,3vw,42px) 16px 64px;color:#f5f1e9}
+.result-top{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:28px;flex-wrap:wrap}
+.result-eyebrow{display:inline-flex;align-items:center;gap:8px;color:#d6ad65;font-size:.75rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+.result-heading{font-size:clamp(2rem,4vw,3.25rem);font-weight:800;letter-spacing:-.055em;line-height:1.05;margin:10px 0}
+.result-subtitle{color:#a5afbf;max-width:650px;margin:0}
+.result-layout{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(280px,.8fr);gap:22px;align-items:start}
+.result-panel{background:linear-gradient(145deg,#1b2433,#131a27);border:1px solid rgba(214,173,101,.18);border-radius:22px;overflow:hidden;box-shadow:0 18px 55px rgba(0,0,0,.22)}
+.result-media{aspect-ratio:16/9;background:radial-gradient(ellipse at center,rgba(214,173,101,.10),transparent 60%),#0c111b;display:grid;place-items:center;position:relative}
+.result-media video{width:100%;height:100%;object-fit:contain;background:#080b12}
+.result-empty{text-align:center;padding:28px;max-width:440px}
+.result-spinner{width:48px;height:48px;border:3px solid rgba(214,173,101,.18);border-top-color:#d6ad65;border-radius:50%;animation:resultSpin .85s linear infinite;margin:0 auto 18px}
+@keyframes resultSpin{to{transform:rotate(360deg)}}
+.result-empty h2{font-size:1.15rem;font-weight:750;margin-bottom:8px}
+.result-empty p{color:#9ba7b8;margin:0;line-height:1.6}
+.result-media-footer{padding:18px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;border-top:1px solid rgba(255,255,255,.07)}
+.result-status{display:inline-flex;align-items:center;gap:8px;color:#d6ad65;font-size:.82rem;font-weight:700}
+.result-status-dot{width:8px;height:8px;border-radius:50%;background:#d6ad65;box-shadow:0 0 0 5px rgba(214,173,101,.12)}
+.result-actions{display:flex;gap:9px;flex-wrap:wrap}
+.result-btn{display:inline-flex;justify-content:center;align-items:center;gap:8px;border-radius:10px;padding:10px 15px;font-size:.85rem;font-weight:700;text-decoration:none;border:1px solid rgba(214,173,101,.35);color:#f5f1e9;background:rgba(214,173,101,.08);cursor:pointer}
+.result-btn.primary{background:linear-gradient(135deg,#d6ad65,#d96c4a);color:#141923;border:0}
+.result-side{display:grid;gap:16px}
+.result-card{background:#18202d;border:1px solid rgba(228,222,212,.11);border-radius:18px;padding:20px}
+.result-card h3{font-size:.9rem;color:#d6ad65;font-weight:800;margin:0 0 12px}
+.result-card p{color:#d4dae3;line-height:1.7;margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.result-meta{font-size:.8rem;color:#8995a7;margin-top:12px}
+.result-share{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.result-error{color:#ff9a91!important}
+@media(max-width:850px){.result-layout{grid-template-columns:1fr}.result-top{align-items:flex-start}.result-media{aspect-ratio:16/10}}
+@media(max-width:520px){.result-shell{padding-left:12px;padding-right:12px}.result-card{padding:16px}.result-media{aspect-ratio:4/3}.result-actions{width:100%}.result-btn{flex:1}}
+</style>
 
-            <!-- Success Header -->
-            <div class="card p-4 mb-4 text-center">
-                <h1 style="color: #F5A623; font-size: 1.6rem;"><i class="fa-solid fa-robot"></i> Prompt Refined!</h1>
-                <p style="color: #C9D1D9;">
-                    Our AI has transformed your idea into a cinematic prompt!
-                </p>
-            </div>
-
-            <!-- Original Prompt -->
-            <div class="card p-4 mb-4">
-                <h5 style="color: #888;">Your Original Idea:</h5>
-                <p id="original" style="color: #C9D1D9; font-style: italic;">
-                    "{{ original }}"
-                </p>
-            </div>
-
-            <!-- Style Used -->
-            <div class="card p-3 mb-4 text-center">
-                <p style="color: #888; margin: 0;">
-                    Video Style:
-                    <strong id="styleLabel" style="color: #F5A623;">
-                        {% if style == 'cinematic' %}<i class="fa-solid fa-clapperboard"></i> Cinematic
-                        {% elif style == 'anime' %}<i class="fa-solid fa-torii-gate"></i> Anime
-                        {% elif style == 'realistic' %}<i class="fa-solid fa-earth-africa"></i> Realistic
-                        {% elif style == 'african' %}<i class="fa-solid fa-crown"></i> African
-                        {% elif style == 'social' %}<i class="fa-solid fa-mobile-screen-button"></i> Social Media
-                        {% endif %}
-                    </strong>
-                </p>
-            </div>
-
-            <!-- Refined Prompt -->
-            <div class="card p-4 mb-4" style="border-color: #F5A623;">
-                <h5 style="color: #F5A623;"><i class="fa-solid fa-wand-magic-sparkles"></i> AI Refined Prompt:</h5>
-                <p id="refined" style="color: #F0F6FC;">{{ refined }}</p>
-            </div>
-
-            <!-- Video Result -->
-            <div id="videoSection" style="display:none;">
-                <div class="card p-4 mb-4 text-center" style="border-color: #27AE60;">
-                    <h5 style="color: #27AE60;"><i class="fa-solid fa-clapperboard"></i> Your Video Is Ready!</h5>
-                    <video id="videoPlayer" width="100%" controls autoplay style="border-radius: 8px; margin-top: 15px;">
-                        <source id="videoSrcMp4" src="" type="video/mp4">
-                        <source id="videoSrcWebm" src="" type="video/webm">
-                        Your browser does not support video.
-                    </video>
-                    <br><br>
-                    <a id="videoOpenBtn" href="#" class="btn btn-afrigen mt-3 px-4 me-3" target="_blank">
-                        <i class="fa-solid fa-clapperboard"></i> Open Video
-                    </a>
-                    <a id="videoDownloadBtn" href="#" class="btn btn-outline-warning mt-3 px-4" download>
-                        <i class="fa-solid fa-download"></i> Download Video
-                    </a>
-                </div>
-
-                <!-- Share Buttons -->
-                <div class="card p-4 mb-4 text-center">
-                    <h5 style="color: #F5A623;"><i class="fa-solid fa-share-nodes"></i> Share it — and let them ask "how?"</h5>
-                    <p style="color: #888; margin-bottom: 0;">Shares open a page with your clip and an invitation to create with Afrigen. <i class="fa-solid fa-earth-africa"></i></p>
-                    <div class="d-flex justify-content-center gap-2 mt-3 flex-wrap">
-                        <a id="shareTwitter" href="#" target="_blank" class="btn btn-info px-3" style="color:white;">🐦 Twitter</a>
-                        <a id="shareFacebook" href="#" target="_blank" class="btn btn-primary px-3">📘 Facebook</a>
-                        <a id="sharePage" href="#" target="_blank" class="btn btn-outline-warning px-3" style="display:none;">🌍 Open share page</a>
-                        <button onclick="copyLink()" class="btn btn-outline-warning px-3">🔗 Copy Invite</button>
-                    </div>
-                </div>
-            </div>
-
-            {% if audio_url %}
-            <div class="card p-4 mb-4" style="border-color: #27AE60;">
-                <h5 style="color: #27AE60;">🎙️ AI Voiceover Ready!</h5>
-                <audio controls class="w-100 mt-2" src="{{ audio_url }}">
-                    Your browser does not support audio.
-                </audio>
-                <a href="{{ audio_url }}"
-                   class="btn btn-outline-success mt-2 btn-sm" download>
-                    ⬇️ Download Audio
-                </a>
-            </div>
-            {% endif %}
-
-            <!-- Action Buttons -->
-            <div class="text-center mt-3">
-                <button onclick="copyPrompt()" class="btn btn-outline-warning px-4 me-2 mb-2">📋 Copy Prompt</button>
-                <button onclick="savePrompt()" class="btn btn-outline-warning px-4 me-2 mb-2">💾 Save Prompt</button>
-                <button id="publishSocialBtn" type="button" class="btn btn-outline-info px-4 me-2 mb-2" style="display:none;">
-                    <i class="fa-solid fa-share-from-square"></i> Publish to Social
-                </button>
-                <a href="{{ url_for('main.dashboard') }}" class="btn btn-afrigen px-4 me-2 mb-2">🔄 Generate Another</a>
-                <a href="{{ url_for('main.history') }}" class="btn btn-outline-warning px-4 mb-2">📜 View History</a>
-            </div>
-
-        </div>
+<div class="result-shell">
+  <header class="result-top">
+    <div>
+      <span class="result-eyebrow"><i class="fa-solid fa-sparkles"></i> CREATION WORKSPACE</span>
+      <h1 class="result-heading">Your next scene starts here.</h1>
+      <p class="result-subtitle">Your generation, prompt and creative controls — together in one place.</p>
     </div>
+    <a href="{{ url_for('main.history') }}" class="result-btn"><i class="fa-solid fa-clock-rotate-left"></i> My creations</a>
+  </header>
+
+  <div class="result-layout">
+    <section class="result-panel">
+      <div class="result-media" id="resultMedia">
+        {% if video_url %}
+        <video id="videoPlayer" controls playsinline preload="metadata" poster="">
+          <source src="{{ video_url }}" type="video/mp4">
+          Your browser does not support video playback.
+        </video>
+        {% else %}
+        <div class="result-empty" id="resultPending">
+          <div class="result-spinner" id="resultSpinner"></div>
+          <h2 id="resultStateTitle">Your video is in production</h2>
+          <p id="resultStateMessage">We’ve received your idea. This page will update automatically when your video is ready.</p>
+        </div>
+        {% endif %}
+      </div>
+      <div class="result-media-footer">
+        <span class="result-status" id="resultStatus"><span class="result-status-dot"></span><span id="resultStatusText">{{ generation_status|default('completed' if video_url else 'processing')|capitalize }}</span></span>
+        <div class="result-actions" id="readyActions" {% if not video_url %}style="display:none"{% endif %}>
+          <a id="videoDownloadBtn" href="{{ video_url or '#' }}" class="result-btn primary" download><i class="fa-solid fa-download"></i> Download video</a>
+          <a id="videoOpenBtn" href="{{ video_url or '#' }}" class="result-btn" target="_blank" rel="noopener"><i class="fa-solid fa-arrow-up-right-from-square"></i> Open</a>
+        </div>
+      </div>
+    </section>
+
+    <aside class="result-side">
+      <section class="result-card">
+        <h3><i class="fa-solid fa-lightbulb"></i> YOUR ORIGINAL IDEA</h3>
+        <p id="original">{{ original or 'Your original prompt will appear here.' }}</p>
+      </section>
+      <section class="result-card">
+        <h3><i class="fa-solid fa-wand-magic-sparkles"></i> AI-REFINED PROMPT</h3>
+        <p id="refined">{{ refined or 'Your refined prompt will appear here.' }}</p>
+        <div class="result-meta">STYLE · <strong id="styleLabel">{{ style|default('Cinematic', true)|capitalize }}</strong></div>
+        <div class="result-share">
+          <button type="button" class="result-btn" onclick="copyPrompt()"><i class="fa-regular fa-copy"></i> Copy prompt</button>
+          <button type="button" class="result-btn" onclick="savePrompt()"><i class="fa-regular fa-bookmark"></i> Save prompt</button>
+        </div>
+      </section>
+      <section class="result-card">
+        <h3><i class="fa-solid fa-share-nodes"></i> KEEP CREATING</h3>
+        <p>Make another version, explore your previous work, or share your finished video.</p>
+        <div class="result-share">
+          <a href="{{ url_for('main.dashboard') }}" class="result-btn primary"><i class="fa-solid fa-plus"></i> Create another</a>
+          <a href="{{ url_for('main.history') }}" class="result-btn"><i class="fa-solid fa-layer-group"></i> View history</a>
+        </div>
+        <div class="result-share" id="shareActions" {% if not video_url %}style="display:none"{% endif %}>
+          <a id="shareTwitter" href="#" target="_blank" rel="noopener" class="result-btn">Share on X</a>
+          <a id="shareFacebook" href="#" target="_blank" rel="noopener" class="result-btn">Facebook</a>
+          <button type="button" class="result-btn" onclick="copyLink()">Copy link</button>
+        </div>
+      </section>
+    </aside>
+  </div>
 </div>
 
 <script>
-// Site root — used to invite recipients of shared clips back to sign up.
-const SITE_URL = "{{ request.host_url }}";
-
-// Load data from sessionStorage
-const resultData = JSON.parse(sessionStorage.getItem('resultData') || '{}');
-sessionStorage.removeItem('resultData');
+const generationId = {{ generation_id|tojson }};
 const serverVideoUrl = {{ video_url|tojson }};
 const serverShareUrl = {{ share_url|tojson }};
+const originalPrompt = {{ original|tojson }};
+const refinedPrompt = {{ refined|tojson }};
+const generationStatusUrl = generationId ? '/generation/' + generationId + '/status' : null;
+let pollCount = 0;
+const maxPolls = 360;
 
-document.addEventListener('DOMContentLoaded', function() {
-    if (resultData.original) {
-        document.getElementById('original').textContent = '"' + resultData.original + '"';
-    }
-    if (resultData.refined) {
-        document.getElementById('refined').textContent = resultData.refined;
-    }
-    if (resultData.style) {
-        const styleMap = {
-            'cinematic': '🎬 Cinematic',
-            'anime': '🎌 Anime',
-            'realistic': '🌍 Realistic',
-            'african': '👑 African',
-            'social': '📱 Social Media'
-        };
-        document.getElementById('styleLabel').textContent = styleMap[resultData.style] || resultData.style;
-    }
-    if (serverVideoUrl) {
-        const url = serverVideoUrl;
-        document.getElementById('videoSection').style.display = 'block';
-        document.getElementById('videoSrcMp4').src = url;
-        document.getElementById('videoSrcWebm').src = url;
-        document.getElementById('videoPlayer').load();
-        document.getElementById('videoOpenBtn').href = url;
-        document.getElementById('videoDownloadBtn').href = url;
-
-        // Each share carries an invite back to Afrigen — that's the growth loop.
-        // Prefer the per-clip share page (it shows the clip + a sign-up CTA and
-        // gets a rich thumbnail preview); fall back to the site root.
-        const shareTarget = serverShareUrl || SITE_URL;
-        const twText = `I made this with @AfrigenAI 🎬🌍 — one line of text became a video. Create yours with Afrigen 👇`;
-        document.getElementById('shareTwitter').href = `https://twitter.com/intent/tweet?text=${encodeURIComponent(twText)}&url=${encodeURIComponent(shareTarget)}`;
-        document.getElementById('shareFacebook').href = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareTarget)}`;
-        if (serverShareUrl) {
-            const sp = document.getElementById('sharePage');
-            sp.href = serverShareUrl;
-            sp.style.display = 'inline-block';
-        }
-        
-        // Show the publish to social button
-        const pubBtn = document.getElementById('publishSocialBtn');
-        pubBtn.style.display = 'inline-block';
-        pubBtn.addEventListener('click', () => {
-            const mediaUrl = serverVideoUrl;
-            const mediaType = 'video';
-            const text = resultData.refined || resultData.original || '';
-            openSocialPublishModal(text, mediaUrl, mediaType);
-        });
-    }
-});
-
-function copyLink() {
-    const target = serverShareUrl || serverVideoUrl || SITE_URL;
-    const invite = `I made this AI video with Afrigen 🎬🌍\nWatch & create your own 👉 ${target}`;
-    navigator.clipboard.writeText(invite);
-    alert('Invite copied! Paste it anywhere 📋');
+function setReady(url) {
+  const media = document.getElementById('resultMedia');
+  media.innerHTML = '';
+  const player = document.createElement('video');
+  player.id = 'videoPlayer';
+  player.controls = true;
+  player.playsInline = true;
+  player.preload = 'metadata';
+  const source = document.createElement('source');
+  source.src = url;
+  source.type = 'video/mp4';
+  player.appendChild(source);
+  player.appendChild(document.createTextNode('Your browser does not support video playback.'));
+  media.appendChild(player);
+  document.getElementById('videoDownloadBtn').href = url;
+  document.getElementById('videoOpenBtn').href = url;
+  document.getElementById('readyActions').style.display = 'flex';
+  document.getElementById('shareActions').style.display = 'flex';
+  document.getElementById('resultStatusText').textContent = 'Ready';
+  document.getElementById('resultStateTitle')?.remove();
+  configureSharing();
 }
-
+function configureSharing() {
+  const target = serverShareUrl || window.location.href;
+  const text = 'I created this video with Afrigen. Take a look!';
+  document.getElementById('shareTwitter').href = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(text) + '&url=' + encodeURIComponent(target);
+  document.getElementById('shareFacebook').href = 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(target);
+}
+async function pollGeneration() {
+  if (!generationStatusUrl || serverVideoUrl || pollCount >= maxPolls) return;
+  pollCount += 1;
+  try {
+    const response = await fetch(generationStatusUrl, {headers:{'Accept':'application/json'},cache:'no-store'});
+    if (!response.ok) throw new Error('Unable to check generation status.');
+    const data = await response.json();
+    const status = (data.status || 'processing').toLowerCase();
+    document.getElementById('resultStatusText').textContent = status === 'completed' ? 'Ready' : status === 'failed' ? 'Needs attention' : 'In production';
+    if (status === 'completed' && data.video_url) { setReady(data.video_url); return; }
+    if (status === 'failed') {
+      document.getElementById('resultSpinner')?.remove();
+      document.getElementById('resultStateTitle').textContent = 'This generation needs another try';
+      document.getElementById('resultStateMessage').textContent = data.error || 'The video could not be completed. You can try again from the creation studio.';
+      document.getElementById('resultStateMessage').classList.add('result-error');
+      document.getElementById('resultStatusText').textContent = 'Failed';
+      return;
+    }
+  } catch (error) {
+    console.warn('Generation status check failed:', error);
+  }
+  window.setTimeout(pollGeneration, 5000);
+}
 function copyPrompt() {
-    const prompt = resultData.refined || document.getElementById('refined').textContent;
-    navigator.clipboard.writeText(prompt);
-    alert('Prompt copied! 📋');
+  navigator.clipboard.writeText(refinedPrompt || document.getElementById('refined').textContent).then(() => alert('Prompt copied.'));
 }
-
 async function savePrompt() {
-    try {
-        const response = await fetch('/save-prompt', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                original: resultData.original || '',
-                refined: resultData.refined || '',
-                type: 'video',
-                style: resultData.style || ''
-            })
-        });
-        const data = await response.json();
-        if (data.success) alert('Prompt saved! 💾');
-    } catch(e) {
-        alert('Error saving prompt!');
-    }
+  try {
+    const response = await fetch('/save-prompt', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({original:originalPrompt,refined:refinedPrompt,type:'video',style:{{ style|tojson }}})});
+    const data = await response.json();
+    if (!response.ok || !data.success) throw new Error(data.error || 'Could not save prompt.');
+    alert('Prompt saved.');
+  } catch (error) { alert(error.message || 'Could not save prompt.'); }
 }
+function copyLink() {
+  navigator.clipboard.writeText(serverShareUrl || window.location.href).then(() => alert('Link copied.'));
+}
+if (serverVideoUrl) { configureSharing(); }
+else { pollGeneration(); }
 </script>
-
 {% include "main/_social_publish_modal.html" %}
-
 {% endblock %}
