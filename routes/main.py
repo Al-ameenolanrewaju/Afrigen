@@ -1208,9 +1208,16 @@ def public_share(token):
 @login_required
 def result_home():
     generation_id = request.args.get('generation_id', type=int)
-    if generation_id:
-        return redirect(url_for('main.video_result', generation_id=generation_id))
-    return redirect(url_for('main.history'))
+    generation = Generation.query.filter_by(
+        id=generation_id, user_id=current_user.id
+    ).first() if generation_id else Generation.query.filter_by(
+        user_id=current_user.id
+    ).order_by(Generation.id.desc()).first()
+    if not generation:
+        return redirect(url_for('main.history'))
+    if generation.image_url or generation.generation_type == 'image':
+        return redirect(url_for('main.image_result', generation_id=generation.id))
+    return redirect(url_for('main.video_result', generation_id=generation.id))
 
 
 @main.route('/generation/<int:generation_id>/status')
