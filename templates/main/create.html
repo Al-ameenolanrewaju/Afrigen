@@ -1426,11 +1426,40 @@
             return;
         }
 
-        // Mode: Video or Image (Standard Form Submit with Progress Overlay)
-        let overlayTitle = (currentMode === 'video') ? 'Directing Video...' : 'Painting Image...';
-        let overlaySub = (currentMode === 'video') ? 'Rendering 35mm frames and camera motion...' : 'Generating 8K textures and volumetric lighting...';
-        startProgressOverlay(overlayTitle, overlaySub, 20000);
+        // Video generation is an AJAX workflow: never navigate to the raw JSON
+        // response from POST /generate. Move the user to the branded result page.
+        if (currentMode === 'video') {
+            const btnSubmit = document.getElementById('btnSubmitGeneration');
+            if (btnSubmit) btnSubmit.disabled = true;
+            startProgressOverlay('Directing your video...', 'Your creative is being prepared. You can stay on this page while we submit it.', 20000);
+            try {
+                const response = await fetch(targetForm.action, {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/json' },
+                    body: new FormData(targetForm)
+                });
+                const data = await response.json();
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'We could not start your video. Please try again.');
+                }
+                if (data.type === 'refine_only') {
+                    hideProgressOverlay();
+                    if (btnSubmit) btnSubmit.disabled = false;
+                    return;
+                }
+                window.location.assign('/result/video?generation_id=' + encodeURIComponent(data.generation_id));
+            } catch (error) {
+                hideProgressOverlay();
+                if (btnSubmit) btnSubmit.disabled = false;
+                const message = error.message || 'Something went wrong. Please try again.';
+                if (window.showAfrigenAlert) window.showAfrigenAlert({ text: message, icon: 'error' });
+                else alert(message);
+            }
+            return;
+        }
 
+        // Image generation keeps its existing server-side redirect workflow.
+        startProgressOverlay('Painting your image...', 'Creating your visual with detail and atmosphere...', 20000);
         targetForm.submit();
     }
 
