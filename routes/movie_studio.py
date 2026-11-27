@@ -150,6 +150,10 @@ def generate_character_portrait(project_id, char_id):
     if not project or project.user_id != current_user.id:
         return jsonify({"success": False, "error": "Not found"}), 404
 
+    character = db.session.get(MovieCharacter, char_id)
+    if not character or character.project_id != project.id:
+        return jsonify({"success": False, "error": "Character not found"}), 404
+
     ok, url_or_err = generate_character_portrait_asset(char_id)
     return jsonify({
         "success": ok,
@@ -172,6 +176,11 @@ def generate_storyboards(project_id, scene_id):
     if not project or project.user_id != current_user.id:
         return jsonify({"success": False, "error": "Not found"}), 404
 
+    from models import MovieScene
+    scene = db.session.get(MovieScene, scene_id)
+    if not scene or scene.project_id != project.id:
+        return jsonify({"success": False, "error": "Scene not found"}), 404
+
     ok, msg = create_scene_shots_and_storyboards(scene_id)
     return jsonify({"success": ok, "message": msg})
 
@@ -185,6 +194,11 @@ def generate_shot(project_id, shot_id):
     project = db.session.get(MovieProject, project_id)
     if not project or project.user_id != current_user.id:
         return jsonify({"success": False, "error": "Not found"}), 404
+
+    from models import MovieShot
+    shot = db.session.get(MovieShot, shot_id)
+    if not shot or shot.project_id != project.id:
+        return jsonify({"success": False, "error": "Shot not found"}), 404
 
     ok, url_or_err = generate_shot_video_clip(shot_id)
     return jsonify({

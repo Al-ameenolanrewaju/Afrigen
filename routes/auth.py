@@ -200,6 +200,7 @@ def register():
 
 
 @auth.route('/login', methods=['GET', 'POST'])
+@limiter.limit("10 per minute", methods=["POST"])
 def login():
     if request.method == 'POST':
         email = request.form.get('email')
@@ -325,6 +326,7 @@ def google_callback():
 
 
 @auth.route('/forgot-password', methods=['GET', 'POST'])
+@limiter.limit("5 per hour", methods=["POST"])
 def forgot_password():
     if request.method == 'POST':
         email = request.form.get('email')
@@ -351,6 +353,7 @@ def forgot_password():
 
 
 @auth.route('/reset-password/<token>', methods=['GET', 'POST'])
+@limiter.limit("10 per hour", methods=["POST"])
 def reset_password(token):
     # Verify token
     email = verify_reset_token(token)
@@ -362,6 +365,10 @@ def reset_password(token):
     if request.method == 'POST':
         password = request.form.get('password')
         confirm_password = request.form.get('confirm_password')
+
+        if len(password or '') < 8:
+            flash('Password must be at least 8 characters long.', 'danger')
+            return redirect(url_for('auth.reset_password', token=token))
 
         if password != confirm_password:
             flash('Passwords do not match!', 'danger')

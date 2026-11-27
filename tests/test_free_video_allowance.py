@@ -137,3 +137,48 @@ def test_free_user_without_enough_video_credits_is_blocked():
         assert not ok
         assert cost == 5
         assert "5 credits" in error
+
+
+def test_video_charge_fails_closed_when_atomic_deduction_fails():
+    with app.app_context():
+        user = User(
+            username="no_credit_charge",
+            email="no_credit_charge@example.com",
+            password="hash",
+            plan="creator",
+            credits=0,
+            free_video_allowance=0,
+        )
+        db.session.add(user)
+        db.session.commit()
+
+        with pytest.raises(ValueError, match="Not enough credits"):
+            charge_video(user, cost=5)
+
+        db.session.rollback()
+        refreshed = db.session.get(User, user.id)
+        assert refreshed.credits == 0
+        assert CreditLedger.query.filter_by(user_id=user.id).count() == 0
+
+
+def test_image_charge_fails_closed_when_atomic_deduction_fails():
+    from services.credits import charge_image
+
+    with app.app_context():
+        user = User(
+            username="no_image_credit_charge",
+            email="no_image_credit_charge@example.com",
+            password="hash",
+            plan="creator",
+            credits=0,
+        )
+        db.session.add(user)
+        db.session.commit()
+
+        with pytest.raises(ValueError, match="Not enough credits"):
+            charge_image(user)
+
+        db.session.rollback()
+        refreshed = db.session.get(User, user.id)
+        assert refreshed.credits == 0
+        assert CreditLedger.query.filter_by(user_id=user.id).count() == 0

@@ -141,9 +141,7 @@ def charge_video(user, cost, reason="Video generation"):
 
     ok, err = deduct_credits_atomic(user.id, cost, reason)
     if not ok:
-        # Fallback if uncommitted changes or in-memory user
-        user.credits = max(0, (user.credits or 0) - cost)
-        record_credit_change(user, -cost, reason)
+        raise ValueError("Not enough credits; generation was not charged.")
 
 
 def image_to_video_gate(user):
@@ -163,8 +161,7 @@ def charge_image_to_video(user, reason="Image-to-video generation"):
     if is_paid_plan(plan):
         ok, err = deduct_credits_atomic(user.id, IMAGE_TO_VIDEO_COST, reason)
         if not ok:
-            user.credits = max(0, (user.credits or 0) - IMAGE_TO_VIDEO_COST)
-            record_credit_change(user, -IMAGE_TO_VIDEO_COST, reason)
+            raise ValueError("Not enough credits; image-to-video generation was not charged.")
 
 
 def refund_video(user, cost, reason="Video generation refund"):
@@ -192,5 +189,4 @@ def charge_image(user, reason="Image generation"):
 
     ok, err = deduct_credits_atomic(user.id, IMAGE_COST, reason)
     if not ok:
-        user.credits = max(0, (user.credits or 0) - IMAGE_COST)
-        record_credit_change(user, -IMAGE_COST, reason)
+        raise ValueError("Not enough credits; image generation was not charged.")

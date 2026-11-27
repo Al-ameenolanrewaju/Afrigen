@@ -2176,7 +2176,8 @@ def payment_callback():
     verified = (
         result.get('status')
         and data.get('status') == 'success'
-        and data.get('customer', {}).get('email') == current_user.email
+        and data.get('currency') == 'NGN'
+        and data.get('customer', {}).get('email', '').strip().lower() == current_user.email.strip().lower()
         and str((data.get('metadata') or {}).get('user_id')) == str(current_user.id)
         and amount in _all_valid_amounts
     )
@@ -3143,11 +3144,15 @@ def payment_webhook():
             reference = charge.get('reference')
             user_id = (charge.get('metadata') or {}).get('user_id')
             amount = charge.get('amount')
+            customer_email = (charge.get('customer') or {}).get('email') or ''
             user = User.query.get(user_id) if user_id else None
 
             if (
                 user
                 and reference
+                and charge.get('status') == 'success'
+                and charge.get('currency') == 'NGN'
+                and customer_email.strip().lower() == user.email.strip().lower()
                 and amount in (
                     PRO_MONTHLY_KOBO, PRO_ANNUAL_KOBO,
                     CREATOR_MONTHLY_KOBO, CREATOR_ANNUAL_KOBO,
