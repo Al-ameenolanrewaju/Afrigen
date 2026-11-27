@@ -346,7 +346,10 @@ def generate_scene_pidgin_dialogue(scene_id: int):
             ],
             max_tokens=1200,
         )
-        dialogue_rows = json.loads((raw or "").strip())
+        clean_dialogue = (raw or "").strip()
+        if clean_dialogue.startswith(chr(96) * 3):
+            clean_dialogue = clean_dialogue.removeprefix(chr(96) * 3 + "json").removesuffix(chr(96) * 3).strip()
+        dialogue_rows = json.loads(clean_dialogue)
         if not isinstance(dialogue_rows, list):
             raise ValueError("Dialogue response must be a JSON array")
 
