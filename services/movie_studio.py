@@ -25,6 +25,9 @@ from services.provider_manager import provider_manager
 from services.video import generate_image, generate_video, generate_video_from_image
 from services.ai_products import customer_error, redact_secrets
 from services.audio import generate_voiceover
+from services.credits import video_gate, deduct_credits_atomic, refund_video
+from services.entitlements import is_admin
+import fal_client
 
 logger = logging.getLogger(__name__)
 
@@ -170,14 +173,21 @@ def create_scene_shots_and_storyboards(scene_id: int):
     project = scene.project
     system_prompt = (
         "You are an expert storyboard artist and cinematographer. "
-        "Breakdown the screenplay scene into 2 to 3 cinematic shots.\n"
+        "Breakdown the screenplay scene into 2 to 3 cinematic shots. Mention the exact character names from the cast whenever they appear in a shot. Preserve their established appearance and clothing.\n"
         "Return ONLY JSON matching:\n"
         "[\n"
         '  {"shot_number": 1, "camera_angle": "Wide Shot", "camera_movement": "Slow Tracking", "lighting": "Golden Hour", "visual_prompt": "Detailed description of what is visible on screen."}\n'
         "]"
     )
 
-    user_content = f"Slugline: {scene.slugline}\nDescription: {scene.description}\nScript: {scene.screenplay_text}"
+    cast_notes = "\n".join(
+        f"- {char.name}: {char.physical_appearance or char.description or 'appearance not specified'}; clothing: {char.clothing or 'preserve the approved reference outfit'}"
+        for char in project.characters
+    )
+    user_content = (
+        f"Slugline: {scene.slugline}\nDescription: {scene.description}\nScript: {scene.screenplay_text}\n"
+        f"CAST REFERENCES (use exact names in visual_prompt whenever visible):\n{cast_notes}"
+    )
 
     try:
         raw = provider_manager.generate_text(
@@ -234,57 +244,150 @@ def create_scene_shots_and_storyboards(scene_id: int):
 # 4. Shot Video Generator
 # ---------------------------------------------------------------------
 
+def _character_references_for_shot(shot):
+    """Return approved character portraits explicitly present in this shot."""
+    project = shot.project
+    context = " ".join([
+        shot.visual_prompt or "",
+        getattr(shot.scene, "description", "") or "",
+        getattr(shot.scene, "screenplay_text", "") or "",
+    ]).casefold()
+    matches = [
+        character for character in project.characters
+        if character.reference_image_url and character.name.casefold() in context
+    ]
+    return matches[:3]
+
+
+def _build_character_consistency_prompt(shot, characters):
+    """Build Kling element references and continuity instructions for a shot."""
+    elements = []
+    continuity = []
+    for index, character in enumerate(characters, 1):
+        elements.append({"frontal_image_url": character.reference_image_url})
+        appearance = character.physical_appearance or character.description or "match the approved portrait"
+        clothing = character.clothing or "keep the clothing shown in the approved reference"
+        continuity.append(
+            f"@Element{index} is {character.name}. Preserve this exact person's facial identity, "
+            f"skin tone, age appearance, hairstyle and body proportions. Appearance: {appearance}. "
+            f"Clothing continuity: {clothing}. Do not redesign or substitute this character."
+        )
+    return elements, " ".join(continuity)
+
+
+def _generate_reference_guided_shot(shot, prompt, characters):
+    """Generate a shot using Kling V3 image-to-video with character elements."""
+    elements, continuity = _build_character_consistency_prompt(shot, characters)
+    start_image = shot.reference_image_url or (
+        characters[0].reference_image_url if characters else None
+    )
+    if not start_image:
+        return None
+
+    duration = str(shot.duration or "5")
+    if duration not in {str(value) for value in range(3, 16)}:
+        duration = "5"
+
+    arguments = {
+        "start_image_url": start_image,
+        "prompt": f"{prompt} {continuity}".strip(),
+        "duration": duration,
+        "generate_audio": False,
+        "negative_prompt": (
+            "different person, changed face, changed hairstyle, changed clothing, "
+            "inconsistent character, face distortion, extra limbs, blurry, low quality"
+        ),
+    }
+    if elements:
+        arguments["elements"] = elements
+
+    result = fal_client.subscribe(
+        "fal-ai/kling-video/v3/pro/image-to-video",
+        arguments=arguments,
+    )
+    video = (result or {}).get("video") or {}
+    return video.get("url")
+
+
 def generate_shot_video_clip(shot_id: int):
-    """Render the cinematic video clip for a specific shot using Kling Pro."""
+    """Generate a Movie Studio shot, using approved character references when available."""
     shot = db.session.get(MovieShot, shot_id)
     if not shot:
         return False, "Shot not found"
 
     project = shot.project
+    user = project.user
+    duration = str(shot.duration or "5")
     full_prompt = (
         f"{shot.visual_prompt}. Camera: {shot.camera_angle}, {shot.camera_movement}. "
         f"Lighting: {shot.lighting}. Style: {project.visual_style}, cinematic composition."
     )
+    characters = _character_references_for_shot(shot)
+    cost = 0
+    charged = False
+    admin_bypass = is_admin(user)
+
+    if not admin_bypass:
+        allowed, error, cost = video_gate(
+            user, "movie", extended=True, duration=duration
+        )
+        if not allowed:
+            return False, error
+        if cost > 0:
+            charged, charge_error = deduct_credits_atomic(
+                user.id, cost, f"Movie Studio shot {shot.id} generation"
+            )
+            if not charged:
+                return False, charge_error or "Not enough credits."
+            db.session.commit()
 
     shot.status = "generating"
+    shot.error_message = None
     db.session.commit()
 
     try:
-        # Use movie style which routes to Kling Pro in services/video.py
-        res = generate_video(
-            full_prompt,
-            style="movie",
-            aspect_ratio=project.aspect_ratio or "16:9",
-            extended=True,
-            duration=str(shot.duration or "5"),
-            allow_fal=True
-        )
-
-        if res and res.get("success") and res.get("video_url"):
-            shot.video_url = res["video_url"]
-            shot.status = "completed"
-            from services.generation_notifications import create_media_ready_notification
-            create_media_ready_notification(
-                project.user_id,
-                "video",
-                f"/movie-studio/projects/{project.id}#shots",
-                title="Your video clip is ready",
-                message=f"Shot {shot.shot_number} has been generated.",
+        video_url = None
+        if characters or shot.reference_image_url:
+            video_url = _generate_reference_guided_shot(
+                shot, full_prompt, characters
             )
-            db.session.commit()
-            return True, shot.video_url
-        else:
-            shot.status = "failed"
-            shot.error_message = customer_error("video")
-            db.session.commit()
-            return False, customer_error("video")
+
+        # Environment-only shots keep the established text-to-video path.
+        if not video_url:
+            res = generate_video(
+                full_prompt,
+                style="movie",
+                aspect_ratio=project.aspect_ratio or "16:9",
+                extended=True,
+                duration=duration,
+                allow_fal=True,
+            )
+            if res and res.get("success"):
+                video_url = res.get("video_url")
+
+        if not video_url:
+            raise RuntimeError("Video provider returned no output URL")
+
+        shot.video_url = video_url
+        shot.status = "completed"
+        from services.generation_notifications import create_media_ready_notification
+        create_media_ready_notification(
+            project.user_id,
+            "video",
+            f"/movie-studio/projects/{project.id}#shots",
+            title="Your video clip is ready",
+            message=f"Shot {shot.shot_number} has been generated.",
+        )
+        db.session.commit()
+        return True, shot.video_url
     except Exception as exc:
         shot.status = "failed"
         shot.error_message = customer_error("video")
+        if charged:
+            refund_video(user, cost, f"Refund failed Movie Studio shot {shot.id}")
         db.session.commit()
         logger.error("Movie shot generation failed: %s", redact_secrets(str(exc)))
         return False, customer_error("video")
-
 
 # ---------------------------------------------------------------------
 # 5. Master Movie Timeline Renderer (FFmpeg Background Pipeline)
