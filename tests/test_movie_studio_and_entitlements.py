@@ -1,7 +1,7 @@
 import pytest
 from werkzeug.security import generate_password_hash
 from app import app
-from models import db, User, MovieProject, MovieScene, MovieShot, Generation
+from models import db, User, MovieProject, MovieCharacter, MovieScene, MovieShot, Generation
 from services.entitlements import can_access_movie_studio, can_access_image_to_video, get_user_entitlements
 
 
