@@ -82,6 +82,8 @@ def video_gate(user, style, extended=False, duration="5"):
     # Free users can use an administrator-granted video gift first, then pay
     # the normal basic-generation credit price from their ordinary balance.
     if not is_paid_plan(plan):
+        if style in KLING_PRO_STYLES:
+            return (False, "Movie Scene Studio video generation requires a Studio or Director plan.", cost)
         if (getattr(user, 'free_video_allowance', 0) or 0) > 0:
             return (True, None, 0)
         if (getattr(user, 'credits', 0) or 0) >= cost:
