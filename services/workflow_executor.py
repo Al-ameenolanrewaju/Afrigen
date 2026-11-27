@@ -98,7 +98,7 @@ class WorkflowExecutor:
                         if isinstance(res, dict) else res
                     )
                     result_text = refined
-                    provider_used = "Fal (Image)"
+                    provider_used = "Fal (Image)" if is_paid_plan(owner.plan) else "Hugging Face (Image)"
                     charge_image(owner, reason='Campaign image generation')
                 elif task.task_type == AssetType.VIDEO.value:
                     owner = db.session.get(User, campaign.user_id, with_for_update=True)
