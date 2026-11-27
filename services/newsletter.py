@@ -139,10 +139,11 @@ def _split_subject(text, fallback_subject):
 # ---------- Recipients ----------
 
 def collect_recipients(limit=None, offset=0):
-    """Return the deduplicated registered-user and subscriber audience.
+    """Return deduplicated recipients who explicitly opted in to marketing email.
 
-    Global opt-outs are always excluded. All registered users and subscriber rows
-    are included regardless of their individual newsletter preference.
+    A registered user's preference is authoritative over a stale Subscriber row.
+    Global opt-outs are always excluded, and newsletter-only subscribers must have
+    their newsletter flag enabled.
     """
     opted_out = {
         (email or "").strip().lower()
@@ -150,21 +151,30 @@ def collect_recipients(limit=None, offset=0):
     }
 
     seen = set()
+    registered_opt_outs = set()
     recipients = []
 
-    # Registered accounts are included in the newsletter audience.
-    user_query = db.session.query(User.email, User.username)
-    for email, name in user_query.all():
+    for email, name, marketing_emails in db.session.query(
+        User.email, User.username, User.marketing_emails
+    ).all():
         key = (email or "").strip().lower()
-        if key and key not in seen and key not in opted_out:
+        if not key:
+            continue
+        if not marketing_emails:
+            registered_opt_outs.add(key)
+            continue
+        if key not in seen and key not in opted_out:
             seen.add(key)
             recipients.append((email, name))
 
-    # Newsletter-only subscriber records are included as well.
-    subscriber_query = db.session.query(Subscriber.email, Subscriber.name)
-    for email, name in subscriber_query.all():
+    for email, name, newsletter in db.session.query(
+        Subscriber.email, Subscriber.name, Subscriber.newsletter
+    ).all():
         key = (email or "").strip().lower()
-        if key and key not in seen and key not in opted_out:
+        if (
+            key and newsletter and key not in seen
+            and key not in opted_out and key not in registered_opt_outs
+        ):
             seen.add(key)
             recipients.append((email, name))
 
@@ -425,20 +435,48 @@ def run_weekly_send():
 # ---------- Daily Newsletter Campaign Batch Runner ----------
 
 def run_daily_newsletter_batch(app_ctx=None):
-    """Find the first 'sending' campaign and dispatch a batch of emails."""
+    """Send one legacy campaign cohort without silently advancing on failures."""
     from models import NewsletterCampaign
     campaign = NewsletterCampaign.query.filter_by(status='sending').first()
     if not campaign:
-        return
-    recipients = collect_recipients(limit=campaign.batch_size, offset=campaign.batch_offset)
-    if recipients:
-        send_newsletter(recipients, campaign.subject, campaign.html_body, is_html=True)
-    campaign.batch_offset += campaign.batch_size
+        return None
+
+    recipients = collect_recipients(
+        limit=campaign.batch_size, offset=campaign.batch_offset
+    )
+    if not recipients:
+        campaign.status = 'complete'
+        campaign.completed_at = datetime.now(timezone.utc)
+        db.session.commit()
+        return {"sent": 0, "failed": 0, "complete": True}
+
+    result = send_newsletter(
+        recipients, campaign.subject, campaign.html_body,
+        is_html=True, return_details=True,
+    )
+    # A test-recipient override is not production delivery. Partial/ambiguous
+    # outcomes must not move the cursor because this legacy campaign has no
+    # per-recipient ledger with which to safely resume a partially sent batch.
+    if result.get("test_recipient") or result.get("failed") or result.get("sent") != len(recipients):
+        campaign.status = 'failed'
+        db.session.commit()
+        logger.error(
+            "Newsletter campaign %s stopped: attempted=%s sent=%s failed=%s test_recipient=%s",
+            campaign.id, result.get("attempted", 0), result.get("sent", 0),
+            result.get("failed", 0), bool(result.get("test_recipient")),
+        )
+        return result
+
+    campaign.batch_offset += len(recipients)
     if campaign.batch_offset >= campaign.total_audience:
         campaign.status = 'complete'
         campaign.completed_at = datetime.now(timezone.utc)
     db.session.commit()
-    print(f"Newsletter campaign {campaign.id}: batch sent ({len(recipients)} recipients), offset now {campaign.batch_offset}")
+    print(
+        f"Newsletter campaign {campaign.id}: batch delivered ({len(recipients)} recipients), "
+        f"offset now {campaign.batch_offset}"
+    )
+    return result
 
 
 def run_daily_newsletter_cycle():

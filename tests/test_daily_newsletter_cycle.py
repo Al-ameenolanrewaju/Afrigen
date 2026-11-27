@@ -11,12 +11,20 @@ def setup_function():
         db.create_all()
 
 
-def test_collect_recipients_includes_independent_subscribers_deduplicates_and_honors_opt_out():
+def test_collect_recipients_requires_explicit_opt_in_deduplicates_and_honors_opt_out():
     with app.app_context():
-        user = User(username="registered", email="same@example.net", password="pw", credits=5, marketing_emails=False)
-        db.session.add(user)
+        opted_out_user = User(
+            username="registered_opted_out", email="same@example.net",
+            password="pw", credits=5, marketing_emails=False,
+        )
+        opted_in_user = User(
+            username="registered_opted_in", email="user-opted-in@example.net",
+            password="pw", credits=5, marketing_emails=True,
+        )
         db.session.add_all([
-            Subscriber(name="Duplicate", email="SAME@example.net", newsletter=True),
+            opted_out_user,
+            opted_in_user,
+            Subscriber(name="Stale duplicate", email="SAME@example.net", newsletter=True),
             Subscriber(name="Independent", email="independent@example.net", newsletter=True),
             Subscriber(name="Inactive newsletter-only", email="inactive@example.net", newsletter=False),
             Subscriber(name="Opted out", email="blocked@example.net", newsletter=True),
@@ -26,9 +34,10 @@ def test_collect_recipients_includes_independent_subscribers_deduplicates_and_ho
 
         recipients = collect_recipients()
         normalized = [email.lower() for email, _name in recipients]
-        assert normalized.count("same@example.net") == 1
+        assert "same@example.net" not in normalized
+        assert normalized.count("user-opted-in@example.net") == 1
         assert "independent@example.net" in normalized
-        assert "inactive@example.net" in normalized
+        assert "inactive@example.net" not in normalized
         assert "blocked@example.net" not in normalized
 
 
