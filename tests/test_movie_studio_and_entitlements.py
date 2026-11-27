@@ -389,3 +389,52 @@ def test_shot_dialogue_lip_sync_uses_saved_audio_and_charges_credits(monkeypatch
         assert captured["arguments"]["audio_url"] == "https://media.example.test/dialogue.mp3"
         assert db.session.get(User, user.id).credits == 45
         assert db.session.get(MovieShot, shot.id).video_url == result
+
+
+
+def test_movie_studio_project_creation_reports_treatment_failure(monkeypatch):
+    client = app.test_client()
+    with app.app_context():
+        director_u = User.query.filter_by(email="director_test@afrigen.com").first()
+        if not director_u:
+            director_u = User(
+                username="director_tester",
+                email="director_test@afrigen.com",
+                password=generate_password_hash("pass123"),
+                plan="director"
+            )
+            db.session.add(director_u)
+            db.session.commit()
+
+        import routes.movie_studio as rms
+        monkeypatch.setattr(
+            rms,
+            "generate_screenplay_treatment",
+            lambda _project: (False, "The screenplay provider is temporarily unavailable."),
+        )
+
+        client.post(
+            "/auth/login",
+            data={"email": "director_test@afrigen.com", "password": "pass123"},
+            follow_redirects=True,
+        )
+        response = client.post(
+            "/movie-studio/projects/create",
+            data={
+                "title": "Treatment Retry Test",
+                "genre": "Drama",
+                "cinematic_tone": "Cinematic",
+                "aspect_ratio": "16:9",
+                "target_duration": "60",
+                "logline": "A test story.",
+            },
+            follow_redirects=True,
+        )
+
+        assert response.status_code == 200
+        assert b"was created, but screenplay generation failed" in response.data
+        assert b"The screenplay provider is temporarily unavailable." in response.data
+
+        project = MovieProject.query.filter_by(title="Treatment Retry Test").one()
+        assert project.status == "draft"
+        assert project.user_id == director_u.id
