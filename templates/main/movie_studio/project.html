@@ -150,9 +150,14 @@
                         <h4 class="h6 text-warning mb-1">SCENE {{ sc.scene_number }}: {{ sc.slugline }}</h4>
                         <p class="small text-secondary mb-0">{{ sc.description }}</p>
                     </div>
-                    <button class="btn btn-sm btn-surface" onclick="breakdownScene({{ sc.id }})">
-                        <i class="fa-solid fa-plus me-1"></i> Create Storyboard Shots
-                    </button>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button class="btn btn-sm btn-surface" onclick="breakdownScene({{ sc.id }})">
+                            <i class="fa-solid fa-plus me-1"></i> Create Storyboard Shots
+                        </button>
+                        <button class="btn btn-sm btn-gold" onclick="generateSceneDialogue({{ sc.id }})">
+                            <i class="fa-solid fa-language me-1"></i> Generate Pidgin Dialogue
+                        </button>
+                    </div>
                 </div>
 
                 <div class="row g-3">
@@ -176,9 +181,14 @@
                                 <div class="frame-prompt">{{ shot.visual_prompt }}</div>
                                 <div class="d-flex align-items-center justify-content-between pt-2 border-top" style="border-color: var(--af-border) !important;">
                                     <small class="text-muted"><i class="fa-solid fa-camera me-1"></i> {{ shot.camera_movement }}</small>
-                                    <button class="btn btn-sm btn-gold" id="btnShot_{{ shot.id }}" onclick="generateShotClip({{ shot.id }})">
-                                        {% if shot.video_url %}Regenerate Clip{% else %}Generate Video{% endif %}
-                                    </button>
+                                    <div class="d-flex gap-2">
+                                        <button class="btn btn-sm btn-surface" id="btnLipSync_{{ shot.id }}" onclick="lipSyncShot({{ shot.id }})" {% if not shot.video_url %}disabled{% endif %}>
+                                            <i class="fa-solid fa-waveform me-1"></i> Lip-sync · 5 credits/5s
+                                        </button>
+                                        <button class="btn btn-sm btn-gold" id="btnShot_{{ shot.id }}" onclick="generateShotClip({{ shot.id }})">
+                                            {% if shot.video_url %}Regenerate Clip{% else %}Generate Video{% endif %}
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -263,6 +273,7 @@
                             <input type="text" class="form-control" value="Stereo 48kHz / AAC" disabled>
                         </div>
 
+                        <p class="small text-secondary mb-3">Dialogue uses Nigerian Pidgin text with your selected Nigerian English neural voice. Lip-sync costs 5 credits per 5-second shot or 10 credits per 10-second shot. Shots with saved dialogue are synced automatically when generated.</p>
                         <button class="btn btn-gold w-100 py-3" onclick="triggerMasterRender()">
                             <i class="fa-solid fa-wand-magic-sparkles me-2"></i> Master &amp; Export Movie
                         </button>
@@ -348,6 +359,41 @@
                 window.showAfrigenAlert({ text: data.error || "Storyboard breakdown failed.", icon: "error" });
             }
         } catch (e) {
+            window.showAfrigenAlert({ text: String(e), icon: "error" });
+        }
+    }
+
+    async function generateSceneDialogue(sceneId) {
+        window.showAfrigenAlert({ text: "Writing Nigerian Pidgin dialogue and generating character voices...", icon: "info", toast: true });
+        try {
+            const res = await fetch(`/movie-studio/projects/${projectId}/scenes/${sceneId}/dialogue`, { method: "POST" });
+            const data = await res.json();
+            if (data.success) {
+                window.showAfrigenAlert({ text: data.message + " Completed shots will be lip-synced automatically.", icon: "success" });
+                location.reload();
+            } else {
+                window.showAfrigenAlert({ text: data.error || data.message || "Dialogue generation failed.", icon: "error" });
+            }
+        } catch (e) {
+            window.showAfrigenAlert({ text: String(e), icon: "error" });
+        }
+    }
+
+    async function lipSyncShot(shotId) {
+        const btn = document.getElementById(`btnLipSync_${shotId}`);
+        if (btn) { btn.disabled = true; btn.innerText = "Lip-syncing..."; }
+        try {
+            const res = await fetch(`/movie-studio/projects/${projectId}/shots/${shotId}/lip-sync`, { method: "POST" });
+            const data = await res.json();
+            if (data.success) {
+                window.showAfrigenAlert({ text: "Character dialogue synchronized successfully.", icon: "success" });
+                location.reload();
+            } else {
+                if (btn) { btn.disabled = false; btn.innerText = "Lip-sync · 5 credits/5s"; }
+                window.showAfrigenAlert({ text: data.error || "Lip-sync failed.", icon: "error" });
+            }
+        } catch (e) {
+            if (btn) btn.disabled = false;
             window.showAfrigenAlert({ text: String(e), icon: "error" });
         }
     }
