@@ -55,12 +55,17 @@ def generate_screenplay_treatment(project: MovieProject):
         "}"
     )
 
+    target_seconds = int(project.target_duration or 60)
+    target_scene_count = max(4, min(30, (target_seconds + 14) // 15))
     user_prompt = (
         f"Title: {project.title}\n"
         f"Genre: {project.genre}\n"
         f"Cinematic Tone: {project.cinematic_tone}\n"
         f"Visual Style: {project.visual_style}\n"
-        f"Desired Duration: {project.target_duration} seconds\n"
+        f"Target film duration: {target_seconds} seconds.\n"
+        f"Create exactly {target_scene_count} numbered scenes. Each scene will be storyboarded into exactly 3 shots of 5 seconds each, "
+        f"so the complete film reaches approximately {target_seconds} seconds. Give every scene a distinct dramatic purpose, "
+        f"clear character actions and dialogue that can be performed in Nigerian Pidgin.\n"
         f"Story Concept / Idea: {project.logline or project.synopsis or 'An ambitious creative narrative set in modern and futuristic Africa.'}"
     )
 
@@ -71,7 +76,7 @@ def generate_screenplay_treatment(project: MovieProject):
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ],
-            max_tokens=2200
+            max_tokens=8000
         )
         
         # Clean JSON from response
@@ -173,7 +178,7 @@ def create_scene_shots_and_storyboards(scene_id: int):
     project = scene.project
     system_prompt = (
         "You are an expert storyboard artist and cinematographer. "
-        "Breakdown the screenplay scene into 2 to 3 cinematic shots. Mention the exact character names from the cast whenever they appear in a shot. Preserve their established appearance and clothing.\n"
+        "Breakdown this scene into exactly 3 cinematic shots of 5 seconds each. Mention exact character names in every shot where they appear. Preserve approved appearance and clothing. Include a clear close-up or medium close-up for any speaking character so dialogue can be lip-synced.\n"
         "Return ONLY JSON matching:\n"
         "[\n"
         '  {"shot_number": 1, "camera_angle": "Wide Shot", "camera_movement": "Slow Tracking", "lighting": "Golden Hour", "visual_prompt": "Detailed description of what is visible on screen."}\n'
