@@ -3957,20 +3957,16 @@ def api_brands():
 
     if request.method == 'GET':
         brands = Brand.query.filter_by(user_id=current_user.id).order_by(Brand.name.asc()).all()
+        fields = (
+            "id", "name", "industry", "voice", "tone", "primary_color",
+            "secondary_color", "accent_color", "typography", "target_audience",
+            "custom_instructions", "mission", "vision", "keywords",
+            "negative_keywords", "languages", "country", "website",
+            "logo_url", "cover_image_url", "preferred_art_style",
+            "preferred_video_style", "voice_preference", "social_links", "default_ai_models",
+        )
         return jsonify({"brands": [
-            {
-                "id": brand.id,
-                "name": brand.name,
-                "industry": brand.industry,
-                "voice": brand.voice,
-                "colors": brand.primary_color,
-                "audience": brand.target_audience,
-                "instructions": brand.custom_instructions,
-                "primary_color": brand.primary_color,
-                "secondary_color": brand.secondary_color,
-                "accent_color": brand.accent_color,
-                "typography": brand.typography,
-            }
+            {field: getattr(brand, field) for field in fields}
             for brand in brands
         ]})
 
@@ -3978,15 +3974,19 @@ def api_brands():
     name = (data.get('name') or '').strip()
     if not name:
         return jsonify({"ok": False, "error": "Brand name is required."}), 400
-    brand = Brand(
-        user_id=current_user.id,
-        name=name,
-        industry=data.get('industry'),
-        voice=data.get('voice'),
-        primary_color=data.get('colors') or data.get('primary_color'),
-        target_audience=data.get('audience') or data.get('target_audience'),
-        custom_instructions=data.get('instructions') or data.get('custom_instructions'),
+    allowed_fields = (
+        "industry", "voice", "tone", "primary_color", "secondary_color",
+        "accent_color", "typography", "target_audience", "custom_instructions",
+        "mission", "vision", "keywords", "negative_keywords", "languages",
+        "country", "website", "logo_url", "cover_image_url",
+        "preferred_art_style", "preferred_video_style", "voice_preference",
+        "social_links", "default_ai_models",
     )
+    brand_values = {field: data[field] for field in allowed_fields if field in data}
+    brand_values.setdefault("primary_color", data.get("colors"))
+    brand_values.setdefault("target_audience", data.get("audience"))
+    brand_values.setdefault("custom_instructions", data.get("instructions"))
+    brand = Brand(user_id=current_user.id, name=name, **brand_values)
     db.session.add(brand)
     db.session.commit()
     return jsonify({"ok": True, "brand": {"id": brand.id, "name": brand.name}}), 201

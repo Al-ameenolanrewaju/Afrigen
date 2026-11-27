@@ -35,7 +35,7 @@ class WorkflowExecutor:
             # Skip COMPLETED or CANCELED tasks.
             tasks = CampaignTask.query.filter(
                 CampaignTask.campaign_id == campaign_id,
-                CampaignTask.status.in_([TaskStatus.PENDING.value, TaskStatus.RETRYING.value, TaskStatus.FAILED.value])
+                CampaignTask.status.in_([TaskStatus.PENDING.value, TaskStatus.RETRYING.value])
             ).order_by(CampaignTask.priority.asc()).all()
 
             for task in tasks:
@@ -173,8 +173,20 @@ class WorkflowExecutor:
             target_provider = platform_map.get(task.task_type)
             if target_provider:
                 from models import ConnectedAccount, UserContent, PublishingRetryQueue
-                account = ConnectedAccount.query.filter_by(user_id=campaign.user_id, provider=target_provider).first()
-                if account:
+                account = ConnectedAccount.query.filter_by(
+                    user_id=campaign.user_id,
+                    provider=target_provider,
+                    status="connected",
+                ).first()
+                from models import PublishingPreference
+                preference = PublishingPreference.query.filter_by(
+                    user_id=campaign.user_id,
+                    provider=target_provider,
+                    content_type=task.task_type,
+                    enabled=True,
+                    auto_publish=True,
+                ).first()
+                if account and preference:
                     logger.info(f"Auto-publishing {task.name} to {target_provider} for Campaign {campaign.id}")
                     user_content = UserContent(
                         user_id=campaign.user_id,
@@ -213,22 +225,35 @@ class WorkflowExecutor:
         )
 
         if campaign.brand:
-            base_context += (
-                f"Brand: {campaign.brand.name}\n"
-                f"Brand Voice: {campaign.brand.voice or ''}\n"
-                f"Brand Mission: {campaign.brand.mission or ''}\n"
-            )
+            brand = campaign.brand
+            fields = {
+                "Brand": brand.name,
+                "Brand Voice": brand.voice,
+                "Brand Tone": brand.tone,
+                "Brand Mission": brand.mission,
+                "Brand Vision": brand.vision,
+                "Brand Audience": brand.target_audience,
+                "Brand Languages": brand.languages,
+                "Brand Keywords": brand.keywords,
+                "Avoid These Keywords": brand.negative_keywords,
+                "Brand Guidelines": brand.custom_instructions,
+            }
             if task.task_type in {AssetType.IMAGE.value, AssetType.VIDEO.value}:
-                base_context += (
-                    f"Brand Colors: {campaign.brand.primary_color or ''}, "
-                    f"{campaign.brand.secondary_color or ''}, "
-                    f"{campaign.brand.accent_color or ''}\n"
-                    f"Brand Typography: {campaign.brand.typography or ''}\n"
-                )
-            base_context += "\n"
+                fields.update({
+                    "Primary Color": brand.primary_color,
+                    "Secondary Color": brand.secondary_color,
+                    "Accent Color": brand.accent_color,
+                    "Typography": brand.typography,
+                    "Preferred Art Style": brand.preferred_art_style,
+                    "Preferred Video Style": brand.preferred_video_style,
+                    "Logo Reference URL": brand.logo_url,
+                })
+            base_context += "".join(
+                f"{label}: {value}\n" for label, value in fields.items() if value
+            ) + "\n"
         else:
             base_context += "\n"
-        
+
         instruction = f"Please generate content for: {task.name}."
         
         if task.task_type == AssetType.STRATEGY.value:

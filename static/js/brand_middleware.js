@@ -95,7 +95,7 @@ class BrandContextMiddleware {
                 const opt = document.createElement('option');
                 opt.value = b.id;
                 opt.textContent = b.name;
-                if (b.id === this.activeBrandId) opt.selected = true;
+                if (String(b.id) === String(this.activeBrandId)) opt.selected = true;
                 selectEl.appendChild(opt);
             });
             

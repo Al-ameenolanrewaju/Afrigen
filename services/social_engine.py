@@ -12,8 +12,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Dict, Any, List, Optional
 
 from models import (
-    db, User, SocialPost, SocialCampaign, SocialMediaAsset,
-    SocialPublishingJob, SocialAutomationSettings, ConnectedAccount
+    db, User, Brand, SocialPost, SocialCampaign, SocialMediaAsset,
+    SocialPublishingJob, SocialAutomationSettings, ConnectedAccount, PublishingPreference
 )
 from services.social_strategist import (
     select_next_pillar, plan_post_concept, generate_platform_copy,
@@ -39,8 +39,8 @@ def get_or_create_settings(user_id: int) -> SocialAutomationSettings:
             user_id=user_id,
             enabled=True,
             emergency_paused=False,
-            facebook_enabled=True,
-            linkedin_enabled=True,
+            facebook_enabled=False,
+            linkedin_enabled=False,
             daily_limit_facebook=1,
             daily_limit_linkedin=1,
             preferred_posting_hours_json='[8, 17]',
@@ -62,6 +62,7 @@ def generate_autonomous_post(
     preferred_pillar: Optional[str] = None,
     preferred_format: Optional[str] = None,
     marketing_objective: str = "awareness",
+    brand_id: Optional[int] = None,
 ) -> Optional[SocialPost]:
     """Execute end-to-end autonomous post creation: strategy -> copy -> creative -> QA -> job."""
     settings = get_or_create_settings(user_id)
@@ -75,6 +76,31 @@ def generate_autonomous_post(
     if platform == "linkedin" and not settings.linkedin_enabled:
         return None
 
+    # Resolve only an explicitly selected brand, or the user's sole brand.
+    # Multiple brands require an explicit selection; never guess.
+    brand = None
+    if brand_id is not None:
+        brand = Brand.query.filter_by(id=brand_id, user_id=user_id).first()
+        if not brand:
+            raise ValueError('Selected brand was not found for this user.')
+    else:
+        owned_brands = Brand.query.filter_by(user_id=user_id).order_by(Brand.updated_at.desc()).limit(2).all()
+        if len(owned_brands) == 1:
+            brand = owned_brands[0]
+    brand_context = ''
+    if brand:
+        brand_fields = {
+            'Brand name': brand.name, 'Industry': brand.industry, 'Voice': brand.voice,
+            'Tone': brand.tone, 'Target audience': brand.target_audience, 'Country': brand.country,
+            'Languages': brand.languages, 'Mission': brand.mission, 'Vision': brand.vision,
+            'Keywords to use': brand.keywords, 'Keywords to avoid': brand.negative_keywords,
+            'Custom guidelines': brand.custom_instructions, 'Preferred art style': brand.preferred_art_style,
+            'Preferred video style': brand.preferred_video_style, 'Typography': brand.typography,
+            'Brand colors': ', '.join(v for v in [brand.primary_color, brand.secondary_color, brand.accent_color] if v),
+        }
+        brand_context = '\n'.join(f'{k}: {v}' for k, v in brand_fields.items() if v)
+        if brand.logo_url:
+            brand_context += '\nLogo reference URL (reference only; do not claim it was composited): ' + brand.logo_url
     # Step 1: Strategy, Pillar Selection & Performance Intelligence
     guidance = get_performance_guidance(user_id)
     raw_pillar = preferred_pillar or select_next_pillar(user_id, settings)
@@ -101,11 +127,14 @@ def generate_autonomous_post(
         content_format=content_format,
         user_id=user_id,
         analytics_guidance=guidance,
+        brand_context=brand_context,
     )
     caption = copy_data["caption"]
     cta = copy_data["call_to_action"]
     hashtags = copy_data["hashtags"]
     creative_prompt = copy_data["creative_prompt"]
+    if brand_context:
+        creative_prompt += "\nApply this user brand identity faithfully:\n" + brand_context
 
     # Step 3: Originality & Duplicate Check
     originality = check_content_originality(caption, user_id, platform=platform)
@@ -207,6 +236,7 @@ def generate_autonomous_post(
             platform=platform,
             content_format=content_format,
             user_id=user_id,
+            brand_context=brand_context,
         )
         caption = safe_copy["caption"]
         qa_result = run_social_quality_audit(
@@ -250,17 +280,28 @@ def generate_autonomous_post(
         media_asset.post_id = post.id
         db.session.add(media_asset)
 
-    # Step 7: Create Distributed Publishing Job (only when QA passes)
+    # Keep generated content as a draft unless the user has an active
+    # platform connection AND has explicitly enabled auto-publishing for it.
     if qa_result["passed"]:
-        job = SocialPublishingJob(
-            user_id=user_id,
-            post_id=post.id,
-            platform=platform,
-            status="pending",
-            scheduled_time=publish_time,
-            idempotency_key=idempotency_key,
-        )
-        db.session.add(job)
+        account = ConnectedAccount.query.filter_by(
+            user_id=user_id, provider=platform, status="connected"
+        ).first()
+        preference = PublishingPreference.query.filter_by(
+            user_id=user_id, provider=platform, content_type=content_format,
+            enabled=True, auto_publish=True
+        ).first()
+        if account and preference:
+            job = SocialPublishingJob(
+                user_id=user_id,
+                post_id=post.id,
+                platform=platform,
+                status="pending",
+                scheduled_time=publish_time,
+                idempotency_key=idempotency_key,
+            )
+            db.session.add(job)
+        else:
+            post.status = "draft"
 
     db.session.commit()
     logger.info("Autonomous %s post #%s created (status: %s, score: %s)", platform, post.id, post.status, post.quality_score)

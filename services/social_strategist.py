@@ -499,6 +499,7 @@ def generate_platform_copy(
     content_format: str = "image",
     user_id: Optional[int] = None,
     analytics_guidance: Optional[Dict[str, Any]] = None,
+    brand_context: str = "",
 ) -> Dict[str, str]:
     """Generate high-value, platform-specific copy for Facebook or LinkedIn.
 
@@ -529,6 +530,8 @@ def generate_platform_copy(
         "9. Avoid announcement-style openings, repeated brand slogans, generic motivational language, and empty engagement bait.\n"
         "10. Write like a knowledgeable human editor: specific, natural, varied in structure, and useful even if the reader never clicks the link."
     )
+    if brand_context:
+        system_prompt += "\n\nUSER BRAND IDENTITY (follow these user-provided details):\n" + brand_context
 
     if platform == "facebook":
         platform_instructions = (
