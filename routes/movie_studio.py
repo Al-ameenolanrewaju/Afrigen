@@ -105,10 +105,25 @@ def create_project():
     db.session.add(project)
     db.session.commit()
 
-    # Generate initial treatment
-    generate_screenplay_treatment(project)
-
-    flash(f"Movie project '{title}' created successfully!", "success")
+    # Generate the initial treatment and report its actual outcome.
+    treatment_ok, treatment_message = generate_screenplay_treatment(project)
+    if treatment_ok:
+        flash(f"Movie project '{title}' created and screenplay generated successfully!", "success")
+    else:
+        # Keep the project so the user can retry treatment generation from its workspace.
+        db.session.refresh(project)
+        if project.status == "draft":
+            flash(
+                f"Movie project '{title}' was created, but screenplay generation failed: "
+                f"{treatment_message or 'Please retry from the project workspace.'}",
+                "warning",
+            )
+        else:
+            flash(
+                f"Movie project '{title}' was created, but its screenplay needs attention: "
+                f"{treatment_message or 'Please retry from the project workspace.'}",
+                "warning",
+            )
     return redirect(url_for('movie_studio.project_workspace', project_id=project.id))
 
 
