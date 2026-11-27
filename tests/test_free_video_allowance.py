@@ -23,7 +23,7 @@ def test_free_user_video_gate_without_allowance():
 
         ok, error, cost = video_gate(user, "cinematic")
         assert not ok
-        assert "paid subscribers" in error
+        assert "5 credits" in error
 
 def test_free_user_video_gate_with_allowance():
     with app.app_context():
