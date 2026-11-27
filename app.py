@@ -410,7 +410,6 @@ def dispatch_running_campaigns():
                     CampaignTask.status.in_([
                         TaskStatus.PENDING.value,
                         TaskStatus.RETRYING.value,
-                        TaskStatus.FAILED.value,
                     ]),
                 )
                 .distinct()
