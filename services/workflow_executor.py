@@ -35,7 +35,7 @@ class WorkflowExecutor:
             # Skip COMPLETED or CANCELED tasks.
             tasks = CampaignTask.query.filter(
                 CampaignTask.campaign_id == campaign_id,
-                CampaignTask.status.in_([TaskStatus.PENDING.value, TaskStatus.RETRYING.value, TaskStatus.FAILED.value])
+                CampaignTask.status.in_([TaskStatus.PENDING.value, TaskStatus.RETRYING.value])
             ).order_by(CampaignTask.priority.asc()).all()
 
             for task in tasks:
