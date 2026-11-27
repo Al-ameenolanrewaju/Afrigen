@@ -24,7 +24,7 @@ from models import (
 from services.provider_manager import provider_manager
 from services.video import generate_image, generate_video, generate_video_from_image
 from services.ai_products import customer_error, redact_secrets
-from services.audio import generate_voiceover
+from services.audio import generate_voiceover, generate_speech_audio
 from services.credits import video_gate, deduct_credits_atomic, refund_video
 from services.entitlements import is_admin
 import fal_client
@@ -307,6 +307,137 @@ def _generate_reference_guided_shot(shot, prompt, characters):
     )
     video = (result or {}).get("video") or {}
     return video.get("url")
+
+
+def generate_scene_pidgin_dialogue(scene_id: int):
+    """Create a Nigerian Pidgin dialogue read for each storyboard shot."""
+    scene = db.session.get(MovieScene, scene_id)
+    if not scene:
+        return False, "Scene not found", []
+    project = scene.project
+    if not scene.screenplay_text or not scene.screenplay_text.strip():
+        return False, "This scene has no screenplay dialogue yet.", []
+    cast = list(project.characters)
+    if not cast:
+        return False, "Add characters before generating dialogue.", []
+
+    cast_text = "\n".join(
+        f"- {character.name}: role={character.role}; voice={character.voice_attributes or 'en-NG-AbeoNeural'}"
+        for character in cast
+    )
+    shot_text = "\n".join(
+        f"- Shot {shot.shot_number}: {shot.visual_prompt}" for shot in scene.shots
+    )
+    try:
+        raw = provider_manager.generate_text(
+            task_type="Movie Studio Pidgin Dialogue",
+            messages=[
+                {"role": "system", "content": (
+                    "You are a Nigerian screenwriter fluent in natural Nigerian Pidgin. "
+                    "Adapt screenplay dialogue into expressive conversational Nigerian Pidgin, preserving intent. "
+                    "Return only a JSON array of objects: shot_number (integer), character (exact cast name), "
+                    "line (8 to 24 spoken words). One speaker per shot. Only include shots with spoken dialogue. "
+                    "Do not invent characters, narration or stage directions."
+                )},
+                {"role": "user", "content": (
+                    f"Scene {scene.scene_number}: {scene.slugline}\nScreenplay:\n{scene.screenplay_text}\n"
+                    f"Cast:\n{cast_text}\nStoryboard:\n{shot_text}"
+                )},
+            ],
+            max_tokens=1200,
+        )
+        dialogue_rows = json.loads((raw or "").strip())
+        if not isinstance(dialogue_rows, list):
+            raise ValueError("Dialogue response must be a JSON array")
+
+        character_by_name = {character.name.casefold(): character for character in cast}
+        shot_by_number = {shot.shot_number: shot for shot in scene.shots}
+        created = []
+        for row in dialogue_rows:
+            character = character_by_name.get(str(row.get("character", "")).strip().casefold())
+            shot = shot_by_number.get(int(row.get("shot_number", 0)))
+            line = str(row.get("line", "")).strip()
+            if not character or not shot or not line:
+                continue
+            voice = character.voice_attributes or "en-NG-AbeoNeural"
+            audio_url = generate_speech_audio(line, voice=voice)
+            if not audio_url:
+                raise RuntimeError(f"Could not synthesize dialogue for {character.name}")
+            title = f"Dialogue · Scene {scene.scene_number} · Shot {shot.shot_number} · {character.name}"
+            track = MovieAudioTrack.query.filter_by(
+                project_id=project.id, track_type="dialogue", title=title
+            ).first()
+            if track is None:
+                track = MovieAudioTrack(
+                    project_id=project.id, track_type="dialogue", title=title,
+                    audio_url=audio_url, script_text=line, voice_id=voice,
+                    start_time=0.0, duration=0.0,
+                )
+                db.session.add(track)
+            else:
+                track.audio_url = audio_url
+                track.script_text = line
+                track.voice_id = voice
+            created.append({"shot_id": shot.id, "shot_number": shot.shot_number,
+                            "character": character.name, "line": line})
+        db.session.commit()
+        if not created:
+            return False, "No valid dialogue lines were returned for this scene.", []
+        return True, f"Generated {len(created)} Nigerian Pidgin dialogue track(s).", created
+    except Exception as exc:
+        db.session.rollback()
+        logger.error("Pidgin dialogue generation failed: %s", redact_secrets(str(exc)))
+        return False, customer_error("audio"), []
+
+
+def sync_shot_dialogue(shot_id: int):
+    """Lip-sync a completed shot to its saved character dialogue and charge by duration."""
+    shot = db.session.get(MovieShot, shot_id)
+    if not shot:
+        return False, "Shot not found"
+    if not shot.video_url or shot.status != "completed":
+        return False, "Generate the shot video before applying lip-sync."
+    duration = int(float(shot.duration or 5))
+    if duration < 2 or duration > 10:
+        return False, "Kling LipSync supports clips between 2 and 10 seconds."
+    scene = shot.scene
+    project = shot.project
+    title_prefix = f"Dialogue · Scene {scene.scene_number} · Shot {shot.shot_number} · "
+    track = MovieAudioTrack.query.filter(
+        MovieAudioTrack.project_id == project.id,
+        MovieAudioTrack.track_type == "dialogue",
+        MovieAudioTrack.title.like(f"{title_prefix}%"),
+    ).first()
+    if not track or not track.audio_url:
+        return False, "Generate this scene's Pidgin dialogue first."
+
+    cost = max(5, ((duration + 4) // 5) * 5)
+    user = project.user
+    charged = False
+    if not is_admin(user):
+        charged, error = deduct_credits_atomic(
+            user.id, cost, f"Movie Studio lip-sync · Scene {scene.scene_number}, Shot {shot.shot_number}"
+        )
+        if not charged:
+            return False, f"Lip-sync costs {cost} credits for this {duration}-second shot. {error or 'Add credits and try again.'}"
+        db.session.commit()
+    try:
+        result = fal_client.subscribe(
+            "fal-ai/kling-video/lipsync/audio-to-video",
+            arguments={"video_url": shot.video_url, "audio_url": track.audio_url},
+        )
+        synced_url = ((result or {}).get("video") or {}).get("url")
+        if not synced_url:
+            raise RuntimeError("Lip-sync provider returned no video URL")
+        shot.video_url = synced_url
+        db.session.commit()
+        return True, synced_url
+    except Exception as exc:
+        if charged:
+            refund_video(user, cost, f"Refund Movie Studio lip-sync · Shot {shot.shot_number}")
+        db.session.commit()
+        logger.error("Movie shot lip-sync failed: %s", redact_secrets(str(exc)))
+        return False, customer_error("video")
 
 
 def generate_shot_video_clip(shot_id: int):
