@@ -87,7 +87,13 @@ def generate_screenplay_treatment(project: MovieProject):
             clean = clean.split("```")[1].split("```")[0].strip()
 
         data = json.loads(clean)
-        
+        generated_scenes = data.get("scenes", [])
+        if len(generated_scenes) != target_scene_count:
+            return False, (
+                f"The screenplay generator returned {len(generated_scenes)} scenes; "
+                f"{target_scene_count} are required for this {target_seconds}-second film. Please retry."
+            )
+
         # Persist to project
         if data.get("logline"):
             project.logline = data["logline"]
