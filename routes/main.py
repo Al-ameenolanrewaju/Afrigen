@@ -403,7 +403,7 @@ def generate():
         flash('Please enter a video idea!', 'danger')
         return redirect(url_for('main.dashboard'))
 
-    effective_style = 'cinematic' if current_user.plan == 'free' else style
+    effective_style = 'cinematic' if not is_paid_plan(current_user.plan) else style
     model_name, _ = _build_t2v_request(prompt, effective_style, aspect_ratio, extended, duration=duration)
 
     try:
