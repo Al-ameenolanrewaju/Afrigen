@@ -576,7 +576,7 @@
                 </span>
                 <span class="text-muted small">&bull;</span>
                 <span class="text-white small fw-bold">
-                    {{ current_user.credits or 0 }} Credits Available
+                    {{ current_user.credits or 0 }} Credits Available{% if current_user.plan in ['free', 'spark'] %} · {{ current_user.free_images_remaining }} free images today{% endif %}
                 </span>
             </div>
             <h1 class="studio-header-title">Unified AI Creation Studio</h1>
@@ -708,7 +708,7 @@
                             </div>
                             <div class="pill-radio-option">
                                 <input type="radio" name="video_dur_radio" id="v_dur_10" value="10" onchange="setVideoDuration('10')">
-                                <label for="v_dur_10" class="pill-radio-label">10 Sec (+5 cr)</label>
+                                <label for="v_dur_10" class="pill-radio-label">10 Sec (15 Credits)</label>
                             </div>
                         </div>
                     </div>
@@ -828,7 +828,7 @@
                             </div>
                             <div class="pill-radio-option">
                                 <input type="radio" name="animate_dur_radio" id="a_dur_10" value="10" onchange="setAnimateDuration('10')">
-                                <label for="a_dur_10" class="pill-radio-label">10 Sec (+5 cr)</label>
+                                <label for="a_dur_10" class="pill-radio-label">10 Sec (28 Credits)</label>
                             </div>
                         </div>
                     </div>
@@ -860,9 +860,9 @@
                     <span class="text-muted small">Estimated Cost:</span>
                     <span class="cost-badge" id="costBadge">
                         {% if (initial_mode or 'video') == 'image' %}
-                        2 Credits / Free Quota
+                        2 Credits / Free plans get 2 images daily
                         {% elif (initial_mode or 'video') == 'animate' %}
-                        10 Credits
+                        15 Credits
                         {% elif (initial_mode or 'video') == 'voice' %}
                         1 Credit
                         {% else %}
@@ -876,7 +876,7 @@
                         Available: <strong class="text-white">{{ current_user.credits or 0 }} cr</strong>
                     </span>
 
-                    {% set can_generate_video = current_user.plan == 'pro' or (current_user.free_video_allowance or 0) > 0 %}
+                    {% set can_generate_video = current_user.plan in ['pro', 'creator', 'studio', 'director'] or (current_user.free_video_allowance or 0) > 0 or (current_user.credits or 0) >= 5 %}
                     <button type="button" id="btnSubmitGeneration" class="btn-create-submit" onclick="submitActiveGeneration()"
                         {% if (initial_mode or 'video') == 'video' and not can_generate_video %}hidden{% endif %}>
                         <span id="btnSubmitText">
@@ -895,7 +895,7 @@
                     <div id="videoAccessWarning" class="alert alert-warning mb-0" role="alert"
                         style="{% if (initial_mode or 'video') == 'video' and not can_generate_video %}display:block;{% else %}display:none;{% endif %} max-width: 420px;">
                         <strong><i class="fa-solid fa-lock me-1"></i> Video generation unavailable</strong>
-                        <div class="small mt-1">Video generation is available to paid subscribers or users with a free video gift. Upgrade your plan or contact support if you were promised a free video.</div>
+                        <div class="small mt-1">Basic video generation costs 5 credits. Premium models and longer durations may cost more. You can also use a free video gift if one was granted.</div>
                         <a href="{{ url_for('main.upgrade') }}" class="btn btn-sm btn-warning mt-2">View plans</a>
                     </div>
                 </div>
@@ -1047,7 +1047,7 @@
     const creditCosts = {
         'video': 5,
         'image': 2,
-        'animate': 10,
+        'animate': 15,
         'voice': 1
     };
 
@@ -1088,7 +1088,7 @@
         }
     }
 
-    const canGenerateVideo = {{ 'true' if (current_user.plan in ['pro', 'creator', 'studio', 'director'] or (current_user.free_video_allowance or 0) > 0) else 'false' }};
+    const canGenerateVideo = {{ 'true' if (current_user.plan in ['pro', 'creator', 'studio', 'director'] or (current_user.free_video_allowance or 0) > 0 or (current_user.credits or 0) >= 5) else 'false' }};
 
     // Master Switch Mode function
     function switchMode(mode, updateHistory = true) {
@@ -1130,7 +1130,7 @@
         if (btnText) btnText.textContent = actionLabels[mode] || 'Generate';
         if (costBadge) {
             if (mode === 'image') {
-                costBadge.textContent = '2 Credits / Free Quota';
+                costBadge.textContent = '2 Credits / Free plans get 2 images daily';
             } else {
                 costBadge.textContent = `${creditCosts[mode]} Credits`;
             }
@@ -1256,6 +1256,10 @@
         el.parentElement.querySelectorAll('.style-chip').forEach(c => c.classList.remove('selected'));
         el.classList.add('selected');
         document.getElementById('form_video_style').value = style;
+        const duration = document.getElementById('form_video_duration').value;
+        const cost = duration === '10' ? (['anime', 'social'].includes(style) ? 10 : 15) : 5;
+        const badge = document.getElementById('costBadge');
+        if (badge) badge.textContent = `${cost} Credits`;
     }
 
     function setVideoRatio(ratio) {
@@ -1265,7 +1269,9 @@
     function setVideoDuration(dur) {
         document.getElementById('form_video_duration').value = dur;
         const badge = document.getElementById('costBadge');
-        if (badge) badge.textContent = (dur === '10') ? '10 Credits' : '5 Credits';
+        const selectedStyle = document.getElementById('form_video_style').value;
+        const cost = dur === '10' ? (['anime', 'social'].includes(selectedStyle) ? 10 : 15) : 5;
+        if (badge) badge.textContent = `${cost} Credits`;
     }
 
     function syncVideoVoiceover(checked) {
@@ -1293,7 +1299,7 @@
     function setAnimateDuration(dur) {
         document.getElementById('form_animate_duration').value = dur;
         const badge = document.getElementById('costBadge');
-        if (badge) badge.textContent = (dur === '10') ? '15 Credits' : '10 Credits';
+        if (badge) badge.textContent = (dur === '10') ? '28 Credits' : '15 Credits';
     }
 
     function syncVoiceActor(actor) {

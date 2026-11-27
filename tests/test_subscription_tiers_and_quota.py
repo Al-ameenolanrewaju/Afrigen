@@ -1,5 +1,5 @@
 import pytest
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from app import app
 from models import db, User, Notification, NewsletterCampaign
 from services.credits import is_paid_plan, get_tier, image_to_video_gate, video_gate, image_gate
@@ -92,6 +92,57 @@ def test_newsletter_campaign_model():
         assert saved.batch_size == 80
         assert saved.status == "draft"
 
+
+
+def test_free_image_allowance_resets_daily_and_extra_images_use_credits():
+    from services.credits import charge_image, IMAGE_COST
+    with app.app_context():
+        user = User(
+            username="daily_images_user",
+            email="daily_images@example.com",
+            password="pw",
+            plan="free",
+            credits=2,
+            monthly_images_used=2,
+            last_image_reset=datetime.now(timezone.utc).date(),
+        )
+        db.session.add(user)
+        db.session.commit()
+
+        ok, err = image_gate(user)
+        assert ok
+        assert err is None
+        charge_image(user)
+        db.session.commit()
+        assert user.credits == 0
+        assert user.monthly_images_used == 2
+
+        user.last_image_reset = (datetime.now(timezone.utc) - timedelta(days=1)).date()
+        user.monthly_images_used = 2
+        db.session.commit()
+        ok, err = image_gate(user)
+        assert ok
+        assert err is None
+        assert user.monthly_images_used == 0
+        assert user.free_images_remaining == 2
+
+
+def test_free_image_quota_blocks_without_credits_after_daily_allowance():
+    with app.app_context():
+        user = User(
+            username="daily_images_no_credits",
+            email="daily_images_no_credits@example.com",
+            password="pw",
+            plan="free",
+            credits=1,
+            monthly_images_used=2,
+            last_image_reset=datetime.now(timezone.utc).date(),
+        )
+        db.session.add(user)
+        db.session.commit()
+        ok, err = image_gate(user)
+        assert not ok
+        assert "2 free images" in err
 
 def test_monthly_quota_reset():
     with app.app_context():

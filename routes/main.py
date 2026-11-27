@@ -403,7 +403,7 @@ def generate():
         flash('Please enter a video idea!', 'danger')
         return redirect(url_for('main.dashboard'))
 
-    effective_style = 'cinematic' if current_user.plan == 'free' else style
+    effective_style = 'cinematic' if not is_paid_plan(current_user.plan) else style
     model_name, _ = _build_t2v_request(prompt, effective_style, aspect_ratio, extended, duration=duration)
 
     try:
@@ -450,7 +450,7 @@ def generate():
             prompt=refined, style=style, aspect_ratio=aspect_ratio, webhook_url=webhook_url,
             extended=extended, duration=duration, request_id=request_id,
             original_prompt=prompt,
-            allow_fal=(locked_user.plan == 'pro' or (locked_user.free_video_allowance or 0) > 0),
+            allow_fal=(is_paid_plan(locked_user.plan) or (locked_user.free_video_allowance or 0) > 0 or (locked_user.credits or 0) >= video_cost),
         )
 
         if not result["success"]:
@@ -891,7 +891,7 @@ def generate_from_image():
             webhook_url=webhook_url,
             duration=duration,
             aspect_ratio=aspect_ratio,
-            allow_fal=(locked_user.plan == 'pro'),
+            allow_fal=is_paid_plan(locked_user.plan),
         )
         if not result["success"]:
             raise RuntimeError(result["error"])
@@ -965,10 +965,10 @@ def generate_image():
             prompt,
             refine_image_prompt(prompt, style, user=locked_user),
         )
-        provider = "fal" if current_user.plan == "pro" else "huggingface"
+        provider = "fal" if is_paid_plan(locked_user.plan) else "huggingface"
         result = generate_ai_image(
             refined, style, aspect_ratio, provider=provider,
-            allow_fal=(locked_user.plan == 'pro'),
+            allow_fal=is_paid_plan(locked_user.plan),
         )
 
         if not result["success"]:
