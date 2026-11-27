@@ -175,7 +175,7 @@
                         <div class="mb-2">
                             <h6 class="text-white mb-1">Available Credits</h6>
                             {% if current_user.plan == 'free' %}
-                            <p class="text-muted mb-0">You have <strong>{{ [2 - (current_user.monthly_images_used or 0), 0]|max }}</strong> free images remaining.</p>
+                            <p class="text-muted mb-0">You have <strong>{{ current_user.free_images_remaining }}</strong> free images remaining today. Additional images cost 2 credits each.</p>
                             {% else %}
                             <p class="text-muted mb-0">You have <strong>{{ current_user.credits }}</strong> credits remaining.</p>
                             {% endif %}
