@@ -510,13 +510,13 @@ class TelegramBotService:
         )
 
         if not is_paid_plan(user.plan):
-            images_used = user.monthly_images_used or 0
+            images_used = 2 - user.free_images_remaining
             info += (
                 f"\n📊 <b>Free Tier Allowances:</b>\n"
                 f"🖼️ Monthly Free Images: <b>{images_used}/2 used</b>\n"
                 f"🎁 Free Video Tokens: <b>{free_videos}</b>\n"
                 f"🪙 Account Credits: <b>{user.credits or 0}</b>\n\n"
-                "ℹ️ <i>You receive 2 free photos every month. Once your free quota is used, "
+                "ℹ️ <i>You receive 2 free photos every day. Once your free quota is used, "
                 "any remaining credits (2 credits/image) will automatically power your next generations.</i>\n\n"
                 "👉 <a href='https://afrigen.com.ng/upgrade'>Upgrade Plan</a> for expanded video access and daily credits."
             )
@@ -1135,9 +1135,9 @@ class TelegramBotService:
         if is_paid_plan(user.plan):
             credits_line = f"🪙 Credits remaining: <b>{user.credits or 0}</b>\n"
         else:
-            images_left = max(0, 2 - (user.monthly_images_used or 0))
+            images_left = user.free_images_remaining
             if mode == "image":
-                credits_line = f"🖼️ Free images left this month: <b>{images_left}</b>\n"
+                credits_line = f"🖼️ Free images left today: <b>{images_left}</b>\n"
             else:
                 credits_line = f"🎁 Free video tokens: <b>{getattr(user, 'free_video_allowance', 0) or 0}</b>\n"
 
