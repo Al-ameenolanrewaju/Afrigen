@@ -35,7 +35,7 @@ class WorkflowExecutor:
             # Skip COMPLETED or CANCELED tasks.
             tasks = CampaignTask.query.filter(
                 CampaignTask.campaign_id == campaign_id,
-                CampaignTask.status.in_([TaskStatus.PENDING.value, TaskStatus.RETRYING.value, TaskStatus.FAILED.value])
+                CampaignTask.status.in_([TaskStatus.PENDING.value, TaskStatus.RETRYING.value])
             ).order_by(CampaignTask.priority.asc()).all()
 
             for task in tasks:
@@ -172,9 +172,15 @@ class WorkflowExecutor:
             }
             target_provider = platform_map.get(task.task_type)
             if target_provider:
-                from models import ConnectedAccount, UserContent, PublishingRetryQueue
-                account = ConnectedAccount.query.filter_by(user_id=campaign.user_id, provider=target_provider).first()
-                if account:
+                from models import ConnectedAccount, UserContent, PublishingRetryQueue, PublishingPreference
+                account = ConnectedAccount.query.filter_by(
+                    user_id=campaign.user_id, provider=target_provider, status="connected"
+                ).first()
+                preference = PublishingPreference.query.filter_by(
+                    user_id=campaign.user_id, provider=target_provider,
+                    content_type=task.task_type, enabled=True, auto_publish=True
+                ).first()
+                if account and preference:
                     logger.info(f"Auto-publishing {task.name} to {target_provider} for Campaign {campaign.id}")
                     user_content = UserContent(
                         user_id=campaign.user_id,
