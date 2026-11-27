@@ -214,7 +214,30 @@ def generate_scene_dialogue(project_id, scene_id):
     if not scene or scene.project_id != project.id:
         return jsonify({"success": False, "error": "Scene not found"}), 404
     ok, message, tracks = generate_scene_pidgin_dialogue(scene_id)
-    return jsonify({"success": ok, "message": message, "tracks": tracks})
+    if not ok:
+        return jsonify({"success": False, "message": message, "tracks": []}), 400
+
+    synced_count = 0
+    pending_count = 0
+    for item in tracks:
+        shot = db.session.get(MovieShot, item["shot_id"])
+        if shot and shot.status == "completed" and shot.video_url:
+            synced, sync_result = sync_shot_dialogue(shot.id)
+            if synced:
+                synced_count += 1
+            else:
+                pending_count += 1
+                logger.warning("Dialogue saved but auto lip-sync is pending for shot %s: %s", shot.id, sync_result)
+        else:
+            pending_count += 1
+
+    return jsonify({
+        "success": True,
+        "message": f"{message} {synced_count} completed shot(s) lip-synced automatically.",
+        "tracks": tracks,
+        "synced_count": synced_count,
+        "pending_count": pending_count,
+    })
 
 
 @movie_studio_bp.route('/projects/<int:project_id>/shots/<int:shot_id>/lip-sync', methods=['POST'])
