@@ -78,19 +78,43 @@ def test_charge_and_refund_free_video_allowance():
         assert user.free_video_allowance == 2
 
 
-def test_free_user_credits_do_not_unlock_video_generation():
+def test_free_user_can_pay_credits_for_basic_video_generation():
     with app.app_context():
         user = User(
             username="free_user_with_credits",
             email="free_credits@example.com",
             password="hash",
             plan="free",
-            credits=100,
+            credits=5,
             free_video_allowance=0,
         )
         db.session.add(user)
         db.session.commit()
 
-        ok, error, cost = video_gate(user, "cinematic")
+        ok, error, cost = video_gate(user, "cinematic", duration="5")
+        assert ok
+        assert error is None
+        assert cost == 5
+
+        charge_video(user, cost=cost)
+        db.session.commit()
+        assert user.credits == 0
+
+
+def test_free_user_without_enough_video_credits_is_blocked():
+    with app.app_context():
+        user = User(
+            username="free_user_without_video_credits",
+            email="free_no_video_credits@example.com",
+            password="hash",
+            plan="free",
+            credits=4,
+            free_video_allowance=0,
+        )
+        db.session.add(user)
+        db.session.commit()
+
+        ok, error, cost = video_gate(user, "cinematic", duration="5")
         assert not ok
-        assert "paid subscribers" in error
+        assert cost == 5
+        assert "5 credits" in error
