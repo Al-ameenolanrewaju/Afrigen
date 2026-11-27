@@ -221,3 +221,77 @@ def test_404_error_page_renders_with_null_endpoint():
         assert res_auth.status_code == 404
         assert b"404" in res_auth.data
 
+
+
+def test_movie_shot_selects_only_named_character_references():
+    from types import SimpleNamespace
+    from services.movie_studio import _character_references_for_shot, _build_character_consistency_prompt
+
+    amina = SimpleNamespace(
+        name="Amina",
+        reference_image_url="https://cdn.example/amina.png",
+        physical_appearance="Young woman with braided hair",
+        description="A village teacher",
+        clothing="Blue Ankara dress",
+    )
+    baba = SimpleNamespace(
+        name="Baba Tunde",
+        reference_image_url="https://cdn.example/baba.png",
+        physical_appearance="Elderly man with grey beard",
+        description="Village elder",
+        clothing="Cream agbada",
+    )
+    project = SimpleNamespace(characters=[amina, baba])
+    scene = SimpleNamespace(description="Amina enters the village square.", screenplay_text="AMINA: Good morning.")
+    shot = SimpleNamespace(project=project, scene=scene, visual_prompt="Amina walks into the market.")
+
+    selected = _character_references_for_shot(shot)
+    assert selected == [amina]
+
+    elements, continuity = _build_character_consistency_prompt(shot, selected)
+    assert elements == [{"frontal_image_url": "https://cdn.example/amina.png"}]
+    assert "@Element1 is Amina" in continuity
+    assert "Blue Ankara dress" in continuity
+    assert "Baba Tunde" not in continuity
+
+
+def test_reference_guided_shot_calls_kling_with_element_bindings(monkeypatch):
+    from types import SimpleNamespace
+    import services.movie_studio as movie_service
+
+    character = SimpleNamespace(
+        name="Amina",
+        reference_image_url="https://cdn.example/amina.png",
+        physical_appearance="Braided hair",
+        description="Village teacher",
+        clothing="Blue Ankara dress",
+    )
+    shot = SimpleNamespace(
+        reference_image_url=None,
+        duration="5",
+    )
+    captured = {}
+
+    def fake_subscribe(model, arguments):
+        captured["model"] = model
+        captured["arguments"] = arguments
+        return {"video": {"url": "https://cdn.example/shot.mp4"}}
+
+    monkeypatch.setattr(movie_service.fal_client, "subscribe", fake_subscribe)
+    result = movie_service._generate_reference_guided_shot(
+        shot, "Amina walks through the village.", [character]
+    )
+
+    assert result == "https://cdn.example/shot.mp4"
+    assert captured["model"] == "fal-ai/kling-video/v3/pro/image-to-video"
+    assert captured["arguments"]["start_image_url"] == character.reference_image_url
+    assert captured["arguments"]["elements"][0]["frontal_image_url"] == character.reference_image_url
+    assert captured["arguments"]["generate_audio"] is False
+    assert "@Element1 is Amina" in captured["arguments"]["prompt"]
+
+
+def test_movie_studio_movie_style_cost_is_duration_based():
+    from services.video import text_to_video_cost
+
+    assert text_to_video_cost("movie", extended=True, duration="5") == 12
+    assert text_to_video_cost("movie", extended=True, duration="10") == 23
