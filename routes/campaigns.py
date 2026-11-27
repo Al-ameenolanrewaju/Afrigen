@@ -43,13 +43,8 @@ def create_campaign():
     # Phase 2: Workflow Planner
     workflow_planner.create_plan(campaign)
 
-    # Phase 3: Start Executor in background
-    from app import scheduler
-    scheduler.add_job(
-        id=f"execute_campaign_{campaign.id}",
-        func=workflow_executor.execute_campaign,
-        args=[campaign.id]
-    )
+    # The scheduler's database-backed dispatcher picks up running campaigns.
+    # Do not enqueue one-off in-memory jobs: they can be lost on worker restarts.
 
     return jsonify({
         "message": "Campaign created and execution started",
@@ -207,13 +202,9 @@ def retry_campaign(campaign_id):
         t.status = TaskStatus.RETRYING.value
     db.session.commit()
     
-    # Start executor in background
-    from app import scheduler
-    scheduler.add_job(
-        id=f"execute_campaign_{campaign.id}_retry",
-        func=workflow_executor.execute_campaign,
-        args=[campaign.id]
-    )
+    campaign.status = CampaignStatus.RUNNING.value
+    db.session.commit()
+    # The scheduler dispatcher will resume this campaign.
     
     return jsonify({"message": "Retrying failed tasks"}), 200
 
@@ -246,13 +237,7 @@ def resume_campaign(campaign_id):
         campaign.status = CampaignStatus.RUNNING.value
         db.session.commit()
         
-        # Start executor in background
-        from app import scheduler
-        scheduler.add_job(
-            id=f"execute_campaign_{campaign.id}_resume",
-            func=workflow_executor.execute_campaign,
-            args=[campaign.id]
-        )
+        # The scheduler dispatcher will resume this campaign.
         
         return jsonify({"message": "Campaign resumed"}), 200
         
