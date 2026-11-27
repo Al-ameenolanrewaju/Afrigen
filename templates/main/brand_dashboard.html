@@ -68,10 +68,10 @@
 </div>
 
 <script>
-    document.addEventListener("DOMContentLoaded", () => {
+    function renderBrandDashboard() {
         const brandId = "{{ brand_id }}";
         const brands = window.BrandContext.getBrands();
-        const brand = brands.find(b => b.id === brandId);
+        const brand = brands.find(b => String(b.id) === String(brandId));
         
         if(!brand) {
             alert("Brand not found");
@@ -84,26 +84,27 @@
         document.getElementById('h-name').textContent = brand.name;
         
         document.getElementById('v-industry').textContent = brand.industry || '--';
-        document.getElementById('v-audience').textContent = brand.audience || '--';
+        document.getElementById('v-audience').textContent = brand.target_audience || '--';
         document.getElementById('v-voice').textContent = brand.voice || '--';
-        document.getElementById('v-colors').textContent = brand.colors || '--';
-        document.getElementById('v-instructions').textContent = brand.instructions || 'No special instructions.';
+        document.getElementById('v-colors').textContent = [brand.primary_color, brand.secondary_color, brand.accent_color].filter(Boolean).join(', ') || '--';
+        document.getElementById('v-instructions').textContent = brand.custom_instructions || 'No special instructions.';
         
         // Check active status
-        const isActive = window.BrandContext.activeBrandId === brand.id;
+        const isActive = String(window.BrandContext.activeBrandId) === String(brand.id);
         if(isActive) {
             document.getElementById('btnActive').textContent = "Currently Active";
             document.getElementById('btnActive').className = "btn btn-warning disabled";
             
             document.getElementById('statusIcon').style.color = "#2EA043"; // Green
             document.getElementById('statusText').textContent = "Active Brand";
-            document.getElementById('statusText').nextElementSibling.textContent = "AI is currently trained on this identity.";
+            document.getElementById('statusText').nextElementSibling.textContent = "This brand identity is selected for supported AI prompts.";
         }
         
         window.makeActive = function() {
             window.BrandContext.setActiveBrand(brand.id);
             window.location.reload();
         }
-    });
+    }
+    document.addEventListener('brand-context-loaded', renderBrandDashboard);
 </script>
 {% endblock %}
