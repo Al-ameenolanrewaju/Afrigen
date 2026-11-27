@@ -513,7 +513,7 @@ class TelegramBotService:
             images_used = 2 - user.free_images_remaining
             info += (
                 f"\n📊 <b>Free Tier Allowances:</b>\n"
-                f"🖼️ Monthly Free Images: <b>{images_used}/2 used</b>\n"
+                f"🖼️ Daily Free Images: <b>{images_used}/2 used</b>\n"
                 f"🎁 Free Video Tokens: <b>{free_videos}</b>\n"
                 f"🪙 Account Credits: <b>{user.credits or 0}</b>\n\n"
                 "ℹ️ <i>You receive 2 free photos every day. Once your free quota is used, "
