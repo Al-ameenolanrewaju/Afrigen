@@ -162,6 +162,28 @@ def generate_character_portrait(project_id, char_id):
     })
 
 
+@movie_studio_bp.route('/projects/<int:project_id>/characters/<int:char_id>/update', methods=['POST'])
+@login_required
+def update_character(project_id, char_id):
+    if not can_access_movie_studio(current_user):
+        return jsonify({"success": False, "error": "Unauthorized"}), 403
+
+    project = db.session.get(MovieProject, project_id)
+    character = db.session.get(MovieCharacter, char_id)
+    if not project or project.user_id != current_user.id:
+        return jsonify({"success": False, "error": "Not found"}), 404
+    if not character or character.project_id != project.id:
+        return jsonify({"success": False, "error": "Character not found"}), 404
+
+    character.physical_appearance = (request.form.get("physical_appearance") or "").strip()[:3000]
+    character.clothing = (request.form.get("clothing") or "").strip()[:1500]
+    voice = (request.form.get("voice_attributes") or "").strip()
+    allowed_voices = {"en-NG-AbeoNeural", "en-NG-EzinneNeural"}
+    character.voice_attributes = voice if voice in allowed_voices else None
+    db.session.commit()
+    return jsonify({"success": True, "message": "Character continuity settings saved."})
+
+
 @movie_studio_bp.route('/projects/<int:project_id>/scenes/<int:scene_id>/storyboard', methods=['POST'])
 @login_required
 def generate_storyboards(project_id, scene_id):
