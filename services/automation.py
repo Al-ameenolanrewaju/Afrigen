@@ -617,7 +617,7 @@ def _run_node(node, workflow_id: str, run_id: str, node_index: int, user_id: int
                     if not ok:
                         raise ValueError(error)
                     result = video_service.generate_video(
-                        prompt, style=style, allow_fal=owner.plan == 'pro',
+                        prompt, style=style, allow_fal=(owner.plan in ('pro', 'creator', 'studio', 'director') or (owner.free_video_allowance or 0) > 0 or (owner.credits or 0) >= video_cost),
                     )
                     if isinstance(result, dict) and result.get('success') is False:
                         raise ValueError(result.get('error') or 'Video generation failed.')
