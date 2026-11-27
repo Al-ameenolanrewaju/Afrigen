@@ -594,14 +594,14 @@ def _run_node(node, workflow_id: str, run_id: str, node_index: int, user_id: int
                     owner = db.session.get(User, user_id, with_for_update=True) if user_id else None
                     if not owner:
                         raise ValueError('Image generation requires a valid user.')
-                    from services.credits import image_gate, charge_image
+                    from services.credits import image_gate, charge_image, is_paid_plan
                     ok, error = image_gate(owner)
                     if not ok:
                         raise ValueError(error)
-                    provider = 'fal' if owner and owner.plan == 'pro' else 'huggingface'
+                    provider = 'fal' if is_paid_plan(owner.plan) else 'huggingface'
                     result = video_service.generate_image(
                         prompt, style=node.get('style', 'african'), provider=provider,
-                        allow_fal=bool(owner and owner.plan == 'pro'),
+                        allow_fal=is_paid_plan(owner.plan),
                     )
                     if isinstance(result, dict) and result.get('success') is False:
                         raise ValueError(result.get('error') or 'Image generation failed.')
