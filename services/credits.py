@@ -19,7 +19,7 @@ from services.video import text_to_video_cost
 
 # Flat credit price of an image generation for paid users (mirrors routes/main.py).
 IMAGE_COST = 2
-IMAGE_TO_VIDEO_COST = 10
+IMAGE_TO_VIDEO_COST = 15
 
 # Free-tier daily image allowance.
 FREE_DAILY_IMAGES = 2
@@ -67,8 +67,8 @@ def deduct_credits_atomic(user_id, amount, reason="Credit deduction"):
 def video_gate(user, style, extended=False, duration="5"):
     """Check whether `user` may generate a video.
 
-    Returns (ok, error_message, cost). `cost` is the credits a
-    paid user will be charged on success; it is irrelevant for free/spark users.
+    Returns (ok, error_message, cost). `cost` is the credits charged on success,
+    except when a free user's administrator-granted video allowance covers it.
     """
     duration = str(duration or "5")
     if duration not in {"5", "10", "15", "20"}:
