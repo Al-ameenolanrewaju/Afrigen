@@ -510,6 +510,18 @@ def generate_shot_video_clip(shot_id: int):
             message=f"Shot {shot.shot_number} has been generated.",
         )
         db.session.commit()
+
+        # If dialogue was prepared before this clip finished, synchronize it now.
+        dialogue_prefix = f"Dialogue · Scene {shot.scene.scene_number} · Shot {shot.shot_number} · "
+        pending_dialogue = MovieAudioTrack.query.filter(
+            MovieAudioTrack.project_id == project.id,
+            MovieAudioTrack.track_type == "dialogue",
+            MovieAudioTrack.title.like(f"{dialogue_prefix}%"),
+        ).first()
+        if pending_dialogue:
+            synced, sync_result = sync_shot_dialogue(shot.id)
+            if not synced:
+                logger.warning("Automatic dialogue sync skipped for shot %s: %s", shot.id, sync_result)
         return True, shot.video_url
     except Exception as exc:
         shot.status = "failed"
