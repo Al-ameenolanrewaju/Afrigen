@@ -295,3 +295,97 @@ def test_movie_studio_movie_style_cost_is_duration_based():
 
     assert text_to_video_cost("movie", extended=True, duration="5") == 12
     assert text_to_video_cost("movie", extended=True, duration="10") == 23
+
+
+def test_scene_pidgin_dialogue_creates_character_voice_track(monkeypatch):
+    from models import MovieAudioTrack
+    import services.movie_studio as movie_service
+
+    with app.app_context():
+        user = User(username="pidgin_creator", email="pidgin@test.com", password="x", plan="director", credits=100)
+        db.session.add(user)
+        db.session.flush()
+        project = MovieProject(user_id=user.id, title="Pidgin Film")
+        db.session.add(project)
+        db.session.flush()
+        character = MovieCharacter(
+            project_id=project.id, name="Amina", role="Protagonist",
+            voice_attributes="en-NG-EzinneNeural",
+        )
+        scene = MovieScene(
+            project_id=project.id, scene_number=1, slugline="INT. HOME - DAY",
+            screenplay_text="AMINA: I will not leave my family behind.",
+        )
+        db.session.add_all([character, scene])
+        db.session.flush()
+        shot = MovieShot(
+            scene_id=scene.id, project_id=project.id, shot_number=1,
+            visual_prompt="Amina speaks to her family.", duration="5",
+        )
+        db.session.add(shot)
+        db.session.commit()
+
+        monkeypatch.setattr(
+            movie_service.provider_manager, "generate_text",
+            lambda **_kwargs: '[{"shot_number": 1, "character": "Amina", "line": "I no go leave my family behind, no matter wetin happen."}]',
+        )
+        monkeypatch.setattr(
+            movie_service, "generate_speech_audio",
+            lambda line, voice: "https://media.example.test/amina-dialogue.mp3",
+        )
+
+        ok, message, tracks = movie_service.generate_scene_pidgin_dialogue(scene.id)
+        assert ok is True
+        assert "Nigerian Pidgin" in message
+        assert tracks[0]["character"] == "Amina"
+        saved = MovieAudioTrack.query.filter_by(project_id=project.id, track_type="dialogue").one()
+        assert saved.voice_id == "en-NG-EzinneNeural"
+        assert "I no go leave" in saved.script_text
+
+
+def test_shot_dialogue_lip_sync_uses_saved_audio_and_charges_credits(monkeypatch):
+    from models import MovieAudioTrack
+    import services.movie_studio as movie_service
+
+    with app.app_context():
+        user = User(
+            username="lipsync_creator", email="lipsync@test.com",
+            password="x", plan="director", credits=50,
+        )
+        db.session.add(user)
+        db.session.flush()
+        project = MovieProject(user_id=user.id, title="Lip Sync Film")
+        db.session.add(project)
+        db.session.flush()
+        scene = MovieScene(project_id=project.id, scene_number=2)
+        db.session.add(scene)
+        db.session.flush()
+        shot = MovieShot(
+            scene_id=scene.id, project_id=project.id, shot_number=3,
+            visual_prompt="Amina speaks.", duration="5",
+            video_url="https://media.example.test/shot.mp4", status="completed",
+        )
+        db.session.add(shot)
+        db.session.add(MovieAudioTrack(
+            project_id=project.id, track_type="dialogue",
+            title="Dialogue · Scene 2 · Shot 3 · Amina",
+            audio_url="https://media.example.test/dialogue.mp3",
+            script_text="I no go leave my family.",
+            voice_id="en-NG-EzinneNeural",
+        ))
+        db.session.commit()
+        captured = {}
+
+        def fake_subscribe(model, arguments):
+            captured["model"] = model
+            captured["arguments"] = arguments
+            return {"video": {"url": "https://media.example.test/synced.mp4"}}
+
+        monkeypatch.setattr(movie_service.fal_client, "subscribe", fake_subscribe)
+        ok, result = movie_service.sync_shot_dialogue(shot.id)
+        assert ok is True
+        assert result == "https://media.example.test/synced.mp4"
+        assert captured["model"] == "fal-ai/kling-video/lipsync/audio-to-video"
+        assert captured["arguments"]["audio_url"] == "https://media.example.test/dialogue.mp3"
+        assert db.session.get(User, user.id).credits == 45
+        assert db.session.get(MovieShot, shot.id).video_url == result
