@@ -101,6 +101,25 @@ def test_free_user_can_pay_credits_for_basic_video_generation():
         assert user.credits == 0
 
 
+
+def test_free_user_cannot_use_premium_movie_video_style():
+    with app.app_context():
+        user = User(
+            username="free_user_movie_style",
+            email="free_movie_style@example.com",
+            password="hash",
+            plan="free",
+            credits=100,
+            free_video_allowance=0,
+        )
+        db.session.add(user)
+        db.session.commit()
+
+        ok, error, cost = video_gate(user, "movie", duration="5")
+        assert not ok
+        assert "Studio or Director" in error
+
+
 def test_free_user_without_enough_video_credits_is_blocked():
     with app.app_context():
         user = User(
