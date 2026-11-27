@@ -39,8 +39,8 @@ def get_or_create_settings(user_id: int) -> SocialAutomationSettings:
             user_id=user_id,
             enabled=True,
             emergency_paused=False,
-            facebook_enabled=True,
-            linkedin_enabled=True,
+            facebook_enabled=False,
+            linkedin_enabled=False,
             daily_limit_facebook=1,
             daily_limit_linkedin=1,
             preferred_posting_hours_json='[8, 17]',
@@ -250,17 +250,32 @@ def generate_autonomous_post(
         media_asset.post_id = post.id
         db.session.add(media_asset)
 
-    # Step 7: Create Distributed Publishing Job (only when QA passes)
+    # Keep generated content as a draft unless the user has an active
+    # platform connection AND has explicitly enabled auto-publishing for it.
     if qa_result["passed"]:
-        job = SocialPublishingJob(
+        account = ConnectedAccount.query.filter_by(
+            user_id=user_id, provider=platform, status="connected"
+        ).first()
+        from models import PublishingPreference
+        preference = PublishingPreference.query.filter_by(
             user_id=user_id,
-            post_id=post.id,
-            platform=platform,
-            status="pending",
-            scheduled_time=publish_time,
-            idempotency_key=idempotency_key,
-        )
-        db.session.add(job)
+            provider=platform,
+            content_type="social",
+            enabled=True,
+            auto_publish=True,
+        ).first()
+        if account and preference:
+            job = SocialPublishingJob(
+                user_id=user_id,
+                post_id=post.id,
+                platform=platform,
+                status="pending",
+                scheduled_time=publish_time,
+                idempotency_key=idempotency_key,
+            )
+            db.session.add(job)
+        else:
+            post.status = "draft"
 
     db.session.commit()
     logger.info("Autonomous %s post #%s created (status: %s, score: %s)", platform, post.id, post.status, post.quality_score)
