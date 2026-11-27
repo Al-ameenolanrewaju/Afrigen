@@ -32,6 +32,7 @@ def _project_with_user():
         email="movie-creator@example.test",
         password="pw",
         plan="director",
+        credits=1000,
     )
     db.session.add(user)
     db.session.flush()
