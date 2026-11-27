@@ -176,6 +176,8 @@ def create_scene_shots_and_storyboards(scene_id: int):
         return False, "Scene not found"
 
     project = scene.project
+    if scene.shots:
+        return True, f"Scene {scene.scene_number} already has {len(scene.shots)} storyboard shot(s)."
     system_prompt = (
         "You are an expert storyboard artist and cinematographer. "
         "Breakdown this scene into exactly 3 cinematic shots of 5 seconds each. Mention exact character names in every shot where they appear. Preserve approved appearance and clothing. Include a clear close-up or medium close-up for any speaking character so dialogue can be lip-synced.\n"
@@ -210,6 +212,8 @@ def create_scene_shots_and_storyboards(scene_id: int):
             clean = clean.split("```")[1].split("```")[0].strip()
 
         shot_list = json.loads(clean)
+        if not isinstance(shot_list, list) or len(shot_list) != 3:
+            raise ValueError("Storyboard breakdown must return exactly three shots.")
         for i, s in enumerate(shot_list, 1):
             shot = MovieShot(
                 scene_id=scene.id,
@@ -546,6 +550,34 @@ def generate_shot_video_clip(shot_id: int):
 
 def start_movie_render_job(project_id: int, user_id: int, app_instance=None):
     """Queue and execute the background FFmpeg concatenation and mastering job."""
+    project = db.session.get(MovieProject, project_id)
+    if not project or project.user_id != user_id:
+        return False, "Movie project not found."
+
+    target_seconds = int(project.target_duration or 60)
+    planned_shots = (
+        MovieShot.query.filter_by(project_id=project.id)
+        .order_by(MovieShot.scene_id.asc(), MovieShot.order.asc())
+        .all()
+    )
+    planned_seconds = sum(float(shot.duration or 5) for shot in planned_shots)
+    completed_shots = [
+        shot for shot in planned_shots
+        if shot.status == "completed" and shot.video_url
+    ]
+    completed_seconds = sum(float(shot.duration or 5) for shot in completed_shots)
+
+    if planned_seconds < target_seconds:
+        return False, (
+            f"Your storyboard currently covers {planned_seconds:.0f} of {target_seconds} seconds. "
+            "Create storyboard shots for the remaining scenes before mastering the film."
+        )
+    if len(completed_shots) != len(planned_shots) or completed_seconds < target_seconds:
+        return False, (
+            f"Only {completed_seconds:.0f} of {target_seconds} seconds of planned footage is ready. "
+            "Generate every storyboard shot before mastering the film."
+        )
+
     app = app_instance or current_app._get_current_object()
 
     render_job = MovieRenderJob(
