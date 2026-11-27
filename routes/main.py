@@ -3963,7 +3963,7 @@ def api_brands():
             "custom_instructions", "mission", "vision", "keywords",
             "negative_keywords", "languages", "country", "website",
             "logo_url", "cover_image_url", "preferred_art_style",
-            "preferred_video_style", "voice_preference",
+            "preferred_video_style", "voice_preference", "social_links", "default_ai_models",
         )
         return jsonify({"brands": [
             {field: getattr(brand, field) for field in fields}
@@ -3980,6 +3980,7 @@ def api_brands():
         "mission", "vision", "keywords", "negative_keywords", "languages",
         "country", "website", "logo_url", "cover_image_url",
         "preferred_art_style", "preferred_video_style", "voice_preference",
+        "social_links", "default_ai_models",
     )
     brand_values = {field: data[field] for field in allowed_fields if field in data}
     brand_values.setdefault("primary_color", data.get("colors"))
