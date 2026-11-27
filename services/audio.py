@@ -8,6 +8,33 @@ import requests
 VOICEOVER_VOICE = os.environ.get("VOICEOVER_VOICE", "en-NG-AbeoNeural")
 
 
+def generate_speech_audio(script, voice=VOICEOVER_VOICE):
+    """Synthesize speech with a selected Nigerian English neural voice and upload it."""
+    tmp_path = os.path.join(tempfile.gettempdir(), f"speech_{os.urandom(8).hex()}.mp3")
+    try:
+        import edge_tts
+        import fal_client
+
+        async def _synthesize():
+            communicate = edge_tts.Communicate(script, voice)
+            await communicate.save(tmp_path)
+
+        asyncio.run(_synthesize())
+        audio_url = fal_client.upload_file(tmp_path)
+        if not audio_url:
+            raise RuntimeError("No audio URL returned from upload")
+        return audio_url
+    except Exception as exc:
+        print(f"Speech synthesis error: {exc}")
+        return None
+    finally:
+        try:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+        except Exception:
+            pass
+
+
 def generate_voiceover(script):
     """Synthesize a Nigerian-voice narration and return a public audio URL.
 
