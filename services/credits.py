@@ -4,7 +4,7 @@ These pure helpers operate on a `User` instance plus the SQLAlchemy session and
 encode exactly one set of rules, so the website (`routes/main.py`) and the
 Telegram bot (`services/telegram_bot.py`) charge and gate generations identically.
 
-- Spark/free plan: monthly free quota (2 images, 1 free video allowance); no credits.
+- Spark/free plan: daily free quota (2 images), then 2 credits per extra image; credits can also pay for basic video.
 - Creator/Pro plan (tier 1): pays credits per generation.
 - Studio plan (tier 2): pays credits; image-to-video unlocked.
 - Director plan (tier 3): pays credits; image-to-video unlocked.
@@ -12,7 +12,7 @@ Telegram bot (`services/telegram_bot.py`) charge and gate generations identicall
 
 Callers are responsible for committing the session after a charge.
 """
-from datetime import date
+from datetime import date, datetime, timezone
 
 from models import db, User, CreditLedger
 from services.video import text_to_video_cost
@@ -21,8 +21,8 @@ from services.video import text_to_video_cost
 IMAGE_COST = 2
 IMAGE_TO_VIDEO_COST = 10
 
-# Free-tier total monthly allowances.
-FREE_TOTAL_IMAGES = 2
+# Free-tier daily image allowance.
+FREE_DAILY_IMAGES = 2
 FREE_MONTHLY_VIDEOS = 1
 
 # Monthly credit grants per plan tier
@@ -79,12 +79,14 @@ def video_gate(user, style, extended=False, duration="5"):
 
     plan = getattr(user, 'plan', 'free') or 'free'
 
-    # Free-tier users may generate video only when an administrator has granted
-    # a free-video allowance. Ordinary credits do not unlock video generation.
+    # Free users can use an administrator-granted video gift first, then pay
+    # the normal basic-generation credit price from their ordinary balance.
     if not is_paid_plan(plan):
         if (getattr(user, 'free_video_allowance', 0) or 0) > 0:
             return (True, None, 0)
-        return (False, "Video generation is available to paid subscribers or users with a granted free video. Upgrade to unlock video generation!", cost)
+        if (getattr(user, 'credits', 0) or 0) >= cost:
+            return (True, None, cost)
+        return (False, f"You need {cost} credits for this video. Add credits or upgrade your plan.", cost)
 
     # Paid tiers — check credits
     if (user.credits or 0) < cost:
@@ -98,16 +100,20 @@ def image_gate(user):
     """Check whether `user` may generate an image. Returns (ok, error_message)."""
     plan = getattr(user, 'plan', 'free') or 'free'
 
-    # Spark / free tier
+    # Spark / free tier: reset the two-image allowance on the first request
+    # after each UTC date changes. The legacy column name is retained to avoid
+    # a database migration; its meaning is now images used today.
     if not is_paid_plan(plan):
-        # 1. Use monthly free images first (up to 2)
-        if (user.monthly_images_used or 0) < FREE_TOTAL_IMAGES:
+        today = datetime.now(timezone.utc).date()
+        if getattr(user, 'last_image_reset', None) != today:
+            user.monthly_images_used = 0
+            user.last_image_reset = today
+        if (user.monthly_images_used or 0) < FREE_DAILY_IMAGES:
             return (True, None)
-        # 2. If 2 free images have been used, check if user has credits available (e.g. starting credits or referral)
         if (user.credits or 0) >= IMAGE_COST:
             return (True, None)
         return (False,
-                "You've used your 2 free images and have insufficient credits. Upgrade to Creator or Pro for more!")
+                "You've used today's 2 free images. Additional images cost 2 credits each.")
 
     # Paid tiers — check credits or fallback_credits
     if (user.credits or 0) >= IMAGE_COST:
@@ -174,7 +180,11 @@ def charge_image(user, reason="Image generation"):
     """Record a successful image generation (free: bump counter if free allowance available, otherwise spend credits)."""
     plan = getattr(user, 'plan', 'free') or 'free'
     if not is_paid_plan(plan):
-        if (user.monthly_images_used or 0) < FREE_TOTAL_IMAGES:
+        today = datetime.now(timezone.utc).date()
+        if getattr(user, 'last_image_reset', None) != today:
+            user.monthly_images_used = 0
+            user.last_image_reset = today
+        if (user.monthly_images_used or 0) < FREE_DAILY_IMAGES:
             user.monthly_images_used = (user.monthly_images_used or 0) + 1
             return
 
