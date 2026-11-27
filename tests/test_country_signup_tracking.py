@@ -59,3 +59,41 @@ def test_country_lookup_skips_non_public_ip(monkeypatch):
 
         monkeypatch.setattr(requests, "get", unexpected_request)
         assert get_country_from_ip("10.197.123.222") == "Unknown"
+
+
+def test_country_lookup_uses_fallback_after_primary_provider_rate_limit(monkeypatch):
+    import requests
+
+    class FakeResponse:
+        def __init__(self, status_code, payload):
+            self.status_code = status_code
+            self._payload = payload
+            self.text = ""
+
+        def raise_for_status(self):
+            if self.status_code >= 400:
+                error = requests.HTTPError("rate limited")
+                error.response = self
+                raise error
+
+        def json(self):
+            return self._payload
+
+    responses = [
+        FakeResponse(429, {"error": True}),
+        FakeResponse(200, {"status": "success", "country": "Nigeria"}),
+    ]
+    calls = []
+
+    def fake_get(url, timeout):
+        calls.append(url)
+        return responses.pop(0)
+
+    monkeypatch.setattr(requests, "get", fake_get)
+    app = Flask(__name__)
+    with app.app_context():
+        assert get_country_from_ip("8.8.8.8") == "Nigeria"
+
+    assert len(calls) == 2
+    assert calls[0].startswith("https://ipapi.co/")
+    assert calls[1].startswith("http://ip-api.com/")
