@@ -99,6 +99,13 @@ class User(UserMixin, db.Model):
     product_updates = db.Column(db.Boolean, default=True)
     default_ai_provider = db.Column(db.String(50), nullable=True, default='gemini')
 
+    @property
+    def free_images_remaining(self):
+        """Daily free-image balance for free/Spark accounts (UTC day)."""
+        today = datetime.now(timezone.utc).date()
+        used = (self.monthly_images_used or 0) if self.last_image_reset == today else 0
+        return max(0, 2 - used)
+
     def __repr__(self):
         return f"<User {self.username}>"
 
