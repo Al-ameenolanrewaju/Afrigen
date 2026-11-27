@@ -968,7 +968,7 @@ def generate_image():
         provider = "fal" if is_paid_plan(locked_user.plan) else "huggingface"
         result = generate_ai_image(
             refined, style, aspect_ratio, provider=provider,
-            allow_fal=(locked_user.plan == 'pro'),
+            allow_fal=is_paid_plan(locked_user.plan),
         )
 
         if not result["success"]:
