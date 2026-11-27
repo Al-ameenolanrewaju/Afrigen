@@ -118,7 +118,7 @@
         <h5 style="color: #F5A623;" class="mb-3"><i class="fa-solid fa-credit-card"></i> Credits</h5>
         <div class="row text-center">
             <div class="col-6">
-                {% if current_user.plan == 'free' %}
+                {% if current_user.plan in ['free', 'spark'] %}
                 <h2 style="color: #F5A623;">{{ current_user.free_images_remaining }}</h2>
                 <p style="color: #888;">Free images remaining today</p>
                 {% else %}
