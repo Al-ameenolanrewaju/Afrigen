@@ -394,6 +394,37 @@ def process_publishing_queue():
             logger.warning(f"Social automation queue processor error: {e}")
 
 
+@scheduler.task('interval', id='dispatch_running_campaigns', seconds=30)
+def dispatch_running_campaigns():
+    """Recover and execute campaigns persisted as running after restarts."""
+    with app.app_context():
+        try:
+            from models import Campaign, CampaignStatus, CampaignTask, TaskStatus
+            from services.workflow_executor import workflow_executor
+
+            campaign_ids = [
+                row[0] for row in db.session.query(Campaign.id)
+                .join(CampaignTask, CampaignTask.campaign_id == Campaign.id)
+                .filter(
+                    Campaign.status == CampaignStatus.RUNNING.value,
+                    CampaignTask.status.in_([
+                        TaskStatus.PENDING.value,
+                        TaskStatus.RETRYING.value,
+                        TaskStatus.FAILED.value,
+                    ]),
+                )
+                .distinct()
+                .order_by(Campaign.id.asc())
+                .limit(5)
+                .all()
+            ]
+            for campaign_id in campaign_ids:
+                workflow_executor.execute_campaign(campaign_id)
+        except Exception:
+            db.session.rollback()
+            logger.exception("Running campaign dispatcher failed")
+
+
 @scheduler.task('cron', id='social_automation_daily_planner', hour=6, minute=0)
 def social_automation_daily_planner_job():
     """Plan and generate daily social content at 7:00 AM WAT (06:00 UTC) for autonomous campaigns."""
