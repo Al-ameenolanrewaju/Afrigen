@@ -113,6 +113,19 @@
                         <div class="character-name">{{ char.name }}</div>
                         <div class="character-role">{{ char.role }}</div>
                         <div class="character-desc mb-3">{{ char.description }}</div>
+                        <form class="mb-3" onsubmit="saveCharacter(event, {{ char.id }})">
+                            <label class="form-label small">Physical appearance</label>
+                            <textarea class="form-control form-control-sm mb-2" name="physical_appearance" rows="2" maxlength="3000" placeholder="Face, age, skin tone, hairstyle, build">{{ char.physical_appearance or char.description }}</textarea>
+                            <label class="form-label small">Signature clothing</label>
+                            <textarea class="form-control form-control-sm mb-2" name="clothing" rows="2" maxlength="1500" placeholder="Outfit that should remain consistent">{{ char.clothing or '' }}</textarea>
+                            <label class="form-label small">Character voice</label>
+                            <select class="form-select form-select-sm mb-2" name="voice_attributes">
+                                <option value="">Choose voice</option>
+                                <option value="en-NG-AbeoNeural" {% if char.voice_attributes == 'en-NG-AbeoNeural' %}selected{% endif %}>Nigerian English — Male</option>
+                                <option value="en-NG-EzinneNeural" {% if char.voice_attributes == 'en-NG-EzinneNeural' %}selected{% endif %}>Nigerian English — Female</option>
+                            </select>
+                            <button class="btn btn-sm btn-surface w-100" type="submit">Save character settings</button>
+                        </form>
                         <button class="btn btn-sm btn-outline-gold w-100" onclick="generatePortrait({{ char.id }})">
                             <i class="fa-solid fa-wand-magic-sparkles me-1"></i> {% if char.reference_image_url %}Regenerate Portrait{% else %}Generate Portrait{% endif %}
                         </button>
@@ -284,6 +297,25 @@
                 location.reload();
             } else {
                 window.showAfrigenAlert({ text: data.error || "Failed to generate screenplay.", icon: "error" });
+            }
+        } catch (e) {
+            window.showAfrigenAlert({ text: String(e), icon: "error" });
+        }
+    }
+
+    async function saveCharacter(event, charId) {
+        event.preventDefault();
+        const form = event.currentTarget;
+        try {
+            const res = await fetch(`/movie-studio/projects/${projectId}/characters/${charId}/update`, {
+                method: "POST",
+                body: new FormData(form)
+            });
+            const data = await res.json();
+            if (data.success) {
+                window.showAfrigenAlert({ text: data.message, icon: "success", toast: true });
+            } else {
+                window.showAfrigenAlert({ text: data.error || "Could not save character settings.", icon: "error" });
             }
         } catch (e) {
             window.showAfrigenAlert({ text: String(e), icon: "error" });
