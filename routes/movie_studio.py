@@ -85,7 +85,11 @@ def create_project():
     genre = request.form.get('genre', 'Afrofuturism')
     cinematic_tone = request.form.get('cinematic_tone', 'Moody & Cinematic')
     aspect_ratio = request.form.get('aspect_ratio', '16:9')
-    target_duration = int(request.form.get('target_duration', 60))
+    try:
+        requested_duration = int(request.form.get('target_duration', 60))
+    except (TypeError, ValueError):
+        requested_duration = 60
+    target_duration = requested_duration if requested_duration in {60, 180, 300} else 60
     logline = (request.form.get('logline') or '').strip()
 
     project = MovieProject(
