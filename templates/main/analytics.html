@@ -119,8 +119,8 @@
         <div class="row text-center">
             <div class="col-6">
                 {% if current_user.plan == 'free' %}
-                <h2 style="color: #F5A623;">{{ [2 - (current_user.monthly_images_used or 0), 0]|max }}</h2>
-                <p style="color: #888;">Free images remaining</p>
+                <h2 style="color: #F5A623;">{{ current_user.free_images_remaining }}</h2>
+                <p style="color: #888;">Free images remaining today</p>
                 {% else %}
                 <h2 style="color: #F5A623;">{{ current_user.credits }}</h2>
                 <p style="color: #888;">Credits remaining</p>
