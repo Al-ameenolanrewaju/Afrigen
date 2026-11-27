@@ -124,7 +124,8 @@ def _dashboard_data(days, start, end, previous_start):
         User.country, func.count(User.id).label("total")
     ).filter(
         User.signup_at >= start, User.signup_at < end,
-        User.country.isnot(None), User.country != ""
+        User.country.isnot(None), User.country != "",
+        func.lower(func.trim(User.country)) != "unknown"
     ).group_by(User.country).order_by(func.count(User.id).desc()).limit(8).all()
 
     sources = db.session.query(

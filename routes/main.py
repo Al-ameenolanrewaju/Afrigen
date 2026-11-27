@@ -80,9 +80,29 @@ def _admin_provider_error(value):
 
 
 
-def get_country_from_ip(ip):
+def _validated_public_ip(value):
+    """Return a normalized public IP address, or None for untrusted values."""
+    if not value:
+        return None
     try:
-        import requests as req
+        address = ipaddress.ip_address(str(value).strip().strip('"'))
+    except ValueError:
+        return None
+    return str(address) if address.is_global else None
+
+
+def get_country_from_ip(ip):
+    # Never send private, reserved, malformed, or missing addresses to geo APIs.
+    ip = _validated_public_ip(ip)
+    if not ip:
+        current_app.logger.warning(
+            "Country lookup skipped because no valid public client IP was available"
+        )
+        return 'Unknown'
+
+    import requests as req
+
+    try:
         response = req.get(f'https://ipapi.co/{ip}/json/', timeout=3)
         response.raise_for_status()
         data = response.json()
@@ -90,24 +110,25 @@ def get_country_from_ip(ip):
         if country:
             return country
         current_app.logger.warning(
-            "Primary country lookup returned no country for %s: status=%s response=%s",
-            ip, response.status_code, data
+            "Primary country lookup returned no country: status=%s",
+            response.status_code
         )
     except req.HTTPError as exc:
+        status = exc.response.status_code if exc.response is not None else "unknown"
         current_app.logger.warning(
-            "Primary country lookup returned HTTP error for %s: status=%s response=%s",
-            ip, exc.response.status_code, exc.response.text[:500]
+            "Primary country lookup returned HTTP error: status=%s", status
         )
     except req.RequestException as exc:
         current_app.logger.warning(
-            "Primary country lookup connection failed for %s: error=%s",
-            ip, exc
+            "Primary country lookup connection failed: error=%s", type(exc).__name__
         )
     except (ValueError, TypeError) as exc:
         current_app.logger.warning(
-            "Primary country response was invalid for %s: %s", ip, exc
+            "Primary country response was invalid: %s", type(exc).__name__
         )
 
+    # ip-api's free endpoint is HTTP-only. Keep it as a last-resort fallback;
+    # the primary HTTPS provider remains preferred.
     try:
         response = req.get(
             f'http://ip-api.com/json/{ip}?fields=status,message,country',
@@ -118,28 +139,45 @@ def get_country_from_ip(ip):
         if data.get('status') == 'success' and data.get('country'):
             return data['country']
         current_app.logger.warning(
-            "Fallback country lookup returned no country for %s: status=%s response=%s",
-            ip, response.status_code, data
+            "Fallback country lookup returned no country: status=%s",
+            response.status_code
         )
     except req.HTTPError as exc:
+        status = exc.response.status_code if exc.response is not None else "unknown"
         current_app.logger.warning(
-            "Fallback country lookup returned HTTP error for %s: status=%s response=%s",
-            ip, exc.response.status_code, exc.response.text[:500]
+            "Fallback country lookup returned HTTP error: status=%s", status
         )
     except req.RequestException as exc:
         current_app.logger.warning(
-            "Fallback country lookup connection failed for %s: error=%s",
-            ip, exc
+            "Fallback country lookup connection failed: error=%s", type(exc).__name__
         )
     except (ValueError, TypeError) as exc:
         current_app.logger.warning(
-            "Fallback country response was invalid for %s: %s", ip, exc
+            "Fallback country response was invalid: %s", type(exc).__name__
         )
 
     return 'Unknown'
 
+
 def get_real_ip():
-    return request.remote_addr
+    """Resolve the visitor IP from Render/Cloudflare forwarding headers.
+
+    Render documents the first X-Forwarded-For entry as the client address.
+    Prefer Cloudflare's client-IP header when present, then fall back to the
+    first public address in X-Forwarded-For. Never use private proxy addresses.
+    """
+    for header_name in ('CF-Connecting-IP', 'True-Client-IP'):
+        client_ip = _validated_public_ip(request.headers.get(header_name))
+        if client_ip:
+            return client_ip
+
+    forwarded_for = request.headers.get('X-Forwarded-For', '')
+    for candidate in forwarded_for.split(','):
+        client_ip = _validated_public_ip(candidate)
+        if client_ip:
+            return client_ip
+
+    return _validated_public_ip(request.remote_addr)
 
 
 def _fal_webhook_token(client_request_id):
