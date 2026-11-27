@@ -36,7 +36,7 @@ def _project_with_user():
     )
     db.session.add(user)
     db.session.flush()
-    project = MovieProject(user_id=user.id, title="The Afrigen Story")
+    project = MovieProject(user_id=user.id, title="The Afrigen Story", target_duration=5)
     db.session.add(project)
     db.session.commit()
     return user, project
@@ -138,3 +138,16 @@ def test_movie_studio_completed_render_creates_notification(monkeypatch):
         assert notification.title == "Your movie is ready"
         assert notification.type == "success"
         assert MovieRenderJob.query.one().status == "completed"
+
+
+def test_movie_master_render_requires_full_target_footage():
+    from services.movie_studio import start_movie_render_job
+
+    with app.app_context():
+        user, project = _project_with_user()
+        project.target_duration = 60
+        db.session.commit()
+        ok, message = start_movie_render_job(project.id, user.id, app_instance=app)
+        assert ok is False
+        assert "0 of 60 seconds" in message
+        assert MovieRenderJob.query.count() == 0
