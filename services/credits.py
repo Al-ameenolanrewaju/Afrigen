@@ -15,7 +15,7 @@ Callers are responsible for committing the session after a charge.
 from datetime import date, datetime, timezone
 
 from models import db, User, CreditLedger
-from services.video import text_to_video_cost
+from services.video import text_to_video_cost, KLING_PRO_STYLES
 
 # Flat credit price of an image generation for paid users (mirrors routes/main.py).
 IMAGE_COST = 2
