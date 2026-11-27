@@ -16,7 +16,7 @@ from services.entitlements import can_access_movie_studio, get_user_entitlements
 from services.movie_studio import (
     generate_screenplay_treatment, generate_character_portrait_asset,
     create_scene_shots_and_storyboards, generate_shot_video_clip,
-    start_movie_render_job
+    start_movie_render_job, generate_scene_pidgin_dialogue, sync_shot_dialogue
 )
 
 movie_studio_bp = Blueprint('movie_studio', __name__, url_prefix='/movie-studio')
@@ -196,6 +196,40 @@ def generate_storyboards(project_id, scene_id):
 
     ok, msg = create_scene_shots_and_storyboards(scene_id)
     return jsonify({"success": ok, "message": msg})
+
+
+@movie_studio_bp.route('/projects/<int:project_id>/scenes/<int:scene_id>/dialogue', methods=['POST'])
+@login_required
+def generate_scene_dialogue(project_id, scene_id):
+    if not can_access_movie_studio(current_user):
+        return jsonify({"success": False, "error": "Unauthorized"}), 403
+    project = db.session.get(MovieProject, project_id)
+    scene = db.session.get(MovieScene, scene_id)
+    if not project or project.user_id != current_user.id:
+        return jsonify({"success": False, "error": "Not found"}), 404
+    if not scene or scene.project_id != project.id:
+        return jsonify({"success": False, "error": "Scene not found"}), 404
+    ok, message, tracks = generate_scene_pidgin_dialogue(scene_id)
+    return jsonify({"success": ok, "message": message, "tracks": tracks})
+
+
+@movie_studio_bp.route('/projects/<int:project_id>/shots/<int:shot_id>/lip-sync', methods=['POST'])
+@login_required
+def lip_sync_shot(project_id, shot_id):
+    if not can_access_movie_studio(current_user):
+        return jsonify({"success": False, "error": "Unauthorized"}), 403
+    project = db.session.get(MovieProject, project_id)
+    shot = db.session.get(MovieShot, shot_id)
+    if not project or project.user_id != current_user.id:
+        return jsonify({"success": False, "error": "Not found"}), 404
+    if not shot or shot.project_id != project.id:
+        return jsonify({"success": False, "error": "Shot not found"}), 404
+    ok, url_or_error = sync_shot_dialogue(shot_id)
+    return jsonify({
+        "success": ok,
+        "video_url": url_for('movie_studio.movie_media', asset_type='shot-video', asset_id=shot_id) if ok else None,
+        "error": None if ok else url_or_error,
+    })
 
 
 @movie_studio_bp.route('/projects/<int:project_id>/shots/<int:shot_id>/generate', methods=['POST'])
