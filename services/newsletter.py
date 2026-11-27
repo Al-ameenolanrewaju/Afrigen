@@ -425,20 +425,74 @@ def run_weekly_send():
 # ---------- Daily Newsletter Campaign Batch Runner ----------
 
 def run_daily_newsletter_batch(app_ctx=None):
-    """Find the first 'sending' campaign and dispatch a batch of emails."""
+    """Send one approved campaign batch without advancing on a failed or test-only send.
+
+    Keep the campaign row locked until delivery is recorded so concurrent scheduler
+    invocations cannot both select and dispatch the same offset.
+    """
     from models import NewsletterCampaign
-    campaign = NewsletterCampaign.query.filter_by(status='sending').first()
+
+    campaign = (
+        NewsletterCampaign.query
+        .filter_by(status="sending")
+        .order_by(NewsletterCampaign.created_at.asc())
+        .with_for_update()
+        .first()
+    )
     if not campaign:
-        return
-    recipients = collect_recipients(limit=campaign.batch_size, offset=campaign.batch_offset)
-    if recipients:
-        send_newsletter(recipients, campaign.subject, campaign.html_body, is_html=True)
-    campaign.batch_offset += campaign.batch_size
-    if campaign.batch_offset >= campaign.total_audience:
-        campaign.status = 'complete'
+        return {"sent": 0, "pending": 0}
+
+    batch_size = max(1, int(campaign.batch_size or 80))
+    recipients = collect_recipients(limit=batch_size, offset=campaign.batch_offset)
+    if not recipients:
+        campaign.status = "complete"
+        campaign.completed_at = datetime.now(timezone.utc)
+        db.session.commit()
+        return {"sent": 0, "pending": 0, "complete": True}
+
+    result = send_newsletter(
+        recipients,
+        campaign.subject,
+        campaign.html_body,
+        is_html=True,
+        return_details=True,
+    )
+
+    # A test-recipient override must never consume a real campaign's audience.
+    if result.get("test_recipient"):
+        db.session.rollback()
+        logger.warning("Newsletter campaign %s paused: test recipient override is enabled.", campaign.id)
+        return {"sent": 0, "pending": campaign.total_audience - campaign.batch_offset, "test_mode": True}
+
+    # If any recipient failed or the provider did not confirm every address,
+    # leave the offset unchanged so an operator can retry this cohort.
+    if result.get("failed", 0) or result.get("sent", 0) != len(recipients):
+        db.session.rollback()
+        logger.error(
+            "Newsletter campaign %s batch not advanced: attempted=%s accepted=%s failed=%s",
+            campaign.id, result.get("attempted", 0), result.get("sent", 0), result.get("failed", 0),
+        )
+        return {
+            "sent": result.get("sent", 0),
+            "failed": result.get("failed", 0),
+            "pending": campaign.total_audience - campaign.batch_offset,
+        }
+
+    campaign.batch_offset += len(recipients)
+    if campaign.batch_offset >= campaign.total_audience or len(recipients) < batch_size:
+        campaign.status = "complete"
         campaign.completed_at = datetime.now(timezone.utc)
     db.session.commit()
-    print(f"Newsletter campaign {campaign.id}: batch sent ({len(recipients)} recipients), offset now {campaign.batch_offset}")
+    logger.info(
+        "Newsletter campaign %s: batch accepted=%s offset=%s",
+        campaign.id, result["sent"], campaign.batch_offset,
+    )
+    return {
+        "sent": result["sent"],
+        "failed": 0,
+        "pending": max(0, campaign.total_audience - campaign.batch_offset),
+        "complete": campaign.status == "complete",
+    }
 
 
 def run_daily_newsletter_cycle():
