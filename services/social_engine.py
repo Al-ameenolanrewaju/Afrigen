@@ -13,7 +13,7 @@ from typing import Dict, Any, List, Optional
 
 from models import (
     db, User, SocialPost, SocialCampaign, SocialMediaAsset,
-    SocialPublishingJob, SocialAutomationSettings, ConnectedAccount
+    SocialPublishingJob, SocialAutomationSettings, ConnectedAccount, PublishingPreference
 )
 from services.social_strategist import (
     select_next_pillar, plan_post_concept, generate_platform_copy,
@@ -256,7 +256,11 @@ def generate_autonomous_post(
         account = ConnectedAccount.query.filter_by(
             user_id=user_id, provider=platform, status="connected"
         ).first()
-        if account:
+        preference = PublishingPreference.query.filter_by(
+            user_id=user_id, provider=platform, content_type=platform,
+            enabled=True, auto_publish=True
+        ).first()
+        if account and preference:
             job = SocialPublishingJob(
                 user_id=user_id,
                 post_id=post.id,
