@@ -173,8 +173,20 @@ class WorkflowExecutor:
             target_provider = platform_map.get(task.task_type)
             if target_provider:
                 from models import ConnectedAccount, UserContent, PublishingRetryQueue
-                account = ConnectedAccount.query.filter_by(user_id=campaign.user_id, provider=target_provider).first()
-                if account:
+                account = ConnectedAccount.query.filter_by(
+                    user_id=campaign.user_id,
+                    provider=target_provider,
+                    status="connected",
+                ).first()
+                from models import PublishingPreference
+                preference = PublishingPreference.query.filter_by(
+                    user_id=campaign.user_id,
+                    provider=target_provider,
+                    content_type="social",
+                    enabled=True,
+                    auto_publish=True,
+                ).first()
+                if account and preference:
                     logger.info(f"Auto-publishing {task.name} to {target_provider} for Campaign {campaign.id}")
                     user_content = UserContent(
                         user_id=campaign.user_id,
