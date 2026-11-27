@@ -256,15 +256,7 @@ def generate_autonomous_post(
         account = ConnectedAccount.query.filter_by(
             user_id=user_id, provider=platform, status="connected"
         ).first()
-        from models import PublishingPreference
-        preference = PublishingPreference.query.filter_by(
-            user_id=user_id,
-            provider=platform,
-            content_type="social",
-            enabled=True,
-            auto_publish=True,
-        ).first()
-        if account and preference:
+        if account:
             job = SocialPublishingJob(
                 user_id=user_id,
                 post_id=post.id,
