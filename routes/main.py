@@ -1942,19 +1942,33 @@ def admin_pricing():
     from services.pricing import DEFAULT_PRICING
     from services.video import estimate_fal_image_to_video_cost, estimate_fal_video_cost
     if request.method == 'POST':
+        import math
+        submitted = {}
+        integer_costs = {'cheap_video_cost', 'kling_video_cost', 'image_to_video_cost'}
         for key in DEFAULT_PRICING:
-            value = request.form.get(key, type=float)
-            if value is None or value < 0:
-                flash(f'Invalid value for {key}.', 'danger')
+            raw_value = (request.form.get(key) or '').strip()
+            try:
+                value = float(raw_value)
+            except (TypeError, ValueError):
+                value = None
+            if value is None or not math.isfinite(value) or value <= 0:
+                flash(f'{key.replace("_", " ").title()} must be a valid positive number.', 'danger')
                 return redirect(url_for('main.admin_pricing'))
+            if key in integer_costs and (not value.is_integer() or value > 10000):
+                flash(f'{key.replace("_", " ").title()} must be a whole number between 1 and 10,000 credits.', 'danger')
+                return redirect(url_for('main.admin_pricing'))
+            if key == 'kling_credits_per_second' and value > 100:
+                flash('Kling credits per second must be between 0 and 100.', 'danger')
+                return redirect(url_for('main.admin_pricing'))
+            submitted[key] = int(value) if key in integer_costs else value
+        for key, value in submitted.items():
             row = PricingConfig.query.filter_by(key=key).first()
             if not row:
-                row = PricingConfig(key=key, value=value)
-                db.session.add(row)
+                db.session.add(PricingConfig(key=key, value=value))
             else:
                 row.value = value
         db.session.commit()
-        flash('Pricing configuration updated.', 'success')
+        flash('Generation credit pricing updated.', 'success')
     pricing = {}
     for key, default in DEFAULT_PRICING.items():
         row = PricingConfig.query.filter_by(key=key).first()
@@ -2116,7 +2130,8 @@ def initialize_payment():
 @main.route('/payment/initialize/annual', methods=['POST'])
 @login_required
 def initialize_payment_annual():
-    amount = PRO_ANNUAL_KOBO
+    # Creator annual checkout must match the advertised ₦100,000 price.
+    amount = CREATOR_ANNUAL_KOBO
     headers = {
         "Authorization": f"Bearer {os.environ.get('PAYSTACK_SECRET_KEY')}",
         "Content-Type": "application/json"
