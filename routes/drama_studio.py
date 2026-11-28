@@ -7,6 +7,7 @@ from services.entitlements import can_access_movie_studio, is_admin
 from services.drama_studio import (
     create_series, create_episode, add_series_character,
     add_character_to_episode, assign_character_to_shot, monthly_usage_summary,
+    generate_series_character_portrait,
 )
 
 drama_studio_bp = Blueprint("drama_studio", __name__, url_prefix="/drama-studio")
@@ -94,6 +95,20 @@ def add_character_view(series_id):
         voice_id=request.form.get("voice_id"),
         notes=request.form.get("notes"),
     )
+    flash(message, "success" if ok else "danger")
+    return redirect(url_for("drama_studio.series_workspace", series_id=series_id))
+
+
+
+
+@drama_studio_bp.route("/series/<int:series_id>/characters/<int:character_id>/portrait", methods=["POST"])
+@login_required
+def generate_character_portrait_view(series_id, character_id):
+    if not can_access_movie_studio(current_user):
+        abort(403)
+    _series_for_user(series_id)
+    ok, result = generate_series_character_portrait(current_user, series_id, character_id)
+    message = "Canonical portrait generated and synced to episode cast copies." if ok else str(result)
     flash(message, "success" if ok else "danger")
     return redirect(url_for("drama_studio.series_workspace", series_id=series_id))
 
