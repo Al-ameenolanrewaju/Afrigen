@@ -3,7 +3,7 @@ from uuid import uuid4
 
 from app import app
 from models import db, User, DramaSeries, DramaEpisode, DramaProductionJob, DramaUsageLedger
-from services.drama_studio import create_series, create_episode, monthly_usage_summary
+from services.drama_studio import create_series, create_episode, monthly_usage_summary, finalize_episode_quota, requeue_failed_episode
 from services import drama_worker
 
 
@@ -110,3 +110,23 @@ def test_admin_cost_report_marks_provider_cost_as_estimate():
         report = drama_worker.admin_drama_cost_report()
         assert report["estimated_provider_cost_usd"] >= 0.225
         assert "not provider invoices" in report["cost_basis"]
+
+
+
+def test_manual_retry_re_reserves_allowance_after_exhausted_failure():
+    with app.app_context():
+        user = _director()
+        _, _, series = create_series(user, "Manual Retry")
+        _, _, episode, job = create_episode(user, series.id)
+        assert finalize_episode_quota(episode.id, success=False)
+        assert monthly_usage_summary(user.id)["remaining"] == 30
+
+        ok, message = requeue_failed_episode(user, episode.id)
+        assert ok, message
+        db.session.refresh(job)
+        db.session.refresh(episode)
+        assert job.status == "queued"
+        assert job.attempt_count == 0
+        assert episode.quota_status == "reserved"
+        assert monthly_usage_summary(user.id)["reserved"] == 1
+        assert monthly_usage_summary(user.id)["remaining"] == 29
