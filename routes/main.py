@@ -3497,7 +3497,7 @@ def _marketing_campaign_payload(campaign):
 @admin_required
 @limiter.exempt
 def admin_marketing_campaigns():
-    from models import NewsletterCampaign
+    from models import NewsletterCampaign, SocialPost
     from services.newsletter import collect_recipients
 
     generated = None
@@ -3553,6 +3553,9 @@ def admin_marketing_campaigns():
                 flash(f'Could not generate the campaign: {exc}', 'danger')
 
     campaigns = NewsletterCampaign.query.order_by(NewsletterCampaign.created_at.desc()).limit(50).all()
+    automated_posts = SocialPost.query.order_by(
+        SocialPost.scheduled_at.desc().nullslast(), SocialPost.created_at.desc()
+    ).limit(20).all()
     campaign_rows = []
     for c in campaigns:
         payload = _marketing_campaign_payload(c)
@@ -3565,6 +3568,7 @@ def admin_marketing_campaigns():
         'admin/marketing_campaigns.html',
         generated=generated,
         campaign_rows=campaign_rows,
+        automated_posts=automated_posts,
         audience_count=len(collect_recipients()),
     )
 
