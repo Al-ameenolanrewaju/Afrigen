@@ -112,10 +112,10 @@ def generate_promo_flyer(offer_text: str) -> str | None:
 
         # 4 High-Converting Feature Value Points
         points = [
-            "4K Cinema-Grade AI Video Generation from text prompts",
-            "Culturally Authentic African Faces, Folklore & Settings",
-            "Multi-Tier Plans Starting from ₦10,000 / mo + Free Spark Trial",
-            "Direct Generation on Web Dashboard & Telegram Bot (@afrigen_bot)",
+            "Create AI videos and images with Afrigen",
+            "Develop visual content for your creative projects",
+            "Review current offers on our website",
+            "Start creating at afrigen.com.ng",
         ]
         font_bullet = _get_flyer_font(21, bold=False)
         y_bullet = card_top + 170
@@ -141,7 +141,7 @@ def generate_promo_flyer(offer_text: str) -> str | None:
 
         # Footer
         font_foot = _get_flyer_font(19, bold=False)
-        draw.text((W // 2, 980), 'Empowering 1,000+ African Creators & Agencies • Telegram: @afrigen_bot', fill=(156, 163, 175), font=font_foot, anchor='mm')
+        draw.text((W // 2, 980), 'Create with Afrigen AI • afrigen.com.ng', fill=(156, 163, 175), font=font_foot, anchor='mm')
 
         # Save to static uploads
         root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -209,7 +209,7 @@ STYLE & PLATFORM RULES:
 Afrigen highlights:
 - Generates high-definition AI videos & images from simple text prompts
 - Built specifically for African cultural styles, folklore, commercials, and stories
-- Tier plans start from ₦10,000/mo (Creator, Studio, Director) with 2 free images & 1 video monthly for Spark free users
+- Mention prices, allowances, customer counts, and performance claims only when explicitly provided in the campaign brief.
 
 Output ONLY the final promotional text ready to publish."""
 
@@ -292,10 +292,11 @@ def run_promo_campaign(offer_text: str, platforms: list = None) -> dict:
             elif platform == "instagram":
                 # Instagram Graph API requires published photo container
                 results["platforms"]["instagram"] = {
-                    "ok": True,
+                    "ok": False,
+                    "status": "prepared",
                     "caption": copy,
                     "flyer_url": flyer_url,
-                    "note": "Ready for Instagram publishing via Meta Business Suite / Scheduler"
+                    "note": "Not published: Instagram publishing is not configured in this campaign publisher."
                 }
 
             else:
@@ -349,10 +350,11 @@ def publish_prepared_campaign(offer_text: str, copies: dict, platforms: list = N
                 )
             elif platform == "instagram":
                 results["platforms"][platform] = {
-                    "ok": True,
+                    "ok": False,
+                    "status": "prepared",
                     "caption": copy,
                     "flyer_url": flyer_url,
-                    "note": "Prepared for Instagram publishing via the connected scheduler.",
+                    "note": "Not published: Instagram publishing is not configured in this campaign publisher. Publish this approved asset manually or connect a supported integration.",
                 }
             else:
                 results["platforms"][platform] = {
