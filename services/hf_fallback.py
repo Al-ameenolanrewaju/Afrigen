@@ -258,6 +258,11 @@ def execute_hf_with_fallback(
                 "[HF Fallback] Account %d (%s) raised exception during %s: %s",
                 idx, masked, operation_name, err_msg[:200]
             )
+            # HTTP 402 means the Inference Provider requires payment, not that
+            # another HF token will fix the request. Stop immediately so the
+            # caller can switch to its configured non-HF provider fallback.
+            if "402" in err_msg.lower() or "payment required" in err_msg.lower() or "pre-paid credits" in err_msg.lower():
+                raise RuntimeError(f"Hugging Face Inference Provider payment required: {err_msg}") from exc
             mark_token_failure(token, exc)
             attempted_errors.append(f"Account {idx} ({masked}): {err_msg}")
 
