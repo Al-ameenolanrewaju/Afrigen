@@ -2685,7 +2685,10 @@ def admin_distribution_retry(run_id, platform):
     from services.distribution import retry_platform
     try:
         ok = retry_platform(run_id, platform)
-        return jsonify({"ok": ok})
+        return jsonify({
+            "ok": ok,
+            "error": None if ok else "Publishing failed again. Check the platform error shown in this run.",
+        })
     except ValueError as e:
         return jsonify({"ok": False, "error": str(e)}), 400
     except Exception as e:
