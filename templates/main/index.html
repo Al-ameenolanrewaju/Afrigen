@@ -180,7 +180,7 @@
             <div class="pricing-plan-name">Creator</div>
             <p class="text-muted small">For solo digital creators</p>
             <div class="pricing-price">
-                <span>₦10,000</span>
+                <span>₦{{ '{:,.0f}'.format(subscription_prices.creator_monthly_kobo) }}</span>
                 <span class="pricing-period">/ month</span>
             </div>
             <ul class="pricing-features-list">
@@ -198,7 +198,7 @@
             <div class="pricing-plan-name">Studio</div>
             <p class="text-muted small">For agencies and media teams</p>
             <div class="pricing-price">
-                <span>₦15,000</span>
+                <span>₦{{ '{:,.0f}'.format(subscription_prices.studio_monthly_kobo) }}</span>
                 <span class="pricing-period">/ month</span>
             </div>
             <ul class="pricing-features-list">
@@ -219,7 +219,7 @@
             <div class="pricing-plan-name text-warning">Director</div>
             <p class="text-muted small">Full AI Film Production Suite</p>
             <div class="pricing-price">
-                <span>₦25,000</span>
+                <span>₦{{ '{:,.0f}'.format(subscription_prices.director_monthly_kobo) }}</span>
                 <span class="pricing-period">/ month</span>
             </div>
             <ul class="pricing-features-list">
