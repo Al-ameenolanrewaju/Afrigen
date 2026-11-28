@@ -1478,7 +1478,7 @@ class SocialAutomationSettings(db.Model):
     daily_limit_facebook = db.Column(db.Integer, default=1)
     daily_limit_linkedin = db.Column(db.Integer, default=1)
 
-    preferred_posting_hours_json = db.Column(db.Text, default='[6, 17]')
+    preferred_posting_hours_json = db.Column(db.Text, default='[6, 6]')
     timezone_str = db.Column(db.String(50), default="Africa/Lagos")
 
     # Content pillar target ratios (% summing to 100)
