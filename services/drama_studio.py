@@ -314,7 +314,8 @@ def requeue_failed_episode(user, episode_id):
         job.status = "queued"
         job.attempt_count = 0
         job.error_message = None
-        job.current_step = "screenplay" if not MovieProject.query.filter_by(id=episode.movie_project_id).first().scenes else "storyboard"
+        project = db.session.get(MovieProject, episode.movie_project_id)
+        job.current_step = "screenplay" if not project or not project.scenes else "storyboard"
         episode.status = "queued"
         db.session.commit()
         return True, "Episode production has been queued again."
