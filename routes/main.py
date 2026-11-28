@@ -1969,6 +1969,10 @@ def admin_pricing():
             if len(set(submitted_subscriptions.values())) != len(submitted_subscriptions):
                 flash('Each subscription price must be unique to avoid ambiguous payment verification.', 'danger')
                 return redirect(url_for('main.admin_pricing'))
+            legacy_creator_annual = 11_000_000
+            if legacy_creator_annual in submitted_subscriptions.values() and submitted_subscriptions['creator_annual_kobo'] != legacy_creator_annual:
+                flash('₦110,000 is reserved for completing older Creator annual checkouts; choose a different price for other plans.', 'danger')
+                return redirect(url_for('main.admin_pricing'))
             for key, value in submitted_subscriptions.items():
                 row = PricingConfig.query.filter_by(key=key).first()
                 if row is None:
