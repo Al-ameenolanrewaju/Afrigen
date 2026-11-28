@@ -16,7 +16,8 @@
    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
    <label class="form-label text-light fw-semibold">What are we promoting?</label>
    <textarea name="campaign_brief" rows="4" class="form-control marketing-field mb-3" required placeholder="Describe the offer, feature launch, announcement, audience, key benefits and call to action. Include exact prices and dates if relevant."></textarea>
-   <label class="form-label text-light fw-semibold">Generate content for</label>
+   <label class="form-label text-light fw-semibold">Generate social content for</label>
+   <small class="marketing-muted d-block mb-2">The email newsletter is generated automatically for every campaign.</small>
    <div class="d-flex flex-wrap gap-2 mb-3">
     {% for p,label in [('facebook','Facebook'),('linkedin','LinkedIn'),('instagram','Instagram (manual review)'),('telegram','Telegram'),('devto','Dev.to')] %}
     <label class="marketing-channel"><input type="checkbox" name="platforms" value="{{ p }}" {% if p != 'devto' %}checked{% endif %}> {{ label }}</label>
