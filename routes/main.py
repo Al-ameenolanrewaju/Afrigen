@@ -1455,9 +1455,13 @@ def admin():
 
     total_users = User.query.count()
     total_generations = Generation.query.count()
-    pro_users = User.query.filter_by(plan='pro').count()
-    free_users = User.query.filter_by(plan='free').count()
-    banned_users = User.query.filter_by(plan='banned').count()
+    # Show every customer tier. The legacy "pro" value is an alias for Creator.
+    normalized_plan = func.lower(func.coalesce(User.plan, 'free'))
+    creator_users = User.query.filter(normalized_plan.in_(['creator', 'pro'])).count()
+    studio_users = User.query.filter(normalized_plan == 'studio').count()
+    director_users = User.query.filter(normalized_plan == 'director').count()
+    free_users = User.query.filter(normalized_plan.in_(['free', 'spark'])).count()
+    banned_users = User.query.filter(normalized_plan == 'banned').count()
 
     # Generation stats
     completed_generations = Generation.query.filter_by(status='completed').count()
@@ -1697,7 +1701,9 @@ def admin():
         stuck_generations=stuck_generations,
         total_users=total_users,
         total_generations=total_generations,
-        pro_users=pro_users,
+        creator_users=creator_users,
+        studio_users=studio_users,
+        director_users=director_users,
         free_users=free_users,
         banned_users=banned_users,
         completed_generations=completed_generations,
