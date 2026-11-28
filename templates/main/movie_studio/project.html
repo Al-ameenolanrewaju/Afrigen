@@ -179,6 +179,21 @@
                             </div>
                             <div class="frame-details">
                                 <div class="frame-prompt">{{ shot.visual_prompt }}</div>
+                                {% if drama_episode %}
+                                <form method="post" class="mt-2 d-flex gap-2 align-items-center" action="{{ url_for('drama_studio.assign_shot_cast_form_view', episode_id=drama_episode.id, shot_id=shot.id) }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <select class="form-select form-select-sm" name="episode_character_id" aria-label="Assign character to this shot" required>
+                                        <option value="">Assign cast to shot</option>
+                                        {% for cast_link in drama_episode.character_links %}
+                                            {% if cast_link.movie_character %}
+                                            <option value="{{ cast_link.id }}" {% if shot.id in cast_link.movie_character.id|string %}{% endif %}>{{ cast_link.character.name }}</option>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </select>
+                                    <button class="btn btn-sm btn-surface" type="submit">Assign</button>
+                                </form>
+                                {% if shot.drama_cast_links is defined %}{% endif %}
+                                {% endif %}
                                 <div class="d-flex align-items-center justify-content-between pt-2 border-top" style="border-color: var(--af-border) !important;">
                                     <small class="text-muted"><i class="fa-solid fa-camera me-1"></i> {{ shot.camera_movement }}</small>
                                     <div class="d-flex gap-2">
