@@ -410,9 +410,9 @@ def process_drama_production_queue_job():
             logger.exception("AI Drama Studio production queue worker failed")
 
 
-@scheduler.task('cron', id='social_automation_daily_planner', hour=6, minute=0)
+@scheduler.task('cron', id='social_automation_daily_planner', hour=5, minute=0)
 def social_automation_daily_planner_job():
-    """Plan and generate daily social content at 7:00 AM WAT (06:00 UTC) for autonomous campaigns."""
+    """Prepare daily social content at 6:00 AM WAT (05:00 UTC) for 7:00 AM WAT publishing."""
     with app.app_context():
         try:
             from models import SocialAutomationSettings, User
