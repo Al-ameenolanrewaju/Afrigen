@@ -8,10 +8,11 @@ from services.drama_studio import (
     create_series, create_episode, add_series_character,
     add_character_to_episode, assign_character_to_shot, monthly_usage_summary,
     generate_series_character_portrait,
-    generate_series_character_portrait,
 )
 
 drama_studio_bp = Blueprint("drama_studio", __name__, url_prefix="/drama-studio")
+
+from services.drama_worker import admin_drama_cost_report
 
 
 def _series_for_user(series_id):
@@ -134,3 +135,49 @@ def assign_shot_character_view(episode_id, shot_id, episode_character_id):
         abort(403)
     ok, message = assign_character_to_shot(current_user, episode_id, shot_id, episode_character_id)
     return jsonify({"success": ok, "message": message}), (200 if ok else 400)
+
+
+@drama_studio_bp.route("/episodes/<int:episode_id>/shots/<int:shot_id>/cast", methods=["POST"])
+@login_required
+def assign_shot_cast_form_view(episode_id, shot_id):
+    if not can_access_movie_studio(current_user):
+        abort(403)
+    episode = db.session.get(DramaEpisode, episode_id)
+    if not episode or (episode.user_id != current_user.id and not is_admin(current_user)):
+        abort(404)
+    episode_character_id = request.form.get("episode_character_id", type=int)
+    ok, message = assign_character_to_shot(
+        current_user, episode_id, shot_id, episode_character_id
+    )
+    flash(message, "success" if ok else "danger")
+    return redirect(url_for("movie_studio.project_workspace", project_id=episode.movie_project_id) + "#shots")
+
+
+@drama_studio_bp.route("/episodes/<int:episode_id>/retry", methods=["POST"])
+@login_required
+def retry_episode_production_view(episode_id):
+    if not can_access_movie_studio(current_user):
+        abort(403)
+    episode = db.session.get(DramaEpisode, episode_id)
+    if not episode or (episode.user_id != current_user.id and not is_admin(current_user)):
+        abort(404)
+    from models import DramaProductionJob
+    job = DramaProductionJob.query.filter_by(episode_id=episode.id).order_by(DramaProductionJob.created_at.desc()).first()
+    if not job or job.status not in {"failed", "queued"}:
+        flash("This episode is not currently eligible for retry.", "warning")
+    else:
+        job.status = "queued"
+        job.attempt_count = 0
+        job.error_message = None
+        job.current_step = "screenplay" if not episode.movie_project.scenes else job.current_step
+        db.session.commit()
+        flash("Episode production has been queued again.", "success")
+    return redirect(url_for("movie_studio.project_workspace", project_id=episode.movie_project_id))
+
+
+@drama_studio_bp.route("/admin/usage", methods=["GET"])
+@login_required
+def admin_drama_usage_view():
+    if not is_admin(current_user):
+        abort(403)
+    return jsonify(admin_drama_cost_report())
