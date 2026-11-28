@@ -5,7 +5,7 @@ from flask import (
 )
 from flask_login import login_required, current_user
 from extensions import csrf, limiter
-from models import db, Generation, User, SavedPrompt, Referral, Payment, CreditLedger, TelegramUser
+from models import db, Generation, User, SavedPrompt, Referral, Payment, CreditLedger, TelegramUser, Notification
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from services.claude import (
     refine_prompt,
@@ -2541,6 +2541,8 @@ def blog():
 
 @main.route('/blog/<slug>')
 def blog_post(slug):
+    if not slug or slug.strip().lower() == 'null':
+        return redirect(url_for('main.blog'))
     from services.blog import get_post
     post = get_post(slug)
     if not post:
