@@ -16,7 +16,11 @@
         {% for character in series.characters %}
           <div class="d-flex gap-3 align-items-start border-bottom border-secondary py-3">
             {% if character.reference_image_url %}<img src="{{ character.reference_image_url }}" alt="" width="64" height="64" class="rounded object-fit-cover">{% else %}<div class="rounded bg-dark d-flex align-items-center justify-content-center" style="width:64px;height:64px">🎭</div>{% endif %}
-            <div><div class="text-white fw-semibold">{{ character.name }}</div><div class="small text-secondary">{{ character.role }}</div><div class="small text-secondary">{{ character.signature_clothing or character.physical_appearance or 'Appearance not defined' }}</div></div>
+            <div><div class="text-white fw-semibold">{{ character.name }}</div><div class="small text-secondary">{{ character.role }}</div><div class="small text-secondary">{{ character.signature_clothing or character.physical_appearance or 'Appearance not defined' }}</div>
+            <form method="post" action="{{ url_for('drama_studio.generate_character_portrait_view', series_id=series.id, character_id=character.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-sm btn-surface mt-2" type="submit">{% if character.reference_image_url %}Regenerate portrait{% else %}Generate portrait{% endif %}</button>
+            </form></div>
           </div>
         {% else %}<p class="small text-secondary">No recurring characters yet.</p>{% endfor %}
         <hr class="border-secondary">
