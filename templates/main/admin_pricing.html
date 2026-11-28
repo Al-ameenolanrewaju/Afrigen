@@ -7,7 +7,24 @@
         {% for key, value in pricing.items() %}<div class="col-md-6"><label class="text-white">{{ key.replace('_', ' ')|title }}</label><input class="form-control" type="number" step="0.1" min="0.1" name="{{ key }}" value="{{ value }}" required></div>{% endfor %}
         <div class="col-12"><button class="btn-admin" type="submit">Save pricing</button></div>
     </form>
-    <p class="text-secondary small mt-2 mb-0">These controls change generation credit deductions, not Creator, Studio or Director subscription prices. Costs must be positive; fixed per-generation costs must be whole credits.</p>
+    <p class="text-secondary small mt-2 mb-0">The generation controls below change credit deductions only. Subscription prices are managed in the section above.</p>
+    <hr class="border-secondary">
+    <h5 class="admin-chart-title mb-2">Subscription Prices (NGN)</h5>
+    <p class="text-secondary small">Set the monthly and annual prices customers see on the upgrade page and pay at Paystack checkout. Values are in Naira, stored internally as kobo.</p>
+    <form method="post" class="row g-3 mb-4">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="pricing_type" value="subscriptions">
+        {% for key, value in subscription_pricing.items() %}
+        <div class="col-md-6">
+            <label class="text-white">{{ key.replace('_kobo', '').replace('_', ' ')|title }}</label>
+            <div class="input-group">
+                <span class="input-group-text">₦</span>
+                <input class="form-control" type="number" step="1" min="1000" max="10000000" name="{{ key }}" value="{{ value }}" required>
+            </div>
+        </div>
+        {% endfor %}
+        <div class="col-12"><button class="btn-admin" type="submit">Save subscription prices</button></div>
+    </form>
     <hr class="border-secondary">
     <h6 class="text-white">Estimated Fal cost per credit</h6>
     <div class="d-flex justify-content-between"><span>Cheap video</span><strong>${{ "{:,.4f}".format(fal_cost_per_credit.cheap_video) }}</strong></div>
