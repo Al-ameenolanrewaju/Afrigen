@@ -7,7 +7,7 @@
         {% for key, value in pricing.items() %}<div class="col-md-6"><label class="text-white">{{ key.replace('_', ' ')|title }}</label><input class="form-control" type="number" step="0.1" min="0.1" name="{{ key }}" value="{{ value }}" required></div>{% endfor %}
         <div class="col-12"><button class="btn-admin" type="submit">Save pricing</button></div>
     </form>
-    <p class="text-secondary small mt-2 mb-0">The generation controls below change credit deductions only. Subscription prices are managed in the section above.</p>
+    <p class="text-secondary small mt-2 mb-0">The generation controls below change credit deductions only. Subscription prices are managed in the section below.</p>
     <hr class="border-secondary">
     <h5 class="admin-chart-title mb-2">Subscription Prices (NGN)</h5>
     <p class="text-secondary small">Set the monthly and annual prices customers see on the upgrade page and pay at Paystack checkout. Values are in Naira, stored internally as kobo.</p>
