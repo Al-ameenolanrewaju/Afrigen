@@ -58,6 +58,15 @@ def generate_screenplay_treatment(project: MovieProject, preserve_existing_cast:
 
     target_seconds = int(project.target_duration or 60)
     target_scene_count = max(4, min(30, (target_seconds + 14) // 15))
+    recurring_cast = list(project.characters) if preserve_existing_cast else []
+    cast_instruction = ""
+    if recurring_cast:
+        cast_names = ", ".join(character.name for character in recurring_cast)
+        cast_instruction = (
+            f"\nRECURRING SERIES CAST: {cast_names}. Use only these established characters; "
+            "do not introduce replacement names or new principal characters. "
+            "Preserve their established identities and relationships.\n"
+        )
     user_prompt = (
         f"Title: {project.title}\n"
         f"Genre: {project.genre}\n"
@@ -67,6 +76,7 @@ def generate_screenplay_treatment(project: MovieProject, preserve_existing_cast:
         f"Create exactly {target_scene_count} numbered scenes. Each scene will be storyboarded into exactly 3 shots of 5 seconds each, "
         f"so the complete film reaches approximately {target_seconds} seconds. Give every scene a distinct dramatic purpose, "
         f"clear character actions and dialogue that can be performed in Nigerian Pidgin.\n"
+        f"{cast_instruction}"
         f"Story Concept / Idea: {project.logline or project.synopsis or 'An ambitious creative narrative set in modern and futuristic Africa.'}"
     )
 
