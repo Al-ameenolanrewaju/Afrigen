@@ -4,6 +4,7 @@
 <div class="admin-chart-container">
     <h5 class="admin-chart-title mb-3">Generation Credit Pricing</h5>
     <form method="post" class="row g-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         {% for key, value in pricing.items() %}<div class="col-md-6"><label class="text-white">{{ key.replace('_', ' ')|title }}</label><input class="form-control" type="number" step="0.1" min="0.1" name="{{ key }}" value="{{ value }}" required></div>{% endfor %}
         <div class="col-12"><button class="btn-admin" type="submit">Save pricing</button></div>
     </form>
