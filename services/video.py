@@ -816,5 +816,9 @@ def _generate_image_huggingface(prompt, aspect_ratio):
             return res
         return {"success": False, "error": customer_error("image")}
     except Exception as exc:
-        print(f"All Hugging Face accounts failed: {exc}")
+        error_text = str(exc).lower()
+        if "402" in error_text or "payment required" in error_text or "pre-paid credits" in error_text:
+            print("Hugging Face Inference Provider credits exhausted; switching directly to Afrigen's Fal fallback.")
+            return _generate_image_fal_free(prompt, aspect_ratio)
+        print(f"All Hugging Face accounts failed: {redact_secrets(str(exc))}")
         return {"success": False, "error": customer_error("image")}
