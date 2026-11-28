@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}AI Drama Studio — Afrigen{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+    <div>
+      <span class="text-warning small fw-semibold text-uppercase">Director workspace</span>
+      <h1 class="h2 text-white fw-bold mb-1">AI Drama Studio</h1>
+      <p class="text-secondary mb-0">Create episodic stories with recurring characters and a consistent visual identity.</p>
+    </div>
+    <div class="card-surface px-3 py-2">
+      <div class="small text-secondary">Monthly episode allowance</div>
+      <div class="h4 text-white mb-0">{{ usage.completed + usage.reserved }} / {{ usage.limit }}</div>
+      <div class="small text-secondary">{{ usage.remaining }} remaining this month</div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-5">
+      <div class="card-surface p-4">
+        <h2 class="h5 text-white mb-3">Create a drama series</h2>
+        <form method="post" action="{{ url_for('drama_studio.create_series_view') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <label class="form-label text-secondary">Series title</label>
+          <input class="form-control mb-3" name="title" maxlength="255" required placeholder="e.g. The Last Promise">
+          <label class="form-label text-secondary">Genre</label>
+          <select class="form-select mb-3" name="genre">
+            <option>Drama</option><option>Family</option><option>Romance</option><option>Comedy</option><option>Thriller</option><option>Historical</option><option>Faith &amp; Society</option>
+          </select>
+          <label class="form-label text-secondary">Series premise</label>
+          <textarea class="form-control mb-3" name="synopsis" rows="3" placeholder="What is the story about?"></textarea>
+          <div class="row g-2">
+            <div class="col-6">
+              <label class="form-label text-secondary">Episode length</label>
+              <select class="form-select" name="episode_duration_seconds"><option value="60">1 minute</option><option value="180">3 minutes</option><option value="300">5 minutes</option></select>
+            </div>
+            <div class="col-6">
+              <label class="form-label text-secondary">Format</label>
+              <select class="form-select" name="aspect_ratio"><option value="9:16">Vertical 9:16</option><option value="16:9">Landscape 16:9</option><option value="1:1">Square 1:1</option></select>
+            </div>
+          </div>
+          <button class="btn btn-gold w-100 mt-3" type="submit">Create series</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="col-lg-7">
+      <h2 class="h5 text-white mb-3">Your series</h2>
+      {% if series %}
+        <div class="row g-3">
+          {% for item in series %}
+          <div class="col-md-6">
+            <a class="card-surface p-3 d-block text-decoration-none h-100" href="{{ url_for('drama_studio.series_workspace', series_id=item.id) }}">
+              <div class="small text-warning text-uppercase mb-2">{{ item.genre }}</div>
+              <h3 class="h5 text-white mb-2">{{ item.title }}</h3>
+              <p class="small text-secondary mb-3">{{ item.synopsis or 'No series premise added yet.' }}</p>
+              <div class="small text-secondary">{{ item.episodes|length }} episodes · {{ item.characters|length }} characters</div>
+            </a>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="card-surface p-4 text-center">
+          <h3 class="h5 text-white">Your first series starts here</h3>
+          <p class="text-secondary mb-0">Create a series, build its character library, then produce episodes one at a time.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
