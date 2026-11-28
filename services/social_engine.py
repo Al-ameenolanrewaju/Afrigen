@@ -43,9 +43,14 @@ def get_or_create_settings(user_id: int) -> SocialAutomationSettings:
             linkedin_enabled=True,
             daily_limit_facebook=1,
             daily_limit_linkedin=1,
-            preferred_posting_hours_json='[8, 17]',
+            preferred_posting_hours_json='[6, 17]',
         )
         db.session.add(settings)
+        db.session.commit()
+    elif settings.preferred_posting_hours_json in (None, '', '[8, 17]'):
+        # Migrate the previous default (09:00 WAT / 08:00 UTC) to 07:00 WAT.
+        # Preserve any explicitly customized posting hours.
+        settings.preferred_posting_hours_json = '[6, 17]'
         db.session.commit()
     return settings
 
@@ -276,8 +281,9 @@ def generate_daily_social_schedule(user_id: int) -> List[SocialPost]:
     created_posts = []
     now = datetime.now(timezone.utc)
 
-    # Preferred posting hours: morning (e.g. 08:00 WAT / 07:00 UTC) and evening (e.g. 17:00 WAT / 16:00 UTC)
-    hours = [8, 17]
+    # Posting times are stored in UTC: 07:00 WAT = 06:00 UTC;
+    # 18:00 WAT = 17:00 UTC.
+    hours = [6, 17]
     if settings.preferred_posting_hours_json:
         try:
             hours = json.loads(settings.preferred_posting_hours_json)
@@ -286,7 +292,7 @@ def generate_daily_social_schedule(user_id: int) -> List[SocialPost]:
 
     # Schedule Facebook Post for morning window
     if settings.facebook_enabled:
-        fb_time = now.replace(hour=hours[0] if hours else 8, minute=0, second=0, microsecond=0)
+        fb_time = now.replace(hour=hours[0] if hours else 6, minute=0, second=0, microsecond=0)
         if fb_time <= now:
             fb_time = now + timedelta(minutes=10)
         fb_post = generate_autonomous_post(user_id=user_id, platform="facebook", scheduled_for=fb_time)
