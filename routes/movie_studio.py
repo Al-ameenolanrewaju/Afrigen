@@ -16,7 +16,7 @@ from services.entitlements import can_access_movie_studio, get_user_entitlements
 from services.movie_studio import (
     generate_screenplay_treatment, generate_character_portrait_asset,
     create_scene_shots_and_storyboards, generate_shot_video_clip,
-    start_movie_render_job
+    start_movie_render_job, generate_scene_pidgin_dialogue, sync_shot_dialogue
 )
 
 movie_studio_bp = Blueprint('movie_studio', __name__, url_prefix='/movie-studio')
@@ -85,7 +85,11 @@ def create_project():
     genre = request.form.get('genre', 'Afrofuturism')
     cinematic_tone = request.form.get('cinematic_tone', 'Moody & Cinematic')
     aspect_ratio = request.form.get('aspect_ratio', '16:9')
-    target_duration = int(request.form.get('target_duration', 60))
+    try:
+        requested_duration = int(request.form.get('target_duration', 60))
+    except (TypeError, ValueError):
+        requested_duration = 60
+    target_duration = requested_duration if requested_duration in {60, 180, 300} else 60
     logline = (request.form.get('logline') or '').strip()
 
     project = MovieProject(
@@ -101,10 +105,17 @@ def create_project():
     db.session.add(project)
     db.session.commit()
 
-    # Generate initial treatment
-    generate_screenplay_treatment(project)
-
-    flash(f"Movie project '{title}' created successfully!", "success")
+    # Generate the initial treatment and report its actual outcome.
+    treatment_ok, treatment_message = generate_screenplay_treatment(project)
+    if treatment_ok:
+        flash(f"Movie project '{title}' created and screenplay generated successfully!", "success")
+    else:
+        db.session.refresh(project)
+        flash(
+            f"Movie project '{title}' was created, but screenplay generation failed: "
+            f"{treatment_message or 'Please retry from the project workspace.'}",
+            "warning",
+        )
     return redirect(url_for('movie_studio.project_workspace', project_id=project.id))
 
 
@@ -166,6 +177,28 @@ def generate_character_portrait(project_id, char_id):
     })
 
 
+@movie_studio_bp.route('/projects/<int:project_id>/characters/<int:char_id>/update', methods=['POST'])
+@login_required
+def update_character(project_id, char_id):
+    if not can_access_movie_studio(current_user):
+        return jsonify({"success": False, "error": "Unauthorized"}), 403
+
+    project = db.session.get(MovieProject, project_id)
+    character = db.session.get(MovieCharacter, char_id)
+    if not project or project.user_id != current_user.id:
+        return jsonify({"success": False, "error": "Not found"}), 404
+    if not character or character.project_id != project.id:
+        return jsonify({"success": False, "error": "Character not found"}), 404
+
+    character.physical_appearance = (request.form.get("physical_appearance") or "").strip()[:3000]
+    character.clothing = (request.form.get("clothing") or "").strip()[:1500]
+    voice = (request.form.get("voice_attributes") or "").strip()
+    allowed_voices = {"en-NG-AbeoNeural", "en-NG-EzinneNeural"}
+    character.voice_attributes = voice if voice in allowed_voices else None
+    db.session.commit()
+    return jsonify({"success": True, "message": "Character continuity settings saved."})
+
+
 @movie_studio_bp.route('/projects/<int:project_id>/scenes/<int:scene_id>/storyboard', methods=['POST'])
 @login_required
 def generate_storyboards(project_id, scene_id):
@@ -183,6 +216,63 @@ def generate_storyboards(project_id, scene_id):
 
     ok, msg = create_scene_shots_and_storyboards(scene_id)
     return jsonify({"success": ok, "message": msg})
+
+
+@movie_studio_bp.route('/projects/<int:project_id>/scenes/<int:scene_id>/dialogue', methods=['POST'])
+@login_required
+def generate_scene_dialogue(project_id, scene_id):
+    if not can_access_movie_studio(current_user):
+        return jsonify({"success": False, "error": "Unauthorized"}), 403
+    project = db.session.get(MovieProject, project_id)
+    scene = db.session.get(MovieScene, scene_id)
+    if not project or project.user_id != current_user.id:
+        return jsonify({"success": False, "error": "Not found"}), 404
+    if not scene or scene.project_id != project.id:
+        return jsonify({"success": False, "error": "Scene not found"}), 404
+    ok, message, tracks = generate_scene_pidgin_dialogue(scene_id)
+    if not ok:
+        return jsonify({"success": False, "message": message, "tracks": []}), 400
+
+    synced_count = 0
+    pending_count = 0
+    for item in tracks:
+        shot = db.session.get(MovieShot, item["shot_id"])
+        if shot and shot.status == "completed" and shot.video_url:
+            synced, sync_result = sync_shot_dialogue(shot.id)
+            if synced:
+                synced_count += 1
+            else:
+                pending_count += 1
+                logger.warning("Dialogue saved but auto lip-sync is pending for shot %s: %s", shot.id, sync_result)
+        else:
+            pending_count += 1
+
+    return jsonify({
+        "success": True,
+        "message": f"{message} {synced_count} completed shot(s) lip-synced automatically.",
+        "tracks": tracks,
+        "synced_count": synced_count,
+        "pending_count": pending_count,
+    })
+
+
+@movie_studio_bp.route('/projects/<int:project_id>/shots/<int:shot_id>/lip-sync', methods=['POST'])
+@login_required
+def lip_sync_shot(project_id, shot_id):
+    if not can_access_movie_studio(current_user):
+        return jsonify({"success": False, "error": "Unauthorized"}), 403
+    project = db.session.get(MovieProject, project_id)
+    shot = db.session.get(MovieShot, shot_id)
+    if not project or project.user_id != current_user.id:
+        return jsonify({"success": False, "error": "Not found"}), 404
+    if not shot or shot.project_id != project.id:
+        return jsonify({"success": False, "error": "Shot not found"}), 404
+    ok, url_or_error = sync_shot_dialogue(shot_id)
+    return jsonify({
+        "success": ok,
+        "video_url": url_for('movie_studio.movie_media', asset_type='shot-video', asset_id=shot_id) if ok else None,
+        "error": None if ok else url_or_error,
+    })
 
 
 @movie_studio_bp.route('/projects/<int:project_id>/shots/<int:shot_id>/generate', methods=['POST'])
