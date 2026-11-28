@@ -8,6 +8,7 @@ from services.drama_studio import (
     create_series, create_episode, add_series_character,
     add_character_to_episode, assign_character_to_shot, monthly_usage_summary,
     generate_series_character_portrait,
+    generate_series_character_portrait,
 )
 
 drama_studio_bp = Blueprint("drama_studio", __name__, url_prefix="/drama-studio")
