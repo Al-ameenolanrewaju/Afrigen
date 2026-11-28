@@ -130,9 +130,12 @@ def project_workspace(project_id):
         flash("Movie project not found or unauthorized.", "danger")
         return redirect(url_for('movie_studio.index'))
 
+    from models import DramaEpisode
+    drama_episode = DramaEpisode.query.filter_by(movie_project_id=project.id).first()
     return render_template(
         'main/movie_studio/project.html',
         project=project,
+        drama_episode=drama_episode,
         entitlements=get_user_entitlements(current_user)
     )
 
