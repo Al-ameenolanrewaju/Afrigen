@@ -1,15 +1,16 @@
 {% extends "admin_base.html" %}
 
 {% block title %}Content Distribution — Afrigen Admin{% endblock %}
-{% block meta_description %}Distribute blog posts to Telegram, LinkedIn, Dev.to, and Hashnode.{% endblock %}
+{% block meta_description %}Distribute published blog posts to Telegram, LinkedIn, Dev.to, and Facebook.{% endblock %}
 
 {% block content %}
+<meta name="csrf-token" content="{{ csrf_token() }}">
 
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
     <div>
         <h1 style="color: #F5A623; font-weight: 700; margin: 0; font-size: 1.6rem;">📡 Content Distribution</h1>
         <p style="color: #888; margin: 0;">
-            Push published blog posts to all platforms. Each platform runs independently — one failure won't stop the others.
+            Push published blog posts to Telegram, LinkedIn, Dev.to, and Facebook. Each destination runs independently; failed destinations can be retried.
         </p>
     </div>
     <div class="d-flex gap-2">
@@ -143,8 +144,7 @@
             <div class="d-flex align-items-center gap-2">
                 {% set icons = {
                     'telegram': '📢', 'linkedin': '💼', 'devto': '👩‍💻',
-                    'hashnode': '📝', 'pinterest': '📌', 'google_indexing': '🔍',
-                    'twitter': '🐦', 'facebook': '📘', 'instagram': '📸', 'medium': '✍️'
+                    'facebook': '📘', 'google_indexing': '🔍'
                 } %}
                 <span style="font-size: 18px;">{{ icons.get(r.platform, '📡') }}</span>
                 <span style="color: #C9D1D9; font-weight: 600;">{{ r.platform | replace('_', ' ') | title }}</span>
@@ -166,12 +166,12 @@
                       title="{{ r.error }}">
                     ❌ {{ r.error[:80] }}
                 </span>
+                {% if r.platform in ['telegram', 'linkedin', 'devto', 'facebook'] and run.status != 'running' %}
                 <button class="btn btn-outline-warning btn-sm retry-btn"
                         style="padding: 2px 10px; font-size: 12px;"
                         data-run-id="{{ run.id }}"
-                        data-platform="{{ r.platform }}">
-                    🔄 Retry
-                </button>
+                        data-platform="{{ r.platform }}">🔄 Retry</button>
+                {% endif %}
                 {% else %}
                 <span style="color: #888; font-size: 12px;">—</span>
                 {% endif %}
@@ -218,14 +218,14 @@
 document.querySelectorAll('.distribute-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
         const postId = btn.dataset.postId;
-        const postTitle = btn.dataset.postTitle;
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
         btn.disabled = true;
         btn.innerHTML = '⏳ Starting...';
 
         try {
             const resp = await fetch(
                 `/admin/distribution/trigger/${postId}`,
-                { method: 'POST', headers: { 'Content-Type': 'application/json' } }
+                { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken } }
             );
             const data = await resp.json();
             if (data.ok) {
@@ -252,6 +252,7 @@ document.querySelectorAll('.retry-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
         const runId = btn.dataset.runId;
         const platform = btn.dataset.platform;
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
         btn.disabled = true;
         btn.innerHTML = '⏳';
 
