@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}{{ series.title }} — AI Drama Studio{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="mb-4">
+    <a href="{{ url_for('drama_studio.index') }}" class="small text-secondary text-decoration-none">← All series</a>
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mt-2">
+      <div><div class="small text-warning text-uppercase">{{ series.genre }}</div><h1 class="h2 text-white fw-bold">{{ series.title }}</h1><p class="text-secondary">{{ series.synopsis or 'Series premise not set.' }}</p></div>
+      <div class="card-surface p-3"><div class="small text-secondary">Monthly episodes</div><div class="h4 text-white mb-0">{{ usage.completed + usage.reserved }} / {{ usage.limit }}</div><div class="small text-secondary">{{ usage.remaining }} remaining</div></div>
+    </div>
+  </div>
+  <div class="row g-4">
+    <div class="col-lg-5">
+      <div class="card-surface p-4 mb-4">
+        <h2 class="h5 text-white mb-3">Series character library</h2>
+        {% for character in series.characters %}
+          <div class="d-flex gap-3 align-items-start border-bottom border-secondary py-3">
+            {% if character.reference_image_url %}<img src="{{ character.reference_image_url }}" alt="" width="64" height="64" class="rounded object-fit-cover">{% else %}<div class="rounded bg-dark d-flex align-items-center justify-content-center" style="width:64px;height:64px">🎭</div>{% endif %}
+            <div><div class="text-white fw-semibold">{{ character.name }}</div><div class="small text-secondary">{{ character.role }}</div><div class="small text-secondary">{{ character.signature_clothing or character.physical_appearance or 'Appearance not defined' }}</div></div>
+          </div>
+        {% else %}<p class="small text-secondary">No recurring characters yet.</p>{% endfor %}
+        <hr class="border-secondary">
+        <form method="post" action="{{ url_for('drama_studio.add_character_view', series_id=series.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <h3 class="h6 text-white">Add recurring character</h3>
+          <input class="form-control mb-2" name="name" required maxlength="120" placeholder="Character name">
+          <select class="form-select mb-2" name="role"><option>Protagonist</option><option>Antagonist</option><option>Supporting</option><option>Narrator</option></select>
+          <textarea class="form-control mb-2" name="physical_appearance" rows="2" placeholder="Face, age, skin tone, hairstyle and build"></textarea>
+          <textarea class="form-control mb-2" name="signature_clothing" rows="2" placeholder="Signature clothing and accessories"></textarea>
+          <select class="form-select mb-2" name="voice_id"><option value="">Choose voice later</option><option value="en-NG-AbeoNeural">Nigerian English — Male</option><option value="en-NG-EzinneNeural">Nigerian English — Female</option></select>
+          <button class="btn btn-surface w-100" type="submit">Save character</button>
+        </form>
+      </div>
+    </div>
+    <div class="col-lg-7">
+      <div class="card-surface p-4 mb-4">
+        <h2 class="h5 text-white mb-3">Create next episode</h2>
+        <form method="post" action="{{ url_for('drama_studio.create_episode_view', series_id=series.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input class="form-control mb-2" name="title" placeholder="Episode title (optional)">
+          <textarea class="form-control mb-3" name="logline" rows="2" placeholder="What happens in this episode?"></textarea>
+          <button class="btn btn-gold w-100" type="submit">Create episode workspace</button>
+        </form>
+        <p class="small text-secondary mt-2 mb-0">A new episode reuses this series' character profiles. Screenplay, storyboard, video and final mastering continue in the existing Movie Studio workspace.</p>
+      </div>
+      <h2 class="h5 text-white mb-3">Episodes</h2>
+      {% for episode in series.episodes %}
+      <div class="card-surface p-3 mb-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div><div class="small text-warning">EPISODE {{ episode.episode_number }}</div><div class="text-white fw-semibold">{{ episode.title }}</div><div class="small text-secondary">{{ episode.status|title }} · {{ episode.target_duration_seconds }} seconds</div></div>
+        {% if episode.movie_project_id %}<a class="btn btn-sm btn-surface" href="{{ url_for('movie_studio.project_workspace', project_id=episode.movie_project_id) }}">Open production</a>{% endif %}
+      </div>
+      {% else %}<div class="card-surface p-4 text-center text-secondary">No episodes yet. Create the first episode above.</div>{% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}
