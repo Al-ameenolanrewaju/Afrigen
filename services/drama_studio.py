@@ -9,6 +9,7 @@ from models import (
     DramaShotCharacter, DramaMonthlyUsage, DramaProductionJob, DramaUsageLedger,
 )
 from services.entitlements import can_access_movie_studio, is_admin
+from services.video import generate_image
 
 DIRECTOR_MONTHLY_EPISODE_LIMIT = 30
 ALLOWED_VOICES = {"en-NG-AbeoNeural", "en-NG-EzinneNeural"}
@@ -205,7 +206,7 @@ def assign_character_to_shot(user, episode_id, shot_id, episode_character_id):
 
 def finalize_episode_quota(episode_id, success):
     """Finalize a reserved slot once; duplicate worker callbacks are harmless."""
-    episode = db.session.get(DramaEpisode, episode_id)
+    episode = DramaEpisode.query.filter_by(id=episode_id).with_for_update().first()
     if not episode or episode.quota_status != "reserved" or not episode.quota_period_start:
         return False
     usage = DramaMonthlyUsage.query.filter_by(
@@ -231,6 +232,43 @@ def finalize_episode_quota(episode_id, success):
         ))
     db.session.commit()
     return True
+
+
+
+
+def generate_series_character_portrait(user, series_id, character_id):
+    """Generate the canonical portrait and propagate it to episode-local cast copies."""
+    series = db.session.get(DramaSeries, series_id)
+    if not _owns_series(user, series):
+        return False, "Series not found."
+    character = db.session.get(DramaCharacter, character_id)
+    if not character or character.series_id != series.id:
+        return False, "Character not found."
+    prompt = (
+        f"Cinematic photorealistic character reference portrait of {character.name}, "
+        f"an African {character.role.lower()}. "
+        f"{character.physical_appearance or character.description or 'Distinct, natural facial features'}. "
+        f"Signature clothing: {character.signature_clothing or 'Create a culturally appropriate outfit and keep it consistent'}. "
+        f"Visual style: {series.visual_style}. Neutral background, clear face, consistent identity reference, "
+        "front-facing medium close-up, natural cinematic lighting."
+    )
+    try:
+        result = generate_image(
+            prompt, style="realistic", aspect_ratio="1:1",
+            provider="fal", allow_fal=True,
+        )
+        if not result or not result.get("success") or not result.get("image_url"):
+            return False, (result or {}).get("error", "Character portrait generation failed.")
+        character.reference_image_url = result["image_url"]
+        links = DramaEpisodeCharacter.query.filter_by(character_id=character.id).all()
+        for link in links:
+            if link.movie_character:
+                link.movie_character.reference_image_url = result["image_url"]
+        db.session.commit()
+        return True, result["image_url"]
+    except Exception:
+        db.session.rollback()
+        raise
 
 
 def monthly_usage_summary(user_id, period_start=None):
