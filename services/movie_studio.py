@@ -24,7 +24,10 @@ from models import (
 from services.provider_manager import provider_manager
 from services.video import generate_image, generate_video, generate_video_from_image
 from services.ai_products import customer_error, redact_secrets
-from services.audio import generate_voiceover
+from services.audio import generate_voiceover, generate_speech_audio
+from services.credits import video_gate, deduct_credits_atomic, refund_video
+from services.entitlements import is_admin
+import fal_client
 
 logger = logging.getLogger(__name__)
 
@@ -52,12 +55,17 @@ def generate_screenplay_treatment(project: MovieProject):
         "}"
     )
 
+    target_seconds = int(project.target_duration or 60)
+    target_scene_count = max(4, min(30, (target_seconds + 14) // 15))
     user_prompt = (
         f"Title: {project.title}\n"
         f"Genre: {project.genre}\n"
         f"Cinematic Tone: {project.cinematic_tone}\n"
         f"Visual Style: {project.visual_style}\n"
-        f"Desired Duration: {project.target_duration} seconds\n"
+        f"Target film duration: {target_seconds} seconds.\n"
+        f"Create exactly {target_scene_count} numbered scenes. Each scene will be storyboarded into exactly 3 shots of 5 seconds each, "
+        f"so the complete film reaches approximately {target_seconds} seconds. Give every scene a distinct dramatic purpose, "
+        f"clear character actions and dialogue that can be performed in Nigerian Pidgin.\n"
         f"Story Concept / Idea: {project.logline or project.synopsis or 'An ambitious creative narrative set in modern and futuristic Africa.'}"
     )
 
@@ -68,7 +76,7 @@ def generate_screenplay_treatment(project: MovieProject):
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ],
-            max_tokens=2200
+            max_tokens=8000
         )
         
         # Clean JSON from response
@@ -79,7 +87,13 @@ def generate_screenplay_treatment(project: MovieProject):
             clean = clean.split("```")[1].split("```")[0].strip()
 
         data = json.loads(clean)
-        
+        generated_scenes = data.get("scenes", [])
+        if len(generated_scenes) != target_scene_count:
+            return False, (
+                f"The screenplay generator returned {len(generated_scenes)} scenes; "
+                f"{target_scene_count} are required for this {target_seconds}-second film. Please retry."
+            )
+
         # Persist to project
         if data.get("logline"):
             project.logline = data["logline"]
@@ -168,16 +182,25 @@ def create_scene_shots_and_storyboards(scene_id: int):
         return False, "Scene not found"
 
     project = scene.project
+    if scene.shots:
+        return True, f"Scene {scene.scene_number} already has {len(scene.shots)} storyboard shot(s)."
     system_prompt = (
         "You are an expert storyboard artist and cinematographer. "
-        "Breakdown the screenplay scene into 2 to 3 cinematic shots.\n"
+        "Breakdown this scene into exactly 3 cinematic shots of 5 seconds each. Mention exact character names in every shot where they appear. Preserve approved appearance and clothing. Include a clear close-up or medium close-up for any speaking character so dialogue can be lip-synced.\n"
         "Return ONLY JSON matching:\n"
         "[\n"
         '  {"shot_number": 1, "camera_angle": "Wide Shot", "camera_movement": "Slow Tracking", "lighting": "Golden Hour", "visual_prompt": "Detailed description of what is visible on screen."}\n'
         "]"
     )
 
-    user_content = f"Slugline: {scene.slugline}\nDescription: {scene.description}\nScript: {scene.screenplay_text}"
+    cast_notes = "\n".join(
+        f"- {char.name}: {char.physical_appearance or char.description or 'appearance not specified'}; clothing: {char.clothing or 'preserve the approved reference outfit'}"
+        for char in project.characters
+    )
+    user_content = (
+        f"Slugline: {scene.slugline}\nDescription: {scene.description}\nScript: {scene.screenplay_text}\n"
+        f"CAST REFERENCES (use exact names in visual_prompt whenever visible):\n{cast_notes}"
+    )
 
     try:
         raw = provider_manager.generate_text(
@@ -195,6 +218,8 @@ def create_scene_shots_and_storyboards(scene_id: int):
             clean = clean.split("```")[1].split("```")[0].strip()
 
         shot_list = json.loads(clean)
+        if not isinstance(shot_list, list) or len(shot_list) != 3:
+            raise ValueError("Storyboard breakdown must return exactly three shots.")
         for i, s in enumerate(shot_list, 1):
             shot = MovieShot(
                 scene_id=scene.id,
@@ -234,57 +259,296 @@ def create_scene_shots_and_storyboards(scene_id: int):
 # 4. Shot Video Generator
 # ---------------------------------------------------------------------
 
+def _character_references_for_shot(shot):
+    """Return approved character portraits explicitly present in this shot."""
+    project = shot.project
+    context = " ".join([
+        shot.visual_prompt or "",
+        getattr(shot.scene, "description", "") or "",
+        getattr(shot.scene, "screenplay_text", "") or "",
+    ]).casefold()
+    matches = [
+        character for character in project.characters
+        if character.reference_image_url and character.name.casefold() in context
+    ]
+    return matches[:3]
+
+
+def _build_character_consistency_prompt(shot, characters):
+    """Build Kling element references and continuity instructions for a shot."""
+    elements = []
+    continuity = []
+    for index, character in enumerate(characters, 1):
+        elements.append({"frontal_image_url": character.reference_image_url})
+        appearance = character.physical_appearance or character.description or "match the approved portrait"
+        clothing = character.clothing or "keep the clothing shown in the approved reference"
+        continuity.append(
+            f"@Element{index} is {character.name}. Preserve this exact person's facial identity, "
+            f"skin tone, age appearance, hairstyle and body proportions. Appearance: {appearance}. "
+            f"Clothing continuity: {clothing}. Do not redesign or substitute this character."
+        )
+    return elements, " ".join(continuity)
+
+
+def _generate_reference_guided_shot(shot, prompt, characters):
+    """Generate a shot using Kling V3 image-to-video with character elements."""
+    elements, continuity = _build_character_consistency_prompt(shot, characters)
+    start_image = shot.reference_image_url or (
+        characters[0].reference_image_url if characters else None
+    )
+    if not start_image:
+        return None
+
+    duration = str(shot.duration or "5")
+    if duration not in {str(value) for value in range(3, 16)}:
+        duration = "5"
+
+    arguments = {
+        "start_image_url": start_image,
+        "prompt": f"{prompt} {continuity}".strip(),
+        "duration": duration,
+        "generate_audio": False,
+        "negative_prompt": (
+            "different person, changed face, changed hairstyle, changed clothing, "
+            "inconsistent character, face distortion, extra limbs, blurry, low quality"
+        ),
+    }
+    if elements:
+        arguments["elements"] = elements
+
+    result = fal_client.subscribe(
+        "fal-ai/kling-video/v3/pro/image-to-video",
+        arguments=arguments,
+    )
+    video = (result or {}).get("video") or {}
+    return video.get("url")
+
+
+def generate_scene_pidgin_dialogue(scene_id: int):
+    """Create a Nigerian Pidgin dialogue read for each storyboard shot."""
+    scene = db.session.get(MovieScene, scene_id)
+    if not scene:
+        return False, "Scene not found", []
+    project = scene.project
+    if not scene.screenplay_text or not scene.screenplay_text.strip():
+        return False, "This scene has no screenplay dialogue yet.", []
+    cast = list(project.characters)
+    if not cast:
+        return False, "Add characters before generating dialogue.", []
+
+    cast_text = "\n".join(
+        f"- {character.name}: role={character.role}; voice={character.voice_attributes or 'en-NG-AbeoNeural'}"
+        for character in cast
+    )
+    shot_text = "\n".join(
+        f"- Shot {shot.shot_number}: {shot.visual_prompt}" for shot in scene.shots
+    )
+    try:
+        raw = provider_manager.generate_text(
+            task_type="Movie Studio Pidgin Dialogue",
+            messages=[
+                {"role": "system", "content": (
+                    "You are a Nigerian screenwriter fluent in natural Nigerian Pidgin. "
+                    "Adapt screenplay dialogue into expressive conversational Nigerian Pidgin, preserving intent. "
+                    "Return only a JSON array of objects: shot_number (integer), character (exact cast name), "
+                    "line (8 to 24 spoken words). One speaker per shot. Only include shots with spoken dialogue. "
+                    "Do not invent characters, narration or stage directions."
+                )},
+                {"role": "user", "content": (
+                    f"Scene {scene.scene_number}: {scene.slugline}\nScreenplay:\n{scene.screenplay_text}\n"
+                    f"Cast:\n{cast_text}\nStoryboard:\n{shot_text}"
+                )},
+            ],
+            max_tokens=1200,
+        )
+        clean_dialogue = (raw or "").strip()
+        if clean_dialogue.startswith(chr(96) * 3):
+            clean_dialogue = clean_dialogue.removeprefix(chr(96) * 3 + "json").removesuffix(chr(96) * 3).strip()
+        dialogue_rows = json.loads(clean_dialogue)
+        if not isinstance(dialogue_rows, list):
+            raise ValueError("Dialogue response must be a JSON array")
+
+        character_by_name = {character.name.casefold(): character for character in cast}
+        shot_by_number = {shot.shot_number: shot for shot in scene.shots}
+        created = []
+        for row in dialogue_rows:
+            character = character_by_name.get(str(row.get("character", "")).strip().casefold())
+            shot = shot_by_number.get(int(row.get("shot_number", 0)))
+            line = str(row.get("line", "")).strip()
+            if not character or not shot or not line:
+                continue
+            voice = character.voice_attributes or "en-NG-AbeoNeural"
+            audio_url = generate_speech_audio(line, voice=voice)
+            if not audio_url:
+                raise RuntimeError(f"Could not synthesize dialogue for {character.name}")
+            title = f"Dialogue · Scene {scene.scene_number} · Shot {shot.shot_number} · {character.name}"
+            track = MovieAudioTrack.query.filter_by(
+                project_id=project.id, track_type="dialogue", title=title
+            ).first()
+            if track is None:
+                track = MovieAudioTrack(
+                    project_id=project.id, track_type="dialogue", title=title,
+                    audio_url=audio_url, script_text=line, voice_id=voice,
+                    start_time=0.0, duration=0.0,
+                )
+                db.session.add(track)
+            else:
+                track.audio_url = audio_url
+                track.script_text = line
+                track.voice_id = voice
+            created.append({"shot_id": shot.id, "shot_number": shot.shot_number,
+                            "character": character.name, "line": line})
+        db.session.commit()
+        if not created:
+            return False, "No valid dialogue lines were returned for this scene.", []
+        return True, f"Generated {len(created)} Nigerian Pidgin dialogue track(s).", created
+    except Exception as exc:
+        db.session.rollback()
+        logger.error("Pidgin dialogue generation failed: %s", redact_secrets(str(exc)))
+        return False, customer_error("audio"), []
+
+
+def sync_shot_dialogue(shot_id: int):
+    """Lip-sync a completed shot to its saved character dialogue and charge by duration."""
+    shot = db.session.get(MovieShot, shot_id)
+    if not shot:
+        return False, "Shot not found"
+    if not shot.video_url or shot.status != "completed":
+        return False, "Generate the shot video before applying lip-sync."
+    duration = int(float(shot.duration or 5))
+    if duration < 2 or duration > 10:
+        return False, "Kling LipSync supports clips between 2 and 10 seconds."
+    scene = shot.scene
+    project = shot.project
+    title_prefix = f"Dialogue · Scene {scene.scene_number} · Shot {shot.shot_number} · "
+    track = MovieAudioTrack.query.filter(
+        MovieAudioTrack.project_id == project.id,
+        MovieAudioTrack.track_type == "dialogue",
+        MovieAudioTrack.title.like(f"{title_prefix}%"),
+    ).first()
+    if not track or not track.audio_url:
+        return False, "Generate this scene's Pidgin dialogue first."
+
+    cost = max(5, ((duration + 4) // 5) * 5)
+    user = project.user
+    charged = False
+    if not is_admin(user):
+        charged, error = deduct_credits_atomic(
+            user.id, cost, f"Movie Studio lip-sync · Scene {scene.scene_number}, Shot {shot.shot_number}"
+        )
+        if not charged:
+            return False, f"Lip-sync costs {cost} credits for this {duration}-second shot. {error or 'Add credits and try again.'}"
+        db.session.commit()
+    try:
+        result = fal_client.subscribe(
+            "fal-ai/kling-video/lipsync/audio-to-video",
+            arguments={"video_url": shot.video_url, "audio_url": track.audio_url},
+        )
+        synced_url = ((result or {}).get("video") or {}).get("url")
+        if not synced_url:
+            raise RuntimeError("Lip-sync provider returned no video URL")
+        shot.video_url = synced_url
+        db.session.commit()
+        return True, synced_url
+    except Exception as exc:
+        if charged:
+            refund_video(user, cost, f"Refund Movie Studio lip-sync · Shot {shot.shot_number}")
+        db.session.commit()
+        logger.error("Movie shot lip-sync failed: %s", redact_secrets(str(exc)))
+        return False, customer_error("video")
+
+
 def generate_shot_video_clip(shot_id: int):
-    """Render the cinematic video clip for a specific shot using Kling Pro."""
+    """Generate a Movie Studio shot, using approved character references when available."""
     shot = db.session.get(MovieShot, shot_id)
     if not shot:
         return False, "Shot not found"
 
     project = shot.project
+    user = project.user
+    duration = str(shot.duration or "5")
     full_prompt = (
         f"{shot.visual_prompt}. Camera: {shot.camera_angle}, {shot.camera_movement}. "
         f"Lighting: {shot.lighting}. Style: {project.visual_style}, cinematic composition."
     )
+    characters = _character_references_for_shot(shot)
+    cost = 0
+    charged = False
+    admin_bypass = is_admin(user)
+
+    if not admin_bypass:
+        allowed, error, cost = video_gate(
+            user, "movie", extended=True, duration=duration
+        )
+        if not allowed:
+            return False, error
+        if cost > 0:
+            charged, charge_error = deduct_credits_atomic(
+                user.id, cost, f"Movie Studio shot {shot.id} generation"
+            )
+            if not charged:
+                return False, charge_error or "Not enough credits."
+            db.session.commit()
 
     shot.status = "generating"
+    shot.error_message = None
     db.session.commit()
 
     try:
-        # Use movie style which routes to Kling Pro in services/video.py
-        res = generate_video(
-            full_prompt,
-            style="movie",
-            aspect_ratio=project.aspect_ratio or "16:9",
-            extended=True,
-            duration=str(shot.duration or "5"),
-            allow_fal=True
-        )
-
-        if res and res.get("success") and res.get("video_url"):
-            shot.video_url = res["video_url"]
-            shot.status = "completed"
-            from services.generation_notifications import create_media_ready_notification
-            create_media_ready_notification(
-                project.user_id,
-                "video",
-                f"/movie-studio/projects/{project.id}#shots",
-                title="Your video clip is ready",
-                message=f"Shot {shot.shot_number} has been generated.",
+        video_url = None
+        if characters or shot.reference_image_url:
+            video_url = _generate_reference_guided_shot(
+                shot, full_prompt, characters
             )
-            db.session.commit()
-            return True, shot.video_url
-        else:
-            shot.status = "failed"
-            shot.error_message = customer_error("video")
-            db.session.commit()
-            return False, customer_error("video")
+
+        # Environment-only shots keep the established text-to-video path.
+        if not video_url:
+            res = generate_video(
+                full_prompt,
+                style="movie",
+                aspect_ratio=project.aspect_ratio or "16:9",
+                extended=True,
+                duration=duration,
+                allow_fal=True,
+            )
+            if res and res.get("success"):
+                video_url = res.get("video_url")
+
+        if not video_url:
+            raise RuntimeError("Video provider returned no output URL")
+
+        shot.video_url = video_url
+        shot.status = "completed"
+        from services.generation_notifications import create_media_ready_notification
+        create_media_ready_notification(
+            project.user_id,
+            "video",
+            f"/movie-studio/projects/{project.id}#shots",
+            title="Your video clip is ready",
+            message=f"Shot {shot.shot_number} has been generated.",
+        )
+        db.session.commit()
+
+        # If dialogue was prepared before this clip finished, synchronize it now.
+        dialogue_prefix = f"Dialogue · Scene {shot.scene.scene_number} · Shot {shot.shot_number} · "
+        pending_dialogue = MovieAudioTrack.query.filter(
+            MovieAudioTrack.project_id == project.id,
+            MovieAudioTrack.track_type == "dialogue",
+            MovieAudioTrack.title.like(f"{dialogue_prefix}%"),
+        ).first()
+        if pending_dialogue:
+            synced, sync_result = sync_shot_dialogue(shot.id)
+            if not synced:
+                logger.warning("Automatic dialogue sync skipped for shot %s: %s", shot.id, sync_result)
+        return True, shot.video_url
     except Exception as exc:
         shot.status = "failed"
         shot.error_message = customer_error("video")
+        if charged:
+            refund_video(user, cost, f"Refund failed Movie Studio shot {shot.id}")
         db.session.commit()
         logger.error("Movie shot generation failed: %s", redact_secrets(str(exc)))
         return False, customer_error("video")
-
 
 # ---------------------------------------------------------------------
 # 5. Master Movie Timeline Renderer (FFmpeg Background Pipeline)
@@ -292,6 +556,34 @@ def generate_shot_video_clip(shot_id: int):
 
 def start_movie_render_job(project_id: int, user_id: int, app_instance=None):
     """Queue and execute the background FFmpeg concatenation and mastering job."""
+    project = db.session.get(MovieProject, project_id)
+    if not project or project.user_id != user_id:
+        return False, "Movie project not found."
+
+    target_seconds = int(project.target_duration or 60)
+    planned_shots = (
+        MovieShot.query.filter_by(project_id=project.id)
+        .order_by(MovieShot.scene_id.asc(), MovieShot.order.asc())
+        .all()
+    )
+    planned_seconds = sum(float(shot.duration or 5) for shot in planned_shots)
+    completed_shots = [
+        shot for shot in planned_shots
+        if shot.status == "completed" and shot.video_url
+    ]
+    completed_seconds = sum(float(shot.duration or 5) for shot in completed_shots)
+
+    if planned_seconds < target_seconds:
+        return False, (
+            f"Your storyboard currently covers {planned_seconds:.0f} of {target_seconds} seconds. "
+            "Create storyboard shots for the remaining scenes before mastering the film."
+        )
+    if len(completed_shots) != len(planned_shots) or completed_seconds < target_seconds:
+        return False, (
+            f"Only {completed_seconds:.0f} of {target_seconds} seconds of planned footage is ready. "
+            "Generate every storyboard shot before mastering the film."
+        )
+
     app = app_instance or current_app._get_current_object()
 
     render_job = MovieRenderJob(
