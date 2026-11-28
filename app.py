@@ -225,6 +225,8 @@ def ensure_legacy_schema_columns():
                 Notification, NewsletterCampaign, MovieProject, MovieCharacter,
                 MovieScene, MovieShot, StoryboardFrame, MovieAudioTrack,
                 MovieTimeline, MovieRenderJob,
+                DramaSeries, DramaCharacter, DramaEpisode, DramaEpisodeCharacter,
+                DramaShotCharacter, DramaMonthlyUsage, DramaProductionJob, DramaUsageLedger,
                 SocialCampaign, SocialPost, SocialMediaAsset, SocialPublishingJob,
                 SocialAnalytics, SocialAutomationSettings, AIContentHistory
             )
@@ -235,6 +237,8 @@ def ensure_legacy_schema_columns():
             for movie_table in (
                 MovieProject, MovieCharacter, MovieScene, MovieShot,
                 StoryboardFrame, MovieAudioTrack, MovieTimeline, MovieRenderJob,
+                DramaSeries, DramaCharacter, DramaEpisode, DramaEpisodeCharacter,
+                DramaShotCharacter, DramaMonthlyUsage, DramaProductionJob, DramaUsageLedger,
                 SocialCampaign, SocialPost, SocialMediaAsset, SocialPublishingJob,
                 SocialAnalytics, SocialAutomationSettings, AIContentHistory
             ):
