@@ -606,7 +606,7 @@ def test_huggingface_video_generation_workflow():
         mock_resp.content = dummy_mp4
         mock_resp.headers = {"content-type": "video/mp4"}
 
-        with patch("services.social_creative_hf._get_hf_token", return_value="hf_mock_token_12345"), \
+        with patch.dict("os.environ", {"HF_TOKEN": "hf_mock_token_12345"}), \\
              patch("requests.post", return_value=mock_resp):
             res = generate_social_video(
                 prompt="Lagos 2050 Afro-futuristic drone flythrough",
