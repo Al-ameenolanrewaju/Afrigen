@@ -587,6 +587,62 @@ def generate_image(prompt, style="realistic", aspect_ratio="1:1", provider="hugg
     return {"success": False, "error": customer_error("image")}
 
 
+def _generate_image_fal_free(prompt, aspect_ratio):
+    """Use Afrigen's Fal account as a controlled fallback for free image requests.
+
+    Hugging Face's auto-routed FLUX endpoint can return 402 when its Inference
+    Provider credit balance is empty. Free users have a daily quota, but that
+    quota is funded by Afrigen; it must not depend on the user's HF billing.
+    """
+    api_key = (
+        os.environ.get("FAL_KEY_ID")
+        or os.environ.get("FAL_API_KEY")
+        or os.environ.get("FAL_KEY")
+    )
+    if not api_key:
+        print("Free image fallback unavailable: Fal API credentials are not configured.")
+        return {"success": False, "error": customer_error("image")}
+
+    size_map = {
+        "1:1": "square_hd",
+        "16:9": "landscape_4_3",
+        "9:16": "portrait_4_3",
+    }
+    payload = {
+        "prompt": prompt,
+        "image_size": size_map.get(aspect_ratio, "square_hd"),
+        "num_images": 1,
+        "num_inference_steps": 4,
+    }
+    try:
+        response = requests.post(
+            "https://fal.run/fal-ai/flux/schnell",
+            json=payload,
+            headers={
+                "Authorization": f"Key {api_key}",
+                "Content-Type": "application/json",
+            },
+            timeout=180,
+        )
+        response.raise_for_status()
+        result = response.json()
+        image_url = None
+        if result.get("images"):
+            image_url = result["images"][0].get("url")
+        elif result.get("image", {}).get("url"):
+            image_url = result["image"]["url"]
+        if not image_url:
+            raise RuntimeError("Fal free image fallback returned no image URL.")
+        print("Free image generated successfully using configured fallback.")
+        return {"success": True, "image_url": image_url}
+    except Exception as error:
+        print(
+            "Free image fallback failed: "
+            f"{redact_secrets(str(error))}"
+        )
+        return {"success": False, "error": customer_error("image")}
+
+
 def _generate_image_huggingface(prompt, aspect_ratio):
     """Generate a free-tier image through Hugging Face Inference Providers."""
     token = (
@@ -645,7 +701,16 @@ def _generate_image_huggingface(prompt, aspect_ratio):
             last_error = str(error)
             print(f"Image generation error on attempt {attempt}: {redact_secrets(last_error)}")
             error_text = last_error.lower()
-            
+
+            # HF's routed FLUX provider requires a prepaid HF inference balance.
+            # A 402 is a billing rejection, not a transient error: do not retry it
+            # against the same endpoint; use Afrigen's configured low-cost Fal path.
+            if "402" in error_text or "payment required" in error_text or (
+                "purchase pre-paid credits" in error_text
+            ):
+                print("Hugging Face inference billing unavailable; trying Afrigen free-image fallback.")
+                return _generate_image_fal_free(prompt, aspect_ratio)
+
             # Non-retryable errors
             if "401" in error_text or "unauthorized" in error_text or "invalid token" in error_text:
                 return {"success": False, "error": customer_error("image")}
@@ -653,10 +718,10 @@ def _generate_image_huggingface(prompt, aspect_ratio):
                 return {"success": False, "error": customer_error("image")}
             if "model" in error_text and ("not found" in error_text or "unsupported" in error_text):
                 return {"success": False, "error": customer_error("image")}
-            
+
             # Retryable errors (network, DNS, timeout, rate limit)
             if attempt < MAX_RETRIES:
                 print(f"Retrying in {RETRY_DELAY} seconds...")
                 time.sleep(RETRY_DELAY)
-    
+
     return {"success": False, "error": customer_error("image")}
