@@ -3,7 +3,7 @@ from flask import Blueprint, abort, flash, jsonify, redirect, render_template, r
 from flask_login import current_user, login_required
 
 from models import db, DramaSeries, DramaEpisode, DramaEpisodeCharacter, MovieShot
-from services.entitlements import can_access_movie_studio
+from services.entitlements import can_access_movie_studio, is_admin
 from services.drama_studio import (
     create_series, create_episode, add_series_character,
     add_character_to_episode, assign_character_to_shot, monthly_usage_summary,
@@ -14,7 +14,7 @@ drama_studio_bp = Blueprint("drama_studio", __name__, url_prefix="/drama-studio"
 
 def _series_for_user(series_id):
     series = db.session.get(DramaSeries, series_id)
-    if not series or (series.user_id != current_user.id and not getattr(current_user, "is_admin", False)):
+    if not series or (series.user_id != current_user.id and not is_admin(current_user)):
         abort(404)
     return series
 
@@ -104,7 +104,7 @@ def add_episode_character_view(episode_id, character_id):
     if not can_access_movie_studio(current_user):
         abort(403)
     episode = db.session.get(DramaEpisode, episode_id)
-    if not episode or episode.user_id != current_user.id:
+    if not episode or (episode.user_id != current_user.id and not is_admin(current_user)):
         abort(404)
     ok, message, _link = add_character_to_episode(current_user, episode_id, character_id)
     flash(message, "success" if ok else "danger")
