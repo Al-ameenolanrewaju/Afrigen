@@ -158,7 +158,7 @@ def create_episode(user, series_id, title=None, logline=None):
             idempotency_key=f"drama-episode:{episode.id}:quota-reserve",
         ))
         db.session.commit()
-        return True, "Episode queued for production.", episode, job
+        return True, "Episode workspace created.", episode, job
     except IntegrityError:
         db.session.rollback()
         return False, "The episode could not be reserved. Please retry.", None, None
@@ -224,6 +224,11 @@ def finalize_episode_quota(episode_id, success):
         episode.quota_status = "released"
         episode.status = "failed"
         ledger_type = "episode_reservation_released"
+    reservation = DramaUsageLedger.query.filter_by(
+        idempotency_key=f"drama-episode:{episode.id}:quota-reserve"
+    ).first()
+    if reservation:
+        reservation.status = "completed" if success else "released"
     key = f"drama-episode:{episode.id}:quota-finalize"
     if not DramaUsageLedger.query.filter_by(idempotency_key=key).first():
         db.session.add(DramaUsageLedger(
