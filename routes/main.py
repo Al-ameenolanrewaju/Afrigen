@@ -3108,6 +3108,24 @@ def unsubscribe(token):
     if not EmailOptOut.query.filter_by(email=email).first():
         db.session.add(EmailOptOut(email=email))
         try:
+            if email_changed:
+                from models import Subscriber
+                from datetime import datetime, timezone
+                old_subscriber = Subscriber.query.filter_by(email=old_email).first()
+                if old_subscriber:
+                    new_subscriber = Subscriber.query.filter_by(email=new_email.lower()).first()
+                    if new_subscriber and new_subscriber.id != old_subscriber.id:
+                        old_subscriber.newsletter = False
+                        old_subscriber.updated_at = datetime.now(timezone.utc)
+                    else:
+                        old_subscriber.email = new_email.lower()
+                        old_subscriber.name = new_username
+                        old_subscriber.newsletter = bool(current_user.marketing_emails)
+                        old_subscriber.updated_at = datetime.now(timezone.utc)
+            else:
+                from services.newsletter import upsert_subscriber_from_user
+                if current_user.marketing_emails:
+                    upsert_subscriber_from_user(current_user)
             db.session.commit()
         except IntegrityError:
             db.session.rollback()
@@ -4662,13 +4680,35 @@ def publish_generated_content():
 @main.route('/settings', methods=['GET', 'POST'])
 @login_required
 def settings():
-    from models import ServiceCredential, ConnectedAccount, db
+    from models import ServiceCredential, db
     from services.newsletter import sync_user_email_preferences
-    from utils.encryption import encrypt_token, decrypt_token
+    from utils.encryption import encrypt_token
+    from werkzeug.security import generate_password_hash
+    from routes.auth import verify_user_password
     import json
 
     if request.method == 'POST':
         section = request.form.get('section')
+        if section == 'account':
+            current_password = request.form.get('current_password') or ''
+            new_password = request.form.get('new_password') or ''
+            confirm_password = request.form.get('confirm_password') or ''
+
+            if not verify_user_password(current_user.password, current_password):
+                flash('Your current password is incorrect.', 'danger')
+                return redirect(url_for('main.settings'))
+            if len(new_password) < 8:
+                flash('Your new password must be at least 8 characters long.', 'danger')
+                return redirect(url_for('main.settings'))
+            if new_password != confirm_password:
+                flash('The new passwords do not match.', 'danger')
+                return redirect(url_for('main.settings'))
+
+            current_user.password = generate_password_hash(new_password)
+            db.session.commit()
+            flash('Your password has been updated successfully.', 'success')
+            return redirect(url_for('main.settings'))
+
         if section == 'notifications':
             sync_user_email_preferences(current_user, request.form)
             db.session.commit()
@@ -4749,6 +4789,8 @@ def profile():
             flash('This email is already registered to another account.', 'danger')
             return redirect(url_for('main.profile'))
 
+        old_email = (current_user.email or '').strip().lower()
+        email_changed = old_email != new_email.lower()
         current_user.username = new_username
         current_user.email = new_email
 
