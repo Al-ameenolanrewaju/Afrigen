@@ -173,8 +173,20 @@ def test_shot_assignment_rejects_character_from_another_episode():
         _, _, episode, _ = create_episode(user, series.id)
         other_series_ok, _, other_series = create_series(user, "Different Story")
         _, _, other_episode, _ = create_episode(user, other_series.id)
-        other_link = DramaEpisodeCharacter.query.filter_by(
-            episode_id=other_episode.id, character_id=character.id
-        ).first()
-        # Character from the first series cannot be attached to a different series episode.
-        assert other_link is None
+        scene = MovieScene(project_id=other_episode.movie_project_id, scene_number=1)
+        db.session.add(scene)
+        db.session.flush()
+        shot = MovieShot(
+            scene_id=scene.id, project_id=other_episode.movie_project_id,
+            shot_number=1, visual_prompt="A character enters the room",
+        )
+        db.session.add(shot)
+        db.session.commit()
+        first_episode_link = DramaEpisodeCharacter.query.filter_by(
+            episode_id=episode.id, character_id=character.id
+        ).one()
+        ok, message = assign_character_to_shot(
+            user, other_episode.id, shot.id, first_episode_link.id
+        )
+        assert not ok
+        assert "Character is not assigned" in message
