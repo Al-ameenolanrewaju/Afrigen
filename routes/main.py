@@ -3112,9 +3112,9 @@ def unsubscribe(token):
                 from models import Subscriber
                 from datetime import datetime, timezone
                 old_subscriber = Subscriber.query.filter_by(email=old_email).first()
-                if old_subscriber:
-                    new_subscriber = Subscriber.query.filter_by(email=new_email.lower()).first()
-                    if new_subscriber and new_subscriber.id != old_subscriber.id:
+                new_subscriber = Subscriber.query.filter_by(email=new_email.lower()).first()
+                if old_subscriber and old_subscriber.id != getattr(new_subscriber, 'id', None):
+                    if new_subscriber:
                         old_subscriber.newsletter = False
                         old_subscriber.updated_at = datetime.now(timezone.utc)
                     else:
@@ -3122,6 +3122,16 @@ def unsubscribe(token):
                         old_subscriber.name = new_username
                         old_subscriber.newsletter = bool(current_user.marketing_emails)
                         old_subscriber.updated_at = datetime.now(timezone.utc)
+                elif new_subscriber:
+                    new_subscriber.name = new_username
+                    new_subscriber.newsletter = bool(current_user.marketing_emails)
+                    new_subscriber.updated_at = datetime.now(timezone.utc)
+                elif current_user.marketing_emails:
+                    db.session.add(Subscriber(
+                        name=new_username,
+                        email=new_email.lower(),
+                        newsletter=True,
+                    ))
             else:
                 from services.newsletter import upsert_subscriber_from_user
                 if current_user.marketing_emails:
