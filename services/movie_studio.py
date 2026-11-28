@@ -19,7 +19,8 @@ from datetime import datetime, timezone
 from flask import current_app
 from models import (
     db, User, MovieProject, MovieCharacter, MovieScene,
-    MovieShot, StoryboardFrame, MovieAudioTrack, MovieTimeline, MovieRenderJob
+    MovieShot, StoryboardFrame, MovieAudioTrack, MovieTimeline, MovieRenderJob,
+    DramaShotCharacter
 )
 from services.provider_manager import provider_manager
 from services.video import generate_image, generate_video, generate_video_from_image
@@ -260,7 +261,17 @@ def create_scene_shots_and_storyboards(scene_id: int):
 # ---------------------------------------------------------------------
 
 def _character_references_for_shot(shot):
-    """Return approved character portraits explicitly present in this shot."""
+    """Prefer explicit series cast assignments; retain name matching for legacy films."""
+    assigned = DramaShotCharacter.query.filter_by(movie_shot_id=shot.id).all() if getattr(shot, "id", None) else []
+    explicit = []
+    for link in assigned:
+        episode_character = link.episode_character
+        movie_character = episode_character.movie_character if episode_character else None
+        if movie_character and movie_character.reference_image_url:
+            explicit.append(movie_character)
+    if explicit:
+        return explicit[:3]
+
     project = shot.project
     context = " ".join([
         shot.visual_prompt or "",
@@ -272,7 +283,6 @@ def _character_references_for_shot(shot):
         if character.reference_image_url and character.name.casefold() in context
     ]
     return matches[:3]
-
 
 def _build_character_consistency_prompt(shot, characters):
     """Build Kling element references and continuity instructions for a shot."""
