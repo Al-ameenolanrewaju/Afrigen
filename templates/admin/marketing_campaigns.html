@@ -1,5 +1,5 @@
 {% extends "admin_base.html" %}
-{% block title %}Marketing Campaign Centre{% endblock %}
+{% block title %}Social Media Centre{% endblock %}
 {% block content %}
 <style>
 .marketing-wrap{max-width:1180px;margin:0 auto}.marketing-hero{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;margin-bottom:22px}.marketing-title{color:#f5a623;font-weight:800;margin:0 0 6px}.marketing-muted{color:#929bad;font-size:14px}.marketing-card{background:#151d2b;border:1px solid #273246;border-radius:16px;padding:22px;margin-bottom:20px}.marketing-card h5{color:#f5b544;font-weight:750;margin-bottom:16px}.marketing-field{background:#0c1220!important;border:1px solid #303b50!important;color:#f3f4f6!important;border-radius:10px!important}.marketing-field:focus{border-color:#d69b37!important;box-shadow:0 0 0 3px #d69b3722!important}.marketing-channel{display:flex;align-items:center;gap:8px;padding:10px 12px;background:#101827;border:1px solid #2b3548;border-radius:10px;color:#e5e7eb;font-size:13px}.marketing-channel input{accent-color:#f5a623}.marketing-btn{background:#f5a623;color:#111827;border:0;border-radius:10px;padding:11px 18px;font-weight:800}.marketing-btn:hover{background:#ffc15b;color:#111827}.marketing-secondary{background:#202b3d;color:#e5e7eb;border:1px solid #3a465a;border-radius:9px;padding:9px 14px}.marketing-preview{background:#fff;color:#20242c;border-radius:10px;padding:16px;min-height:150px;overflow:auto}.marketing-copy{min-height:130px}.marketing-stat{background:#101827;border:1px solid #29364a;padding:14px;border-radius:12px}.marketing-stat strong{display:block;color:#f5b544;font-size:22px}.marketing-campaign{border-top:1px solid #2b3548;padding:16px 0}.marketing-tag{font-size:11px;letter-spacing:.06em;color:#aab4c5}
@@ -7,11 +7,11 @@
 </style>
 <div class="marketing-wrap">
  <div class="marketing-hero">
-  <div><div class="marketing-tag mb-2">GROWTH & DISTRIBUTION</div><h3 class="marketing-title"><i class="fa-solid fa-bullhorn me-2"></i>Marketing Campaign Centre</h3><p class="marketing-muted mb-0">One brief. AI-generated email, social content and creative. Review everything before launch.</p></div>
+  <div><div class="marketing-tag mb-2">GROWTH & DISTRIBUTION</div><h3 class="marketing-title"><i class="fa-solid fa-share-nodes me-2"></i>Social Media Centre</h3><p class="marketing-muted mb-0">Manage campaign content, daily automated posts and blog distribution from one admin workspace.</p></div>
   <div class="d-flex flex-column gap-2">
+   <div class="marketing-stat"><span class="marketing-muted">Daily automated publishing</span><strong>07:00 WAT</strong><span class="marketing-muted">Facebook morning post · LinkedIn evening post at 18:00 WAT</span></div>
    <div class="marketing-stat"><span class="marketing-muted">Reachable newsletter audience</span><strong>{{ audience_count }}</strong><span class="marketing-muted">Eligible recipients after deduplication and opt-outs</span></div>
-   <a class="marketing-secondary text-decoration-none text-center" href="{{ url_for('main.admin_distribution') }}"><i class="fa-solid fa-satellite-dish me-2"></i>Open distribution history</a>
-   <div class="marketing-muted text-end">Daily social content planning: 7:00 AM WAT</div>
+   <a class="marketing-secondary text-decoration-none text-center" href="{{ url_for('main.admin_distribution') }}"><i class="fa-solid fa-satellite-dish me-2"></i>Open blog distribution history</a>
   </div>
  </div>
  <section class="marketing-card">
