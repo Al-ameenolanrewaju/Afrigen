@@ -43,14 +43,14 @@ def get_or_create_settings(user_id: int) -> SocialAutomationSettings:
             linkedin_enabled=True,
             daily_limit_facebook=1,
             daily_limit_linkedin=1,
-            preferred_posting_hours_json='[6, 17]',
+            preferred_posting_hours_json='[6, 6]',
         )
         db.session.add(settings)
         db.session.commit()
-    elif settings.preferred_posting_hours_json in (None, '', '[8, 17]'):
-        # Migrate the previous default (09:00 WAT / 08:00 UTC) to 07:00 WAT.
-        # Preserve any explicitly customized posting hours.
-        settings.preferred_posting_hours_json = '[6, 17]'
+    elif settings.preferred_posting_hours_json in (None, '', '[8, 17]', '[6, 17]'):
+        # Migrate known legacy defaults to 07:00 WAT for both platforms.
+        # Preserve any other explicitly customized posting hours.
+        settings.preferred_posting_hours_json = '[6, 6]'
         db.session.commit()
     return settings
 
@@ -281,30 +281,31 @@ def generate_daily_social_schedule(user_id: int) -> List[SocialPost]:
     created_posts = []
     now = datetime.now(timezone.utc)
 
-    # Posting times are stored in UTC: 07:00 WAT = 06:00 UTC;
-    # 18:00 WAT = 17:00 UTC.
-    hours = [6, 17]
+    # Posting times are stored in UTC: 07:00 WAT = 06:00 UTC.
+    # The first slot is Facebook and the second is LinkedIn.
+    hours = [6, 6]
     if settings.preferred_posting_hours_json:
         try:
             hours = json.loads(settings.preferred_posting_hours_json)
         except Exception:
             pass
 
-    # Schedule Facebook Post for morning window
+    # Both platforms use their configured daily slots (07:00 WAT by default).
+    # If the planner runs after a slot, schedule that platform for the next day.
     if settings.facebook_enabled:
-        fb_time = now.replace(hour=hours[0] if hours else 6, minute=0, second=0, microsecond=0)
+        fb_hour = hours[0] if hours else 6
+        fb_time = now.replace(hour=fb_hour, minute=0, second=0, microsecond=0)
         if fb_time <= now:
-            fb_time = now + timedelta(minutes=10)
+            fb_time += timedelta(days=1)
         fb_post = generate_autonomous_post(user_id=user_id, platform="facebook", scheduled_for=fb_time)
         if fb_post:
             created_posts.append(fb_post)
 
-    # Schedule LinkedIn Post for evening window
     if settings.linkedin_enabled:
-        li_hour = hours[1] if len(hours) > 1 else 17
+        li_hour = hours[1] if len(hours) > 1 else (hours[0] if hours else 6)
         li_time = now.replace(hour=li_hour, minute=0, second=0, microsecond=0)
         if li_time <= now:
-            li_time = now + timedelta(minutes=25)
+            li_time += timedelta(days=1)
         li_post = generate_autonomous_post(user_id=user_id, platform="linkedin", scheduled_for=li_time)
         if li_post:
             created_posts.append(li_post)
