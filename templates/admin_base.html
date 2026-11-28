@@ -468,7 +468,7 @@
         <ul class="admin-nav-list">
             <li>
                 <a href="{{ url_for('main.admin_marketing_campaigns') }}" class="admin-nav-item {% if request.endpoint in ('main.admin_marketing_campaigns', 'main.admin_promo_campaigns', 'main.admin_newsletter_campaigns') %}active{% endif %}">
-                    <i class="fa-solid fa-bullhorn" style="color: #F5A623;"></i> Marketing Campaigns
+                    <i class="fa-solid fa-bullhorn" style="color: #F5A623;"></i> Social Media Centre
                 </a>
             </li>
             <li>
@@ -483,7 +483,7 @@
             </li>
             <li>
                 <a href="{{ url_for('main.admin_distribution') }}" class="admin-nav-item {% if request.endpoint and 'distribution' in request.endpoint %}active{% endif %}">
-                    <i class="fa-solid fa-satellite-dish"></i> Social Distribution
+                    <i class="fa-solid fa-satellite-dish"></i> Distribution History
                 </a>
             </li>
             <li>
