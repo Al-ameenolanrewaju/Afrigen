@@ -53,8 +53,9 @@ def get_subscription_payment_details(amount):
         prices["studio_annual_kobo"]: ("studio", 3600, True),
         prices["director_monthly_kobo"]: ("director", 1000, False),
         prices["director_annual_kobo"]: ("director", 12000, True),
-        # Keep accepting the old Creator annual checkout amount for payments
-        # already initialized before the ₦100,000 correction.
-        11_000_000: ("creator", 1200, True),
     }
+    # Keep accepting the old Creator annual checkout amount only when it
+    # does not collide with a different currently configured plan price.
+    if 11_000_000 not in details:
+        details[11_000_000] = ("creator", 1200, True)
     return details.get(amount)
