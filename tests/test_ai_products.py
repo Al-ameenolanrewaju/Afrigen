@@ -176,3 +176,55 @@ def test_customer_settings_hides_ai_provider_configuration_and_admin_route_stays
         assert provider_name not in settings_response.data
 
     assert client.get("/admin/provider-status").status_code == 302
+
+
+def test_free_image_falls_back_to_fal_when_hugging_face_returns_402(monkeypatch):
+    from services import video
+
+    monkeypatch.setenv("HF_TOKEN", "hf-test-token")
+    monkeypatch.setenv("FAL_KEY", "fal-test-key")
+
+    class FailedHFClient:
+        def __init__(self, **_kwargs):
+            pass
+
+        def text_to_image(self, *_args, **_kwargs):
+            raise RuntimeError(
+                "Client error '402 Payment Required'. Purchase pre-paid credits."
+            )
+
+    class FakeResponse:
+        status_code = 200
+
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {"images": [{"url": "https://v3.fal.media/files/free-test.png"}]}
+
+    monkeypatch.setattr(video, "InferenceClient", FailedHFClient)
+    post = Mock(return_value=FakeResponse())
+    monkeypatch.setattr(video.requests, "post", post)
+
+    result = video._generate_image_huggingface("A test image", "1:1")
+
+    assert result == {
+        "success": True,
+        "image_url": "https://v3.fal.media/files/free-test.png",
+    }
+    post.assert_called_once()
+    assert post.call_args.args[0] == "https://fal.run/fal-ai/flux/schnell"
+    assert post.call_args.kwargs["headers"]["Authorization"] == "Key fal-test-key"
+
+
+def test_free_image_fal_fallback_fails_safely_without_fal_credentials(monkeypatch):
+    from services.video import _generate_image_fal_free
+    from services.ai_products import customer_error
+
+    monkeypatch.delenv("FAL_KEY_ID", raising=False)
+    monkeypatch.delenv("FAL_API_KEY", raising=False)
+    monkeypatch.delenv("FAL_KEY", raising=False)
+
+    result = _generate_image_fal_free("A test image", "1:1")
+
+    assert result == {"success": False, "error": customer_error("image")}
