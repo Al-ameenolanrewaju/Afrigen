@@ -3510,7 +3510,14 @@ def admin_marketing_campaigns():
                 flash(f'Could not generate the campaign: {exc}', 'danger')
 
     campaigns = NewsletterCampaign.query.order_by(NewsletterCampaign.created_at.desc()).limit(50).all()
-    campaign_rows = [{"campaign": c, "payload": _marketing_campaign_payload(c)} for c in campaigns]
+    campaign_rows = []
+    for c in campaigns:
+        payload = _marketing_campaign_payload(c)
+        try:
+            social_results = json.loads(c.social_results or "{}")
+        except (TypeError, ValueError):
+            social_results = {}
+        campaign_rows.append({"campaign": c, "payload": payload, "social_results": social_results})
     return render_template(
         'admin/marketing_campaigns.html',
         generated=generated,
@@ -3546,6 +3553,7 @@ def admin_marketing_campaign_save():
     campaign = NewsletterCampaign(
         subject=subject,
         html_body=_MARKETING_CAMPAIGN_PREFIX + json.dumps(payload, ensure_ascii=False),
+        social_results=json.dumps({}, ensure_ascii=False),
         status='draft',
     )
     db.session.add(campaign)
@@ -3567,6 +3575,10 @@ def admin_marketing_campaign_launch(id):
         return redirect(url_for('main.admin_marketing_campaigns'))
     campaign.subject = payload.get('email_subject') or campaign.subject
     campaign.html_body = payload.get('email_html') or ''
+    campaign.social_results = json.dumps({
+        platform: {"status": "pending", "ok": None, "message": "Awaiting publisher response."}
+        for platform in (payload.get("platforms") or [])
+    }, ensure_ascii=False)
     campaign.total_audience = len(collect_recipients())
     campaign.batch_offset = 0
     campaign.status = 'sending'
@@ -3581,10 +3593,31 @@ def admin_marketing_campaign_launch(id):
                 payload.get('brief', ''), payload.get('copies', {}),
                 platforms, payload.get('flyer_url')
             )
-            logger.info("Marketing campaign %s social delivery: %s", id, social.get('platforms', {}))
+            platform_results = social.get("platforms", {})
+            campaign.social_results = json.dumps(platform_results, ensure_ascii=False, default=str)
+            failed = [
+                name for name, result in platform_results.items()
+                if not isinstance(result, dict) or result.get("ok") is not True
+            ]
+            logger.info("Marketing campaign %s social delivery: %s", id, platform_results)
+            db.session.commit()
+            if failed:
+                flash(
+                    "Email campaign queued. Social channels needing attention: "
+                    + ", ".join(failed) + ". Review their delivery status below.",
+                    "warning",
+                )
         except Exception:
+            db.session.rollback()
             logger.exception("Social distribution failed for marketing campaign %s", id)
-            flash('Email campaign queued; one or more social channels could not be published. Check logs.', 'warning')
+            campaign = NewsletterCampaign.query.get(id)
+            if campaign:
+                campaign.social_results = json.dumps({
+                    platform: {"ok": False, "status": "failed", "error": "Publisher failed before returning a result."}
+                    for platform in (payload.get("platforms") or [])
+                })
+                db.session.commit()
+            flash('Email campaign queued, but social publishing failed. Review the delivery status below.', 'warning')
     flash(f'Campaign launched. Email delivery will process in batches for {campaign.total_audience} opted-in recipients.', 'success')
     return redirect(url_for('main.admin_marketing_campaigns'))
 
