@@ -1841,6 +1841,42 @@ def grant_free_video(user_id):
     return redirect(request.referrer or url_for('main.admin'))
 
 
+@main.route('/admin/users/<int:user_id>/plan', methods=['POST'])
+@admin_required
+@limiter.exempt
+def admin_set_user_plan(user_id):
+    user = db.session.get(User, user_id)
+    if not user:
+        flash('User not found.', 'danger')
+        return redirect(url_for('main.admin'))
+
+    requested_plan = (request.form.get('plan') or '').strip().lower()
+    plan_credits = {'free': 10, 'spark': 10, 'creator': 100, 'pro': 100, 'studio': 300, 'director': 1000}
+    if requested_plan not in plan_credits:
+        flash('Choose a valid subscription tier.', 'danger')
+        return redirect(url_for('main.admin'))
+
+    # Store the canonical tier name; "pro" remains supported as a legacy Creator alias.
+    canonical_plan = 'free' if requested_plan == 'spark' else requested_plan
+    previous_plan = (user.plan or 'free').lower()
+    previous_credits = user.credits or 0
+    new_credits = plan_credits[canonical_plan]
+    user.plan = canonical_plan
+    user.credits = new_credits
+
+    from models import CreditLedger
+    delta = new_credits - previous_credits
+    if delta:
+        db.session.add(CreditLedger(
+            user_id=user.id,
+            delta=delta,
+            reason=f'Admin plan change: {previous_plan} -> {canonical_plan}'
+        ))
+    db.session.commit()
+    flash(f"{user.username}'s plan changed to {canonical_plan.title()} with {new_credits} credits.", 'success')
+    return redirect(url_for('main.admin'))
+
+
 @main.route('/admin/upgrade/<int:user_id>')
 @admin_required
 @limiter.exempt
