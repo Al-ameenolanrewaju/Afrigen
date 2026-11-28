@@ -7,7 +7,7 @@ from services.entitlements import can_access_movie_studio, is_admin
 from services.drama_studio import (
     create_series, create_episode, add_series_character,
     add_character_to_episode, assign_character_to_shot, monthly_usage_summary,
-    generate_series_character_portrait,
+    generate_series_character_portrait, requeue_failed_episode,
 )
 
 drama_studio_bp = Blueprint("drama_studio", __name__, url_prefix="/drama-studio")
@@ -158,20 +158,11 @@ def assign_shot_cast_form_view(episode_id, shot_id):
 def retry_episode_production_view(episode_id):
     if not can_access_movie_studio(current_user):
         abort(403)
+    ok, message = requeue_failed_episode(current_user, episode_id)
+    flash(message, "success" if ok else "warning")
     episode = db.session.get(DramaEpisode, episode_id)
     if not episode or (episode.user_id != current_user.id and not is_admin(current_user)):
         abort(404)
-    from models import DramaProductionJob
-    job = DramaProductionJob.query.filter_by(episode_id=episode.id).order_by(DramaProductionJob.created_at.desc()).first()
-    if not job or job.status not in {"failed", "queued"}:
-        flash("This episode is not currently eligible for retry.", "warning")
-    else:
-        job.status = "queued"
-        job.attempt_count = 0
-        job.error_message = None
-        job.current_step = "screenplay" if not episode.movie_project.scenes else job.current_step
-        db.session.commit()
-        flash("Episode production has been queued again.", "success")
     return redirect(url_for("movie_studio.project_workspace", project_id=episode.movie_project_id))
 
 
