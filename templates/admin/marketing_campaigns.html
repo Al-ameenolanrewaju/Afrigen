@@ -8,7 +8,11 @@
 <div class="marketing-wrap">
  <div class="marketing-hero">
   <div><div class="marketing-tag mb-2">GROWTH & DISTRIBUTION</div><h3 class="marketing-title"><i class="fa-solid fa-bullhorn me-2"></i>Marketing Campaign Centre</h3><p class="marketing-muted mb-0">One brief. AI-generated email, social content and creative. Review everything before launch.</p></div>
-  <div class="marketing-stat"><span class="marketing-muted">Reachable newsletter audience</span><strong>{{ audience_count }}</strong><span class="marketing-muted">Eligible recipients after deduplication and opt-outs</span></div>
+  <div class="d-flex flex-column gap-2">
+   <div class="marketing-stat"><span class="marketing-muted">Reachable newsletter audience</span><strong>{{ audience_count }}</strong><span class="marketing-muted">Eligible recipients after deduplication and opt-outs</span></div>
+   <a class="marketing-secondary text-decoration-none text-center" href="{{ url_for('main.admin_distribution') }}"><i class="fa-solid fa-satellite-dish me-2"></i>Open distribution history</a>
+   <div class="marketing-muted text-end">Daily social content planning: 7:00 AM WAT</div>
+  </div>
  </div>
  <section class="marketing-card">
   <h5>01 · Campaign brief</h5>
