@@ -153,6 +153,13 @@ def process_drama_production_job(job_id):
 
     try:
         _run_episode_pipeline(job)
+        job = db.session.get(DramaProductionJob, job_id)
+        job.status = "completed"
+        job.current_step = "completed"
+        job.progress = 100
+        job.completed_at = _now()
+        job.updated_at = _now()
+        db.session.commit()
         from services.drama_studio import finalize_episode_quota
         finalize_episode_quota(job.episode_id, success=True)
         return True
