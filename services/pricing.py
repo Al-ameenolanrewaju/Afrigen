@@ -12,6 +12,8 @@ DEFAULT_PRICING = {
 
 
 def get_pricing(key):
+    if key not in DEFAULT_PRICING:
+        raise KeyError(key)
     if not has_app_context():
         return DEFAULT_PRICING[key]
     row = PricingConfig.query.filter_by(key=key).first()
