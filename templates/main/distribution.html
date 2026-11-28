@@ -259,7 +259,7 @@ document.querySelectorAll('.retry-btn').forEach(btn => {
         try {
             const resp = await fetch(
                 `/admin/distribution/retry/${runId}/${platform}`,
-                { method: 'POST', headers: { 'Content-Type': 'application/json' } }
+                { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken } }
             );
             const data = await resp.json();
             if (data.ok) {
