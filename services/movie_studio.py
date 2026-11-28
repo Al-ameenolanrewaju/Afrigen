@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 # 1. AI Screenplay Writer
 # ---------------------------------------------------------------------
 
-def generate_screenplay_treatment(project: MovieProject):
+def generate_screenplay_treatment(project: MovieProject, preserve_existing_cast: bool = False):
     """Use Groq LLM to generate logline, synopsis, character suggestions, and scene breakdown."""
     system_prompt = (
         "You are an award-winning African film director and master screenwriter. "
@@ -101,8 +101,10 @@ def generate_screenplay_treatment(project: MovieProject):
         if data.get("synopsis"):
             project.synopsis = data["synopsis"]
 
-        # Populate characters
-        for char_data in data.get("characters", []):
+        # Drama episodes already have canonical series characters copied into the
+        # episode project. Do not create a second AI-invented cast on those projects.
+        existing_cast = list(project.characters) if preserve_existing_cast else []
+        for char_data in ([] if existing_cast else data.get("characters", [])):
             char = MovieCharacter(
                 project_id=project.id,
                 name=char_data.get("name", "Character"),
