@@ -267,6 +267,13 @@ def ensure_legacy_schema_columns():
                 'newsletter_issues': [
                     ('research_sources_json', 'TEXT', None),
                 ],
+                # Social campaign outcomes were added after some existing
+                # production databases had already created newsletter_campaigns.
+                # Keep this additive startup repair so admin marketing queries
+                # remain compatible even when the Alembic revision was skipped.
+                'newsletter_campaigns': [
+                    ('social_results', 'TEXT', None),
+                ],
                 'telegram_users': [
                     ('mode', "VARCHAR(20) DEFAULT 'video'", "UPDATE telegram_users SET mode = 'video' WHERE mode IS NULL"),
                     ('style', "VARCHAR(50) DEFAULT 'cinematic'", "UPDATE telegram_users SET style = 'cinematic' WHERE style IS NULL"),
