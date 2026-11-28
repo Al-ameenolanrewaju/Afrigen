@@ -320,9 +320,13 @@ def index():
                 _PUBLIC_STATS_CACHE_AT = now
 
     total_users, total_generations = _PUBLIC_STATS_CACHE
+    from services.pricing import get_subscription_pricing
+    prices = get_subscription_pricing()
+    subscription_prices = {key: value // 100 for key, value in prices.items()}
     return render_template("main/index.html",
         total_users=total_users,
-        total_generations=total_generations
+        total_generations=total_generations,
+        subscription_prices=subscription_prices,
     )
 
 
@@ -1943,6 +1947,38 @@ def admin_pricing():
     from services.video import estimate_fal_image_to_video_cost, estimate_fal_video_cost
     if request.method == 'POST':
         import math
+        if request.form.get('pricing_type') == 'subscriptions':
+            from services.pricing import DEFAULT_SUBSCRIPTION_PRICING
+            submitted_subscriptions = {}
+            for key in DEFAULT_SUBSCRIPTION_PRICING:
+                raw_value = (request.form.get(key) or '').strip()
+                try:
+                    naira = float(raw_value)
+                except (TypeError, ValueError):
+                    naira = None
+                if naira is None or not math.isfinite(naira) or not naira.is_integer() or not 1000 <= naira <= 10_000_000:
+                    flash(f'{key.replace("_", " ").replace("kobo", "").title()} must be a whole Naira amount between ₦1,000 and ₦10,000,000.', 'danger')
+                    return redirect(url_for('main.admin_pricing'))
+                submitted_subscriptions[key] = int(naira) * 100
+            for tier in ('creator', 'studio', 'director'):
+                monthly = submitted_subscriptions[f'{tier}_monthly_kobo']
+                annual = submitted_subscriptions[f'{tier}_annual_kobo']
+                if annual <= monthly or annual >= monthly * 12:
+                    flash(f'{tier.title()} annual pricing must be higher than one month and lower than twelve monthly payments.', 'danger')
+                    return redirect(url_for('main.admin_pricing'))
+            if len(set(submitted_subscriptions.values())) != len(submitted_subscriptions):
+                flash('Each subscription price must be unique to avoid ambiguous payment verification.', 'danger')
+                return redirect(url_for('main.admin_pricing'))
+            for key, value in submitted_subscriptions.items():
+                row = PricingConfig.query.filter_by(key=key).first()
+                if row is None:
+                    db.session.add(PricingConfig(key=key, value=value))
+                else:
+                    row.value = value
+            db.session.commit()
+            flash('Subscription prices updated. Public pricing and new Paystack checkouts now use these prices.', 'success')
+            return redirect(url_for('main.admin_pricing'))
+
         submitted = {}
         integer_costs = {'cheap_video_cost', 'kling_video_cost', 'image_to_video_cost'}
         for key in DEFAULT_PRICING:
@@ -1978,7 +2014,17 @@ def admin_pricing():
         'kling_video': estimate_fal_video_cost('fal-ai/kling-video/v1/standard/text-to-video', '5') / pricing['kling_video_cost'],
         'image_to_video': estimate_fal_image_to_video_cost('5') / pricing['image_to_video_cost'],
     }
-    return render_template('main/admin_pricing.html', pricing=pricing, fal_cost_per_credit=fal_cost_per_credit)
+    from services.pricing import get_subscription_pricing
+    subscription_pricing = {
+        key: value // 100
+        for key, value in get_subscription_pricing().items()
+    }
+    return render_template(
+        'main/admin_pricing.html',
+        pricing=pricing,
+        fal_cost_per_credit=fal_cost_per_credit,
+        subscription_pricing=subscription_pricing,
+    )
 
 
 def _admin_csv(filename, headers, rows):
@@ -2095,16 +2141,23 @@ import requests as http_requests
 
 @main.route('/upgrade')
 def upgrade():
-    # Public so logged-out visitors can see pricing (transparency). The actual
-    # payment forms are still gated — anonymous users get a sign-up CTA instead.
-    return render_template('main/upgrade.html',
-                           paystack_public_key=os.environ.get('PAYSTACK_PUBLIC_KEY'))
+    # Public so logged-out visitors can see current prices. Checkout remains
+    # login-gated and uses the same values shown on this page.
+    from services.pricing import get_subscription_pricing
+    prices = get_subscription_pricing()
+    subscription_prices = {key: value // 100 for key, value in prices.items()}
+    return render_template(
+        'main/upgrade.html',
+        paystack_public_key=os.environ.get('PAYSTACK_PUBLIC_KEY'),
+        subscription_prices=subscription_prices,
+    )
 
 
 @main.route('/payment/initialize', methods=['POST'])
 @login_required
 def initialize_payment():
-    amount = PRO_MONTHLY_KOBO
+    from services.pricing import get_subscription_pricing
+    amount = get_subscription_pricing()['creator_monthly_kobo']
     headers = {
         "Authorization": f"Bearer {os.environ.get('PAYSTACK_SECRET_KEY')}",
         "Content-Type": "application/json"
@@ -2130,8 +2183,8 @@ def initialize_payment():
 @main.route('/payment/initialize/annual', methods=['POST'])
 @login_required
 def initialize_payment_annual():
-    # Creator annual checkout must match the advertised ₦100,000 price.
-    amount = CREATOR_ANNUAL_KOBO
+    from services.pricing import get_subscription_pricing
+    amount = get_subscription_pricing()['creator_annual_kobo']
     headers = {
         "Authorization": f"Bearer {os.environ.get('PAYSTACK_SECRET_KEY')}",
         "Content-Type": "application/json"
@@ -2184,25 +2237,29 @@ def _initialize_paystack_payment(amount, metadata_extra=None):
 @main.route('/payment/initialize/studio', methods=['POST'])
 @login_required
 def initialize_payment_studio():
-    return _initialize_paystack_payment(STUDIO_MONTHLY_KOBO, {"plan": "studio"})
+    from services.pricing import get_subscription_pricing
+    return _initialize_paystack_payment(get_subscription_pricing()['studio_monthly_kobo'], {"plan": "studio"})
 
 
 @main.route('/payment/initialize/studio/annual', methods=['POST'])
 @login_required
 def initialize_payment_studio_annual():
-    return _initialize_paystack_payment(STUDIO_ANNUAL_KOBO, {"plan": "studio_annual"})
+    from services.pricing import get_subscription_pricing
+    return _initialize_paystack_payment(get_subscription_pricing()['studio_annual_kobo'], {"plan": "studio_annual"})
 
 
 @main.route('/payment/initialize/director', methods=['POST'])
 @login_required
 def initialize_payment_director():
-    return _initialize_paystack_payment(DIRECTOR_MONTHLY_KOBO, {"plan": "director"})
+    from services.pricing import get_subscription_pricing
+    return _initialize_paystack_payment(get_subscription_pricing()['director_monthly_kobo'], {"plan": "director"})
 
 
 @main.route('/payment/initialize/director/annual', methods=['POST'])
 @login_required
 def initialize_payment_director_annual():
-    return _initialize_paystack_payment(DIRECTOR_ANNUAL_KOBO, {"plan": "director_annual"})
+    from services.pricing import get_subscription_pricing
+    return _initialize_paystack_payment(get_subscription_pricing()['director_annual_kobo'], {"plan": "director_annual"})
 
 
 @main.route('/payment/callback')
@@ -2224,19 +2281,15 @@ def payment_callback():
 
     # Verify payment status, payer email, metadata user_id, AND that the amount
     # is one we actually charge (so the tier can't be downgraded by paying less).
-    _all_valid_amounts = (
-        PRO_MONTHLY_KOBO, PRO_ANNUAL_KOBO,
-        CREATOR_MONTHLY_KOBO, CREATOR_ANNUAL_KOBO,
-        STUDIO_MONTHLY_KOBO, STUDIO_ANNUAL_KOBO,
-        DIRECTOR_MONTHLY_KOBO, DIRECTOR_ANNUAL_KOBO,
-    )
+    from services.pricing import get_subscription_payment_details
+    payment_details = get_subscription_payment_details(amount)
     verified = (
         result.get('status')
         and data.get('status') == 'success'
         and data.get('currency') == 'NGN'
         and data.get('customer', {}).get('email', '').strip().lower() == current_user.email.strip().lower()
         and str((data.get('metadata') or {}).get('user_id')) == str(current_user.id)
-        and amount in _all_valid_amounts
+        and payment_details is not None
     )
 
     if not verified:
@@ -2250,23 +2303,9 @@ def payment_callback():
         flash('This payment has already been applied. ⭐', 'info')
         return redirect(url_for('main.dashboard'))
 
-    # Derive plan and credits from amount
-    if amount in (DIRECTOR_MONTHLY_KOBO,):
-        new_plan = 'director'; grant = 1000
-    elif amount == DIRECTOR_ANNUAL_KOBO:
-        new_plan = 'director'; grant = 12000
-    elif amount == STUDIO_MONTHLY_KOBO:
-        new_plan = 'studio'; grant = 300
-    elif amount == STUDIO_ANNUAL_KOBO:
-        new_plan = 'studio'; grant = 3600
-    elif amount == CREATOR_ANNUAL_KOBO:
-        new_plan = 'creator'; grant = 1200
-    elif amount == PRO_ANNUAL_KOBO:
-        new_plan = 'creator'; grant = 1200
-    else:
-        # PRO_MONTHLY_KOBO == CREATOR_MONTHLY_KOBO
-        new_plan = 'creator'; grant = 100
-    is_annual = amount in (CREATOR_ANNUAL_KOBO, STUDIO_ANNUAL_KOBO, DIRECTOR_ANNUAL_KOBO, PRO_ANNUAL_KOBO)
+    # Tier and credits are resolved from the same configurable price table
+    # used by checkout and the public pricing pages.
+    new_plan, grant, is_annual = payment_details
     current_user.plan = new_plan
     current_user.credits = (current_user.credits or 0) + grant
     from models import CreditLedger
@@ -3194,6 +3233,7 @@ def payment_webhook():
         return '', 400
 
     enqueue_webhook_task(lambda: clear_alert('paystack-signature'))
+    from services.pricing import get_subscription_payment_details
     outcome = 'ignored'
     try:
         if data.get('event') == 'charge.success':
@@ -3210,29 +3250,10 @@ def payment_webhook():
                 and charge.get('status') == 'success'
                 and charge.get('currency') == 'NGN'
                 and customer_email.strip().lower() == user.email.strip().lower()
-                and amount in (
-                    PRO_MONTHLY_KOBO, PRO_ANNUAL_KOBO,
-                    CREATOR_MONTHLY_KOBO, CREATOR_ANNUAL_KOBO,
-                    STUDIO_MONTHLY_KOBO, STUDIO_ANNUAL_KOBO,
-                    DIRECTOR_MONTHLY_KOBO, DIRECTOR_ANNUAL_KOBO,
-                )
+                and get_subscription_payment_details(amount) is not None
                 and not Payment.query.filter_by(reference=reference).first()
             ):
-                is_annual = amount in (CREATOR_ANNUAL_KOBO, STUDIO_ANNUAL_KOBO, DIRECTOR_ANNUAL_KOBO, PRO_ANNUAL_KOBO)
-                if amount == DIRECTOR_MONTHLY_KOBO:
-                    new_plan = 'director'; grant = 1000
-                elif amount == DIRECTOR_ANNUAL_KOBO:
-                    new_plan = 'director'; grant = 12000
-                elif amount == STUDIO_MONTHLY_KOBO:
-                    new_plan = 'studio'; grant = 300
-                elif amount == STUDIO_ANNUAL_KOBO:
-                    new_plan = 'studio'; grant = 3600
-                elif amount == CREATOR_ANNUAL_KOBO:
-                    new_plan = 'creator'; grant = 1200
-                elif amount == PRO_ANNUAL_KOBO:
-                    new_plan = 'creator'; grant = 1200
-                else:
-                    new_plan = 'creator'; grant = 100
+                new_plan, grant, is_annual = get_subscription_payment_details(amount)
                 user.plan = new_plan
                 user.credits = (user.credits or 0) + grant
                 from models import CreditLedger
