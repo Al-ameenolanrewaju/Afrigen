@@ -15,7 +15,24 @@
   </div>
  </div>
  <section class="marketing-card">
-  <h5>01 · Campaign brief</h5>
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+   <h5 class="mb-0">01 · Automated social posts</h5>
+   <span class="marketing-tag">FACEBOOK · LINKEDIN</span>
+  </div>
+  <p class="marketing-muted">Daily posts are prepared automatically. The morning Facebook post is scheduled for 7:00 AM Nigeria time; the LinkedIn post remains in the evening window.</p>
+  {% for post in automated_posts %}
+   <div class="marketing-campaign">
+    <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+     <div class="flex-grow-1"><div class="marketing-tag text-capitalize">{{ post.platform }} · {{ post.scheduled_at.strftime('%d %b %Y, %H:%M') if post.scheduled_at else 'Not scheduled' }} UTC</div><div class="text-light fw-semibold mt-1">{{ post.title or 'Automated social post' }}</div><div class="marketing-muted">{{ (post.caption or '')[:220] }}{% if post.caption and post.caption|length > 220 %}…{% endif %}</div></div>
+     <span class="badge bg-dark border border-secondary">{{ post.status|upper }}</span>
+    </div>
+   </div>
+  {% else %}
+   <p class="marketing-muted mb-0">No automated social posts have been generated yet.</p>
+  {% endfor %}
+ </section>
+ <section class="marketing-card">
+  <h5>02 · Campaign brief</h5>
   <form method="POST" action="{{ url_for('main.admin_marketing_campaigns') }}">
    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
    <label class="form-label text-light fw-semibold">What are we promoting?</label>
@@ -37,7 +54,7 @@
   <input type="hidden" name="flyer_url" value="{{ generated.flyer_url or '' }}">
   {% for p in generated.platforms %}<input type="hidden" name="platforms" value="{{ p }}">{% endfor %}
   <section class="marketing-card">
-   <h5>02 · Review and edit generated assets</h5>
+   <h5>03 · Review and edit generated assets</h5>
    <div class="mb-3"><label class="form-label text-light fw-semibold">Email subject</label><input class="form-control marketing-field" name="email_subject" value="{{ generated.email_subject }}" maxlength="300" required></div>
    <div class="mb-3"><label class="form-label text-light fw-semibold">Email HTML body</label><textarea class="form-control marketing-field font-monospace" name="email_html" rows="12" required>{{ generated.email_html }}</textarea><small class="marketing-muted">The delivery system wraps this in Afrigen's branded email layout and adds the unsubscribe link.</small></div>
    <h6 class="text-light fw-semibold mt-4">Email preview</h6><iframe class="marketing-preview mb-4 w-100" id="emailPreview" title="Email preview" sandbox="" style="height:360px;border:0"></iframe>
@@ -54,7 +71,7 @@
  </script>
  {% endif %}
  <section class="marketing-card">
-  <h5>03 · Campaign drafts and delivery</h5>
+  <h5>04 · Campaign drafts and delivery</h5>
   {% if campaign_rows %}
    {% for row in campaign_rows %}
     <div class="marketing-campaign">
