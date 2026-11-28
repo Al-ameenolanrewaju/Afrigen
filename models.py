@@ -935,6 +935,166 @@ class Notification(db.Model):
 # Gated strictly to Director Tier (Tier 3)
 # =====================================================================
 
+
+# ==============================================================================
+# AI DRAMA STUDIO — SERIES, EPISODE, CHARACTER CONTINUITY & USAGE
+# ==============================================================================
+
+class DramaSeries(db.Model):
+    __tablename__ = "drama_series"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    title = db.Column(db.String(255), nullable=False)
+    logline = db.Column(db.Text, nullable=True)
+    synopsis = db.Column(db.Text, nullable=True)
+    genre = db.Column(db.String(100), nullable=False, default="Drama")
+    visual_style = db.Column(db.String(100), nullable=False, default="cinematic")
+    dialogue_language = db.Column(db.String(40), nullable=False, default="nigerian_pidgin")
+    aspect_ratio = db.Column(db.String(20), nullable=False, default="9:16")
+    episode_duration_seconds = db.Column(db.Integer, nullable=False, default=60)
+    status = db.Column(db.String(30), nullable=False, default="active", index=True)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+    user = db.relationship("User", backref=db.backref("drama_series", cascade="all, delete-orphan"))
+    episodes = db.relationship("DramaEpisode", back_populates="series", cascade="all, delete-orphan", order_by="DramaEpisode.episode_number")
+    characters = db.relationship("DramaCharacter", back_populates="series", cascade="all, delete-orphan", order_by="DramaCharacter.name")
+
+
+class DramaCharacter(db.Model):
+    """Canonical series-level character profile; reused across every episode."""
+    __tablename__ = "drama_characters"
+    __table_args__ = (db.UniqueConstraint("series_id", "name", name="uq_drama_character_series_name"),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    series_id = db.Column(db.Integer, db.ForeignKey("drama_series.id"), nullable=False, index=True)
+    name = db.Column(db.String(120), nullable=False)
+    role = db.Column(db.String(100), nullable=False, default="Supporting")
+    description = db.Column(db.Text, nullable=True)
+    personality = db.Column(db.Text, nullable=True)
+    physical_appearance = db.Column(db.Text, nullable=True)
+    signature_clothing = db.Column(db.Text, nullable=True)
+    voice_id = db.Column(db.String(120), nullable=True)
+    reference_image_url = db.Column(db.String(1000), nullable=True)
+    notes = db.Column(db.Text, nullable=True)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+    series = db.relationship("DramaSeries", back_populates="characters")
+
+
+class DramaEpisode(db.Model):
+    __tablename__ = "drama_episodes"
+    __table_args__ = (db.UniqueConstraint("series_id", "episode_number", name="uq_drama_episode_number"),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    series_id = db.Column(db.Integer, db.ForeignKey("drama_series.id"), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    movie_project_id = db.Column(db.Integer, db.ForeignKey("movie_projects.id"), nullable=True, unique=True)
+    episode_number = db.Column(db.Integer, nullable=False)
+    title = db.Column(db.String(255), nullable=False)
+    logline = db.Column(db.Text, nullable=True)
+    synopsis = db.Column(db.Text, nullable=True)
+    target_duration_seconds = db.Column(db.Integer, nullable=False, default=60)
+    status = db.Column(db.String(30), nullable=False, default="draft", index=True)
+    quota_period_start = db.Column(db.Date, nullable=True, index=True)
+    quota_status = db.Column(db.String(20), nullable=False, default="reserved")
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+    series = db.relationship("DramaSeries", back_populates="episodes")
+    user = db.relationship("User", backref=db.backref("drama_episodes", cascade="all, delete-orphan"))
+    movie_project = db.relationship("MovieProject")
+    character_links = db.relationship("DramaEpisodeCharacter", back_populates="episode", cascade="all, delete-orphan")
+
+
+class DramaEpisodeCharacter(db.Model):
+    """Episode cast membership plus the episode-local MovieCharacter engine record."""
+    __tablename__ = "drama_episode_characters"
+    __table_args__ = (db.UniqueConstraint("episode_id", "character_id", name="uq_drama_episode_character"),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    episode_id = db.Column(db.Integer, db.ForeignKey("drama_episodes.id"), nullable=False, index=True)
+    character_id = db.Column(db.Integer, db.ForeignKey("drama_characters.id"), nullable=False, index=True)
+    movie_character_id = db.Column(db.Integer, db.ForeignKey("movie_characters.id"), nullable=True, unique=True)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+
+    episode = db.relationship("DramaEpisode", back_populates="character_links")
+    character = db.relationship("DramaCharacter")
+    movie_character = db.relationship("MovieCharacter")
+
+
+class DramaShotCharacter(db.Model):
+    """Explicit cast-to-shot assignment; never infer cast from prompt text."""
+    __tablename__ = "drama_shot_characters"
+    __table_args__ = (db.UniqueConstraint("movie_shot_id", "episode_character_id", name="uq_drama_shot_character"),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    movie_shot_id = db.Column(db.Integer, db.ForeignKey("movie_shots.id"), nullable=False, index=True)
+    episode_character_id = db.Column(db.Integer, db.ForeignKey("drama_episode_characters.id"), nullable=False, index=True)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+
+    movie_shot = db.relationship("MovieShot")
+    episode_character = db.relationship("DramaEpisodeCharacter")
+
+
+class DramaMonthlyUsage(db.Model):
+    """Atomic monthly episode allowance accounting for Director subscribers."""
+    __tablename__ = "drama_monthly_usage"
+    __table_args__ = (db.UniqueConstraint("user_id", "period_start", name="uq_drama_usage_user_period"),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    period_start = db.Column(db.Date, nullable=False)
+    episodes_reserved = db.Column(db.Integer, nullable=False, default=0)
+    episodes_completed = db.Column(db.Integer, nullable=False, default=0)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+    user = db.relationship("User")
+
+
+class DramaProductionJob(db.Model):
+    """Durable, retryable orchestration record for one episode production run."""
+    __tablename__ = "drama_production_jobs"
+
+    id = db.Column(db.Integer, primary_key=True)
+    episode_id = db.Column(db.Integer, db.ForeignKey("drama_episodes.id"), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    idempotency_key = db.Column(db.String(160), nullable=False, unique=True)
+    status = db.Column(db.String(24), nullable=False, default="queued", index=True)
+    current_step = db.Column(db.String(50), nullable=False, default="screenplay")
+    progress = db.Column(db.Integer, nullable=False, default=0)
+    attempt_count = db.Column(db.Integer, nullable=False, default=0)
+    error_message = db.Column(db.Text, nullable=True)
+    started_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    completed_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+    episode = db.relationship("DramaEpisode", backref=db.backref("production_jobs", cascade="all, delete-orphan"))
+    user = db.relationship("User")
+
+
+class DramaUsageLedger(db.Model):
+    """Idempotent record of episode reservations, releases and generation spend."""
+    __tablename__ = "drama_usage_ledger"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    episode_id = db.Column(db.Integer, db.ForeignKey("drama_episodes.id"), nullable=True, index=True)
+    usage_type = db.Column(db.String(40), nullable=False)
+    status = db.Column(db.String(20), nullable=False, default="recorded")
+    credits_charged = db.Column(db.Integer, nullable=False, default=0)
+    provider_cost_usd = db.Column(db.Float, nullable=False, default=0.0)
+    idempotency_key = db.Column(db.String(180), nullable=False, unique=True)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+
+    user = db.relationship("User")
+    episode = db.relationship("DramaEpisode")
+
+
 class MovieProject(db.Model):
     __tablename__ = 'movie_projects'
 
