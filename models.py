@@ -901,6 +901,7 @@ class NewsletterCampaign(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     subject = db.Column(db.String(300), nullable=False)
     html_body = db.Column(db.Text, nullable=False)
+    social_results = db.Column(db.Text, nullable=True)  # JSON per-platform delivery outcomes
     status = db.Column(db.String(20), default='draft')  # draft | sending | paused | complete
     batch_size = db.Column(db.Integer, default=80)
     batch_offset = db.Column(db.Integer, default=0)
