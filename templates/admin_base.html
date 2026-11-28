@@ -482,7 +482,7 @@
                 </a>
             </li>
             <li>
-                <a href="{{ url_for('main.admin_distribution') }}" class="admin-nav-item {% if request.endpoint and 'distribution' in request.endpoint %}active{% endif %}">
+
                     <i class="fa-solid fa-satellite-dish"></i> Distribution History
                 </a>
             </li>
@@ -590,7 +590,7 @@
             <a href="{{ url_for('main.admin_promo_campaigns') }}" {% if request.endpoint == 'main.admin_promo_campaigns' %}aria-current="page"{% endif %}><i class="fa-solid fa-bullhorn"></i>AI Promo Campaigns</a>
             <a href="{{ url_for('main.admin_newsletter') }}" {% if request.endpoint and ('newsletter' in request.endpoint or request.path.startswith('/admin/newsletter')) %}aria-current="page"{% endif %}><i class="fa-solid fa-envelope-open-text"></i>Newsletter Studio</a>
             <a href="{{ url_for('main.admin_blog') }}" {% if request.endpoint and 'blog' in request.endpoint %}aria-current="page"{% endif %}><i class="fa-solid fa-newspaper"></i>Blog CMS</a>
-            <a href="{{ url_for('main.admin_distribution') }}" {% if request.endpoint and 'distribution' in request.endpoint %}aria-current="page"{% endif %}><i class="fa-solid fa-satellite-dish"></i>Social Distribution</a>
+
             <a href="{{ url_for('main.admin_pricing') }}" {% if request.endpoint == 'main.admin_pricing' %}aria-current="page"{% endif %}><i class="fa-solid fa-tags"></i>Pricing &amp; Tiers</a>
             <a href="{{ url_for('main.admin_credits') }}" {% if request.endpoint == 'main.admin_credits' %}aria-current="page"{% endif %}><i class="fa-solid fa-coins"></i>Manage Credits</a>
             <a href="{{ url_for('main.admin_paystack_webhooks') }}" {% if request.endpoint == 'main.admin_paystack_webhooks' %}aria-current="page"{% endif %}><i class="fa-solid fa-money-bill-transfer"></i>Payment Webhooks</a>
