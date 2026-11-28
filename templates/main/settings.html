@@ -42,15 +42,18 @@
                     <div class="card-body">
                         <form method="POST" action="{{ url_for('main.settings') }}">
                             <input type="hidden" name="section" value="account">
-                            
+                            <div class="mb-4">
+                                <label for="current_password" class="form-label text-muted small text-uppercase fw-bold">Current Password</label>
+                                <input type="password" class="form-control bg-dark border-secondary text-white" id="current_password" name="current_password" autocomplete="current-password" required>
+                            </div>
                             <div class="mb-4">
                                 <label for="new_password" class="form-label text-muted small text-uppercase fw-bold">New Password</label>
-                                <input type="password" class="form-control bg-dark border-secondary text-white" id="new_password" name="new_password" required>
+                                <input type="password" class="form-control bg-dark border-secondary text-white" id="new_password" name="new_password" minlength="8" autocomplete="new-password" required>
                             </div>
                             
                             <div class="mb-4">
                                 <label for="confirm_password" class="form-label text-muted small text-uppercase fw-bold">Confirm Password</label>
-                                <input type="password" class="form-control bg-dark border-secondary text-white" id="confirm_password" name="confirm_password" required>
+                                <input type="password" class="form-control bg-dark border-secondary text-white" id="confirm_password" name="confirm_password" minlength="8" autocomplete="new-password" required>
                             </div>
                             
                             <div class="d-flex justify-content-end">
