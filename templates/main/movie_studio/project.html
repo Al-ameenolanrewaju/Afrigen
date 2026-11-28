@@ -113,6 +113,19 @@
                         <div class="character-name">{{ char.name }}</div>
                         <div class="character-role">{{ char.role }}</div>
                         <div class="character-desc mb-3">{{ char.description }}</div>
+                        <form class="mb-3" onsubmit="saveCharacter(event, {{ char.id }})">
+                            <label class="form-label small">Physical appearance</label>
+                            <textarea class="form-control form-control-sm mb-2" name="physical_appearance" rows="2" maxlength="3000" placeholder="Face, age, skin tone, hairstyle, build">{{ char.physical_appearance or char.description }}</textarea>
+                            <label class="form-label small">Signature clothing</label>
+                            <textarea class="form-control form-control-sm mb-2" name="clothing" rows="2" maxlength="1500" placeholder="Outfit that should remain consistent">{{ char.clothing or '' }}</textarea>
+                            <label class="form-label small">Character voice</label>
+                            <select class="form-select form-select-sm mb-2" name="voice_attributes">
+                                <option value="">Choose voice</option>
+                                <option value="en-NG-AbeoNeural" {% if char.voice_attributes == 'en-NG-AbeoNeural' %}selected{% endif %}>Nigerian English — Male</option>
+                                <option value="en-NG-EzinneNeural" {% if char.voice_attributes == 'en-NG-EzinneNeural' %}selected{% endif %}>Nigerian English — Female</option>
+                            </select>
+                            <button class="btn btn-sm btn-surface w-100" type="submit">Save character settings</button>
+                        </form>
                         <button class="btn btn-sm btn-outline-gold w-100" onclick="generatePortrait({{ char.id }})">
                             <i class="fa-solid fa-wand-magic-sparkles me-1"></i> {% if char.reference_image_url %}Regenerate Portrait{% else %}Generate Portrait{% endif %}
                         </button>
@@ -137,9 +150,14 @@
                         <h4 class="h6 text-warning mb-1">SCENE {{ sc.scene_number }}: {{ sc.slugline }}</h4>
                         <p class="small text-secondary mb-0">{{ sc.description }}</p>
                     </div>
-                    <button class="btn btn-sm btn-surface" onclick="breakdownScene({{ sc.id }})">
-                        <i class="fa-solid fa-plus me-1"></i> Create Storyboard Shots
-                    </button>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button class="btn btn-sm btn-surface" onclick="breakdownScene({{ sc.id }})">
+                            <i class="fa-solid fa-plus me-1"></i> Create Storyboard Shots
+                        </button>
+                        <button class="btn btn-sm btn-gold" onclick="generateSceneDialogue({{ sc.id }})">
+                            <i class="fa-solid fa-language me-1"></i> Generate Pidgin Dialogue
+                        </button>
+                    </div>
                 </div>
 
                 <div class="row g-3">
@@ -161,11 +179,30 @@
                             </div>
                             <div class="frame-details">
                                 <div class="frame-prompt">{{ shot.visual_prompt }}</div>
+                                {% if drama_episode %}
+                                <form method="post" class="mt-2 d-flex gap-2 align-items-center" action="{{ url_for('drama_studio.assign_shot_cast_form_view', episode_id=drama_episode.id, shot_id=shot.id) }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <select class="form-select form-select-sm" name="episode_character_id" aria-label="Assign character to this shot" required>
+                                        <option value="">Assign cast to shot</option>
+                                        {% for cast_link in drama_episode.character_links %}
+                                            {% if cast_link.movie_character %}
+                                            <option value="{{ cast_link.id }}">{{ cast_link.character.name }}</option>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </select>
+                                    <button class="btn btn-sm btn-surface" type="submit">Assign</button>
+                                </form>
+                                {% endif %}
                                 <div class="d-flex align-items-center justify-content-between pt-2 border-top" style="border-color: var(--af-border) !important;">
                                     <small class="text-muted"><i class="fa-solid fa-camera me-1"></i> {{ shot.camera_movement }}</small>
-                                    <button class="btn btn-sm btn-gold" id="btnShot_{{ shot.id }}" onclick="generateShotClip({{ shot.id }})">
-                                        {% if shot.video_url %}Regenerate Clip{% else %}Generate Video{% endif %}
-                                    </button>
+                                    <div class="d-flex gap-2">
+                                        <button class="btn btn-sm btn-surface" id="btnLipSync_{{ shot.id }}" onclick="lipSyncShot({{ shot.id }})" {% if not shot.video_url %}disabled{% endif %}>
+                                            <i class="fa-solid fa-waveform me-1"></i> Lip-sync · 5 credits/5s
+                                        </button>
+                                        <button class="btn btn-sm btn-gold" id="btnShot_{{ shot.id }}" onclick="generateShotClip({{ shot.id }})">
+                                            {% if shot.video_url %}Regenerate Clip{% else %}Generate Video{% endif %}
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -250,6 +287,7 @@
                             <input type="text" class="form-control" value="Stereo 48kHz / AAC" disabled>
                         </div>
 
+                        <p class="small text-secondary mb-3">Dialogue uses Nigerian Pidgin text with your selected Nigerian English neural voice. Lip-sync costs 5 credits per 5-second shot or 10 credits per 10-second shot. Shots with saved dialogue are synced automatically when generated.</p>
                         <button class="btn btn-gold w-100 py-3" onclick="triggerMasterRender()">
                             <i class="fa-solid fa-wand-magic-sparkles me-2"></i> Master &amp; Export Movie
                         </button>
@@ -290,6 +328,25 @@
         }
     }
 
+    async function saveCharacter(event, charId) {
+        event.preventDefault();
+        const form = event.currentTarget;
+        try {
+            const res = await fetch(`/movie-studio/projects/${projectId}/characters/${charId}/update`, {
+                method: "POST",
+                body: new FormData(form)
+            });
+            const data = await res.json();
+            if (data.success) {
+                window.showAfrigenAlert({ text: data.message, icon: "success", toast: true });
+            } else {
+                window.showAfrigenAlert({ text: data.error || "Could not save character settings.", icon: "error" });
+            }
+        } catch (e) {
+            window.showAfrigenAlert({ text: String(e), icon: "error" });
+        }
+    }
+
     async function generatePortrait(charId) {
         window.showAfrigenAlert({ text: "Generating 35mm facial reference... Takes ~10s.", icon: "info", toast: true });
         try {
@@ -316,6 +373,41 @@
                 window.showAfrigenAlert({ text: data.error || "Storyboard breakdown failed.", icon: "error" });
             }
         } catch (e) {
+            window.showAfrigenAlert({ text: String(e), icon: "error" });
+        }
+    }
+
+    async function generateSceneDialogue(sceneId) {
+        window.showAfrigenAlert({ text: "Writing Nigerian Pidgin dialogue and generating character voices...", icon: "info", toast: true });
+        try {
+            const res = await fetch(`/movie-studio/projects/${projectId}/scenes/${sceneId}/dialogue`, { method: "POST" });
+            const data = await res.json();
+            if (data.success) {
+                window.showAfrigenAlert({ text: data.message + " Completed shots will be lip-synced automatically.", icon: "success" });
+                location.reload();
+            } else {
+                window.showAfrigenAlert({ text: data.error || data.message || "Dialogue generation failed.", icon: "error" });
+            }
+        } catch (e) {
+            window.showAfrigenAlert({ text: String(e), icon: "error" });
+        }
+    }
+
+    async function lipSyncShot(shotId) {
+        const btn = document.getElementById(`btnLipSync_${shotId}`);
+        if (btn) { btn.disabled = true; btn.innerText = "Lip-syncing..."; }
+        try {
+            const res = await fetch(`/movie-studio/projects/${projectId}/shots/${shotId}/lip-sync`, { method: "POST" });
+            const data = await res.json();
+            if (data.success) {
+                window.showAfrigenAlert({ text: "Character dialogue synchronized successfully.", icon: "success" });
+                location.reload();
+            } else {
+                if (btn) { btn.disabled = false; btn.innerText = "Lip-sync · 5 credits/5s"; }
+                window.showAfrigenAlert({ text: data.error || "Lip-sync failed.", icon: "error" });
+            }
+        } catch (e) {
+            if (btn) btn.disabled = false;
             window.showAfrigenAlert({ text: String(e), icon: "error" });
         }
     }

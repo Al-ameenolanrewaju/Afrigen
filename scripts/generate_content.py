@@ -556,7 +556,7 @@ Return ONLY valid JSON, no markdown fences, no commentary."""
 # Bulk generation using Content Engine
 # ---------------------------------------------------------------------------
 
-ACTIVE_PLATFORMS = ["telegram", "linkedin", "devto", "facebook", "instagram"]
+ACTIVE_PLATFORMS = ["telegram", "linkedin", "devto", "facebook"]
 
 _GENERATORS = {
     "telegram": telegram_prompt,

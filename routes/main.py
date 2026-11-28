@@ -320,9 +320,13 @@ def index():
                 _PUBLIC_STATS_CACHE_AT = now
 
     total_users, total_generations = _PUBLIC_STATS_CACHE
+    from services.pricing import get_subscription_pricing
+    prices = get_subscription_pricing()
+    subscription_prices = {key: value // 100 for key, value in prices.items()}
     return render_template("main/index.html",
         total_users=total_users,
-        total_generations=total_generations
+        total_generations=total_generations,
+        subscription_prices=subscription_prices,
     )
 
 
@@ -1455,9 +1459,13 @@ def admin():
 
     total_users = User.query.count()
     total_generations = Generation.query.count()
-    pro_users = User.query.filter_by(plan='pro').count()
-    free_users = User.query.filter_by(plan='free').count()
-    banned_users = User.query.filter_by(plan='banned').count()
+    # Show every customer tier. The legacy "pro" value is an alias for Creator.
+    normalized_plan = func.lower(func.coalesce(User.plan, 'free'))
+    creator_users = User.query.filter(normalized_plan.in_(['creator', 'pro'])).count()
+    studio_users = User.query.filter(normalized_plan == 'studio').count()
+    director_users = User.query.filter(normalized_plan == 'director').count()
+    free_users = User.query.filter(normalized_plan.in_(['free', 'spark'])).count()
+    banned_users = User.query.filter(normalized_plan == 'banned').count()
 
     # Generation stats
     completed_generations = Generation.query.filter_by(status='completed').count()
@@ -1697,7 +1705,9 @@ def admin():
         stuck_generations=stuck_generations,
         total_users=total_users,
         total_generations=total_generations,
-        pro_users=pro_users,
+        creator_users=creator_users,
+        studio_users=studio_users,
+        director_users=director_users,
         free_users=free_users,
         banned_users=banned_users,
         completed_generations=completed_generations,
@@ -1835,6 +1845,42 @@ def grant_free_video(user_id):
     return redirect(request.referrer or url_for('main.admin'))
 
 
+@main.route('/admin/users/<int:user_id>/plan', methods=['POST'])
+@admin_required
+@limiter.exempt
+def admin_set_user_plan(user_id):
+    user = db.session.get(User, user_id)
+    if not user:
+        flash('User not found.', 'danger')
+        return redirect(url_for('main.admin'))
+
+    requested_plan = (request.form.get('plan') or '').strip().lower()
+    plan_credits = {'free': 10, 'spark': 10, 'creator': 100, 'pro': 100, 'studio': 300, 'director': 1000}
+    if requested_plan not in plan_credits:
+        flash('Choose a valid subscription tier.', 'danger')
+        return redirect(url_for('main.admin'))
+
+    # Store the canonical tier name; "pro" remains supported as a legacy Creator alias.
+    canonical_plan = 'free' if requested_plan == 'spark' else requested_plan
+    previous_plan = (user.plan or 'free').lower()
+    previous_credits = user.credits or 0
+    new_credits = plan_credits[canonical_plan]
+    user.plan = canonical_plan
+    user.credits = new_credits
+
+    from models import CreditLedger
+    delta = new_credits - previous_credits
+    if delta:
+        db.session.add(CreditLedger(
+            user_id=user.id,
+            delta=delta,
+            reason=f'Admin plan change: {previous_plan} -> {canonical_plan}'
+        ))
+    db.session.commit()
+    flash(f"{user.username}'s plan changed to {canonical_plan.title()} with {new_credits} credits.", 'success')
+    return redirect(url_for('main.admin'))
+
+
 @main.route('/admin/upgrade/<int:user_id>')
 @admin_required
 @limiter.exempt
@@ -1900,19 +1946,69 @@ def admin_pricing():
     from services.pricing import DEFAULT_PRICING
     from services.video import estimate_fal_image_to_video_cost, estimate_fal_video_cost
     if request.method == 'POST':
-        for key in DEFAULT_PRICING:
-            value = request.form.get(key, type=float)
-            if value is None or value < 0:
-                flash(f'Invalid value for {key}.', 'danger')
+        import math
+        if request.form.get('pricing_type') == 'subscriptions':
+            from services.pricing import DEFAULT_SUBSCRIPTION_PRICING
+            submitted_subscriptions = {}
+            for key in DEFAULT_SUBSCRIPTION_PRICING:
+                raw_value = (request.form.get(key) or '').strip()
+                try:
+                    naira = float(raw_value)
+                except (TypeError, ValueError):
+                    naira = None
+                if naira is None or not math.isfinite(naira) or not naira.is_integer() or not 1000 <= naira <= 10_000_000:
+                    flash(f'{key.replace("_", " ").replace("kobo", "").title()} must be a whole Naira amount between ₦1,000 and ₦10,000,000.', 'danger')
+                    return redirect(url_for('main.admin_pricing'))
+                submitted_subscriptions[key] = int(naira) * 100
+            for tier in ('creator', 'studio', 'director'):
+                monthly = submitted_subscriptions[f'{tier}_monthly_kobo']
+                annual = submitted_subscriptions[f'{tier}_annual_kobo']
+                if annual <= monthly or annual >= monthly * 12:
+                    flash(f'{tier.title()} annual pricing must be higher than one month and lower than twelve monthly payments.', 'danger')
+                    return redirect(url_for('main.admin_pricing'))
+            if len(set(submitted_subscriptions.values())) != len(submitted_subscriptions):
+                flash('Each subscription price must be unique to avoid ambiguous payment verification.', 'danger')
                 return redirect(url_for('main.admin_pricing'))
+            legacy_creator_annual = 11_000_000
+            if legacy_creator_annual in submitted_subscriptions.values() and submitted_subscriptions['creator_annual_kobo'] != legacy_creator_annual:
+                flash('₦110,000 is reserved for completing older Creator annual checkouts; choose a different price for other plans.', 'danger')
+                return redirect(url_for('main.admin_pricing'))
+            for key, value in submitted_subscriptions.items():
+                row = PricingConfig.query.filter_by(key=key).first()
+                if row is None:
+                    db.session.add(PricingConfig(key=key, value=value))
+                else:
+                    row.value = value
+            db.session.commit()
+            flash('Subscription prices updated. Public pricing and new Paystack checkouts now use these prices.', 'success')
+            return redirect(url_for('main.admin_pricing'))
+
+        submitted = {}
+        integer_costs = {'cheap_video_cost', 'kling_video_cost', 'image_to_video_cost'}
+        for key in DEFAULT_PRICING:
+            raw_value = (request.form.get(key) or '').strip()
+            try:
+                value = float(raw_value)
+            except (TypeError, ValueError):
+                value = None
+            if value is None or not math.isfinite(value) or value <= 0:
+                flash(f'{key.replace("_", " ").title()} must be a valid positive number.', 'danger')
+                return redirect(url_for('main.admin_pricing'))
+            if key in integer_costs and (not value.is_integer() or value > 10000):
+                flash(f'{key.replace("_", " ").title()} must be a whole number between 1 and 10,000 credits.', 'danger')
+                return redirect(url_for('main.admin_pricing'))
+            if key == 'kling_credits_per_second' and value > 100:
+                flash('Kling credits per second must be between 0 and 100.', 'danger')
+                return redirect(url_for('main.admin_pricing'))
+            submitted[key] = int(value) if key in integer_costs else value
+        for key, value in submitted.items():
             row = PricingConfig.query.filter_by(key=key).first()
             if not row:
-                row = PricingConfig(key=key, value=value)
-                db.session.add(row)
+                db.session.add(PricingConfig(key=key, value=value))
             else:
                 row.value = value
         db.session.commit()
-        flash('Pricing configuration updated.', 'success')
+        flash('Generation credit pricing updated.', 'success')
     pricing = {}
     for key, default in DEFAULT_PRICING.items():
         row = PricingConfig.query.filter_by(key=key).first()
@@ -1922,7 +2018,17 @@ def admin_pricing():
         'kling_video': estimate_fal_video_cost('fal-ai/kling-video/v1/standard/text-to-video', '5') / pricing['kling_video_cost'],
         'image_to_video': estimate_fal_image_to_video_cost('5') / pricing['image_to_video_cost'],
     }
-    return render_template('main/admin_pricing.html', pricing=pricing, fal_cost_per_credit=fal_cost_per_credit)
+    from services.pricing import get_subscription_pricing
+    subscription_pricing = {
+        key: value // 100
+        for key, value in get_subscription_pricing().items()
+    }
+    return render_template(
+        'main/admin_pricing.html',
+        pricing=pricing,
+        fal_cost_per_credit=fal_cost_per_credit,
+        subscription_pricing=subscription_pricing,
+    )
 
 
 def _admin_csv(filename, headers, rows):
@@ -2039,16 +2145,23 @@ import requests as http_requests
 
 @main.route('/upgrade')
 def upgrade():
-    # Public so logged-out visitors can see pricing (transparency). The actual
-    # payment forms are still gated — anonymous users get a sign-up CTA instead.
-    return render_template('main/upgrade.html',
-                           paystack_public_key=os.environ.get('PAYSTACK_PUBLIC_KEY'))
+    # Public so logged-out visitors can see current prices. Checkout remains
+    # login-gated and uses the same values shown on this page.
+    from services.pricing import get_subscription_pricing
+    prices = get_subscription_pricing()
+    subscription_prices = {key: value // 100 for key, value in prices.items()}
+    return render_template(
+        'main/upgrade.html',
+        paystack_public_key=os.environ.get('PAYSTACK_PUBLIC_KEY'),
+        subscription_prices=subscription_prices,
+    )
 
 
 @main.route('/payment/initialize', methods=['POST'])
 @login_required
 def initialize_payment():
-    amount = PRO_MONTHLY_KOBO
+    from services.pricing import get_subscription_pricing
+    amount = get_subscription_pricing()['creator_monthly_kobo']
     headers = {
         "Authorization": f"Bearer {os.environ.get('PAYSTACK_SECRET_KEY')}",
         "Content-Type": "application/json"
@@ -2074,7 +2187,8 @@ def initialize_payment():
 @main.route('/payment/initialize/annual', methods=['POST'])
 @login_required
 def initialize_payment_annual():
-    amount = PRO_ANNUAL_KOBO
+    from services.pricing import get_subscription_pricing
+    amount = get_subscription_pricing()['creator_annual_kobo']
     headers = {
         "Authorization": f"Bearer {os.environ.get('PAYSTACK_SECRET_KEY')}",
         "Content-Type": "application/json"
@@ -2127,25 +2241,29 @@ def _initialize_paystack_payment(amount, metadata_extra=None):
 @main.route('/payment/initialize/studio', methods=['POST'])
 @login_required
 def initialize_payment_studio():
-    return _initialize_paystack_payment(STUDIO_MONTHLY_KOBO, {"plan": "studio"})
+    from services.pricing import get_subscription_pricing
+    return _initialize_paystack_payment(get_subscription_pricing()['studio_monthly_kobo'], {"plan": "studio"})
 
 
 @main.route('/payment/initialize/studio/annual', methods=['POST'])
 @login_required
 def initialize_payment_studio_annual():
-    return _initialize_paystack_payment(STUDIO_ANNUAL_KOBO, {"plan": "studio_annual"})
+    from services.pricing import get_subscription_pricing
+    return _initialize_paystack_payment(get_subscription_pricing()['studio_annual_kobo'], {"plan": "studio_annual"})
 
 
 @main.route('/payment/initialize/director', methods=['POST'])
 @login_required
 def initialize_payment_director():
-    return _initialize_paystack_payment(DIRECTOR_MONTHLY_KOBO, {"plan": "director"})
+    from services.pricing import get_subscription_pricing
+    return _initialize_paystack_payment(get_subscription_pricing()['director_monthly_kobo'], {"plan": "director"})
 
 
 @main.route('/payment/initialize/director/annual', methods=['POST'])
 @login_required
 def initialize_payment_director_annual():
-    return _initialize_paystack_payment(DIRECTOR_ANNUAL_KOBO, {"plan": "director_annual"})
+    from services.pricing import get_subscription_pricing
+    return _initialize_paystack_payment(get_subscription_pricing()['director_annual_kobo'], {"plan": "director_annual"})
 
 
 @main.route('/payment/callback')
@@ -2167,19 +2285,15 @@ def payment_callback():
 
     # Verify payment status, payer email, metadata user_id, AND that the amount
     # is one we actually charge (so the tier can't be downgraded by paying less).
-    _all_valid_amounts = (
-        PRO_MONTHLY_KOBO, PRO_ANNUAL_KOBO,
-        CREATOR_MONTHLY_KOBO, CREATOR_ANNUAL_KOBO,
-        STUDIO_MONTHLY_KOBO, STUDIO_ANNUAL_KOBO,
-        DIRECTOR_MONTHLY_KOBO, DIRECTOR_ANNUAL_KOBO,
-    )
+    from services.pricing import get_subscription_payment_details
+    payment_details = get_subscription_payment_details(amount)
     verified = (
         result.get('status')
         and data.get('status') == 'success'
         and data.get('currency') == 'NGN'
         and data.get('customer', {}).get('email', '').strip().lower() == current_user.email.strip().lower()
         and str((data.get('metadata') or {}).get('user_id')) == str(current_user.id)
-        and amount in _all_valid_amounts
+        and payment_details is not None
     )
 
     if not verified:
@@ -2193,23 +2307,9 @@ def payment_callback():
         flash('This payment has already been applied. ⭐', 'info')
         return redirect(url_for('main.dashboard'))
 
-    # Derive plan and credits from amount
-    if amount in (DIRECTOR_MONTHLY_KOBO,):
-        new_plan = 'director'; grant = 1000
-    elif amount == DIRECTOR_ANNUAL_KOBO:
-        new_plan = 'director'; grant = 12000
-    elif amount == STUDIO_MONTHLY_KOBO:
-        new_plan = 'studio'; grant = 300
-    elif amount == STUDIO_ANNUAL_KOBO:
-        new_plan = 'studio'; grant = 3600
-    elif amount == CREATOR_ANNUAL_KOBO:
-        new_plan = 'creator'; grant = 1200
-    elif amount == PRO_ANNUAL_KOBO:
-        new_plan = 'creator'; grant = 1200
-    else:
-        # PRO_MONTHLY_KOBO == CREATOR_MONTHLY_KOBO
-        new_plan = 'creator'; grant = 100
-    is_annual = amount in (CREATOR_ANNUAL_KOBO, STUDIO_ANNUAL_KOBO, DIRECTOR_ANNUAL_KOBO, PRO_ANNUAL_KOBO)
+    # Tier and credits are resolved from the same configurable price table
+    # used by checkout and the public pricing pages.
+    new_plan, grant, is_annual = payment_details
     current_user.plan = new_plan
     current_user.credits = (current_user.credits or 0) + grant
     from models import CreditLedger
@@ -2585,7 +2685,10 @@ def admin_distribution_retry(run_id, platform):
     from services.distribution import retry_platform
     try:
         ok = retry_platform(run_id, platform)
-        return jsonify({"ok": ok})
+        return jsonify({
+            "ok": ok,
+            "error": None if ok else "Publishing failed again. Check the platform error shown in this run.",
+        })
     except ValueError as e:
         return jsonify({"ok": False, "error": str(e)}), 400
     except Exception as e:
@@ -3005,6 +3108,34 @@ def unsubscribe(token):
     if not EmailOptOut.query.filter_by(email=email).first():
         db.session.add(EmailOptOut(email=email))
         try:
+            if email_changed:
+                from models import Subscriber
+                from datetime import datetime, timezone
+                old_subscriber = Subscriber.query.filter_by(email=old_email).first()
+                new_subscriber = Subscriber.query.filter_by(email=new_email.lower()).first()
+                if new_subscriber:
+                    new_subscriber.name = new_username
+                    new_subscriber.newsletter = bool(current_user.marketing_emails)
+                    new_subscriber.updated_at = datetime.now(timezone.utc)
+                if old_subscriber and old_subscriber.id != getattr(new_subscriber, 'id', None):
+                    if new_subscriber:
+                        old_subscriber.newsletter = False
+                        old_subscriber.updated_at = datetime.now(timezone.utc)
+                    else:
+                        old_subscriber.email = new_email.lower()
+                        old_subscriber.name = new_username
+                        old_subscriber.newsletter = bool(current_user.marketing_emails)
+                        old_subscriber.updated_at = datetime.now(timezone.utc)
+                elif not new_subscriber and current_user.marketing_emails:
+                    db.session.add(Subscriber(
+                        name=new_username,
+                        email=new_email.lower(),
+                        newsletter=True,
+                    ))
+            else:
+                from services.newsletter import upsert_subscriber_from_user
+                if current_user.marketing_emails:
+                    upsert_subscriber_from_user(current_user)
             db.session.commit()
         except IntegrityError:
             db.session.rollback()
@@ -3137,6 +3268,7 @@ def payment_webhook():
         return '', 400
 
     enqueue_webhook_task(lambda: clear_alert('paystack-signature'))
+    from services.pricing import get_subscription_payment_details
     outcome = 'ignored'
     try:
         if data.get('event') == 'charge.success':
@@ -3153,29 +3285,10 @@ def payment_webhook():
                 and charge.get('status') == 'success'
                 and charge.get('currency') == 'NGN'
                 and customer_email.strip().lower() == user.email.strip().lower()
-                and amount in (
-                    PRO_MONTHLY_KOBO, PRO_ANNUAL_KOBO,
-                    CREATOR_MONTHLY_KOBO, CREATOR_ANNUAL_KOBO,
-                    STUDIO_MONTHLY_KOBO, STUDIO_ANNUAL_KOBO,
-                    DIRECTOR_MONTHLY_KOBO, DIRECTOR_ANNUAL_KOBO,
-                )
+                and get_subscription_payment_details(amount) is not None
                 and not Payment.query.filter_by(reference=reference).first()
             ):
-                is_annual = amount in (CREATOR_ANNUAL_KOBO, STUDIO_ANNUAL_KOBO, DIRECTOR_ANNUAL_KOBO, PRO_ANNUAL_KOBO)
-                if amount == DIRECTOR_MONTHLY_KOBO:
-                    new_plan = 'director'; grant = 1000
-                elif amount == DIRECTOR_ANNUAL_KOBO:
-                    new_plan = 'director'; grant = 12000
-                elif amount == STUDIO_MONTHLY_KOBO:
-                    new_plan = 'studio'; grant = 300
-                elif amount == STUDIO_ANNUAL_KOBO:
-                    new_plan = 'studio'; grant = 3600
-                elif amount == CREATOR_ANNUAL_KOBO:
-                    new_plan = 'creator'; grant = 1200
-                elif amount == PRO_ANNUAL_KOBO:
-                    new_plan = 'creator'; grant = 1200
-                else:
-                    new_plan = 'creator'; grant = 100
+                new_plan, grant, is_annual = get_subscription_payment_details(amount)
                 user.plan = new_plan
                 user.credits = (user.credits or 0) + grant
                 from models import CreditLedger
@@ -3412,7 +3525,7 @@ def _marketing_campaign_payload(campaign):
 @admin_required
 @limiter.exempt
 def admin_marketing_campaigns():
-    from models import NewsletterCampaign
+    from models import NewsletterCampaign, SocialPost
     from services.newsletter import collect_recipients
 
     generated = None
@@ -3468,11 +3581,22 @@ def admin_marketing_campaigns():
                 flash(f'Could not generate the campaign: {exc}', 'danger')
 
     campaigns = NewsletterCampaign.query.order_by(NewsletterCampaign.created_at.desc()).limit(50).all()
-    campaign_rows = [{"campaign": c, "payload": _marketing_campaign_payload(c)} for c in campaigns]
+    automated_posts = SocialPost.query.order_by(
+        SocialPost.scheduled_at.desc().nullslast(), SocialPost.created_at.desc()
+    ).limit(20).all()
+    campaign_rows = []
+    for c in campaigns:
+        payload = _marketing_campaign_payload(c)
+        try:
+            social_results = json.loads(c.social_results or "{}")
+        except (TypeError, ValueError):
+            social_results = {}
+        campaign_rows.append({"campaign": c, "payload": payload, "social_results": social_results})
     return render_template(
         'admin/marketing_campaigns.html',
         generated=generated,
         campaign_rows=campaign_rows,
+        automated_posts=automated_posts,
         audience_count=len(collect_recipients()),
     )
 
@@ -3504,6 +3628,7 @@ def admin_marketing_campaign_save():
     campaign = NewsletterCampaign(
         subject=subject,
         html_body=_MARKETING_CAMPAIGN_PREFIX + json.dumps(payload, ensure_ascii=False),
+        social_results=json.dumps({}, ensure_ascii=False),
         status='draft',
     )
     db.session.add(campaign)
@@ -3525,6 +3650,10 @@ def admin_marketing_campaign_launch(id):
         return redirect(url_for('main.admin_marketing_campaigns'))
     campaign.subject = payload.get('email_subject') or campaign.subject
     campaign.html_body = payload.get('email_html') or ''
+    campaign.social_results = json.dumps({
+        platform: {"status": "pending", "ok": None, "message": "Awaiting publisher response."}
+        for platform in (payload.get("platforms") or [])
+    }, ensure_ascii=False)
     campaign.total_audience = len(collect_recipients())
     campaign.batch_offset = 0
     campaign.status = 'sending'
@@ -3539,10 +3668,31 @@ def admin_marketing_campaign_launch(id):
                 payload.get('brief', ''), payload.get('copies', {}),
                 platforms, payload.get('flyer_url')
             )
-            logger.info("Marketing campaign %s social delivery: %s", id, social.get('platforms', {}))
+            platform_results = social.get("platforms", {})
+            campaign.social_results = json.dumps(platform_results, ensure_ascii=False, default=str)
+            failed = [
+                name for name, result in platform_results.items()
+                if not isinstance(result, dict) or result.get("ok") is not True
+            ]
+            logger.info("Marketing campaign %s social delivery: %s", id, platform_results)
+            db.session.commit()
+            if failed:
+                flash(
+                    "Email campaign queued. Social channels needing attention: "
+                    + ", ".join(failed) + ". Review their delivery status below.",
+                    "warning",
+                )
         except Exception:
+            db.session.rollback()
             logger.exception("Social distribution failed for marketing campaign %s", id)
-            flash('Email campaign queued; one or more social channels could not be published. Check logs.', 'warning')
+            campaign = NewsletterCampaign.query.get(id)
+            if campaign:
+                campaign.social_results = json.dumps({
+                    platform: {"ok": False, "status": "failed", "error": "Publisher failed before returning a result."}
+                    for platform in (payload.get("platforms") or [])
+                })
+                db.session.commit()
+            flash('Email campaign queued, but social publishing failed. Review the delivery status below.', 'warning')
     flash(f'Campaign launched. Email delivery will process in batches for {campaign.total_audience} opted-in recipients.', 'success')
     return redirect(url_for('main.admin_marketing_campaigns'))
 
@@ -4540,13 +4690,35 @@ def publish_generated_content():
 @main.route('/settings', methods=['GET', 'POST'])
 @login_required
 def settings():
-    from models import ServiceCredential, ConnectedAccount, db
+    from models import ServiceCredential, db
     from services.newsletter import sync_user_email_preferences
-    from utils.encryption import encrypt_token, decrypt_token
+    from utils.encryption import encrypt_token
+    from werkzeug.security import generate_password_hash
+    from routes.auth import verify_user_password
     import json
 
     if request.method == 'POST':
         section = request.form.get('section')
+        if section == 'account':
+            current_password = request.form.get('current_password') or ''
+            new_password = request.form.get('new_password') or ''
+            confirm_password = request.form.get('confirm_password') or ''
+
+            if not verify_user_password(current_user.password, current_password):
+                flash('Your current password is incorrect.', 'danger')
+                return redirect(url_for('main.settings'))
+            if len(new_password) < 8:
+                flash('Your new password must be at least 8 characters long.', 'danger')
+                return redirect(url_for('main.settings'))
+            if new_password != confirm_password:
+                flash('The new passwords do not match.', 'danger')
+                return redirect(url_for('main.settings'))
+
+            current_user.password = generate_password_hash(new_password)
+            db.session.commit()
+            flash('Your password has been updated successfully.', 'success')
+            return redirect(url_for('main.settings'))
+
         if section == 'notifications':
             sync_user_email_preferences(current_user, request.form)
             db.session.commit()
@@ -4627,6 +4799,8 @@ def profile():
             flash('This email is already registered to another account.', 'danger')
             return redirect(url_for('main.profile'))
 
+        old_email = (current_user.email or '').strip().lower()
+        email_changed = old_email != new_email.lower()
         current_user.username = new_username
         current_user.email = new_email
 

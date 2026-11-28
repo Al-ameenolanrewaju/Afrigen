@@ -193,6 +193,41 @@
     .dot:nth-child(2) { animation-delay: 0.2s; }
     .dot:nth-child(3) { animation-delay: 0.4s; }
     @keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+
+.assistant-container { min-width:0; width:100%; max-width:100%; overflow:hidden; }
+.chat-area { min-width:0; }
+.chat-messages { min-width:0; }
+.msg { min-width:0; max-width:min(80%,760px); }
+.msg-bubble { overflow-wrap:anywhere; word-break:break-word; }
+.action-group { max-width:100%; }
+.btn-ai-action { max-width:100%; white-space:normal; text-align:left; }
+.assistant-mobile-toolbar { display:none; }
+@media (max-width:768px) {
+ .assistant-container { position:relative; height:calc(100dvh - 72px - var(--mobile-nav-height,64px)); min-height:420px; margin:-12px -12px 0 !important; width:calc(100% + 24px); overflow:hidden; }
+ .assistant-mobile-toolbar { display:flex; align-items:center; gap:12px; flex:0 0 auto; min-height:52px; padding:8px 14px; background:#161B22; border-bottom:1px solid #30363D; }
+ .history-sidebar { display:flex; position:absolute; z-index:30; inset:0 auto 0 0; width:min(82vw,320px); max-width:calc(100% - 48px); height:100%; transform:translateX(-105%); transition:transform .22s ease; box-shadow:12px 0 32px rgba(0,0,0,.35); }
+ .history-sidebar.mobile-open { transform:translateX(0); }
+ .assistant-drawer-backdrop { display:none; position:absolute; inset:0; z-index:20; background:rgba(0,0,0,.58); }
+ .assistant-drawer-backdrop.active { display:block; }
+ .chat-area { width:100%; flex:1 1 auto; min-width:0; }
+ .chat-messages { padding:18px 14px; gap:18px; }
+ .msg { max-width:92%; }
+ .msg-bubble { padding:12px 14px; font-size:14px; }
+ .chat-input-wrapper { padding:12px 12px max(12px,env(safe-area-inset-bottom)); }
+ .chat-input-box { padding:6px 12px; gap:10px; }
+ .chat-input-box input { min-width:0; }
+ .empty-state { padding:20px 8px; gap:16px; }
+ .pill-suggestions { width:100%; gap:8px; }
+ .pill { max-width:100%; padding:9px 12px; font-size:13px; }
+ .action-group { gap:8px; }
+ .btn-ai-action { font-size:12px; padding:8px 12px; }
+}
+@media (max-width:380px) {
+ .chat-messages { padding-inline:10px; }
+ .msg { max-width:96%; }
+ .chat-input-wrapper { padding-inline:8px; }
+}
+
 </style>
 
 <div class="assistant-container m-0">
@@ -207,8 +242,14 @@
         </div>
     </div>
 
+    <div class="assistant-drawer-backdrop" id="assistantDrawerBackdrop"></div>
     <!-- Main Chat -->
     <div class="chat-area">
+        <div class="assistant-mobile-toolbar">
+            <button type="button" class="btn btn-sm" id="btnToggleHistory" aria-label="Open chat history" aria-expanded="false" style="color:#F5A623;background:rgba(245,166,35,.1);"><i class="fa-solid fa-clock-rotate-left"></i></button>
+            <strong style="color:#F0F6FC;font-size:14px;">Afrigen Copilot</strong>
+            <button type="button" class="btn btn-sm ms-auto" id="btnMobileNewChat" aria-label="Start new chat" style="color:#F5A623;background:rgba(245,166,35,.1);"><i class="fa-solid fa-plus"></i></button>
+        </div>
         <div class="chat-messages" id="chatMessages">
             <!-- Empty State -->
             <div class="empty-state" id="emptyState">
@@ -256,6 +297,26 @@
     const loadingIndicator = document.getElementById('loadingIndicator');
     const historyList = document.getElementById('historyList');
     
+    // Mobile chat-history drawer
+    const historySidebar = document.querySelector('.history-sidebar');
+    const drawerBackdrop = document.getElementById('assistantDrawerBackdrop');
+    const toggleHistoryBtn = document.getElementById('btnToggleHistory');
+    function closeHistoryDrawer() {
+        historySidebar.classList.remove('mobile-open');
+        drawerBackdrop.classList.remove('active');
+        toggleHistoryBtn?.setAttribute('aria-expanded', 'false');
+    }
+    toggleHistoryBtn?.addEventListener('click', () => {
+        const isOpen = historySidebar.classList.toggle('mobile-open');
+        drawerBackdrop.classList.toggle('active', isOpen);
+        toggleHistoryBtn.setAttribute('aria-expanded', String(isOpen));
+    });
+    drawerBackdrop?.addEventListener('click', closeHistoryDrawer);
+    document.getElementById('btnMobileNewChat')?.addEventListener('click', () => {
+        document.getElementById('btnNewChat').click();
+        closeHistoryDrawer();
+    });
+
     // Initialize
     renderHistoryList();
     if(conversations.length > 0) {

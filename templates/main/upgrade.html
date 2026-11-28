@@ -29,6 +29,13 @@
                 </thead>
                 <tbody>
                     <tr>
+                        <td class="fw-bold text-white">Free AI image generations</td>
+                        <td class="text-center text-muted fw-bold">2 images / day</td>
+                        <td class="text-center text-muted">Credit-based</td>
+                        <td class="text-center text-muted">Credit-based</td>
+                        <td class="text-center text-muted">Credit-based</td>
+                    </tr>
+                    <tr>
                         <td class="fw-bold text-white">Monthly AI Credits</td>
                         <td class="text-center text-muted">—</td>
                         <td class="text-center text-success fw-bold">100 Credits</td>
@@ -55,6 +62,34 @@
                         <td class="text-center text-muted"><i class="fa-solid fa-xmark"></i></td>
                         <td class="text-center text-muted"><i class="fa-solid fa-xmark"></i></td>
                         <td class="text-center text-warning fw-bold"><i class="fa-solid fa-crown"></i> Full Access</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold text-white">AI Drama Studio — series &amp; episodes</td>
+                        <td class="text-center text-muted"><i class="fa-solid fa-xmark"></i></td>
+                        <td class="text-center text-muted"><i class="fa-solid fa-xmark"></i></td>
+                        <td class="text-center text-muted"><i class="fa-solid fa-xmark"></i></td>
+                        <td class="text-center text-warning fw-bold"><i class="fa-solid fa-circle-check"></i> Full access</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold text-white">Recurring character profiles &amp; visual continuity</td>
+                        <td class="text-center text-muted"><i class="fa-solid fa-xmark"></i></td>
+                        <td class="text-center text-muted"><i class="fa-solid fa-xmark"></i></td>
+                        <td class="text-center text-muted"><i class="fa-solid fa-xmark"></i></td>
+                        <td class="text-center text-warning"><i class="fa-solid fa-circle-check"></i> Included</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold text-white">Monthly AI drama episodes</td>
+                        <td class="text-center text-muted">—</td>
+                        <td class="text-center text-muted">—</td>
+                        <td class="text-center text-muted">—</td>
+                        <td class="text-center text-warning fw-bold">Up to 30</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold text-white">Automated screenplay-to-film workflow</td>
+                        <td class="text-center text-muted"><i class="fa-solid fa-xmark"></i></td>
+                        <td class="text-center text-muted"><i class="fa-solid fa-xmark"></i></td>
+                        <td class="text-center text-muted"><i class="fa-solid fa-xmark"></i></td>
+                        <td class="text-center text-warning"><i class="fa-solid fa-circle-check"></i> Included</td>
                     </tr>
                     <tr>
                         <td class="fw-bold text-white">Premium Cinematic Engine</td>
@@ -89,7 +124,7 @@
             <div class="pricing-plan-name text-success">Creator ⭐</div>
             <p class="text-secondary small">For solo creators &amp; influencers</p>
             <div class="pricing-price">
-                <span>₦10,000</span>
+                <span>₦{{ '{:,.0f}'.format(subscription_prices.creator_monthly_kobo) }}</span>
                 <span class="pricing-period">/ month</span>
             </div>
             <ul class="pricing-features-list">
@@ -103,11 +138,11 @@
             <div class="mt-auto">
                 <form method="POST" action="{{ url_for('main.initialize_payment') }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-surface w-100 mb-2">Pay ₦10,000 / Month</button>
+                    <button type="submit" class="btn btn-surface w-100 mb-2">Pay ₦{{ '{:,.0f}'.format(subscription_prices.creator_monthly_kobo) }} / Month</button>
                 </form>
                 <form method="POST" action="{{ url_for('main.initialize_payment_annual') }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-ghost w-100 small" style="font-size: 11px;">Pay ₦100,000 / Year (Save ₦20k)</button>
+                    <button type="submit" class="btn btn-ghost w-100 small" style="font-size: 11px;">Pay ₦{{ '{:,.0f}'.format(subscription_prices.creator_annual_kobo) }} / Year (Save ₦{{ '{:,.0f}'.format(subscription_prices.creator_monthly_kobo * 12 - subscription_prices.creator_annual_kobo) }})</button>
                 </form>
             </div>
         </div>
@@ -117,7 +152,7 @@
             <div class="pricing-plan-name text-info">Studio 🎬</div>
             <p class="text-secondary small">For production teams &amp; agencies</p>
             <div class="pricing-price">
-                <span>₦15,000</span>
+                <span>₦{{ '{:,.0f}'.format(subscription_prices.studio_monthly_kobo) }}</span>
                 <span class="pricing-period">/ month</span>
             </div>
             <ul class="pricing-features-list">
@@ -131,11 +166,11 @@
             <div class="mt-auto">
                 <form method="POST" action="{{ url_for('main.initialize_payment_studio') }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-surface w-100 mb-2">Pay ₦15,000 / Month</button>
+                    <button type="submit" class="btn btn-surface w-100 mb-2">Pay ₦{{ '{:,.0f}'.format(subscription_prices.studio_monthly_kobo) }} / Month</button>
                 </form>
                 <form method="POST" action="{{ url_for('main.initialize_payment_studio_annual') }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-ghost w-100 small" style="font-size: 11px;">Pay ₦150,000 / Year (Save ₦30k)</button>
+                    <button type="submit" class="btn btn-ghost w-100 small" style="font-size: 11px;">Pay ₦{{ '{:,.0f}'.format(subscription_prices.studio_annual_kobo) }} / Year (Save ₦{{ '{:,.0f}'.format(subscription_prices.studio_monthly_kobo * 12 - subscription_prices.studio_annual_kobo) }})</button>
                 </form>
             </div>
         </div>
@@ -148,7 +183,7 @@
             <div class="pricing-plan-name text-warning">Director 👑</div>
             <p class="text-secondary small">Full AI Film Production Suite</p>
             <div class="pricing-price">
-                <span>₦25,000</span>
+                <span>₦{{ '{:,.0f}'.format(subscription_prices.director_monthly_kobo) }}</span>
                 <span class="pricing-period">/ month</span>
             </div>
             <ul class="pricing-features-list">
@@ -163,12 +198,12 @@
                 <form method="POST" action="{{ url_for('main.initialize_payment_director') }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn btn-gold w-100 mb-2">
-                        <i class="fa-solid fa-crown me-1"></i> Upgrade to Director (₦25k/mo)
+                        <i class="fa-solid fa-crown me-1"></i> Upgrade to Director (₦{{ '{:,.0f}'.format(subscription_prices.director_monthly_kobo) }}/mo)
                     </button>
                 </form>
                 <form method="POST" action="{{ url_for('main.initialize_payment_director_annual') }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-ghost w-100 small" style="font-size: 11px;">Pay ₦250,000 / Year (Save ₦50k)</button>
+                    <button type="submit" class="btn btn-ghost w-100 small" style="font-size: 11px;">Pay ₦{{ '{:,.0f}'.format(subscription_prices.director_annual_kobo) }} / Year (Save ₦{{ '{:,.0f}'.format(subscription_prices.director_monthly_kobo * 12 - subscription_prices.director_annual_kobo) }})</button>
                 </form>
             </div>
         </div>

@@ -32,6 +32,7 @@ from routes.api import api
 from routes.campaigns import campaigns_bp
 from routes.telegram import telegram_bp
 from routes.movie_studio import movie_studio_bp
+from routes.drama_studio import drama_studio_bp
 from routes.admin_intelligence import admin_intelligence
 from services.credits import refund_video
 from services.monitoring import generate_daily_intelligence_report, run_monitoring_cycle
@@ -225,6 +226,8 @@ def ensure_legacy_schema_columns():
                 Notification, NewsletterCampaign, MovieProject, MovieCharacter,
                 MovieScene, MovieShot, StoryboardFrame, MovieAudioTrack,
                 MovieTimeline, MovieRenderJob,
+                DramaSeries, DramaCharacter, DramaEpisode, DramaEpisodeCharacter,
+                DramaShotCharacter, DramaMonthlyUsage, DramaProductionJob, DramaUsageLedger,
                 SocialCampaign, SocialPost, SocialMediaAsset, SocialPublishingJob,
                 SocialAnalytics, SocialAutomationSettings, AIContentHistory
             )
@@ -235,6 +238,8 @@ def ensure_legacy_schema_columns():
             for movie_table in (
                 MovieProject, MovieCharacter, MovieScene, MovieShot,
                 StoryboardFrame, MovieAudioTrack, MovieTimeline, MovieRenderJob,
+                DramaSeries, DramaCharacter, DramaEpisode, DramaEpisodeCharacter,
+                DramaShotCharacter, DramaMonthlyUsage, DramaProductionJob, DramaUsageLedger,
                 SocialCampaign, SocialPost, SocialMediaAsset, SocialPublishingJob,
                 SocialAnalytics, SocialAutomationSettings, AIContentHistory
             ):
@@ -394,9 +399,20 @@ def process_publishing_queue():
             logger.warning(f"Social automation queue processor error: {e}")
 
 
-@scheduler.task('cron', id='social_automation_daily_planner', hour=6, minute=0)
+@scheduler.task('interval', id='process_drama_production_queue', seconds=30, max_instances=1, coalesce=True)
+def process_drama_production_queue_job():
+    """Consume queued Drama Studio production jobs and recover abandoned claims."""
+    with app.app_context():
+        try:
+            from services.drama_worker import process_drama_production_queue
+            process_drama_production_queue(limit=1)
+        except Exception:
+            logger.exception("AI Drama Studio production queue worker failed")
+
+
+@scheduler.task('cron', id='social_automation_daily_planner', hour=5, minute=0)
 def social_automation_daily_planner_job():
-    """Plan and generate daily social content at 7:00 AM WAT (06:00 UTC) for autonomous campaigns."""
+    """Prepare daily social content at 6:00 AM WAT (05:00 UTC) for 7:00 AM WAT publishing."""
     with app.app_context():
         try:
             from models import SocialAutomationSettings, User
@@ -521,6 +537,7 @@ app.register_blueprint(api, url_prefix='/api/v1')
 app.register_blueprint(campaigns_bp, url_prefix='/api/campaigns')
 app.register_blueprint(telegram_bp)
 app.register_blueprint(movie_studio_bp)
+app.register_blueprint(drama_studio_bp)
 app.register_blueprint(admin_intelligence)
 
 

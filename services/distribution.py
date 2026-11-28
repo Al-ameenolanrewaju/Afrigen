@@ -31,91 +31,78 @@ from models import db, BlogPost, DistributionRun, DistributionResult
 # ---------------------------------------------------------------------------
 
 def trigger_distribution(post_id: int) -> int:
-    """Start a distribution run for a published blog post in a background thread.
-
-    Returns the DistributionRun id immediately. The admin UI polls for updates.
-    If the post is not published, raises ValueError.
-    """
+    """Start one distribution run for a published post; reject duplicate active runs."""
     post = db.session.get(BlogPost, post_id)
     if not post:
         raise ValueError(f"Blog post {post_id} not found.")
     if post.status != "published":
         raise ValueError(f"Blog post {post_id} is not published (status={post.status}).")
-
-    run = DistributionRun(
-        blog_post_id=post.id,
-        status="running",
-        total_platforms=0,
-        success_count=0,
-        fail_count=0,
-    )
+    active = DistributionRun.query.filter_by(blog_post_id=post.id, status="running").first()
+    if active:
+        raise ValueError(f"Distribution is already running for this post (run #{active.id}).")
+    run = DistributionRun(blog_post_id=post.id, status="running", total_platforms=0,
+                          success_count=0, fail_count=0)
     db.session.add(run)
     db.session.commit()
-
     run_id = run.id
-
-    # Fire in background thread — the admin gets their response immediately.
-    threading.Thread(target=_execute_run, args=(run_id,), daemon=True).start()
-
+    try:
+        threading.Thread(target=_execute_run, args=(run_id,), daemon=True).start()
+    except Exception:
+        run.status = "failed"
+        run.finished_at = datetime.now(timezone.utc)
+        db.session.commit()
+        raise
     return run_id
 
 
-def retry_platform(run_id: int, platform: str) -> bool:
-    """Retry a single failed platform within an existing run.
+def _refresh_run_totals(run):
+    results = DistributionResult.query.filter_by(run_id=run.id).all()
+    run.total_platforms = len(results)
+    run.success_count = sum(1 for item in results if item.ok)
+    run.fail_count = sum(1 for item in results if not item.ok)
+    if results and all(item.error or item.ok for item in results):
+        run.status = "completed" if run.success_count else "failed"
+        run.finished_at = datetime.now(timezone.utc)
+    return results
 
-    Re-generates the content for that platform and posts it. Updates the
-    existing DistributionResult row.
-    """
+
+def retry_platform(run_id: int, platform: str) -> bool:
     run = db.session.get(DistributionRun, run_id)
     if not run:
         raise ValueError(f"Distribution run {run_id} not found.")
-
+    if run.status == "running":
+        raise ValueError("Wait for the distribution run to finish before retrying.")
     existing = DistributionResult.query.filter_by(run_id=run_id, platform=platform).first()
     if not existing:
         raise ValueError(f"No result for platform '{platform}' in run {run_id}.")
-
+    if existing.ok:
+        raise ValueError(f"{platform} was already published successfully.")
+    if platform == "google_indexing":
+        raise ValueError("Google indexing is not manually retryable from this dashboard.")
+    from generate_content import _GENERATORS
+    gen_fn = _GENERATORS.get(platform)
+    if not gen_fn:
+        raise ValueError(f"Platform '{platform}' is not configured for retry.")
     post = run.blog_post
     if not post:
         raise ValueError("Blog post not found for this run.")
-
-    # Re-generate content for this specific platform. _GENERATORS includes the
-    # active platforms (telegram, linkedin, devto, hashnode); disabled ones stay
-    # mapped there too so a historical row can still be retried if re-enabled.
-    from generate_content import _GENERATORS
-
-    gen_fn = _GENERATORS.get(platform)
-    if not gen_fn:
-        raise ValueError(f"Unknown platform: {platform}")
-
-    post_dict = {
-        "slug": post.slug,
-        "title": post.title,
-        "description": post.description,
-        "body": post.body,
-    }
-
+    post_dict = {"slug": post.slug, "title": post.title,
+                 "description": post.description, "body": post.body}
     try:
         content = gen_fn(post_dict)
         result = _post_to_platform(platform, content, post_dict)
-        existing.ok = result["ok"]
-        existing.error = result.get("error") if not result["ok"] else None
+        existing.ok = bool(result.get("ok"))
+        existing.error = result.get("error") if not existing.ok else None
         existing.post_url = result.get("post_url") or (
-            result.get("urls", [None])[0] if result.get("urls") else None
-        )
+            result.get("urls", [None])[0] if result.get("urls") else None)
         existing.extra = json.dumps(result, ensure_ascii=False, default=str)
-
-        # Recalculate run counts from all results
-        run.success_count = sum(1 for r in run.results if r.ok)
-        run.fail_count = sum(1 for r in run.results if not r.ok)
-        db.session.commit()
-        return result["ok"]
-    except Exception as e:
+    except Exception as exc:
         existing.ok = False
-        existing.error = str(e)[:500]
-        run.fail_count = sum(1 for r in run.results if not r.ok)
-        run.success_count = sum(1 for r in run.results if r.ok)
-        db.session.commit()
-        return False
+        existing.error = str(exc)[:500]
+        existing.extra = None
+    _refresh_run_totals(run)
+    db.session.commit()
+    return existing.ok
 
 
 def get_run(run_id: int) -> DistributionRun | None:

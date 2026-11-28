@@ -69,8 +69,10 @@
                 </div>
                 <h2 class="admin-stat-value">{{ total_users }}</h2>
                 <div class="admin-stat-sub d-flex gap-2 align-items-center mt-2">
-                    <span class="badge" style="background: rgba(245, 166, 35, 0.15); color: #F5A623;">Pro: {{ pro_users }}</span>
-                    <span class="badge" style="background: rgba(107, 114, 128, 0.2); color: #9CA3AF;">Free: {{ free_users }}</span>
+                    <span class="badge" style="background: rgba(96, 165, 250, 0.15); color: #60A5FA;">Creator: {{ creator_users }}</span>
+                    <span class="badge" style="background: rgba(34, 211, 238, 0.15); color: #22D3EE;">Studio: {{ studio_users }}</span>
+                    <span class="badge" style="background: rgba(245, 166, 35, 0.15); color: #F5A623;">Director: {{ director_users }}</span>
+                    <span class="badge" style="background: rgba(107, 114, 128, 0.2); color: #9CA3AF;">Spark / Free: {{ free_users }}</span>
                 </div>
             </div>
         </div>
@@ -331,23 +333,20 @@
                                         <i class="fa-solid fa-video me-1"></i>+ Free Video
                                     </a>
 
-                                    {% if user.plan in ['free', 'spark', None] %}
-                                    <a href="{{ url_for('main.upgrade_user', user_id=user.id) }}" class="btn btn-sm btn-outline-warning" style="font-size: 12px;">
-                                        Upgrade
-                                    </a>
-                                    {% else %}
-                                    <a href="{{ url_for('main.downgrade_user', user_id=user.id) }}" class="btn btn-sm btn-outline-secondary" style="font-size: 12px;">
-                                        Downgrade
-                                    </a>
-                                    {% endif %}
-                                    
+                                    <form method="POST" action="{{ url_for('main.admin_set_user_plan', user_id=user.id) }}" class="d-inline-flex align-items-center gap-1">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <select name="plan" class="form-select form-select-sm" aria-label="Set plan for {{ user.username }}" style="width: 112px; min-width: 112px; font-size: 11px; background: #111827; color: #F0F6FC; border-color: #374151;">
+                                            <option value="free" {% if user.plan in ['free', 'spark', None, 'banned'] %}selected{% endif %}>Spark / Free</option>
+                                            <option value="creator" {% if user.plan in ['creator', 'pro'] %}selected{% endif %}>Creator</option>
+                                            <option value="studio" {% if user.plan == 'studio' %}selected{% endif %}>Studio</option>
+                                            <option value="director" {% if user.plan == 'director' %}selected{% endif %}>Director</option>
+                                        </select>
+                                        <button type="submit" class="btn btn-sm btn-outline-warning" style="font-size: 11px;">Set</button>
+                                    </form>
+
                                     {% if user.plan != 'banned' %}
                                     <a href="{{ url_for('main.ban_user', user_id=user.id) }}" class="btn btn-sm btn-outline-danger" style="font-size: 12px;" onclick="sweetConfirmLink(event, 'Ban {{ user.username }}?')">
                                         Ban
-                                    </a>
-                                    {% else %}
-                                    <a href="{{ url_for('main.upgrade_user', user_id=user.id) }}" class="btn btn-sm btn-outline-success" style="font-size: 12px;">
-                                        Unban
                                     </a>
                                     {% endif %}
                                     <a href="{{ url_for('main.delete_user', user_id=user.id) }}" class="btn btn-sm btn-outline-danger" style="font-size: 12px;" onclick="sweetConfirmLink(event, 'Permanently delete {{ user.username }}?')">
