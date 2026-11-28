@@ -213,11 +213,27 @@ class LinkedinAdapter(BaseProviderAdapter):
 
     def publish(self, user_id: int, content: Any, preferences: Any = None) -> Dict[str, Any]:
         """Publish post (text, image, or video) to LinkedIn via REST Posts API."""
-        account = ConnectedAccount.query.filter_by(user_id=user_id, provider="linkedin").first()
-        if not account or not account.encrypted_access_token:
-            return {"ok": False, "error": "LinkedIn is not connected."}
+        # Founder-only API credentials. This bypasses Connected Accounts ONLY for
+        # the configured founder user; every other user keeps the existing OAuth flow.
+        try:
+            founder_user_id = int(os.environ.get("FOUNDER_SOCIAL_USER_ID", "1"))
+        except (TypeError, ValueError):
+            founder_user_id = -1
 
-        access_token = decrypt_token(account.encrypted_access_token)
+        founder_api_mode = user_id == founder_user_id
+        if founder_api_mode:
+            access_token = os.environ.get("LINKEDIN_ACCESS_TOKEN", "").strip()
+            if not access_token:
+                return {
+                    "ok": False,
+                    "error": "Founder LinkedIn API token is missing. Configure LINKEDIN_ACCESS_TOKEN.",
+                }
+            account = None
+        else:
+            account = ConnectedAccount.query.filter_by(user_id=user_id, provider="linkedin").first()
+            if not account or not account.encrypted_access_token:
+                return {"ok": False, "error": "LinkedIn is not connected."}
+            access_token = decrypt_token(account.encrypted_access_token)
 
         # Retrieve text from various content object structures
         text = (
@@ -240,13 +256,22 @@ class LinkedinAdapter(BaseProviderAdapter):
             post_message = f"{post_message}\n\n{hashtags}"
 
         # Resolve person/organization URN
-        metadata = self._parse_metadata(account.metadata_json)
+        metadata = self._parse_metadata(account.metadata_json) if account else {}
         person_id = (
-            metadata.get("publishing_identity")
-            or account.account_identifier
-            or metadata.get("sub")
-            or os.environ.get("LINKEDIN_PERSON_ID", "")
+            os.environ.get("LINKEDIN_PERSON_ID", "").strip()
+            if founder_api_mode
+            else (
+                metadata.get("publishing_identity")
+                or account.account_identifier
+                or metadata.get("sub")
+                or os.environ.get("LINKEDIN_PERSON_ID", "")
+            )
         )
+        if not person_id:
+            return {
+                "ok": False,
+                "error": "LinkedIn publishing identity is missing. Configure LINKEDIN_PERSON_ID for founder API publishing.",
+            }
         media_url = getattr(content, "media_url", "") or getattr(content, "file_url", "") or ""
         media_type = (getattr(content, "media_type", "") or getattr(content, "content_type", "") or "").lower()
 

@@ -250,13 +250,29 @@ class FacebookAdapter(BaseProviderAdapter):
 
     def publish(self, user_id: int, content: Any, preferences: Any = None) -> Dict[str, Any]:
         """Publish text, image, or video directly to the connected Facebook Page."""
-        account = ConnectedAccount.query.filter_by(user_id=user_id, provider="facebook").first()
-        if not account or not account.encrypted_access_token:
-            return {"ok": False, "error": "Facebook Page is not connected."}
+        # Founder-only API credentials. This bypasses Connected Accounts ONLY for
+        # the configured founder user; every other user keeps the existing OAuth flow.
+        try:
+            founder_user_id = int(os.environ.get("FOUNDER_SOCIAL_USER_ID", "1"))
+        except (TypeError, ValueError):
+            founder_user_id = -1
 
-        token = decrypt_token(account.encrypted_access_token)
-        metadata = self._parse_metadata(account.metadata_json)
-        page_id = account.account_identifier or metadata.get("page_id")
+        if user_id == founder_user_id:
+            token = os.environ.get("FACEBOOK_PAGE_ACCESS_TOKEN", "").strip()
+            page_id = os.environ.get("FACEBOOK_PAGE_ID", "").strip()
+            if not token or not page_id:
+                return {
+                    "ok": False,
+                    "error": "Founder Facebook API credentials are missing. Configure FACEBOOK_PAGE_ACCESS_TOKEN and FACEBOOK_PAGE_ID.",
+                }
+            metadata = {}
+        else:
+            account = ConnectedAccount.query.filter_by(user_id=user_id, provider="facebook").first()
+            if not account or not account.encrypted_access_token:
+                return {"ok": False, "error": "Facebook Page is not connected."}
+            token = decrypt_token(account.encrypted_access_token)
+            metadata = self._parse_metadata(account.metadata_json)
+            page_id = account.account_identifier or metadata.get("page_id")
 
         if not page_id:
             return {"ok": False, "error": "Missing Facebook Page ID."}
