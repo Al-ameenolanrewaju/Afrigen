@@ -50,7 +50,13 @@
       <h2 class="h5 text-white mb-3">Episodes</h2>
       {% for episode in series.episodes %}
       <div class="card-surface p-3 mb-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
-        <div><div class="small text-warning">EPISODE {{ episode.episode_number }}</div><div class="text-white fw-semibold">{{ episode.title }}</div><div class="small text-secondary">{{ episode.status|title }} · {{ episode.target_duration_seconds }} seconds</div></div>
+        <div><div class="small text-warning">EPISODE {{ episode.episode_number }}</div><div class="text-white fw-semibold">{{ episode.title }}</div><div class="small text-secondary">{{ episode.status|title }} · {{ episode.target_duration_seconds }} seconds{% if episode.production_jobs %} · Production {{ episode.production_jobs[-1].status|title }}{% endif %}</div>
+          {% if episode.production_jobs and episode.production_jobs[-1].status == 'failed' %}
+          <form method="post" action="{{ url_for('drama_studio.retry_episode_production_view', episode_id=episode.id) }}" class="mt-2">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-sm btn-surface" type="submit">Retry production</button>
+          </form>
+          {% endif %}</div>
         {% if episode.movie_project_id %}<a class="btn btn-sm btn-surface" href="{{ url_for('movie_studio.project_workspace', project_id=episode.movie_project_id) }}">Open production</a>{% endif %}
       </div>
       {% else %}<div class="card-surface p-4 text-center text-secondary">No episodes yet. Create the first episode above.</div>{% endfor %}
