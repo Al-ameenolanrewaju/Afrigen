@@ -276,6 +276,53 @@ def generate_series_character_portrait(user, series_id, character_id):
         raise
 
 
+def requeue_failed_episode(user, episode_id):
+    """Retry a failed episode, re-reserving a monthly slot if an earlier run exhausted it."""
+    episode = db.session.get(DramaEpisode, episode_id)
+    if not episode or (episode.user_id != user.id and not is_admin(user)):
+        return False, "Episode not found."
+    job = (DramaProductionJob.query.filter_by(episode_id=episode.id)
+           .order_by(DramaProductionJob.created_at.desc()).first())
+    if not job or job.status not in {"failed", "queued"}:
+        return False, "This episode is not eligible for retry."
+
+    try:
+        if episode.quota_status != "reserved":
+            period_start = current_period_start()
+            db.session.query(User).filter_by(id=episode.user_id).with_for_update().one()
+            usage = (DramaMonthlyUsage.query.filter_by(
+                user_id=episode.user_id, period_start=period_start
+            ).with_for_update().first())
+            if usage is None:
+                usage = DramaMonthlyUsage(user_id=episode.user_id, period_start=period_start)
+                db.session.add(usage)
+                db.session.flush()
+            if usage.episodes_reserved + usage.episodes_completed >= DIRECTOR_MONTHLY_EPISODE_LIMIT:
+                db.session.rollback()
+                return False, "The monthly 30-episode allowance is full; this retry needs a new available slot."
+            usage.episodes_reserved += 1
+            episode.quota_period_start = period_start
+            episode.quota_status = "reserved"
+            reservation_key = f"drama-episode:{episode.id}:retry-reserve:{job.attempt_count}"
+            if not DramaUsageLedger.query.filter_by(idempotency_key=reservation_key).first():
+                db.session.add(DramaUsageLedger(
+                    user_id=episode.user_id, episode_id=episode.id,
+                    usage_type="episode_retry_reservation", status="reserved",
+                    idempotency_key=reservation_key,
+                ))
+
+        job.status = "queued"
+        job.attempt_count = 0
+        job.error_message = None
+        job.current_step = "screenplay" if not MovieProject.query.filter_by(id=episode.movie_project_id).first().scenes else "storyboard"
+        episode.status = "queued"
+        db.session.commit()
+        return True, "Episode production has been queued again."
+    except Exception:
+        db.session.rollback()
+        raise
+
+
 def monthly_usage_summary(user_id, period_start=None):
     period_start = period_start or current_period_start()
     usage = DramaMonthlyUsage.query.filter_by(user_id=user_id, period_start=period_start).first()
