@@ -17,7 +17,7 @@
 
             <!-- Original Prompt -->
             <div class="card p-4 mb-4">
-                <h5 style="color: #888;">Your Original Idea:</h5>
+                <h5 style="color: var(--text-muted, #CBD5E1);">Your Original Idea:</h5>
                 <p id="original" style="color: #C9D1D9; font-style: italic;">
                     "{{ original }}"
                 </p>
@@ -25,7 +25,7 @@
 
             <!-- Style Used -->
             <div class="card p-3 mb-4 text-center">
-                <p style="color: #888; margin: 0;">
+                <p style="color: var(--text-muted, #CBD5E1); margin: 0;">
                     Video Style:
                     <strong id="styleLabel" style="color: #F5A623;">
                         {% if style == 'cinematic' %}<i class="fa-solid fa-clapperboard"></i> Cinematic
@@ -65,7 +65,7 @@
                 <!-- Share Buttons -->
                 <div class="card p-4 mb-4 text-center">
                     <h5 style="color: #F5A623;"><i class="fa-solid fa-share-nodes"></i> Share it — and let them ask "how?"</h5>
-                    <p style="color: #888; margin-bottom: 0;">Shares open a page with your clip and an invitation to create with Afrigen. <i class="fa-solid fa-earth-africa"></i></p>
+                    <p style="color: var(--text-muted, #CBD5E1); margin-bottom: 0;">Shares open a page with your clip and an invitation to create with Afrigen. <i class="fa-solid fa-earth-africa"></i></p>
                     <div class="d-flex justify-content-center gap-2 mt-3 flex-wrap">
                         <a id="shareTwitter" href="#" target="_blank" class="btn btn-info px-3" style="color:white;">🐦 Twitter</a>
                         <a id="shareFacebook" href="#" target="_blank" class="btn btn-primary px-3">📘 Facebook</a>

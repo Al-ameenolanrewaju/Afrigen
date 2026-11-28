@@ -9,7 +9,7 @@
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
     <div>
         <h1 style="color: #F5A623; font-weight: 700; margin: 0; font-size: 1.6rem;">📡 Content Distribution</h1>
-        <p style="color: #888; margin: 0;">
+        <p style="color: var(--text-muted, #CBD5E1); margin: 0;">
             Push published blog posts to Telegram, LinkedIn, Dev.to, and Facebook. Each destination runs independently; failed destinations can be retried.
         </p>
     </div>
@@ -24,12 +24,12 @@
      ===================================================================== -->
 <h5 style="color: #F0F6FC; font-weight: 700;" class="mb-3">
     Published Posts
-    <small style="color: #555; font-weight: 400;">— click Distribute to cross-post</small>
+    <small style="color: var(--text-muted, #CBD5E1); font-weight: 400;">— click Distribute to cross-post</small>
 </h5>
 
 {% if not published %}
 <div class="card p-4 mb-4">
-    <p style="color: #888; margin: 0;">No published posts yet. Publish a draft first from <a href="{{ url_for('main.admin_blog') }}">Blog Drafts</a>.</p>
+    <p style="color: var(--text-muted, #CBD5E1); margin: 0;">No published posts yet. Publish a draft first from <a href="{{ url_for('main.admin_blog') }}">Blog Drafts</a>.</p>
 </div>
 {% endif %}
 
@@ -46,7 +46,7 @@
         <div style="flex: 1; min-width: 200px;">
             <div class="d-flex align-items-center gap-2 mb-1">
                 {% if post.tag %}<span class="pill">{{ post.tag }}</span>{% endif %}
-                <span style="font-size: 12px; color: #555;">{{ post.date }}</span>
+                <span style="font-size: 12px; color: var(--text-muted, #CBD5E1);">{{ post.date }}</span>
             </div>
             <h5 style="color: #F0F6FC; margin: 0 0 4px;">
                 <a href="{{ url_for('main.blog_post', slug=post.slug) }}" target="_blank"
@@ -54,7 +54,7 @@
                     {{ post.title }}
                 </a>
             </h5>
-            <small style="color: #555;">
+            <small style="color: var(--text-muted, #CBD5E1);">
                 /blog/{{ post.slug }}
                 {% if latest_run.r %}
                 · Last distribution: <span class="run-status-badge status-{{ latest_run.r.status }}">
@@ -89,12 +89,12 @@
      ===================================================================== -->
 <h5 style="color: #F0F6FC; font-weight: 700;" class="mb-3 mt-5">
     Recent Distribution Runs
-    <small style="color: #555; font-weight: 400;">— auto-refreshes during active runs</small>
+    <small style="color: var(--text-muted, #CBD5E1); font-weight: 400;">— auto-refreshes during active runs</small>
 </h5>
 
 {% if not runs %}
 <div class="card p-4 mb-4">
-    <p style="color: #888; margin: 0;">No distribution runs yet. Click "Distribute" on a post above.</p>
+    <p style="color: var(--text-muted, #CBD5E1); margin: 0;">No distribution runs yet. Click "Distribute" on a post above.</p>
 </div>
 {% endif %}
 
@@ -109,7 +109,7 @@
                 <span class="run-status-badge status-{{ run.status }}" id="run-status-label-{{ run.id }}">
                     {{ run.status.upper() }}
                 </span>
-                <span style="color: #888; font-size: 13px;">Run #{{ run.id }}</span>
+                <span style="color: var(--text-muted, #CBD5E1); font-size: 13px;">Run #{{ run.id }}</span>
                 {% if run.status == 'running' %}
                 <span class="spinner-border spinner-border-sm" style="color: #F5A623;" role="status"></span>
                 {% endif %}
@@ -119,19 +119,19 @@
                 <a href="{{ url_for('main.blog_post', slug=post.slug) }}" target="_blank"
                    style="color: #F5A623;">{{ post.title }}</a>
                 {% else %}
-                <span style="color: #888;">Post deleted</span>
+                <span style="color: var(--text-muted, #CBD5E1);">Post deleted</span>
                 {% endif %}
             </p>
-            <small style="color: #555;">
+            <small style="color: var(--text-muted, #CBD5E1);">
                 {{ run.started_at.strftime('%b %d, %Y %H:%M UTC') if run.started_at else '—' }}
                 {% if run.finished_at %}→ finished {{ run.finished_at.strftime('%H:%M UTC') }}{% endif %}
             </small>
         </div>
         <div class="text-end">
             <span style="color: #27AE60; font-weight: 700; font-size: 18px;">{{ run.success_count }}</span>
-            <span style="color: #888;">/</span>
+            <span style="color: var(--text-muted, #CBD5E1);">/</span>
             <span style="color: #E74C3C; font-weight: 700; font-size: 18px;">{{ run.fail_count }}</span>
-            <span style="color: #888; font-size: 13px;"> succeeded/failed</span>
+            <span style="color: var(--text-muted, #CBD5E1); font-size: 13px;"> succeeded/failed</span>
         </div>
     </div>
 
@@ -149,7 +149,7 @@
                 <span style="font-size: 18px;">{{ icons.get(r.platform, '📡') }}</span>
                 <span style="color: #C9D1D9; font-weight: 600;">{{ r.platform | replace('_', ' ') | title }}</span>
                 {% if run.status == 'running' and r.ok is sameas false and r.error is none %}
-                <span style="color: #888; font-size: 12px;">⏳ waiting...</span>
+                <span style="color: var(--text-muted, #CBD5E1); font-size: 12px;">⏳ waiting...</span>
                 {% endif %}
             </div>
             <div class="d-flex align-items-center gap-2">
@@ -173,14 +173,14 @@
                         data-platform="{{ r.platform }}">🔄 Retry</button>
                 {% endif %}
                 {% else %}
-                <span style="color: #888; font-size: 12px;">—</span>
+                <span style="color: var(--text-muted, #CBD5E1); font-size: 12px;">—</span>
                 {% endif %}
             </div>
         </div>
         {% endfor %}
 
         {% if not run.results %}
-        <p style="color: #888; margin: 8px 0;">No platform results recorded yet...</p>
+        <p style="color: var(--text-muted, #CBD5E1); margin: 8px 0;">No platform results recorded yet...</p>
         {% endif %}
     </div>
 </div>

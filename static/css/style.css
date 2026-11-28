@@ -22,8 +22,8 @@
 
     /* Text */
     --text:          #F2F5FA;
-    --text-muted:    #AEB7C7;
-    --text-dim:      #9CA3AF;
+    --text-muted:    #CBD5E1;
+    --text-dim:      #A0ABC0;
 
     /* Lines & effects */
     --border:        rgba(255, 255, 255, 0.08);
@@ -81,14 +81,111 @@ a { transition: color 0.2s var(--ease); }
 ::-webkit-scrollbar-thumb:hover { background: var(--accent-hover); }
 
 /* Global Readability Overrides */
-.text-muted, .text-secondary, .text-white-50 {
+.text-muted, .text-secondary, .text-white-50, .form-text, .form-check-label {
     color: var(--text-muted) !important;
 }
-.text-dark, .text-black { color: var(--text) !important; }
+
+/* Ensure dark text on bright/warning backgrounds stays dark, crisp, and high-contrast */
+.bg-warning.text-dark,
+.badge.bg-warning,
+.badge.bg-warning.text-dark,
+.badge-warning,
+.btn-warning.text-dark,
+.badge-gold,
+.btn-gold {
+    color: #111827 !important;
+}
+
+/* Standalone text-dark outside warning containers should be light on dark backgrounds */
+*:not(.bg-warning):not(.badge-gold):not(.btn-gold):not(.btn-warning) > .text-dark,
+*:not(.bg-warning):not(.badge-gold):not(.btn-gold):not(.btn-warning) > .text-black {
+    color: var(--text) !important;
+}
+
 .bg-light, .bg-white { background-color: var(--surface-2) !important; }
+
 ::placeholder {
     color: var(--text-dim) !important;
     opacity: 1 !important;
+}
+
+/* Tables: ensure high contrast readability across all tables and rows */
+table, .table {
+    --bs-table-color: #F2F5FA !important;
+    --bs-table-striped-color: #F2F5FA !important;
+    --bs-table-hover-color: #FFFFFF !important;
+    color: #F2F5FA !important;
+}
+table th, .table th, table td, .table td {
+    color: #F2F5FA !important;
+}
+table thead th, .table thead th {
+    color: #D6AD65 !important;
+    font-weight: 600 !important;
+}
+
+/* Dropdown Menus: guarantee white/ivory text on dark background */
+.dropdown-menu {
+    background: #182233 !important;
+    border: 1px solid var(--border-strong) !important;
+    border-radius: var(--radius-sm) !important;
+    box-shadow: var(--shadow-lg);
+    padding: 8px !important;
+}
+.dropdown-item {
+    color: #F2F5FA !important;
+    border-radius: 8px !important;
+    padding: 9px 12px !important;
+    transition: background 0.15s, color 0.15s;
+}
+.dropdown-item:hover, .dropdown-item:focus {
+    background: rgba(214, 173, 101, 0.15) !important;
+    color: #D6AD65 !important;
+}
+
+/* Form Select & Option Popups: eliminate white-on-white or dark-on-dark invisible text */
+select, .form-select, .studio-select {
+    color: #F2F5FA !important;
+    background-color: rgba(7, 9, 15, 0.8) !important;
+}
+select option, .form-select option, .studio-select option {
+    background-color: #182233 !important;
+    color: #F2F5FA !important;
+}
+
+/* Modals: clear high-contrast titles and text */
+.modal-content {
+    background-color: #182233 !important;
+    color: #F2F5FA !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+}
+.modal-title, .modal-header h5 {
+    color: #F5F1E8 !important;
+}
+.modal-body p, .modal-body label, .modal-body span {
+    color: #CBD5E1;
+}
+
+/* Accordions */
+.accordion-button {
+    background-color: #182233 !important;
+    color: #F2F5FA !important;
+}
+.accordion-button:not(.collapsed) {
+    background-color: #202B3B !important;
+    color: #D6AD65 !important;
+}
+.accordion-body {
+    background-color: #111827 !important;
+    color: #CBD5E1 !important;
+}
+
+/* Toggle Buttons & Surface Controls */
+.btn-check + .btn {
+    color: #CBD5E1 !important;
+}
+.btn-surface {
+    color: #F2F5FA !important;
 }
 
 /* Utility: gradient text */

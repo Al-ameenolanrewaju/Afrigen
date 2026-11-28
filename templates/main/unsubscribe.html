@@ -12,7 +12,7 @@
                     {% if ok %}
                     <div style="font-size: 48px;"><i class="fa-solid fa-circle-check" style="color:#27AE60;"></i></div>
                     <h1 style="color: #F0F6FC; font-weight: 700; font-size: 1.6rem;">You're unsubscribed</h1>
-                    <p style="color: #888;">
+                    <p style="color: var(--text-muted, #CBD5E1);">
                         <strong style="color: #C9D1D9;">{{ email }}</strong> won't receive any more
                         Afrigen newsletters. You can keep using Afrigen as normal.
                     </p>
@@ -20,7 +20,7 @@
                     {% else %}
                     <div style="font-size: 48px;"><i class="fa-solid fa-triangle-exclamation"></i></div>
                     <h1 style="color: #F0F6FC; font-weight: 700; font-size: 1.6rem;">Link not valid</h1>
-                    <p style="color: #888;">
+                    <p style="color: var(--text-muted, #CBD5E1);">
                         This unsubscribe link is invalid or has already been used.
                         If you keep receiving emails, contact us at
                         <a href="mailto:contact@afrigen.com.ng" style="color: #F5A623;">contact@afrigen.com.ng</a>.

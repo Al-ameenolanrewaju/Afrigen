@@ -10,7 +10,7 @@
         <div class="col-md-12">
             <div class="card p-4">
                 <h1 style="color: #F5A623; font-size: 1.75rem;"><i class="fa-solid fa-chart-column"></i> My Analytics</h1>
-                <p style="color: #888;">Track your generation activity and performance</p>
+                <p style="color: var(--text-muted, #CBD5E1);">Track your generation activity and performance</p>
             </div>
         </div>
     </div>
@@ -20,25 +20,25 @@
         <div class="col-6 col-md-3 mb-3">
             <div class="card p-4 text-center">
                 <h2 style="color: #F5A623;">{{ total }}</h2>
-                <p style="color: #888; font-size: 14px;">Total Generations</p>
+                <p style="color: var(--text-muted, #CBD5E1); font-size: 14px;">Total Generations</p>
             </div>
         </div>
         <div class="col-6 col-md-3 mb-3">
             <div class="card p-4 text-center">
                 <h2 style="color: #27AE60;">{{ completed }}</h2>
-                <p style="color: #888; font-size: 14px;">Successful</p>
+                <p style="color: var(--text-muted, #CBD5E1); font-size: 14px;">Successful</p>
             </div>
         </div>
         <div class="col-6 col-md-3 mb-3">
             <div class="card p-4 text-center">
                 <h2 style="color: #E74C3C;">{{ failed }}</h2>
-                <p style="color: #888; font-size: 14px;">Failed</p>
+                <p style="color: var(--text-muted, #CBD5E1); font-size: 14px;">Failed</p>
             </div>
         </div>
         <div class="col-6 col-md-3 mb-3">
             <div class="card p-4 text-center">
                 <h2 style="color: #F5A623;">{{ success_rate }}%</h2>
-                <p style="color: #888; font-size: 14px;">Success Rate</p>
+                <p style="color: var(--text-muted, #CBD5E1); font-size: 14px;">Success Rate</p>
             </div>
         </div>
     </div>
@@ -48,13 +48,13 @@
         <div class="col-md-6 mb-3">
             <div class="card p-4 text-center">
                 <h2 style="color: #F5A623;">{{ videos }}</h2>
-                <p style="color: #888;"><i class="fa-solid fa-clapperboard"></i> Videos Generated</p>
+                <p style="color: var(--text-muted, #CBD5E1);"><i class="fa-solid fa-clapperboard"></i> Videos Generated</p>
             </div>
         </div>
         <div class="col-md-6 mb-3">
             <div class="card p-4 text-center">
                 <h2 style="color: #F5A623;">{{ images }}</h2>
-                <p style="color: #888;"><i class="fa-solid fa-image"></i> Images Generated</p>
+                <p style="color: var(--text-muted, #CBD5E1);"><i class="fa-solid fa-image"></i> Images Generated</p>
             </div>
         </div>
     </div>
@@ -81,7 +81,7 @@
                         transition: height 0.3s;
                     "></div>
                 </div>
-                <p style="color: #888; font-size: 11px; margin-top: 6px;">{{ day.day }}</p>
+                <p style="color: var(--text-muted, #CBD5E1); font-size: 11px; margin-top: 6px;">{{ day.day }}</p>
                 <p style="color: #F5A623; font-size: 12px; font-weight: bold; margin: 0;">{{ day.count }}</p>
             </div>
             {% endfor %}
@@ -120,15 +120,15 @@
             <div class="col-6">
                 {% if current_user.plan in ['free', 'spark'] %}
                 <h2 style="color: #F5A623;">{{ current_user.free_images_remaining }}</h2>
-                <p style="color: #888;">Free images remaining today</p>
+                <p style="color: var(--text-muted, #CBD5E1);">Free images remaining today</p>
                 {% else %}
                 <h2 style="color: #F5A623;">{{ current_user.credits }}</h2>
-                <p style="color: #888;">Credits remaining</p>
+                <p style="color: var(--text-muted, #CBD5E1);">Credits remaining</p>
                 {% endif %}
             </div>
             <div class="col-6">
                 <h2 style="color: #F5A623;">{{ current_user.plan.upper() }}</h2>
-                <p style="color: #888;">Current Plan</p>
+                <p style="color: var(--text-muted, #CBD5E1);">Current Plan</p>
             </div>
         </div>
         {% if current_user.plan == 'free' %}

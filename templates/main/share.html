@@ -42,7 +42,7 @@
 
             <!-- The "one line" wow -->
             <div class="card p-4 mb-4">
-                <small style="color: #888;">Made on Afrigen from one idea:</small>
+                <small style="color: var(--text-muted, #CBD5E1);">Made on Afrigen from one idea:</small>
                 <p style="color: #F0F6FC; font-size: 1.05rem; font-style: italic; margin: 6px 0 0;">
                     "{{ gen.original_prompt }}"
                 </p>
@@ -63,7 +63,7 @@
 
             <!-- Share onward -->
             <div class="text-center">
-                <p style="color: #888; margin-bottom: 10px;"><i class="fa-solid fa-share-nodes"></i> Share it:</p>
+                <p style="color: var(--text-muted, #CBD5E1); margin-bottom: 10px;"><i class="fa-solid fa-share-nodes"></i> Share it:</p>
                 <div class="d-flex justify-content-center gap-2 flex-wrap">
                     <a href="https://twitter.com/intent/tweet?text={{ ('This AI ' ~ kind ~ ' was made on @AfrigenAI from one line of text. Make yours free') | urlencode }}&url={{ request.url | urlencode }}"
                        target="_blank" class="btn btn-sm btn-info" style="color:white;">Twitter</a>

@@ -23,7 +23,7 @@
         <div class="card p-4 mb-3">
             <div class="row">
                 <div class="col-md-8">
-                    <small style="color: #888;">Original:</small>
+                    <small style="color: var(--text-muted, #CBD5E1);">Original:</small>
                     <p style="color: #C9D1D9;">"{{ prompt.original_prompt }}"</p>
                     <small style="color: #F5A623;">Refined:</small>
                     <p style="color: #F0F6FC; font-size: 14px;">
@@ -35,7 +35,7 @@
                         {{ prompt.prompt_type.upper() }}
                     </span>
                     <br>
-                    <small style="color: #888;">
+                    <small style="color: var(--text-muted, #CBD5E1);">
                         {{ prompt.created_at.strftime('%b %d, %Y') }}
                     </small>
                 </div>

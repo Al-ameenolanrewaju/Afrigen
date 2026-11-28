@@ -16,7 +16,7 @@
                     ● Live System
                 </span>
             </div>
-            <div style="color: #8B949E; font-size: 13px;">Afrigen Platform Diagnostics, Monetization & Operations</div>
+            <div style="color: #CBD5E1; font-size: 13px;">Afrigen Platform Diagnostics, Monetization & Operations</div>
         </div>
     </div>
     <div class="d-flex flex-wrap gap-2">
@@ -538,7 +538,7 @@
                     <tr>
                         <td>
                             <strong style="color: white;">{{ gen.user.username }}</strong>
-                            <div style="font-size: 11px; color: #8B949E;">#{{ gen.id }} • {{ gen.generation_type|upper }}</div>
+                            <div style="font-size: 11px; color: #CBD5E1;">#{{ gen.id }} • {{ gen.generation_type|upper }}</div>
                         </td>
                         <td style="max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #C9D1D9; font-size: 13px;" title="{{ gen.original_prompt }}">
                             {{ gen.original_prompt }}
@@ -621,7 +621,7 @@
                         <td><span class="badge" style="background: #1F2937; color: #9CA3AF;">{{ content.content_type }}</span></td>
                         <td style="color: #F0F6FC;">{{ content.title or 'Untitled Asset' }}</td>
                         <td><span class="admin-badge admin-badge-green">{{ content.status }}</span></td>
-                        <td style="color: #8B949E; font-size: 13px;">{{ admin_resend_datetime(content.created_at).strftime('%b %d, %Y') }}</td>
+                        <td style="color: #CBD5E1; font-size: 13px;">{{ admin_resend_datetime(content.created_at).strftime('%b %d, %Y') }}</td>
                     </tr>
                     {% else %}
                     <tr><td colspan="5" class="text-center text-muted py-3">No customer content saved yet.</td></tr>
@@ -722,7 +722,7 @@
                                 <td style="color: white;">{{ payment.user.username }}</td>
                                 <td style="color: #34D399; font-weight: 600;">₦{{ "{:,.0f}".format((payment.amount or 0) / 100) }}</td>
                                 <td><span class="admin-badge admin-badge-orange">{{ payment.plan.upper() }}</span></td>
-                                <td style="color: #8B949E;">{{ payment.created_at.strftime('%b %d') }}</td>
+                                <td style="color: #CBD5E1;">{{ payment.created_at.strftime('%b %d') }}</td>
                             </tr>
                             {% else %}
                             <tr><td colspan="4" class="text-center text-muted py-2">No recent payments</td></tr>
@@ -761,7 +761,7 @@
                         <td>{{ health.avg_latency_ms }} ms</td>
                         <td><strong style="color: #34D399;">{{ health.success_count }}</strong></td>
                         <td><strong style="color: {% if health.failure_count > 0 %}#F87171{% else %}#9CA3AF{% endif %};">{{ health.failure_count }}</strong></td>
-                        <td style="max-width: 300px; color: #8B949E; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        <td style="max-width: 300px; color: #CBD5E1; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                             {{ admin_provider_error(health.last_error) }}
                         </td>
                     </tr>
@@ -872,7 +872,7 @@
                                 {{ acc.status.upper() }}
                             </span>
                         </td>
-                        <td style="color: #8B949E; font-size: 13px;">{{ acc.connected_at.strftime('%b %d, %Y') }}</td>
+                        <td style="color: #CBD5E1; font-size: 13px;">{{ acc.connected_at.strftime('%b %d, %Y') }}</td>
                     </tr>
                     {% else %}
                     <tr><td colspan="5" class="text-center text-muted py-3">No connected accounts yet.</td></tr>
@@ -910,7 +910,7 @@
                             </span>
                         </td>
                         <td><strong style="color: #34D399;">{{ run.success_count }}</strong> / {{ run.total_platforms }}</td>
-                        <td style="color: #8B949E; font-size: 13px;">{{ run.started_at.strftime('%b %d, %Y') }}</td>
+                        <td style="color: #CBD5E1; font-size: 13px;">{{ run.started_at.strftime('%b %d, %Y') }}</td>
                         <td>
                             <a href="{{ url_for('main.admin_distribution_run', run_id=run.id) }}" class="btn-admin text-decoration-none">
                                 Inspect
@@ -1130,7 +1130,7 @@
                                 <span class="text-muted small">—</span>
                             {% endif %}
                         </td>
-                        <td style="color: #8B949E; font-size: 12px;">
+                        <td style="color: #CBD5E1; font-size: 12px;">
                             {{ admin_resend_datetime(notif.created_at).strftime('%b %d, %H:%M') if notif.created_at else 'Just now' }}
                         </td>
                         <td>

@@ -8,7 +8,7 @@
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
     <div>
         <h1 style="color: #F5A623; font-weight: 700; margin: 0; font-size: 1.6rem;"><i class="fa-solid fa-pencil"></i> Edit Post</h1>
-        <p style="color: #888; margin: 0;">
+        <p style="color: var(--text-muted, #CBD5E1); margin: 0;">
             {% if post.status == 'published' %}
             This post is <strong style="color:#27AE60;">live</strong> — changes show on the blog immediately after you save.
             {% else %}
@@ -29,7 +29,7 @@
         </div>
 
         <div class="mb-3">
-            <label class="form-label" style="color:#C9D1D9;">Description <small style="color:#555;">(SEO meta, ≤320 chars)</small></label>
+            <label class="form-label" style="color:#C9D1D9;">Description <small style="color: var(--text-muted, #CBD5E1);">(SEO meta, ≤320 chars)</small></label>
             <textarea name="description" class="form-control" rows="2" maxlength="320"
                       style="background:#0d1117; color:#F0F6FC; border:1px solid #30363D;">{{ post.description }}</textarea>
         </div>
@@ -49,13 +49,13 @@
         </div>
 
         <div class="mb-2">
-            <label class="form-label" style="color:#C9D1D9;">Body <small style="color:#555;">(HTML — uses the site's inline styles)</small></label>
+            <label class="form-label" style="color:#C9D1D9;">Body <small style="color: var(--text-muted, #CBD5E1);">(HTML — uses the site's inline styles)</small></label>
             <textarea id="bodyInput" name="body" class="form-control" rows="20"
                       style="background:#0d1117; color:#F0F6FC; border:1px solid #30363D; font-family:monospace; font-size:13px;">{{ post.body }}</textarea>
         </div>
 
-        <small style="color:#555;">
-            Slug <code style="color:#888;">/blog/{{ post.slug }}</code> stays fixed so the public URL never breaks.
+        <small style="color: var(--text-muted, #CBD5E1);">
+            Slug <code style="color: var(--text-muted, #CBD5E1);">/blog/{{ post.slug }}</code> stays fixed so the public URL never breaks.
         </small>
     </div>
 

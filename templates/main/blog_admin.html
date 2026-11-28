@@ -8,7 +8,7 @@
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
     <div>
         <h1 style="color: #F5A623; font-weight: 700; margin: 0; font-size: 1.6rem;">📝 Blog Drafts</h1>
-        <p style="color: #888; margin: 0;">Auto-generated daily — or generate one yourself below. Review, then publish or discard. Drafts are invisible to the public until you publish them.</p>
+        <p style="color: var(--text-muted, #CBD5E1); margin: 0;">Auto-generated daily — or generate one yourself below. Review, then publish or discard. Drafts are invisible to the public until you publish them.</p>
     </div>
     <a href="{{ url_for('main.admin') }}" class="btn btn-outline-warning btn-sm">← Back to Admin</a>
 </div>
@@ -17,16 +17,16 @@
 <div class="row g-3 mb-4">
     <div class="col-md-6">
         <div class="card p-3 text-center">
-            <p style="color: #888; margin-bottom: 6px;">Pending drafts</p>
+            <p style="color: var(--text-muted, #CBD5E1); margin-bottom: 6px;">Pending drafts</p>
             <h3 style="color: #F5A623; font-weight: 800; margin: 0;">{{ drafts|length }}</h3>
-            <small style="color: #555;">awaiting your review</small>
+            <small style="color: var(--text-muted, #CBD5E1);">awaiting your review</small>
         </div>
     </div>
     <div class="col-md-6">
         <div class="card p-3 text-center">
-            <p style="color: #888; margin-bottom: 6px;">Published (live)</p>
+            <p style="color: var(--text-muted, #CBD5E1); margin-bottom: 6px;">Published (live)</p>
             <h3 style="color: #27AE60; font-weight: 800; margin: 0;">{{ published|length }}</h3>
-            <small style="color: #555;">visible on /blog</small>
+            <small style="color: var(--text-muted, #CBD5E1);">visible on /blog</small>
         </div>
     </div>
 </div>
@@ -36,12 +36,12 @@
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
         <div>
             <h5 style="color: #F0F6FC; font-weight: 700; margin: 0;">Generate a new draft</h5>
-            <p style="color: #888; margin: 4px 0 0; font-size: 14px;">
+            <p style="color: var(--text-muted, #CBD5E1); margin: 4px 0 0; font-size: 14px;">
                 Writes one fresh post with AI, grounded in this week's real headlines. It is saved as a draft below for you to review — it never publishes itself. A draft is also generated automatically every morning.
             </p>
         </div>
         <div class="d-flex align-items-center gap-2">
-            <span id="genStatus" style="color: #888;"></span>
+            <span id="genStatus" style="color: var(--text-muted, #CBD5E1);"></span>
             <button id="generateBtn" class="btn btn-afrigen">🤖 Generate with AI + web</button>
         </div>
     </div>
@@ -52,7 +52,7 @@
 
 {% if not drafts %}
 <div class="card p-4 mb-4">
-    <p style="color: #888; margin: 0;">No drafts right now. The daily cron job will add one each morning for you to review here.</p>
+    <p style="color: var(--text-muted, #CBD5E1); margin: 0;">No drafts right now. The daily cron job will add one each morning for you to review here.</p>
 </div>
 {% endif %}
 
@@ -62,7 +62,7 @@
         <div>
             {% if post.tag %}<span class="pill" style="align-self: flex-start;">{{ post.tag }}</span>{% endif %}
             <h4 style="color: #F0F6FC; margin-top: 10px; margin-bottom: 4px;">{{ post.title }}</h4>
-            <small style="color: #555;">
+            <small style="color: var(--text-muted, #CBD5E1);">
                 /blog/{{ post.slug }} · {{ post.read_time or '—' }} ·
                 created {{ post.created_at.strftime('%b %d, %Y %H:%M') if post.created_at else '—' }}
                 {% if post.auto_generated %}· 🤖 auto-generated{% endif %}
@@ -100,7 +100,7 @@
 <h5 style="color: #F0F6FC; font-weight: 700;" class="mb-3 mt-5">Published Posts</h5>
 <div class="card p-4 mb-5">
     {% if not published %}
-    <p style="color: #888; margin: 0;">No published posts yet.</p>
+    <p style="color: var(--text-muted, #CBD5E1); margin: 0;">No published posts yet.</p>
     {% else %}
     <ul style="list-style: none; padding: 0; margin: 0;">
         {% for post in published %}
@@ -109,7 +109,7 @@
             <a href="{{ url_for('main.blog_post', slug=post.slug) }}" target="_blank"
                style="color: #C9D1D9; text-decoration: none;">{{ post.title }}</a>
             <span class="d-flex align-items-center gap-3">
-                <small style="color: #555;">{{ post.date }}</small>
+                <small style="color: var(--text-muted, #CBD5E1);">{{ post.date }}</small>
                 <a href="{{ url_for('main.admin_blog_edit', post_id=post.id) }}"
                    style="color: #F5A623; text-decoration: none; white-space: nowrap;">✏️ Edit</a>
             </span>

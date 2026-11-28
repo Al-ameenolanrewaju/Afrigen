@@ -7,7 +7,7 @@
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
     <div>
         <h1 style="color: #F5A623; font-weight: 700; margin: 0; font-size: 1.6rem;">🚀 Launch Dashboard</h1>
-        <p style="color: #888; margin: 0;">Live waitlist &amp; newsletter analytics</p>
+        <p style="color: var(--text-muted, #CBD5E1); margin: 0;">Live waitlist &amp; newsletter analytics</p>
     </div>
     <div class="d-flex gap-2">
         <a href="{{ url_for('main.launch_admin_export') }}" class="btn btn-outline-warning btn-sm">⬇ Export CSV</a>
@@ -19,19 +19,19 @@
 <div class="row g-3 mb-4">
     <div class="col-md-4">
         <div class="card p-4 text-center">
-            <p style="color: #888; margin-bottom: 8px;">Total Subscribers</p>
+            <p style="color: var(--text-muted, #CBD5E1); margin-bottom: 8px;">Total Subscribers</p>
             <h2 id="totalSubs" style="color: #F5A623; font-weight: 800; margin: 0;">0</h2>
         </div>
     </div>
     <div class="col-md-4">
         <div class="card p-4 text-center">
-            <p style="color: #888; margin-bottom: 8px;">Newsletter Subscribers</p>
+            <p style="color: var(--text-muted, #CBD5E1); margin-bottom: 8px;">Newsletter Subscribers</p>
             <h2 id="newsletterSubs" style="color: #F5A623; font-weight: 800; margin: 0;">0</h2>
         </div>
     </div>
     <div class="col-md-4">
         <div class="card p-4 text-center">
-            <p style="color: #888; margin-bottom: 8px;">Today's Signups</p>
+            <p style="color: var(--text-muted, #CBD5E1); margin-bottom: 8px;">Today's Signups</p>
             <h2 id="todaySubs" style="color: #F5A623; font-weight: 800; margin: 0;">0</h2>
         </div>
     </div>
@@ -41,19 +41,19 @@
 <div class="card p-4 mb-4">
     <h5 style="color: #F0F6FC; font-weight: 700;">Recent Joiners</h5>
     <div id="launchList" class="d-grid gap-2 mt-3">
-        <div style="color: #888;">Loading recent joiners...</div>
+        <div style="color: var(--text-muted, #CBD5E1);">Loading recent joiners...</div>
     </div>
 </div>
 
 <!-- NEWSLETTER COMPOSER -->
 <div class="card p-4 mb-4">
     <h5 style="color: #F0F6FC; font-weight: 700;">Compose Newsletter</h5>
-    <p style="color: #888; font-size: 14px;">Sent to everyone who opted in to the newsletter.</p>
+    <p style="color: var(--text-muted, #CBD5E1); font-size: 14px;">Sent to everyone who opted in to the newsletter.</p>
     <input type="text" id="newsletterSubject" class="form-control mb-2" placeholder="Subject">
     <textarea id="newsletterBody" class="form-control mb-3" placeholder="Write your newsletter here..." rows="6"></textarea>
     <div>
         <button id="sendNewsletterBtn" class="btn btn-afrigen">Send Newsletter</button>
-        <span id="newsletterStatus" class="ms-2" style="color: #888;"></span>
+        <span id="newsletterStatus" class="ms-2" style="color: var(--text-muted, #CBD5E1);"></span>
     </div>
 </div>
 
@@ -91,7 +91,7 @@
     border-radius: 10px;
 }
 .launch-name { font-weight: 700; color: #F0F6FC; }
-.launch-meta { color: #888; font-size: 14px; }
+.launch-meta { color: var(--text-muted, #CBD5E1); font-size: 14px; }
 .launch-badge {
     padding: 4px 10px;
     border-radius: 99px;
