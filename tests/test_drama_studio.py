@@ -1,4 +1,5 @@
 import pytest
+from uuid import uuid4
 
 from app import app
 from models import (
@@ -13,9 +14,10 @@ from services.drama_studio import (
 
 
 def _user(plan="director", suffix="one"):
+    token = uuid4().hex[:10]
     user = User(
-        username=f"drama_{suffix}",
-        email=f"drama_{suffix}@example.test",
+        username=f"drama_{suffix}_{token}",
+        email=f"drama_{suffix}_{token}@example.test",
         password="test-hash",
         plan=plan,
         credits=100,
@@ -39,7 +41,7 @@ def test_drama_studio_is_director_only():
         assert not ok
         assert series is None
         assert "Director" in message
-        assert DramaSeries.query.count() == 0
+        assert DramaSeries.query.filter_by(user_id=spark.id).count() == 0
 
 
 def test_series_episode_and_character_continuity_are_created():
