@@ -186,13 +186,12 @@
                                         <option value="">Assign cast to shot</option>
                                         {% for cast_link in drama_episode.character_links %}
                                             {% if cast_link.movie_character %}
-                                            <option value="{{ cast_link.id }}" {% if shot.id in cast_link.movie_character.id|string %}{% endif %}>{{ cast_link.character.name }}</option>
+                                            <option value="{{ cast_link.id }}">{{ cast_link.character.name }}</option>
                                             {% endif %}
                                         {% endfor %}
                                     </select>
                                     <button class="btn btn-sm btn-surface" type="submit">Assign</button>
                                 </form>
-                                {% if shot.drama_cast_links is defined %}{% endif %}
                                 {% endif %}
                                 <div class="d-flex align-items-center justify-content-between pt-2 border-top" style="border-color: var(--af-border) !important;">
                                     <small class="text-muted"><i class="fa-solid fa-camera me-1"></i> {{ shot.camera_movement }}</small>
