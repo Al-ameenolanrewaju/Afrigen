@@ -399,6 +399,17 @@ def process_publishing_queue():
             logger.warning(f"Social automation queue processor error: {e}")
 
 
+@scheduler.task('interval', id='process_drama_production_queue', seconds=30, max_instances=1, coalesce=True)
+def process_drama_production_queue_job():
+    """Consume queued Drama Studio production jobs and recover abandoned claims."""
+    with app.app_context():
+        try:
+            from services.drama_worker import process_drama_production_queue
+            process_drama_production_queue(limit=1)
+        except Exception:
+            logger.exception("AI Drama Studio production queue worker failed")
+
+
 @scheduler.task('cron', id='social_automation_daily_planner', hour=6, minute=0)
 def social_automation_daily_planner_job():
     """Plan and generate daily social content at 7:00 AM WAT (06:00 UTC) for autonomous campaigns."""
