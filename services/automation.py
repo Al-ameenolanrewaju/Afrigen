@@ -598,10 +598,11 @@ def _run_node(node, workflow_id: str, run_id: str, node_index: int, user_id: int
                     ok, error = image_gate(owner)
                     if not ok:
                         raise ValueError(error)
-                    provider = 'fal' if is_paid_plan(owner.plan) else 'huggingface'
+                    is_paid = is_paid_plan(owner.plan)
+                    provider = 'fal' if is_paid else 'huggingface'
                     result = video_service.generate_image(
                         prompt, style=node.get('style', 'african'), provider=provider,
-                        allow_fal=is_paid_plan(owner.plan),
+                        allow_fal=is_paid, watermark=(not is_paid),
                     )
                     if isinstance(result, dict) and result.get('success') is False:
                         raise ValueError(result.get('error') or 'Image generation failed.')

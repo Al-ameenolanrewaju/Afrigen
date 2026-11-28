@@ -29,9 +29,15 @@ features:
 ## Deployment Steps
 1. Provide the required production environment variables and a persistent PostgreSQL database.
 2. The platform installs dependencies from `requirements.txt`.
-3. Run `flask db upgrade` once as the release/pre-deploy step, before routing traffic to the new release. Do not run migrations independently in every web replica.
-4. Start the web service with `gunicorn app:app --workers 1 --threads 8 --timeout 180`. The single web process owns the in-process scheduler; keep `ENABLE_SCHEDULER=true` on one process only.
-5. Configure the platform readiness probe to use `/healthz`. It returns only a generic database dependency status and does not expose connection details.
+3. Back up the production database, then run `flask db upgrade` once as the release/pre-deploy step, before routing traffic to the new release. Do not run migrations independently in every web replica.
+4. Run `flask db check` against the migrated database and confirm Alembic reports no pending schema operations before routing traffic.
+5. Start the web service with `gunicorn app:app --workers 1 --threads 8 --timeout 180`. The single web process owns the in-process scheduler; keep `ENABLE_SCHEDULER=true` on one process only.
+6. Configure the platform readiness probe to use `/healthz`. It returns only a generic database dependency status and does not expose connection details.
+
+The legacy-schema reconciliation migration conditionally adds missing tables,
+columns, and indexes, and backfills quota defaults and signup timestamps for
+existing rows. Its downgrade intentionally preserves those schema objects so a
+rollback cannot delete legacy application data.
 
 The Docker image excludes local environment files, credentials, database files,
 logs, test data, and local uploads. For a container deployment, run the image's

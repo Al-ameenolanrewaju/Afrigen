@@ -969,16 +969,26 @@ def generate_image():
             prompt,
             refine_image_prompt(prompt, style, user=locked_user),
         )
-        provider = "fal" if is_paid_plan(locked_user.plan) else "huggingface"
+        is_paid = is_paid_plan(locked_user.plan)
+        provider = "fal" if is_paid else "huggingface"
         result = generate_ai_image(
             refined, style, aspect_ratio, provider=provider,
-            allow_fal=is_paid_plan(locked_user.plan),
+            allow_fal=is_paid,
+            watermark=(not is_paid),
         )
 
         if not result["success"]:
             raise Exception(result["error"])
 
         image = result.get("image_url")
+        if not is_paid and image:
+            from services.video import add_watermark_to_image
+            try:
+                watermarked = add_watermark_to_image(image)
+                if watermarked and watermarked.startswith("http"):
+                    image = watermarked
+            except Exception as w_err:
+                print("IMAGE WATERMARK POST-PROCESSING ERROR:", w_err)
 
         generation = Generation(
             user_id=current_user.id,
@@ -1106,12 +1116,22 @@ def generate_image_from_retry(generation):
         return redirect(url_for('main.history'))
     try:
         style = 'realistic'
-        provider = "fal" if current_user.plan == "pro" else "huggingface"
+        is_paid = is_paid_plan(current_user.plan)
+        provider = "fal" if is_paid else "huggingface"
         result = generate_ai_image(
             generation.refined_prompt, style, '1:1', provider=provider,
-            allow_fal=(current_user.plan == 'pro'),
+            allow_fal=is_paid,
+            watermark=(not is_paid),
         )
         image_url = result.get('image_url') if result.get('success') else None
+        if not is_paid and image_url:
+            from services.video import add_watermark_to_image
+            try:
+                watermarked = add_watermark_to_image(image_url)
+                if watermarked and watermarked.startswith("http"):
+                    image_url = watermarked
+            except Exception as w_err:
+                print("IMAGE WATERMARK RETRY ERROR:", w_err)
         generation.image_url = image_url
         generation.video_url = None
         generation.status = 'completed' if image_url else 'failed'
@@ -1759,6 +1779,7 @@ def admin():
         ,missing_subscribers_count=missing_subscribers_count
         ,auto_publish_by_provider=auto_publish_by_provider
         ,recent_user_content=UserContent.query.options(joinedload(UserContent.user)).order_by(UserContent.created_at.desc()).limit(10).all()
+        ,recent_admin_notifications=Notification.query.options(joinedload(Notification.user)).order_by(Notification.created_at.desc(), Notification.id.desc()).limit(30).all()
     )
 
 
@@ -3450,7 +3471,7 @@ def fal_webhook():
             print("TEXT OVERLAY ERROR:", str(e))
 
         # Apply branding watermark for free tier users
-        if user and user.plan != 'pro':
+        if user and not is_paid_plan(user.plan):
             try:
                 from services.video import add_watermark_to_video
                 watermarked = add_watermark_to_video(generation.video_url)
@@ -3917,29 +3938,102 @@ def api_notifications_read_all():
     return jsonify({'ok': True, 'updated': updated})
 
 
+@main.route('/admin/notifications/send', methods=['POST'])
 @main.route('/admin/notifications/broadcast', methods=['POST'])
 @admin_required
 @csrf.exempt
 @limiter.exempt
-def admin_notifications_broadcast():
-    from models import Notification
-    data = request.get_json(silent=True) or {}
-    title = data.get('title', '').strip()
-    message = data.get('message', '').strip()
-    link = data.get('link', '').strip() or None
+def admin_notifications_send():
+    """Send in-app notifications to all users, specific plan tiers, or an individual user."""
+    from models import Notification, User
+    from sqlalchemy import or_
+
+    is_json = request.is_json
+    data = request.get_json(silent=True) if is_json else request.form
+
+    title = (data.get('title') or '').strip()
+    message = (data.get('message') or '').strip()
+    link = (data.get('link') or '').strip() or None
+    notif_type = (data.get('type') or 'info').strip().lower()
+    if notif_type not in ('info', 'success', 'warning', 'promo'):
+        notif_type = 'info'
+
+    target = (data.get('target') or 'all').strip().lower()
+
     if not title or not message:
-        return jsonify({'ok': False, 'error': 'title and message required'}), 400
-    users = User.query.all()
-    for u in users:
-        db.session.add(Notification(
+        err = 'Title and message are required.'
+        if is_json:
+            return jsonify({'ok': False, 'error': err}), 400
+        flash(err, 'danger')
+        return redirect(url_for('main.admin') + '#notifications')
+
+    # Resolve target recipients
+    recipients = []
+    if target == 'single':
+        user_id = data.get('user_id')
+        user_identifier = (data.get('user_identifier') or '').strip()
+        user = None
+        if user_id:
+            try:
+                user = db.session.get(User, int(user_id))
+            except (ValueError, TypeError):
+                pass
+        if not user and user_identifier:
+            user = User.query.filter(
+                or_(User.email.ilike(user_identifier), User.username.ilike(user_identifier))
+            ).first()
+        if not user:
+            err = f"User '{user_identifier or user_id}' was not found."
+            if is_json:
+                return jsonify({'ok': False, 'error': err}), 404
+            flash(err, 'danger')
+            return redirect(url_for('main.admin') + '#notifications')
+        recipients = [user]
+
+    elif target == 'plan':
+        plan = (data.get('plan') or '').strip().lower()
+        if plan == 'paid':
+            recipients = User.query.filter(User.plan.in_(['creator', 'pro', 'studio', 'director'])).all()
+        elif plan == 'free':
+            recipients = User.query.filter(or_(User.plan.in_(['free', 'spark', None]), User.plan == '')).all()
+        elif plan in ('creator', 'studio', 'director'):
+            if plan == 'creator':
+                recipients = User.query.filter(User.plan.in_(['creator', 'pro'])).all()
+            else:
+                recipients = User.query.filter_by(plan=plan).all()
+        else:
+            recipients = User.query.filter(User.plan != 'banned').all()
+
+    else:  # 'all'
+        recipients = User.query.filter(User.plan != 'banned').all()
+
+    if not recipients:
+        err = 'No recipients found for this target selection.'
+        if is_json:
+            return jsonify({'ok': False, 'error': err}), 400
+        flash(err, 'warning')
+        return redirect(url_for('main.admin') + '#notifications')
+
+    new_notifs = [
+        Notification(
             user_id=u.id,
             title=title,
             message=message,
             link=link,
-            type='info',
-        ))
+            type=notif_type,
+        )
+        for u in recipients
+    ]
+    db.session.add_all(new_notifs)
     db.session.commit()
-    return jsonify({'ok': True, 'sent_to': len(users)})
+
+    count = len(recipients)
+    msg = f"In-app notification successfully delivered to {count} creator{'s' if count != 1 else ''}!"
+    if is_json:
+        return jsonify({'ok': True, 'sent_to': count, 'message': msg})
+
+    flash(msg, 'success')
+    return redirect(url_for('main.admin') + '#notifications')
 
 
 # ---------- Legacy promo entry redirects to unified marketing ----------

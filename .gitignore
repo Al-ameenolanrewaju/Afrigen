@@ -12,5 +12,6 @@ static/audio/
 static/videos/
 static/images/
 static/uploads/
+static/generated_social/
 credentials/
 data/

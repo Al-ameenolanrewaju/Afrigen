@@ -10,7 +10,10 @@ from datetime import datetime, timezone
 from flask import current_app
 from models import db, User, TelegramUser, Generation
 from services.credits import video_gate, image_gate, charge_video, charge_image, is_paid_plan, get_tier
-from services.video import generate_image, generate_video, add_text_overlay, add_watermark_to_video, merge_audio_into_video
+from services.video import (
+    generate_image, generate_video, add_text_overlay,
+    add_watermark_to_video, add_watermark_to_image, merge_audio_into_video
+)
 from services.claude import refine_prompt, refine_image_prompt, extract_on_screen_text
 
 logger = logging.getLogger(__name__)
@@ -1018,8 +1021,13 @@ class TelegramBotService:
 
         try:
             if mode == "image":
-                provider = "fal" if is_paid_plan(user.plan) else "huggingface"
-                res = generate_image(refined_prompt, style=style, aspect_ratio=aspect_ratio, provider=provider, allow_fal=allow_fal)
+                is_paid = is_paid_plan(user.plan)
+                provider = "fal" if is_paid else "huggingface"
+                res = generate_image(
+                    refined_prompt, style=style, aspect_ratio=aspect_ratio,
+                    provider=provider, allow_fal=allow_fal,
+                    watermark=(not is_paid),
+                )
                 if res and res.get("success"):
                     media_url = res.get("image_url")
                 else:
@@ -1099,6 +1107,14 @@ class TelegramBotService:
                         media_url = watermarked
                 except Exception as e:
                     logger.warning("Watermark error: %s", e)
+        elif mode == "image" and not is_paid_plan(user.plan):
+            if media_url:
+                try:
+                    watermarked = add_watermark_to_image(media_url)
+                    if watermarked:
+                        media_url = watermarked
+                except Exception as e:
+                    logger.warning("Image watermark error: %s", e)
 
         # 7. Deduct credits & record completion
         if mode == "image":

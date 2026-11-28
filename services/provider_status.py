@@ -15,6 +15,13 @@ def _fal_token() -> str:
 
 
 def _huggingface_token() -> str:
+    try:
+        from services.hf_fallback import get_active_hf_token
+        token = get_active_hf_token()
+        if token:
+            return token
+    except Exception:
+        pass
     return (
         os.environ.get("HF_TOKEN")
         or os.environ.get("HUGGINGFACE_API_KEY")
@@ -80,11 +87,30 @@ def get_provider_status() -> Dict[str, Dict[str, Any]]:
 
     hf_token = _huggingface_token()
     hf_model = os.environ.get("HF_IMAGE_MODEL", "black-forest-labs/FLUX.1-schnell")
+
+    accounts = []
+    try:
+        from services.hf_fallback import get_hf_accounts
+        accounts = get_hf_accounts()
+    except Exception:
+        pass
+
+    num_accounts = len(accounts)
     hf = {
         "name": "Hugging Face",
         "status": "not_configured" if not hf_token else "offline",
-        "detail": "HF_TOKEN is not configured." if not hf_token else "Checking model access...",
+        "detail": "No HF token is configured." if not hf_token else "Checking model access...",
         "model": hf_model,
+        "accounts_count": num_accounts,
+        "accounts": [
+            {
+                "name": a.get("name"),
+                "masked_token": a.get("masked_token"),
+                "in_cooldown": a.get("in_cooldown"),
+                "cooldown_remaining": a.get("cooldown_remaining"),
+            }
+            for a in accounts
+        ] if accounts else [],
     }
     if hf_token:
         try:
@@ -95,7 +121,11 @@ def get_provider_status() -> Dict[str, Dict[str, Any]]:
             )
             if response.ok:
                 hf["status"] = "healthy"
-                hf["detail"] = "Token accepted; configured image model is reachable."
+                hf["detail"] = (
+                    f"{num_accounts} account(s) configured. Active account token accepted; model is reachable."
+                    if num_accounts > 1
+                    else "Token accepted; configured image model is reachable."
+                )
             else:
                 hf["detail"] = _error_message(response)
         except requests.RequestException as exc:

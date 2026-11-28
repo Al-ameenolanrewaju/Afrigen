@@ -3,8 +3,9 @@ services:
     name: afrigen-web
     env: python
     buildCommand: pip install -r requirements.txt
-    preDeployCommand: flask db upgrade
+    preDeployCommand: flask db upgrade && flask db check
     startCommand: gunicorn app:app --workers 1 --threads 8 --timeout 180
+    numInstances: 1
     healthCheckPath: /healthz
     envVars:
       - key: PYTHON_VERSION

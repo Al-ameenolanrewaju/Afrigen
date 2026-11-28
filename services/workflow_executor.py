@@ -86,10 +86,11 @@ class WorkflowExecutor:
                     if not ok:
                         raise ValueError(error)
                     refined = refine_image_prompt(prompt)
-                    provider = 'fal' if is_paid_plan(owner.plan) else 'huggingface'
+                    is_paid = is_paid_plan(owner.plan)
+                    provider = 'fal' if is_paid else 'huggingface'
                     res = generate_image(
                         refined, provider=provider,
-                        allow_fal=is_paid_plan(owner.plan),
+                        allow_fal=is_paid, watermark=(not is_paid),
                     )
                     if isinstance(res, dict) and res.get("success") is False:
                         raise Exception(res.get("error"))

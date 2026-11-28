@@ -52,6 +52,9 @@
     <button class="admin-tab-btn" data-tab="marketing">
         <i class="fa-solid fa-bullhorn" style="color: #F87171;"></i> Growth & Social CMS
     </button>
+    <button class="admin-tab-btn" data-tab="notifications">
+        <i class="fa-solid fa-bell" style="color: #FBBF24;"></i> In-App Messaging
+    </button>
 </div>
 
 <!-- ========================================== -->
@@ -332,6 +335,11 @@
                                     <a href="{{ url_for('main.grant_free_video', user_id=user.id, count=1) }}" class="btn btn-sm" style="background: rgba(96, 165, 250, 0.15); color: #60A5FA; border: 1px solid rgba(96, 165, 250, 0.3); font-size: 12px; font-weight: 600;" title="Gift 1 Free Video to {{ user.username }}">
                                         <i class="fa-solid fa-video me-1"></i>+ Free Video
                                     </a>
+
+                                    <!-- Send In-App Notification Button -->
+                                    <button type="button" class="btn btn-sm" style="background: rgba(245, 166, 35, 0.15); color: #F5A623; border: 1px solid rgba(245, 166, 35, 0.3); font-size: 12px; font-weight: 600;" onclick="openNotifyModal('{{ user.id }}', '{{ user.username|e }}', '{{ user.email|e }}')" title="Send in-app message to {{ user.username }}">
+                                        <i class="fa-solid fa-paper-plane me-1"></i>Message
+                                    </button>
 
                                     <form method="POST" action="{{ url_for('main.admin_set_user_plan', user_id=user.id) }}" class="d-inline-flex align-items-center gap-1">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -917,6 +925,286 @@
         </div>
     </div>
 </div>
+
+<!-- ========================================== -->
+<!-- TAB 6: IN-APP MESSAGING & NOTIFICATIONS     -->
+<!-- ========================================== -->
+<div id="notifications" class="admin-tab-pane">
+    <div class="row g-4 mb-4">
+        <!-- Notification Composer Form -->
+        <div class="col-lg-7">
+            <div class="admin-chart-container h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="admin-chart-title mb-0">
+                        <i class="fa-solid fa-paper-plane me-2 text-warning"></i>Compose In-App Notification
+                    </h5>
+                    <span class="badge" style="background: rgba(245, 166, 35, 0.15); color: #F5A623; border: 1px solid rgba(245, 166, 35, 0.3);">
+                        Direct Tray Delivery
+                    </span>
+                </div>
+                <p class="text-muted small mb-4">
+                    Send updates, announcements, or custom alerts directly into creators' in-app notification center.
+                </p>
+
+                <form method="POST" action="{{ url_for('main.admin_notifications_send') }}" id="adminNotificationForm">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <!-- Target Selection -->
+                    <div class="mb-3">
+                        <label class="form-label text-light small fw-bold">Target Audience</label>
+                        <select name="target" id="notifTargetSelect" class="form-select form-select-sm" style="background: #111827; border: 1px solid #1F2937; color: #F0F6FC;">
+                            <option value="all">📢 All Active Creators (Broadcast to Everyone)</option>
+                            <option value="plan:paid">⭐ All Paid Subscribers (Creator, Studio &amp; Director)</option>
+                            <option value="plan:free">⚡ Free / Spark Creators Only</option>
+                            <option value="plan:creator">🎬 Creator Tier Only</option>
+                            <option value="plan:studio">🎥 Studio Tier Only</option>
+                            <option value="plan:director">👑 Director Tier Only</option>
+                            <option value="single">👤 Specific Individual Creator</option>
+                        </select>
+                    </div>
+
+                    <!-- Hidden helper for plan selection -->
+                    <input type="hidden" name="plan" id="notifPlanHidden" value="">
+
+                    <!-- Single User Input (Conditional) -->
+                    <div class="mb-3 d-none" id="singleUserInputGroup">
+                        <label class="form-label text-light small fw-bold">Recipient Username, Email or User ID</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text" style="background: #1F2937; border-color: #374151; color: #9CA3AF;">@</span>
+                            <input type="text" name="user_identifier" id="notifUserIdentifier" class="form-control form-control-sm" placeholder="e.g. adedamola or user@example.com or 42" style="background: #111827; border: 1px solid #1F2937; color: #F0F6FC;">
+                        </div>
+                        <input type="hidden" name="user_id" id="notifUserIdHidden" value="">
+                    </div>
+
+                    <!-- Notification Type -->
+                    <div class="mb-3">
+                        <label class="form-label text-light small fw-bold">Notification Style / Badge</label>
+                        <div class="d-flex flex-wrap gap-2">
+                            <label class="btn btn-sm text-start d-flex align-items-center gap-2 px-3 py-2 cursor-pointer" style="background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.4); color: #60A5FA;">
+                                <input type="radio" name="type" value="info" checked class="form-check-input mt-0 notif-type-radio">
+                                <span><i class="fa-solid fa-circle-info"></i> Info (Blue)</span>
+                            </label>
+                            <label class="btn btn-sm text-start d-flex align-items-center gap-2 px-3 py-2 cursor-pointer" style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); color: #34D399;">
+                                <input type="radio" name="type" value="success" class="form-check-input mt-0 notif-type-radio">
+                                <span><i class="fa-solid fa-circle-check"></i> Success (Green)</span>
+                            </label>
+                            <label class="btn btn-sm text-start d-flex align-items-center gap-2 px-3 py-2 cursor-pointer" style="background: rgba(245, 166, 35, 0.15); border: 1px solid rgba(245, 166, 35, 0.4); color: #F5A623;">
+                                <input type="radio" name="type" value="warning" class="form-check-input mt-0 notif-type-radio">
+                                <span><i class="fa-solid fa-triangle-exclamation"></i> Alert (Amber)</span>
+                            </label>
+                            <label class="btn btn-sm text-start d-flex align-items-center gap-2 px-3 py-2 cursor-pointer" style="background: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.4); color: #C084FC;">
+                                <input type="radio" name="type" value="promo" class="form-check-input mt-0 notif-type-radio">
+                                <span><i class="fa-solid fa-gift"></i> Promo / Offer (Purple)</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Title -->
+                    <div class="mb-3">
+                        <label class="form-label text-light small fw-bold">Notification Title</label>
+                        <input type="text" name="title" id="notifTitleInput" required maxlength="200" class="form-control form-control-sm" placeholder="e.g. 🎬 New Feature: Kling Pro Video is live!" style="background: #111827; border: 1px solid #1F2937; color: #F0F6FC;">
+                    </div>
+
+                    <!-- Message -->
+                    <div class="mb-3">
+                        <label class="form-label text-light small fw-bold">Message Content</label>
+                        <textarea name="message" id="notifMessageInput" required rows="3" class="form-control form-control-sm" placeholder="Describe the announcement, feature release, or personalized note for the creator..." style="background: #111827; border: 1px solid #1F2937; color: #F0F6FC;"></textarea>
+                    </div>
+
+                    <!-- Action Link -->
+                    <div class="mb-4">
+                        <label class="form-label text-light small fw-bold">Action Link <span class="text-muted fw-normal">(Optional internal path or URL)</span></label>
+                        <input type="text" name="link" id="notifLinkInput" class="form-control form-control-sm" placeholder="e.g. /upgrade or /movie-studio or /drama-studio" style="background: #111827; border: 1px solid #1F2937; color: #F0F6FC;">
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center">
+                        <button type="reset" class="btn btn-sm btn-outline-secondary" id="notifResetBtn">
+                            Clear
+                        </button>
+                        <button type="submit" class="btn btn-sm d-inline-flex align-items-center gap-2" style="background: #F5A623; color: #0B0F19; font-weight: 700; border-radius: 6px; padding: 8px 20px;">
+                            <i class="fa-solid fa-paper-plane"></i> Send In-App Notification
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Live Preview Card -->
+        <div class="col-lg-5">
+            <div class="admin-chart-container h-100">
+                <h5 class="admin-chart-title mb-3">
+                    <i class="fa-solid fa-eye me-2 text-info"></i>Live In-App Preview
+                </h5>
+                <p class="text-muted small mb-3">
+                    Real-time visual rendering of how this notification appears inside the creator's notification drawer:
+                </p>
+
+                <!-- Mock Notification Card -->
+                <div class="p-3 rounded mb-4" id="livePreviewBox" style="background: #111827; border: 1px solid #1F2937; border-left: 4px solid #60A5FA; transition: all 0.2s ease;">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <span class="badge" id="previewBadge" style="background: rgba(59, 130, 246, 0.2); color: #60A5FA; font-size: 11px;">
+                            INFO
+                        </span>
+                        <span class="text-muted" style="font-size: 11px;">Just now</span>
+                    </div>
+                    <h6 class="fw-bold mb-1" id="previewTitle" style="color: #F0F6FC; font-size: 14px;">
+                        🎬 New Feature: Kling Pro Video is live!
+                    </h6>
+                    <p class="small text-muted mb-3" id="previewMessage" style="font-size: 13px; line-height: 1.4;">
+                        Describe the announcement, feature release, or personalized note for the creator...
+                    </p>
+                    <div id="previewLinkContainer">
+                        <a href="#" class="btn btn-sm d-inline-flex align-items-center gap-1" id="previewLinkBtn" style="background: rgba(245, 166, 35, 0.15); color: #F5A623; border: 1px solid rgba(245, 166, 35, 0.3); font-size: 11px; font-weight: 600; text-decoration: none;">
+                            <span>Open Link</span> <i class="fa-solid fa-arrow-right" style="font-size: 10px;"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Guidance Info Box -->
+                <div class="p-3 rounded" style="background: rgba(31, 41, 55, 0.4); border: 1px dashed #374151;">
+                    <div class="d-flex gap-2 align-items-start">
+                        <i class="fa-solid fa-lightbulb text-warning mt-1"></i>
+                        <div class="small text-muted">
+                            <strong class="text-light d-block mb-1">Instant Delivery</strong>
+                            Recipients see the notification bell counter increment immediately upon page navigation or next API poll. Unread notifications persist until opened or dismissed.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Sent In-App Notifications History -->
+    <div class="admin-chart-container">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="admin-chart-title mb-0">
+                <i class="fa-solid fa-clock-rotate-left me-2 text-warning"></i>Recently Dispatched Notifications
+            </h5>
+            <span class="badge" style="background: #1F2937; color: #9CA3AF;">Last 30 Dispatched</span>
+        </div>
+
+        <div class="table-responsive">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Recipient / Creator</th>
+                        <th>Type</th>
+                        <th>Title &amp; Message</th>
+                        <th>Action Link</th>
+                        <th>Date Sent</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for notif in recent_admin_notifications %}
+                    <tr>
+                        <td>
+                            {% if notif.user %}
+                                <strong style="color: #F0F6FC; font-size: 13px;">{{ notif.user.username }}</strong>
+                                <div class="text-muted" style="font-size: 11px;">{{ notif.user.email }}</div>
+                            {% else %}
+                                <span class="text-muted">User #{{ notif.user_id }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if notif.type == 'success' %}
+                                <span class="admin-badge admin-badge-green">SUCCESS</span>
+                            {% elif notif.type == 'warning' %}
+                                <span class="admin-badge admin-badge-orange">ALERT</span>
+                            {% elif notif.type == 'promo' %}
+                                <span class="admin-badge" style="background: rgba(168, 85, 247, 0.15); color: #C084FC; border: 1px solid rgba(168, 85, 247, 0.3);">PROMO</span>
+                            {% else %}
+                                <span class="admin-badge admin-badge-blue">INFO</span>
+                            {% endif %}
+                        </td>
+                        <td style="max-width: 320px;">
+                            <div class="fw-bold text-light text-truncate" style="font-size: 13px;">{{ notif.title }}</div>
+                            <div class="text-muted text-truncate small">{{ notif.message }}</div>
+                        </td>
+                        <td>
+                            {% if notif.link %}
+                                <a href="{{ notif.link }}" target="_blank" class="small text-decoration-none" style="color: #F5A623;">
+                                    {{ notif.link }} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 10px;"></i>
+                                </a>
+                            {% else %}
+                                <span class="text-muted small">—</span>
+                            {% endif %}
+                        </td>
+                        <td style="color: #8B949E; font-size: 12px;">
+                            {{ admin_resend_datetime(notif.created_at).strftime('%b %d, %H:%M') if notif.created_at else 'Just now' }}
+                        </td>
+                        <td>
+                            {% if notif.is_read %}
+                                <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34D399; font-size: 11px;"><i class="fa-solid fa-check-double me-1"></i>Read</span>
+                            {% else %}
+                                <span class="badge" style="background: rgba(107, 114, 128, 0.2); color: #9CA3AF; font-size: 11px;"><i class="fa-regular fa-clock me-1"></i>Unread</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">No notifications dispatched yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- QUICK DIRECT MESSAGE MODAL                 -->
+<!-- ========================================== -->
+<div class="modal fade" id="directMessageModal" tabindex="-1" aria-labelledby="directMessageModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background: #111827; border: 1px solid #1F2937; color: #F0F6FC; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+            <div class="modal-header" style="border-bottom: 1px solid #1F2937;">
+                <h5 class="modal-title fs-6 fw-bold" id="directMessageModalLabel">
+                    <i class="fa-solid fa-paper-plane me-2 text-warning"></i>Direct Message to <span id="modalCreatorName" class="text-warning"></span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('main.admin_notifications_send') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="target" value="single">
+                <input type="hidden" name="user_id" id="modalUserId">
+
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">Notification Style</label>
+                        <select name="type" class="form-select form-select-sm" style="background: #0B0F19; border: 1px solid #1F2937; color: #F0F6FC;">
+                            <option value="info">Info (Blue notice)</option>
+                            <option value="success">Success (Green achievement / credit gift)</option>
+                            <option value="warning">Alert (Amber warning)</option>
+                            <option value="promo">Promo (Purple special offer)</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">Title</label>
+                        <input type="text" name="title" required maxlength="200" class="form-control form-control-sm" placeholder="e.g. Free bonus credits added to your account" style="background: #0B0F19; border: 1px solid #1F2937; color: #F0F6FC;">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">Message</label>
+                        <textarea name="message" required rows="3" class="form-control form-control-sm" placeholder="Write your direct note to this creator..." style="background: #0B0F19; border: 1px solid #1F2937; color: #F0F6FC;"></textarea>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label text-muted small fw-bold">Action Link (Optional)</label>
+                        <input type="text" name="link" class="form-control form-control-sm" placeholder="e.g. /dashboard or /upgrade" style="background: #0B0F19; border: 1px solid #1F2937; color: #F0F6FC;">
+                    </div>
+                </div>
+                <div class="modal-footer" style="border-top: 1px solid #1F2937;">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-sm btn-warning fw-bold px-3">
+                        <i class="fa-solid fa-paper-plane me-1"></i> Send Now
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -1074,5 +1362,82 @@
             }
         });
     }
+
+    // In-App Notification Composer Interactivity
+    const notifTargetSelect = document.getElementById('notifTargetSelect');
+    const singleUserInputGroup = document.getElementById('singleUserInputGroup');
+    const notifPlanHidden = document.getElementById('notifPlanHidden');
+    const notifTitleInput = document.getElementById('notifTitleInput');
+    const notifMessageInput = document.getElementById('notifMessageInput');
+    const notifLinkInput = document.getElementById('notifLinkInput');
+    const previewTitle = document.getElementById('previewTitle');
+    const previewMessage = document.getElementById('previewMessage');
+    const previewBadge = document.getElementById('previewBadge');
+    const previewLinkBtn = document.getElementById('previewLinkBtn');
+    const previewLinkContainer = document.getElementById('previewLinkContainer');
+    const livePreviewBox = document.getElementById('livePreviewBox');
+
+    function updateNotifTarget() {
+        if (!notifTargetSelect) return;
+        const val = notifTargetSelect.value;
+        if (val.startsWith('plan:')) {
+            notifPlanHidden.value = val.split(':')[1];
+            if (singleUserInputGroup) singleUserInputGroup.classList.add('d-none');
+        } else if (val === 'single') {
+            notifPlanHidden.value = '';
+            if (singleUserInputGroup) singleUserInputGroup.classList.remove('d-none');
+        } else {
+            notifPlanHidden.value = '';
+            if (singleUserInputGroup) singleUserInputGroup.classList.add('d-none');
+        }
+    }
+    notifTargetSelect?.addEventListener('change', updateNotifTarget);
+
+    function updateLivePreview() {
+        if (previewTitle && notifTitleInput) {
+            previewTitle.textContent = notifTitleInput.value.trim() || 'Notification Title';
+        }
+        if (previewMessage && notifMessageInput) {
+            previewMessage.textContent = notifMessageInput.value.trim() || 'Your message will appear here...';
+        }
+        if (previewLinkContainer && notifLinkInput) {
+            const linkVal = notifLinkInput.value.trim();
+            if (linkVal) {
+                previewLinkContainer.style.display = 'block';
+                if (previewLinkBtn) previewLinkBtn.href = linkVal;
+            } else {
+                previewLinkContainer.style.display = 'none';
+            }
+        }
+        const selectedType = document.querySelector('input[name="type"]:checked')?.value || 'info';
+        if (previewBadge && livePreviewBox) {
+            const typeStyles = {
+                'info': { label: 'INFO', color: '#60A5FA', bg: 'rgba(59, 130, 246, 0.2)', border: '#60A5FA' },
+                'success': { label: 'SUCCESS', color: '#34D399', bg: 'rgba(16, 185, 129, 0.2)', border: '#34D399' },
+                'warning': { label: 'ALERT', color: '#F5A623', bg: 'rgba(245, 166, 35, 0.2)', border: '#F5A623' },
+                'promo': { label: 'PROMO', color: '#C084FC', bg: 'rgba(168, 85, 247, 0.2)', border: '#C084FC' }
+            };
+            const s = typeStyles[selectedType] || typeStyles.info;
+            previewBadge.textContent = s.label;
+            previewBadge.style.color = s.color;
+            previewBadge.style.background = s.bg;
+            livePreviewBox.style.borderLeftColor = s.border;
+        }
+    }
+
+    notifTitleInput?.addEventListener('input', updateLivePreview);
+    notifMessageInput?.addEventListener('input', updateLivePreview);
+    notifLinkInput?.addEventListener('input', updateLivePreview);
+    document.querySelectorAll('.notif-type-radio').forEach(r => r.addEventListener('change', updateLivePreview));
+
+    // Direct Message Modal Launcher
+    window.openNotifyModal = function(userId, username, email) {
+        const modalEl = document.getElementById('directMessageModal');
+        if (!modalEl) return;
+        document.getElementById('modalUserId').value = userId;
+        document.getElementById('modalCreatorName').textContent = username + (email ? ` (${email})` : '');
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
+    };
 </script>
 {% endblock %}

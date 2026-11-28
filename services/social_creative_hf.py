@@ -68,12 +68,26 @@ CREATIVE_STYLE_TEMPLATES = {
 
 
 def _get_hf_token() -> Optional[str]:
-    """Retrieve Hugging Face API token from environment."""
+    """Retrieve Hugging Face API token from environment or fallback manager."""
+    from services.hf_fallback import get_active_hf_token
+    token = get_active_hf_token()
+    if token:
+        return token
     return (
         os.environ.get("HF_TOKEN")
         or os.environ.get("HUGGINGFACE_API_KEY")
         or os.environ.get("HUGGINGFACE_TOKEN")
     )
+
+
+def _get_hf_tokens_list() -> list:
+    """Retrieve all available Hugging Face tokens in fallback priority order."""
+    from services.hf_fallback import get_all_hf_tokens
+    tokens = get_all_hf_tokens()
+    primary = _get_hf_token()
+    if primary and primary not in tokens:
+        tokens.insert(0, primary)
+    return tokens
 
 
 def _persist_media_bytes(data: bytes, ext: str, prefix: str = "social") -> str:
@@ -186,13 +200,16 @@ def generate_social_image(
     creative_type: str = "promotional_flyer",
     fallback_to_flyer: bool = True,
 ) -> Dict[str, Any]:
-    """Generate a marketing image using Hugging Face inference.
+    """Generate a marketing image using Hugging Face inference with 3-account fallback.
 
     Maintains Afrigen visual identity (Black, Gold, Orange, African-inspired aesthetics).
-    If HF is unavailable or rate-limited, safely uses internal Python PIL branded
+    If an account fails or is rate-limited (429), fails over to Account 2, then Account 3.
+    If all HF accounts are unavailable or exhausted, safely uses internal Python PIL branded
     flyer generation. Strictly avoids any third-party external AI image providers.
     """
-    token = _get_hf_token()
+    from services.hf_fallback import execute_hf_with_fallback
+
+    tokens = _get_hf_tokens_list()
     model = model_override or DEFAULT_HF_IMAGE_MODEL
 
     dimensions = {
@@ -209,10 +226,12 @@ def generate_social_image(
     )
     branded_prompt = f"{prompt}. {style_snippet}"
 
-    if token:
-        try:
+    if tokens:
+        def _hf_image_worker(token: str, acc: Dict[str, Any]) -> Dict[str, Any]:
             from huggingface_hub import InferenceClient
-            logger.info("Generating social creative via Hugging Face model: %s", model)
+            acc_name = acc.get("name", "Account")
+            masked = acc.get("masked_token", "token")
+            logger.info("Generating social creative via Hugging Face (%s - %s) model: %s", acc_name, masked, model)
             client = InferenceClient(model=model, token=token, timeout=90)
             img = client.text_to_image(
                 branded_prompt,
@@ -229,18 +248,28 @@ def generate_social_image(
             check = verify_image_bytes(img_bytes)
             if not check["valid"]:
                 logger.warning("HF generated image failed quality verification: %s", check["error"])
-            else:
-                public_url = _persist_media_bytes(img_bytes, ext="jpg", prefix="hf_img")
-                return {
-                    "ok": True,
-                    "media_url": public_url,
-                    "media_type": "image",
-                    "provider": "huggingface",
-                    "model_name": model,
-                    "dimensions": f"{width}x{height}",
-                }
+                raise ValueError(f"Image quality verification failed: {check['error']}")
+
+            public_url = _persist_media_bytes(img_bytes, ext="jpg", prefix="hf_img")
+            return {
+                "ok": True,
+                "media_url": public_url,
+                "media_type": "image",
+                "provider": "huggingface",
+                "model_name": model,
+                "account_used": acc_name,
+                "dimensions": f"{width}x{height}",
+            }
+
+        try:
+            res = execute_hf_with_fallback(
+                _hf_image_worker,
+                operation_name=f"Hugging Face image generation ({model})"
+            )
+            if isinstance(res, dict) and res.get("ok"):
+                return res
         except Exception as exc:
-            logger.warning("Hugging Face image generation encountered an error: %s", exc)
+            logger.warning("All Hugging Face accounts encountered errors during image generation: %s", exc)
 
     # Safe fallback to internal Python PIL flyer engine (No external AI provider)
     if fallback_to_flyer:
@@ -262,7 +291,7 @@ def generate_social_image(
 
     return {
         "ok": False,
-        "error": "Creative generation could not complete. Retrying shortly.",
+        "error": "Creative generation could not complete across configured Hugging Face accounts.",
         "provider": "huggingface",
     }
 
@@ -280,11 +309,12 @@ def generate_social_video(
     max_retries: int = 3,
     timeout_seconds: int = 120,
 ) -> Dict[str, Any]:
-    """Generate marketing video using Hugging Face video models.
+    """Generate marketing video using Hugging Face video models with multi-account fallback.
 
     Supports:
     - Text-to-video (default: damo-vilab/text-to-video-ms-1.7m or configured override).
     - Image-to-video (when image_url is provided).
+    - Automatic failover across 3 Hugging Face accounts on rate limits or errors.
     - Asynchronous status polling and model cold-start handling (503 loading retries).
     - Video header and size validation.
     - Persistent asset storage with publicly accessible HTTPS URL.
@@ -292,9 +322,11 @@ def generate_social_video(
     STRICT: Never falls back to Kling or external AI video providers.
     Never returns incomplete or corrupted videos.
     """
-    token = _get_hf_token()
-    if not token:
-        logger.warning("HF_TOKEN is not configured; cannot generate Hugging Face video.")
+    from services.hf_fallback import execute_hf_with_fallback
+
+    tokens = _get_hf_tokens_list()
+    if not tokens:
+        logger.warning("No Hugging Face token is configured; cannot generate video.")
         return {
             "ok": False,
             "error": "Hugging Face authentication token (HF_TOKEN) is not configured.",
@@ -312,7 +344,6 @@ def generate_social_video(
     logger.info("Initiating Hugging Face video generation with model: %s (img2vid=%s)", model, is_img2vid)
 
     api_url = f"{HF_INFERENCE_BASE_URL}/{model}"
-    headers = {"Authorization": f"Bearer {token}"}
 
     # Brand-aligned prompt reinforcement
     enriched_prompt = (
@@ -320,112 +351,117 @@ def generate_social_video(
         f"radiant gold and warm amber lighting, cinematic camera motion, photorealistic African aesthetic."
     )
 
-    start_time = time.time()
-    attempt = 0
+    def _hf_video_worker(token: str, acc: Dict[str, Any]) -> Dict[str, Any]:
+        acc_name = acc.get("name", "Account")
+        masked = acc.get("masked_token", "token")
+        headers = {"Authorization": f"Bearer {token}"}
+        start_time = time.time()
+        attempt = 0
 
-    while attempt < max_retries and (time.time() - start_time) < timeout_seconds:
-        attempt += 1
-        try:
-            if is_img2vid and image_url:
-                # Fetch image bytes for image-to-video
-                img_resp = requests.get(image_url, timeout=30)
-                if img_resp.status_code != 200:
-                    return {"ok": False, "error": f"Could not fetch source image: HTTP {img_resp.status_code}"}
-                resp = requests.post(
-                    api_url,
-                    headers=headers,
-                    data=img_resp.content,
-                    timeout=timeout_seconds,
-                )
-            else:
-                payload = {
-                    "inputs": enriched_prompt,
-                    "parameters": {
-                        "num_frames": 16,
-                        "num_inference_steps": 25,
-                    },
-                }
-                resp = requests.post(
-                    api_url,
-                    headers=headers,
-                    json=payload,
-                    timeout=timeout_seconds,
-                )
+        while attempt < max_retries and (time.time() - start_time) < timeout_seconds:
+            attempt += 1
+            try:
+                if is_img2vid and image_url:
+                    img_resp = requests.get(image_url, timeout=30)
+                    if img_resp.status_code != 200:
+                        return {"ok": False, "error": f"Could not fetch source image: HTTP {img_resp.status_code}"}
+                    resp = requests.post(
+                        api_url,
+                        headers=headers,
+                        data=img_resp.content,
+                        timeout=timeout_seconds,
+                    )
+                else:
+                    payload = {
+                        "inputs": enriched_prompt,
+                        "parameters": {
+                            "num_frames": 16,
+                            "num_inference_steps": 25,
+                        },
+                    }
+                    resp = requests.post(
+                        api_url,
+                        headers=headers,
+                        json=payload,
+                        timeout=timeout_seconds,
+                    )
 
-            # Success: Video bytes returned
-            if resp.status_code == 200:
-                content_type = resp.headers.get("content-type", "").lower()
-                vid_bytes = resp.content
+                # Success: Video bytes returned
+                if resp.status_code == 200:
+                    vid_bytes = resp.content
+                    validation = verify_video_bytes(vid_bytes)
+                    if not validation["valid"]:
+                        logger.error("Hugging Face video failed validation: %s", validation["error"])
+                        return {
+                            "ok": False,
+                            "error": f"Generated video failed validation: {validation['error']}",
+                            "provider": "huggingface",
+                            "model_name": model,
+                        }
 
-                # Validate video integrity
-                validation = verify_video_bytes(vid_bytes)
-                if not validation["valid"]:
-                    logger.error("Hugging Face video failed validation: %s", validation["error"])
+                    ext = validation.get("format", "mp4")
+                    public_url = _persist_media_bytes(vid_bytes, ext=ext, prefix="hf_vid")
+                    logger.info("Hugging Face video generated successfully via %s: %s", acc_name, public_url)
+
                     return {
-                        "ok": False,
-                        "error": f"Generated video failed validation: {validation['error']}",
+                        "ok": True,
+                        "media_url": public_url,
+                        "media_type": "video",
                         "provider": "huggingface",
                         "model_name": model,
+                        "account_used": acc_name,
+                        "duration_seconds": duration_seconds,
                     }
 
-                # Persist to public storage
-                ext = validation.get("format", "mp4")
-                public_url = _persist_media_bytes(vid_bytes, ext=ext, prefix="hf_vid")
-                logger.info("Hugging Face video generated successfully: %s", public_url)
+                # Model is loading on Hugging Face (503 Service Unavailable)
+                elif resp.status_code == 503:
+                    try:
+                        data = resp.json()
+                        est_time = float(data.get("estimated_time", 20.0))
+                    except Exception:
+                        est_time = 20.0
+                    sleep_time = min(est_time, 25.0)
+                    logger.info("HF video model %s is warming up on %s. Waiting %.1fs (attempt %s/%s)...",
+                                model, acc_name, sleep_time, attempt, max_retries)
+                    time.sleep(sleep_time)
+                    continue
 
-                return {
-                    "ok": True,
-                    "media_url": public_url,
-                    "media_type": "video",
-                    "provider": "huggingface",
-                    "model_name": model,
-                    "duration_seconds": duration_seconds,
-                }
+                # Rate limited (429) or Auth error (401, 403): Raise to trigger next account
+                elif resp.status_code == 429:
+                    raise RuntimeError(f"Rate limit hit on {acc_name} ({masked}): HTTP 429")
 
-            # Model is loading on Hugging Face (503 Service Unavailable)
-            elif resp.status_code == 503:
-                try:
-                    data = resp.json()
-                    est_time = float(data.get("estimated_time", 20.0))
-                except Exception:
-                    est_time = 20.0
-                sleep_time = min(est_time, 25.0)
-                logger.info("HF video model %s is warming up. Waiting %.1fs (attempt %s/%s)...",
-                            model, sleep_time, attempt, max_retries)
-                time.sleep(sleep_time)
-                continue
+                elif resp.status_code in (401, 403):
+                    raise RuntimeError(f"Authentication failure on {acc_name} ({masked}): HTTP {resp.status_code}")
 
-            # Rate limited (429)
-            elif resp.status_code == 429:
-                logger.warning("HF rate limit hit, backing off 15s...")
-                time.sleep(15)
-                continue
+                else:
+                    err_text = resp.text[:250]
+                    raise RuntimeError(f"HF API HTTP {resp.status_code} on {acc_name}: {err_text}")
 
-            else:
-                err_text = resp.text[:250]
-                logger.warning("HF video inference returned status %s: %s", resp.status_code, err_text)
-                return {
-                    "ok": False,
-                    "error": f"Hugging Face API returned HTTP {resp.status_code}: {err_text}",
-                    "provider": "huggingface",
-                    "model_name": model,
-                }
+            except requests.exceptions.Timeout:
+                logger.warning("Hugging Face video inference timed out on %s (attempt %s).", acc_name, attempt)
+                if attempt >= max_retries:
+                    raise
+                time.sleep(3)
 
-        except requests.exceptions.Timeout:
-            logger.warning("Hugging Face video inference timed out on attempt %s.", attempt)
-            time.sleep(5)
-        except Exception as exc:
-            logger.exception("HF video generation exception: %s", exc)
-            return {
-                "ok": False,
-                "error": f"Hugging Face video generation error: {exc}",
-                "provider": "huggingface",
-                "model_name": model,
-            }
+        raise RuntimeError(f"{acc_name} video generation timed out after {int(time.time() - start_time)}s.")
 
-    return {
-        "ok": False,
-        "error": f"Hugging Face video generation timed out after {int(time.time() - start_time)}s.",
-        "provider": "huggingface",
-        "model_name": model,
-    }
+    try:
+        res = execute_hf_with_fallback(
+            _hf_video_worker,
+            operation_name=f"Hugging Face video generation ({model})"
+        )
+        if isinstance(res, dict):
+            return res
+        return {
+            "ok": False,
+            "error": "Unexpected video generation response format.",
+            "provider": "huggingface",
+        }
+    except Exception as exc:
+        logger.exception("All Hugging Face accounts failed for video generation: %s", exc)
+        return {
+            "ok": False,
+            "error": f"Hugging Face video generation error: {exc}",
+            "provider": "huggingface",
+            "model_name": model,
+        }

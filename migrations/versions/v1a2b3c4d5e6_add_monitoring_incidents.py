@@ -14,44 +14,34 @@ branch_labels = None
 depends_on = None
 
 
+def _create_index_if_missing(table_name, index_name, columns):
+    inspector = sa.inspect(op.get_bind())
+    if not inspector.has_table(table_name):
+        raise RuntimeError(
+            "Cannot create index {}: table {} does not exist.".format(index_name, table_name)
+        )
+    existing = {index["name"] for index in inspector.get_indexes(table_name)}
+    if index_name not in existing:
+        op.create_index(index_name, table_name, columns, unique=False)
+
+
+def _create_table_if_missing(name, *columns_and_constraints):
+    if not sa.inspect(op.get_bind()).has_table(name):
+        op.create_table(name, *columns_and_constraints)
+
+
 def upgrade():
-    op.create_index(
-        "ix_generations_status_created_at",
-        "generations",
-        ["status", "created_at"],
-        unique=False,
-    )
-    op.create_index(
-        "ix_generations_created_at",
-        "generations",
-        ["created_at"],
-        unique=False,
-    )
-    op.create_index(
-        "ix_provider_logs_timestamp",
-        "provider_logs",
-        ["timestamp"],
-        unique=False,
-    )
-    op.create_index(
-        "ix_paystack_webhook_logs_created_at",
-        "paystack_webhook_logs",
-        ["created_at"],
-        unique=False,
-    )
-    op.create_index(
-        "ix_payments_created_at",
-        "payments",
-        ["created_at"],
-        unique=False,
-    )
-    op.create_index(
-        "ix_credit_ledger_created_at_user_id",
-        "credit_ledger",
-        ["created_at", "user_id"],
-        unique=False,
-    )
-    op.create_table(
+    for table_name, index_name, columns in (
+        ("generations", "ix_generations_status_created_at", ["status", "created_at"]),
+        ("generations", "ix_generations_created_at", ["created_at"]),
+        ("provider_logs", "ix_provider_logs_timestamp", ["timestamp"]),
+        ("paystack_webhook_logs", "ix_paystack_webhook_logs_created_at", ["created_at"]),
+        ("payments", "ix_payments_created_at", ["created_at"]),
+        ("credit_ledger", "ix_credit_ledger_created_at_user_id", ["created_at", "user_id"]),
+    ):
+        _create_index_if_missing(table_name, index_name, columns)
+
+    _create_table_if_missing(
         "monitoring_snapshots",
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("run_key", sa.String(length=120), nullable=False),
@@ -63,19 +53,14 @@ def upgrade():
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("run_key"),
     )
-    op.create_index(
-        "ix_monitoring_snapshots_monitor_key",
-        "monitoring_snapshots",
-        ["monitor_key"],
-        unique=False,
+    _create_index_if_missing(
+        "monitoring_snapshots", "ix_monitoring_snapshots_monitor_key", ["monitor_key"]
     )
-    op.create_index(
-        "ix_monitoring_snapshots_observed_at",
-        "monitoring_snapshots",
-        ["observed_at"],
-        unique=False,
+    _create_index_if_missing(
+        "monitoring_snapshots", "ix_monitoring_snapshots_observed_at", ["observed_at"]
     )
-    op.create_table(
+
+    _create_table_if_missing(
         "monitoring_incidents",
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("fingerprint", sa.String(length=180), nullable=False),
@@ -96,31 +81,15 @@ def upgrade():
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("fingerprint"),
     )
-    op.create_index(
-        "ix_monitoring_incidents_source",
-        "monitoring_incidents",
-        ["source"],
-        unique=False,
-    )
-    op.create_index(
-        "ix_monitoring_incidents_severity",
-        "monitoring_incidents",
-        ["severity"],
-        unique=False,
-    )
-    op.create_index(
-        "ix_monitoring_incidents_status",
-        "monitoring_incidents",
-        ["status"],
-        unique=False,
-    )
-    op.create_index(
-        "ix_monitoring_incidents_last_seen_at",
-        "monitoring_incidents",
-        ["last_seen_at"],
-        unique=False,
-    )
-    op.create_table(
+    for index_name, columns in (
+        ("ix_monitoring_incidents_source", ["source"]),
+        ("ix_monitoring_incidents_severity", ["severity"]),
+        ("ix_monitoring_incidents_status", ["status"]),
+        ("ix_monitoring_incidents_last_seen_at", ["last_seen_at"]),
+    ):
+        _create_index_if_missing("monitoring_incidents", index_name, columns)
+
+    _create_table_if_missing(
         "monitoring_incident_events",
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("incident_id", sa.Integer(), nullable=False),
@@ -130,36 +99,19 @@ def upgrade():
         sa.Column("details", sa.JSON(), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
         sa.ForeignKeyConstraint(
-            ["incident_id"],
-            ["monitoring_incidents.id"],
-            ondelete="CASCADE",
+            ["incident_id"], ["monitoring_incidents.id"], ondelete="CASCADE"
         ),
-        sa.ForeignKeyConstraint(
-            ["actor_user_id"],
-            ["users.id"],
-            ondelete="SET NULL",
-        ),
+        sa.ForeignKeyConstraint(["actor_user_id"], ["users.id"], ondelete="SET NULL"),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(
-        "ix_monitoring_incident_events_incident_id",
-        "monitoring_incident_events",
-        ["incident_id"],
-        unique=False,
-    )
-    op.create_index(
-        "ix_monitoring_incident_events_event_type",
-        "monitoring_incident_events",
-        ["event_type"],
-        unique=False,
-    )
-    op.create_index(
-        "ix_monitoring_incident_events_created_at",
-        "monitoring_incident_events",
-        ["created_at"],
-        unique=False,
-    )
-    op.create_table(
+    for index_name, columns in (
+        ("ix_monitoring_incident_events_incident_id", ["incident_id"]),
+        ("ix_monitoring_incident_events_event_type", ["event_type"]),
+        ("ix_monitoring_incident_events_created_at", ["created_at"]),
+    ):
+        _create_index_if_missing("monitoring_incident_events", index_name, columns)
+
+    _create_table_if_missing(
         "monitoring_daily_reports",
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("report_date", sa.Date(), nullable=False),
@@ -172,22 +124,7 @@ def upgrade():
 
 
 def downgrade():
-    op.drop_table("monitoring_daily_reports")
-    op.drop_index("ix_monitoring_incident_events_created_at", table_name="monitoring_incident_events")
-    op.drop_index("ix_monitoring_incident_events_event_type", table_name="monitoring_incident_events")
-    op.drop_index("ix_monitoring_incident_events_incident_id", table_name="monitoring_incident_events")
-    op.drop_table("monitoring_incident_events")
-    op.drop_index("ix_monitoring_incidents_last_seen_at", table_name="monitoring_incidents")
-    op.drop_index("ix_monitoring_incidents_status", table_name="monitoring_incidents")
-    op.drop_index("ix_monitoring_incidents_severity", table_name="monitoring_incidents")
-    op.drop_index("ix_monitoring_incidents_source", table_name="monitoring_incidents")
-    op.drop_table("monitoring_incidents")
-    op.drop_index("ix_monitoring_snapshots_observed_at", table_name="monitoring_snapshots")
-    op.drop_index("ix_monitoring_snapshots_monitor_key", table_name="monitoring_snapshots")
-    op.drop_table("monitoring_snapshots")
-    op.drop_index("ix_payments_created_at", table_name="payments")
-    op.drop_index("ix_paystack_webhook_logs_created_at", table_name="paystack_webhook_logs")
-    op.drop_index("ix_provider_logs_timestamp", table_name="provider_logs")
-    op.drop_index("ix_credit_ledger_created_at_user_id", table_name="credit_ledger")
-    op.drop_index("ix_generations_created_at", table_name="generations")
-    op.drop_index("ix_generations_status_created_at", table_name="generations")
+    # These tables are also provisioned by application startup before migrations
+    # run. Their provenance is therefore unknown here, and dropping them could
+    # destroy monitoring data that predates this revision.
+    pass

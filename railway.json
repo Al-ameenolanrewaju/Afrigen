@@ -4,7 +4,7 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "preDeployCommand": "flask db upgrade",
+    "preDeployCommand": "flask db upgrade && flask db check",
     "startCommand": "gunicorn app:app --workers 1 --threads 8 --timeout 180",
     "restartPolicyType": "ON_FAILURE"
   }
