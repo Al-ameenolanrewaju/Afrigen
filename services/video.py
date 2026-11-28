@@ -684,62 +684,6 @@ def generate_image(prompt, style="realistic", aspect_ratio="1:1", provider="hugg
     return {"success": False, "error": customer_error("image")}
 
 
-def _generate_image_fal_free(prompt, aspect_ratio):
-    """Use Afrigen's Fal account as a controlled fallback for free image requests.
-
-    Hugging Face's auto-routed FLUX endpoint can return 402 when its Inference
-    Provider credit balance is empty. Free users have a daily quota, but that
-    quota is funded by Afrigen; it must not depend on the user's HF billing.
-    """
-    api_key = (
-        os.environ.get("FAL_KEY_ID")
-        or os.environ.get("FAL_API_KEY")
-        or os.environ.get("FAL_KEY")
-    )
-    if not api_key:
-        print("Free image fallback unavailable: Fal API credentials are not configured.")
-        return {"success": False, "error": customer_error("image")}
-
-    size_map = {
-        "1:1": "square_hd",
-        "16:9": "landscape_4_3",
-        "9:16": "portrait_4_3",
-    }
-    payload = {
-        "prompt": prompt,
-        "image_size": size_map.get(aspect_ratio, "square_hd"),
-        "num_images": 1,
-        "num_inference_steps": 4,
-    }
-    try:
-        response = requests.post(
-            "https://fal.run/fal-ai/flux/schnell",
-            json=payload,
-            headers={
-                "Authorization": f"Key {api_key}",
-                "Content-Type": "application/json",
-            },
-            timeout=180,
-        )
-        response.raise_for_status()
-        result = response.json()
-        image_url = None
-        if result.get("images"):
-            image_url = result["images"][0].get("url")
-        elif result.get("image", {}).get("url"):
-            image_url = result["image"]["url"]
-        if not image_url:
-            raise RuntimeError("Fal free image fallback returned no image URL.")
-        print("Free image generated successfully using configured fallback.")
-        return {"success": True, "image_url": image_url}
-    except Exception as error:
-        print(
-            "Free image fallback failed: "
-            f"{redact_secrets(str(error))}"
-        )
-        return {"success": False, "error": customer_error("image")}
-
-
 def _generate_image_huggingface(prompt, aspect_ratio):
     """Generate a free-tier image through Hugging Face Inference Providers with 3-account fallback."""
     from services.hf_fallback import execute_hf_with_fallback, get_all_hf_tokens
@@ -818,7 +762,7 @@ def _generate_image_huggingface(prompt, aspect_ratio):
     except Exception as exc:
         error_text = str(exc).lower()
         if "402" in error_text or "payment required" in error_text or "pre-paid credits" in error_text:
-            print("Hugging Face Inference Provider credits exhausted; switching directly to Afrigen's Fal fallback.")
-            return _generate_image_fal_free(prompt, aspect_ratio)
-        print(f"All Hugging Face accounts failed: {redact_secrets(str(exc))}")
+            print("Hugging Face Inference Provider credits exhausted; free image generation is unavailable. Fal fallback is disabled for free users.")
+        else:
+            print(f"All Hugging Face accounts failed: {redact_secrets(str(exc))}")
         return {"success": False, "error": customer_error("image")}
